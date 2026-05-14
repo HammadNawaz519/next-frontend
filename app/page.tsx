@@ -486,9 +486,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="animated-bg h-screen w-full flex items-center justify-center overflow-hidden" style={{ padding: '24px 1.5rem' }}>
-      <span className="blob3" aria-hidden="true" />
-      <span className="blob4" aria-hidden="true" />
+    <div className="h-screen w-full flex items-center justify-center overflow-hidden bg-black" style={{ padding: '24px 1.5rem' }}>
       <div className="w-full max-w-[960px] bg-white rounded-2xl md:rounded-[2rem] overflow-hidden" style={{ height: 'calc(100vh - 48px)', position: 'relative', zIndex: 1 }}>
         <div className="grid lg:grid-cols-2 gap-0 h-full">
           {renderLeft()}

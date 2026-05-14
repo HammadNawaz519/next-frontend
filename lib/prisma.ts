@@ -7,11 +7,17 @@ declare global {
 }
 
 function getPrismaClient(): PrismaClient {
-  const url = process.env.DATABASE_URL || "postgresql://dummy:dummy@localhost:5432/dummy";
+  const url = process.env.DATABASE_URL;
+  
+  if (!url) {
+    console.error("❌ CRITICAL ERROR: DATABASE_URL is missing! Check Vercel environment variables.");
+  }
+
+  const connectionString = url || "postgresql://dummy:dummy@localhost:5432/dummy";
   
   // In Prisma 7, we must provide an adapter if the schema doesn't have a URL.
   // Note: Your version of PrismaNeon expects a PoolConfig object.
-  const adapter = new PrismaNeon({ connectionString: url });
+  const adapter = new PrismaNeon({ connectionString });
   return new PrismaClient({ 
     adapter,
     log: ["query", "info", "warn", "error"] 
