@@ -9,8 +9,8 @@ declare global {
 function getPrismaClient(): PrismaClient {
   const url = process.env.DATABASE_URL || "postgresql://dummy:dummy@localhost:5432/dummy";
   
-  // In Prisma 7, we must provide an adapter or accelerateUrl if the schema doesn't have a URL.
-  // We use the Neon adapter for both the real connection and the dummy fallback.
+  // In Prisma 7, we must provide an adapter if the schema doesn't have a URL.
+  // Note: Your version of PrismaNeon expects a PoolConfig object.
   const adapter = new PrismaNeon({ connectionString: url });
   return new PrismaClient({ adapter });
 }
