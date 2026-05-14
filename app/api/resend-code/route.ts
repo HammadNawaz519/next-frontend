@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
+
 import { sendVerificationEmail } from "@/lib/mail";
 
 function generateOTP(): string {
