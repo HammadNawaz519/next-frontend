@@ -123,11 +123,16 @@ export const authOptions: NextAuthOptions = {
 
   pages: {
     signIn: "/",
-    error: "/",
+    // Temporarily disabled to see the real NextAuth error page
+    // error: "/", 
   },
 
   secret: process.env.NEXTAUTH_SECRET,
 };
+
+// Runtime environment check
+console.log("[AUTH_INIT] NEXTAUTH_URL:", process.env.NEXTAUTH_URL);
+console.log("[AUTH_INIT] DATABASE_URL present:", !!process.env.DATABASE_URL);
 
 export const dynamic = "force-dynamic";
 

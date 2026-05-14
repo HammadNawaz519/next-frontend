@@ -12,7 +12,10 @@ function getPrismaClient(): PrismaClient {
   // In Prisma 7, we must provide an adapter if the schema doesn't have a URL.
   // Note: Your version of PrismaNeon expects a PoolConfig object.
   const adapter = new PrismaNeon({ connectionString: url });
-  return new PrismaClient({ adapter });
+  return new PrismaClient({ 
+    adapter,
+    log: ["query", "info", "warn", "error"] 
+  });
 }
 
 export const prisma = global.__prisma ?? getPrismaClient();
