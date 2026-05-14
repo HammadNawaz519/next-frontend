@@ -1,3 +1,4 @@
+@import url('https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css');
 @import "tailwindcss";
 
 :root {
@@ -19,8 +20,102 @@
   }
 }
 
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ===== Animated blob gradient background ===== */
+.animated-bg {
+  position: relative;
+  background: #F2EAE0;
+  overflow: hidden;
+}
+
+/* Shared blob styles */
+.animated-bg::before,
+.animated-bg::after,
+.animated-bg .blob3,
+.animated-bg .blob4 {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(55px);
+  opacity: 0.65;
+  will-change: transform;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Blob 1 — lavender/purple — top-left */
+.animated-bg::before {
+  width: 22vw;
+  height: 22vw;
+  background: #BDA6CE;
+  top: 5%;
+  left: 5%;
+  animation: blob1 14s ease-in-out infinite alternate;
+}
+
+/* Blob 2 — slate purple — bottom-right */
+.animated-bg::after {
+  width: 20vw;
+  height: 20vw;
+  background: #9B8EC7;
+  bottom: 5%;
+  right: 5%;
+  animation: blob2 18s ease-in-out infinite alternate;
+}
+
+/* Blob 3 — teal — bottom-left */
+.animated-bg .blob3 {
+  width: 20vw;
+  height: 20vw;
+  background: #B4D3D9;
+  bottom: 8%;
+  left: 10%;
+  animation: blob3 20s ease-in-out infinite alternate;
+}
+
+/* Blob 4 — warm cream accent — top-right */
+.animated-bg .blob4 {
+  width: 18vw;
+  height: 18vw;
+  background: #BDA6CE;
+  top: 8%;
+  right: 8%;
+  animation: blob4 16s ease-in-out infinite alternate;
+}
+
+@keyframes blob1 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(8vw, 12vh) scale(1.1); }
+  100% { transform: translate(3vw, 20vh) scale(0.95); }
+}
+
+@keyframes blob2 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(-10vw, -8vh) scale(1.08); }
+  100% { transform: translate(-4vw, -16vh) scale(0.92); }
+}
+
+@keyframes blob3 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(12vw, -10vh) scale(1.05); }
+  100% { transform: translate(6vw, -18vh) scale(1.1); }
+}
+
+@keyframes blob4 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(-8vw, 10vh) scale(0.95); }
+  100% { transform: translate(-14vw, 6vh) scale(1.08); }
+}
+
+
