@@ -7,19 +7,10 @@ declare global {
 }
 
 function getPrismaClient(): PrismaClient {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    // If DATABASE_URL is missing (e.g. during build), return a client with a dummy URL.
-    // This avoids construction errors while allowing the build to proceed.
-    return new PrismaClient({
-      datasources: {
-        db: {
-          url: "postgresql://dummy:dummy@localhost:5432/dummy",
-        },
-      },
-    });
-  }
-  // PrismaNeon takes a PoolConfig (not a Pool instance)
+  const url = process.env.DATABASE_URL || "postgresql://dummy:dummy@localhost:5432/dummy";
+  
+  // In Prisma 7, we must provide an adapter or accelerateUrl if the schema doesn't have a URL.
+  // We use the Neon adapter for both the real connection and the dummy fallback.
   const adapter = new PrismaNeon({ connectionString: url });
   return new PrismaClient({ adapter });
 }
