@@ -8,19 +8,27 @@ datasource db {
 }
 
 model User {
-  id               String    @id @default(cuid())
-  name             String?
-  username         String?   @unique
-  email            String?   @unique
-  emailVerified    DateTime?
-  image            String?
-  password         String?
-  verifyCode       String?
-  verifyExpiry     DateTime?
-  createdAt        DateTime  @default(now())
+  id            String    @id @default(cuid())
+  name          String?
+  username      String?   @unique
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  createdAt     DateTime  @default(now())
 
   accounts Account[]
   sessions Session[]
+}
+
+model PendingUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String?
+  password     String
+  verifyCode   String
+  verifyExpiry DateTime
+  createdAt    DateTime @default(now())
 }
 
 model Account {

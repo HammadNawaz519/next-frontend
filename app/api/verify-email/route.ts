@@ -12,52 +12,45 @@ export async function POST(req: Request) {
       );
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    // Look up the pending (unverified) registration
+    const pending = await prisma.pendingUser.findUnique({ where: { email } });
 
-    if (!user) {
+    if (!pending) {
       return NextResponse.json(
-        { message: "No account found for this email." },
+        { message: "No pending registration found for this email." },
         { status: 404 }
       );
     }
 
-    if (user.emailVerified) {
+    if (new Date() > pending.verifyExpiry) {
+      // Clean up expired pending record
+      await prisma.pendingUser.delete({ where: { email } });
       return NextResponse.json(
-        { message: "Email is already verified." },
+        { message: "Verification code has expired. Please sign up again." },
         { status: 400 }
       );
     }
 
-    if (!user.verifyCode || !user.verifyExpiry) {
-      return NextResponse.json(
-        { message: "No verification code found. Please request a new one." },
-        { status: 400 }
-      );
-    }
-
-    if (new Date() > user.verifyExpiry) {
-      return NextResponse.json(
-        { message: "Verification code has expired. Please request a new one." },
-        { status: 400 }
-      );
-    }
-
-    if (user.verifyCode !== code.trim()) {
+    if (pending.verifyCode !== code.trim()) {
       return NextResponse.json(
         { message: "Invalid verification code." },
         { status: 400 }
       );
     }
 
-    // Mark verified, clear OTP fields
-    await prisma.user.update({
-      where: { email },
+    // OTP is valid — create the real User record
+    await prisma.user.create({
       data: {
+        email: pending.email,
+        username: pending.username,
+        name: pending.username,
+        password: pending.password,
         emailVerified: new Date(),
-        verifyCode: null,
-        verifyExpiry: null,
       },
     });
+
+    // Remove the pending record
+    await prisma.pendingUser.delete({ where: { email } });
 
     return NextResponse.json(
       { message: "Email verified successfully." },

@@ -18,22 +18,21 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if verified user already exists
+    // Block if a verified User already exists with this email
     const existingUser = await prisma.user.findUnique({ where: { email } });
-
-    if (existingUser?.emailVerified) {
+    if (existingUser) {
       return NextResponse.json(
         { message: "An account with this email already exists." },
         { status: 409 }
       );
     }
 
-    // Check if username is taken by someone else
+    // Block if username is already taken by a real (verified) user
     if (username) {
       const existingUsername = await prisma.user.findUnique({
         where: { username },
       });
-      if (existingUsername && existingUsername.email !== email) {
+      if (existingUsername) {
         return NextResponse.json(
           { message: "This username is already taken." },
           { status: 409 }
@@ -45,28 +44,25 @@ export async function POST(req: Request) {
     const otp = generateOTP();
     const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-    // Upsert: create or overwrite unverified user (re-registration attempt)
-    await prisma.user.upsert({
+    // Save/overwrite in PendingUser — not in User
+    await prisma.pendingUser.upsert({
       where: { email },
       update: {
         username: username || null,
-        name: username || null,
         password: hashedPassword,
         verifyCode: otp,
         verifyExpiry: expiry,
-        emailVerified: null,
       },
       create: {
         email,
         username: username || null,
-        name: username || null,
         password: hashedPassword,
         verifyCode: otp,
         verifyExpiry: expiry,
       },
     });
 
-    // Send OTP email (non-blocking — don't await to keep response fast)
+    // Send OTP email
     sendVerificationEmail(email, otp, username).catch((err) =>
       console.error("[MAIL_ERROR]", err)
     );
