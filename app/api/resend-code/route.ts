@@ -14,19 +14,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Email is required." }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
-
-    if (!user) {
-      return NextResponse.json({ message: "No account found." }, { status: 404 });
-    }
-
-    if (user.emailVerified) {
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
       return NextResponse.json({ message: "Email already verified." }, { status: 400 });
     }
 
+    const pending = await prisma.pendingUser.findUnique({ where: { email } });
+
+    if (!pending) {
+      return NextResponse.json({ message: "No pending registration found." }, { status: 404 });
+    }
+
     // Rate limit: only resend if last code was sent > 60s ago (or expired)
-    if (user.verifyExpiry) {
-      const sentAt = new Date(user.verifyExpiry.getTime() - 15 * 60 * 1000);
+    if (pending.verifyExpiry) {
+      const sentAt = new Date(pending.verifyExpiry.getTime() - 15 * 60 * 1000);
       const secondsSinceSent = (Date.now() - sentAt.getTime()) / 1000;
       if (secondsSinceSent < 60) {
         const wait = Math.ceil(60 - secondsSinceSent);
@@ -40,12 +41,12 @@ export async function POST(req: Request) {
     const otp = generateOTP();
     const expiry = new Date(Date.now() + 15 * 60 * 1000);
 
-    await prisma.user.update({
+    await prisma.pendingUser.update({
       where: { email },
       data: { verifyCode: otp, verifyExpiry: expiry },
     });
 
-    sendVerificationEmail(email, otp, user.username).catch((err) =>
+    sendVerificationEmail(email, otp, pending.username).catch((err) =>
       console.error("[RESEND_MAIL_ERROR]", err)
     );
 
