@@ -66,17 +66,14 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     // ── Save Google users to DB on first sign-in ──────────────────────────────
     async signIn({ user, account }) {
-      console.log("[DEBUG] Sign-in attempt for:", user.email);
-      console.log("[DEBUG] DATABASE_URL present:", !!process.env.DATABASE_URL);
-
       if (account?.provider === "google") {
         try {
           if (!user.email) {
-            console.error("[DEBUG] No email provided by Google");
-            return true; // Still allow sign-in to test flow
+            console.error("[GOOGLE_SIGNIN_ERROR] No email returned from Google");
+            return false;
           }
 
-          // Attempt DB write, but catch errors to prevent AccessDenied redirect
+          // Attempt DB write
           await prisma.user.upsert({
             where: { email: user.email },
             update: {
@@ -91,12 +88,16 @@ export const authOptions: NextAuthOptions = {
               emailVerified: new Date(),
             },
           });
-          console.log("[DEBUG] DB Sync successful");
+          
+          console.log("[GOOGLE_SIGNIN_SUCCESS] User saved to database");
+          return true;
         } catch (error) {
-          console.error("[DEBUG] DB Sync failed, but bypassing to allow sign-in:", error);
+          console.error("[GOOGLE_SIGNIN_DB_ERROR] Failed to upsert user:", error);
+          // Return false to block sign-in if database write fails (prevents inconsistent state)
+          return false;
         }
       }
-      return true; // Force success to bypass AccessDenied
+      return true;
     },
 
     async jwt({ token, user }) {
