@@ -68,22 +68,33 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account }) {
       if (account?.provider === "google") {
         try {
+          if (!user.email) {
+            console.error("[GOOGLE_SIGNIN_ERROR] No email returned from Google provider");
+            return false;
+          }
+
+          console.log(`[GOOGLE_SIGNIN_START] Attempting DB upsert for: ${user.email}`);
+          
           await prisma.user.upsert({
-            where: { email: user.email! },
+            where: { email: user.email },
             update: {
               name: user.name ?? undefined,
               image: user.image ?? undefined,
-              emailVerified: new Date(), // Google confirms email ownership
+              emailVerified: new Date(),
             },
             create: {
-              email: user.email!,
+              email: user.email,
               name: user.name ?? null,
               image: user.image ?? null,
               emailVerified: new Date(),
             },
           });
+          
+          console.log("[GOOGLE_SIGNIN_SUCCESS] User synchronized with database");
+          return true;
         } catch (error) {
-          console.error("[GOOGLE_SIGNIN_DB_ERROR]", error);
+          console.error("[GOOGLE_SIGNIN_DB_ERROR] Failed to upsert user:", error);
+          // Returning false triggers a redirect to the error page (set to "/")
           return false;
         }
       }
