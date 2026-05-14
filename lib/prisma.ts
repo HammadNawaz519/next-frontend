@@ -9,9 +9,11 @@ declare global {
 function getPrismaClient(): PrismaClient {
   const url = process.env.DATABASE_URL;
   if (!url) {
-    // If DATABASE_URL is missing (e.g. during build), return a default client.
-    // It will only fail if a query is actually executed.
-    return new PrismaClient();
+    // If DATABASE_URL is missing (e.g. during build), return a client with a dummy URL.
+    // This avoids construction errors while allowing the build to proceed.
+    return new PrismaClient({
+      datasourceUrl: "postgresql://dummy:dummy@localhost:5432/dummy",
+    });
   }
   // PrismaNeon takes a PoolConfig (not a Pool instance)
   const adapter = new PrismaNeon({ connectionString: url });
