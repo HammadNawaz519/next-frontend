@@ -1,14 +1,123 @@
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
 
-const handler = NextAuth({
+export const authOptions: NextAuthOptions = {
+  // No PrismaAdapter — JWT sessions are incompatible with it when using CredentialsProvider.
+  // We handle DB writes manually via signIn callback (Google) and /api/register (credentials).
+
   providers: [
+    // ── Google OAuth ──────────────────────────────────────────────────────────
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-  ],
-  secret: process.env.NEXTAUTH_SECRET,
-});
 
+    // ── Email + Password ──────────────────────────────────────────────────────
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Email and password are required.");
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+
+        if (!user || !user.password) {
+          throw new Error("No account found with this email.");
+        }
+
+        // Block unverified users
+        if (!user.emailVerified) {
+          throw new Error("EMAIL_NOT_VERIFIED");
+        }
+
+        const isPasswordValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
+
+        if (!isPasswordValid) {
+          throw new Error("Incorrect password.");
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name ?? user.username ?? null,
+          image: user.image,
+        };
+      },
+    }),
+  ],
+
+  session: {
+    strategy: "jwt",
+  },
+
+  callbacks: {
+    // ── Save Google users to DB on first sign-in ──────────────────────────────
+    async signIn({ user, account }) {
+      if (account?.provider === "google") {
+        try {
+          await prisma.user.upsert({
+            where: { email: user.email! },
+            update: {
+              name: user.name ?? undefined,
+              image: user.image ?? undefined,
+              emailVerified: new Date(), // Google confirms email ownership
+            },
+            create: {
+              email: user.email!,
+              name: user.name ?? null,
+              image: user.image ?? null,
+              emailVerified: new Date(),
+            },
+          });
+        } catch (error) {
+          console.error("[GOOGLE_SIGNIN_DB_ERROR]", error);
+          return false;
+        }
+      }
+      return true;
+    },
+
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.picture = user.image;
+      }
+      return token;
+    },
+
+    async session({ session, token }) {
+      if (token && session.user) {
+        (session.user as any).id = token.id;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
+        session.user.image = token.picture as string;
+      }
+      return session;
+    },
+  },
+
+  pages: {
+    signIn: "/",
+    error: "/",
+  },
+
+  secret: process.env.NEXTAUTH_SECRET,
+};
+
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
