@@ -9,7 +9,9 @@ declare global {
 function getPrismaClient(): PrismaClient {
   const url = process.env.DATABASE_URL;
   if (!url) {
-    throw new Error("DATABASE_URL is not set in environment variables.");
+    // If DATABASE_URL is missing (e.g. during build), return a default client.
+    // It will only fail if a query is actually executed.
+    return new PrismaClient();
   }
   // PrismaNeon takes a PoolConfig (not a Pool instance)
   const adapter = new PrismaNeon({ connectionString: url });
