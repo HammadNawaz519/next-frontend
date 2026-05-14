@@ -12,7 +12,11 @@ function getPrismaClient(): PrismaClient {
     // If DATABASE_URL is missing (e.g. during build), return a client with a dummy URL.
     // This avoids construction errors while allowing the build to proceed.
     return new PrismaClient({
-      datasourceUrl: "postgresql://dummy:dummy@localhost:5432/dummy",
+      datasources: {
+        db: {
+          url: "postgresql://dummy:dummy@localhost:5432/dummy",
+        },
+      },
     });
   }
   // PrismaNeon takes a PoolConfig (not a Pool instance)
