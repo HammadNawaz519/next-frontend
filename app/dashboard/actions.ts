@@ -83,3 +83,20 @@ export async function saveChatMessage(content: string, role: 'user' | 'ai') {
     }
   });
 }
+
+export async function getUserDetails() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return null;
+
+  return await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      createdAt: true,
+      image: true
+    }
+  });
+}
