@@ -19,6 +19,40 @@ model User {
   accounts Account[]
   sessions Session[]
   messages Message[]
+
+  sentSocialMessages     SocialMessage[] @relation("SentMessages")
+  receivedSocialMessages SocialMessage[] @relation("ReceivedMessages")
+  socialReactions        SocialReaction[]
+
+  callsMade     SocialCall[] @relation("CallsMade")
+  callsReceived SocialCall[] @relation("CallsReceived")
+}
+
+
+
+model SocialMessage {
+  id         String   @id @default(cuid())
+  content    String   @db.Text
+  type       String   @default("text") // "text", "image", "video", "voice", "deleted"
+  senderId   String
+  receiverId String
+  createdAt  DateTime @default(now())
+  isSeen     Boolean  @default(false)
+
+  sender    User             @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver  User             @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  reactions SocialReaction[]
+}
+
+model SocialReaction {
+  id        String   @id @default(cuid())
+  emoji     String
+  userId    String
+  messageId String
+  message   SocialMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId, emoji])
 }
 
 model Message {
@@ -75,3 +109,18 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+model SocialCall {
+  id         String   @id @default(cuid())
+  callerId   String
+  receiverId String
+  type       String   // "audio" or "video"
+  status     String   // "missed", "completed", "rejected"
+  duration   Int?     // in seconds
+  createdAt  DateTime @default(now())
+
+  caller   User @relation("CallsMade", fields: [callerId], references: [id], onDelete: Cascade)
+  receiver User @relation("CallsReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+}
+
+

@@ -132,7 +132,7 @@ export default function AuthenticationCard() {
     passwordRequirements.every((req) => req.test(formData.password))
 
   return (
-    <div className={`w-[450px] max-w-[450px] transition-all duration-700 ease-out ${getCardHeight()}`}>
+    <div className={`w-[450px] max-w-[450px] transition-[height] duration-500 ease-[var(--ease-premium)] will-change-[height] ${getCardHeight()}`}>
       <div className="relative h-full">
         {/* Glass morphism card */}
         <div className="absolute inset-0 bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl">
