@@ -23,7 +23,7 @@ interface User {
   name: string;
   email: string;
   image?: string;
-  online?: boolean;
+
   lastMessage?: string;
   unseenCount?: number;
 }
@@ -65,7 +65,6 @@ export default function SocialChat() {
   const [activeCall, setActiveCall] = useState<{ peer: any, type: 'audio' | 'video', isCaller: boolean } | null>(null);
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
-  const [onlineEmails, setOnlineEmails] = useState<Set<string>>(new Set());
   const [view, setView] = useState<'recent' | 'requests'>('recent');
   const [requests, setRequests] = useState<User[]>([]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -81,21 +80,6 @@ export default function SocialChat() {
       console.log('Socket connected, identifying...');
     });
 
-    newSocket.on('online_users_list', (emails: string[]) => {
-      setOnlineEmails(new Set(emails.map(e => e.toLowerCase().trim())));
-    });
-
-    newSocket.on('user_online', ({ email }) => {
-      setOnlineEmails(prev => new Set(prev).add(email.toLowerCase().trim()));
-    });
-
-    newSocket.on('user_offline', ({ email }) => {
-      setOnlineEmails(prev => {
-        const next = new Set(prev);
-        next.delete(email.toLowerCase().trim());
-        return next;
-      });
-    });
 
     newSocket.on('receive_social_message', (msg: Message) => {
       setMessages((prev) => {
@@ -485,21 +469,24 @@ export default function SocialChat() {
           </div>
           <div className="list">
             {(view === 'recent' ? users : requests).map((user) => {
-              const isOnline = onlineEmails.has(user.email);
               return (
                 <div key={user.id} className={`item ${selectedUser?.id === user.id ? 'active' : ''}`} onClick={() => setSelectedUser(user)}>
                   <div className="user-pfp">
-                    {user.image ? <img src={user.image} alt={user.name} /> : <div>{user.name?.charAt(0)}</div>}
+                    {user.image && user.image.length > 5 ? (
+                      <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
+                    ) : (
+                      <span>{user.name?.charAt(0).toUpperCase()}</span>
+                    )}
                   </div>
                   <div className="meta">
                     <b>
                       {user.name} 
                       <div className="side-meta">
                         {user.unseenCount && user.unseenCount > 0 ? <span className="unseen-badge">{user.unseenCount}</span> : null}
-                        <span className={`online-dot ${isOnline ? 'online' : ''}`} />
+
                       </div>
                     </b>
-                    <small>{user.lastMessage || `@${user.username}`}</small>
+                    <small>{user.lastMessage || `@${user.username || user.name?.toLowerCase().replace(/\s+/g, '') || user.email?.split('@')[0] || 'user'}`}</small>
                   </div>
                 </div>
               );
@@ -518,18 +505,17 @@ export default function SocialChat() {
               <div className="chat-header">
                 <div className="to">
                   <div className="avatar">
-                    {selectedUser.image ? <img src={selectedUser.image} alt={selectedUser.name} /> : <div>{selectedUser.name?.charAt(0)}</div>}
+                    {selectedUser.image && selectedUser.image.length > 5 ? (
+                      <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
+                    ) : (
+                      <span>{selectedUser.name?.charAt(0).toUpperCase()}</span>
+                    )}
                   </div>
                   <div className="info">
                     <div className="name">{selectedUser.name}</div>
                     <div className="status-text">
-                      {typingUsers.has(selectedUser.email) ? (
+                      {typingUsers.has(selectedUser.email) && (
                         <span className="typing-indicator">typing...</span>
-                      ) : (
-                        <>
-                          <span className={`status-dot ${onlineEmails.has(selectedUser.email) ? 'online' : ''}`} />
-                          {onlineEmails.has(selectedUser.email) ? 'online' : 'offline'}
-                        </>
                       )}
                     </div>
                   </div>
@@ -617,9 +603,19 @@ export default function SocialChat() {
                   );
                 })}
                 {!isLoadingMessages && messages.length === 0 && (
-                  <div className="empty-chat">
+                  <div className="empty-chat-state">
+                    <div className="empty-chat-pfp">
+                      {selectedUser.image && selectedUser.image.length > 5 ? (
+                        <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="avatar-initials">{selectedUser.name?.charAt(0).toUpperCase()}</div>
+                      )}
+                    </div>
                     <h3>Start a conversation</h3>
-                    <p>Send a message to start chatting with {selectedUser.name}</p>
+                    <p>Send a message to start chatting with <b>{selectedUser.name}</b></p>
+                    <div className="empty-chat-hint">
+                      Messages are encrypted and secure
+                    </div>
                   </div>
                 )}
                 <div ref={messagesEndRef} />

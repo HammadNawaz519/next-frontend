@@ -34,9 +34,6 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
     });
     res.socket.server.io = io;
 
-    // Use a map to track online users: email -> Set of socketIds
-    const onlineUsers = new Map<string, Set<string>>();
-
     io.on("connection", (socket: Socket) => {
       console.log("Socket connected:", socket.id);
 
@@ -44,20 +41,8 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
         if (!rawEmail) return;
         const email = rawEmail.toLowerCase().trim();
         socket.join(email); 
-        
-        if (!onlineUsers.has(email)) {
-          onlineUsers.set(email, new Set());
-        }
-        onlineUsers.get(email)!.add(socket.id);
         (socket as any).userEmail = email; 
-        
-        console.log(`User ${email} identified. Sockets: ${onlineUsers.get(email)!.size}`);
-        
-        // Broadcast that user is online
-        io.emit("user_online", { email });
-        
-        // Send the list of current online users to the newly connected user
-        socket.emit("online_users_list", Array.from(onlineUsers.keys()));
+        console.log(`User ${email} identified.`);
       });
 
       socket.on("send_social_message", (data: SocialMessageData) => {
@@ -119,18 +104,6 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
       });
 
       socket.on("disconnect", () => {
-        const email = (socket as any).userEmail;
-        if (email && onlineUsers.has(email)) {
-          const sockets = onlineUsers.get(email)!;
-          sockets.delete(socket.id);
-          if (sockets.size === 0) {
-            onlineUsers.delete(email);
-            io.emit("user_offline", { email });
-            console.log(`User ${email} went offline (all sockets closed)`);
-          } else {
-            console.log(`User ${email} closed one socket. Remaining: ${sockets.size}`);
-          }
-        }
         console.log("Socket disconnected:", socket.id);
       });
     });

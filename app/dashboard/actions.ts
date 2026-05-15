@@ -111,7 +111,7 @@ export async function searchUsers(query: string) {
         { name: { contains: query, mode: 'insensitive' } },
         { username: { contains: query, mode: 'insensitive' } }
       ],
-      NOT: { email: session.user.email }
+      NOT: { id: (session.user as any).id }
     },
     select: {
       id: true,

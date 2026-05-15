@@ -174,7 +174,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex-1 min-w-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden">
                 <p className="text-[13px] font-normal text-gray-900 truncate group-hover/profile:text-indigo-600 transition-colors">
-                  {session.user?.name || 'User'}
+                  {session.user?.name || session.user?.email?.split('@')[0] || 'User'}
                 </p>
                 <p className="text-[10px] text-gray-400 truncate uppercase tracking-widest mt-0.5">
                   View Profile
@@ -328,7 +328,7 @@ export default function DashboardPage() {
             {/* Content */}
             <div className="flex-1 p-10 space-y-3.5 overflow-hidden">
               {[
-                { label: 'Identifier', value: `@${fullUser?.username || 'user'}`, icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+                { label: 'Username', value: `@${fullUser?.username || fullUser?.name?.toLowerCase().replace(/\s+/g, '') || fullUser?.email?.split('@')[0] || 'user'}`, icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
                 { label: 'Mail Channel', value: fullUser?.email, icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
                 { label: 'Joined Date', value: fullUser?.createdAt ? new Date(fullUser.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '---', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
               ].map((detail) => (
