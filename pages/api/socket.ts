@@ -34,19 +34,32 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
     });
     res.socket.server.io = io;
 
+    // Use a map to track online users: email -> socketId
+    const onlineUsers = new Map<string, string>();
+
     io.on("connection", (socket: Socket) => {
       console.log("Socket connected:", socket.id);
 
       socket.on("identify", ({ email }: { email: string }) => {
+        if (!email) return;
         socket.join(email); // Join a room for their email
+        onlineUsers.set(email, socket.id);
+        (socket as any).userEmail = email; // Store email on socket for disconnect handling
+        
         console.log(`User ${email} joined room`);
+        
+        // Broadcast that user is online
+        io.emit("user_online", { email });
+        
+        // Send the list of current online users to the newly connected user
+        socket.emit("online_users_list", Array.from(onlineUsers.keys()));
       });
 
       socket.on("send_social_message", (data: SocialMessageData) => {
         const { receiverEmail, ...msgData } = data;
         // Emit to the receiver's room
         socket.to(receiverEmail).emit("receive_social_message", msgData);
-        // Also emit back to the sender
+        // Also emit back to the sender (optional, usually sender updates UI optimistically)
         socket.emit("receive_social_message", msgData);
       });
 
@@ -60,18 +73,26 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
         socket.to(receiverEmail).emit("receive_social_delete", deleteData);
       });
 
+      socket.on("typing", ({ receiverEmail }) => {
+        const senderEmail = (socket as any).userEmail;
+        socket.to(receiverEmail).emit("user_typing", { email: senderEmail });
+      });
+
+      socket.on("stop_typing", ({ receiverEmail }) => {
+        const senderEmail = (socket as any).userEmail;
+        socket.to(receiverEmail).emit("user_stop_typing", { email: senderEmail });
+      });
+
       socket.on('mark_as_seen', (data) => {
         socket.broadcast.emit('messages_seen', data);
       });
 
       // --- CALL EVENTS ---
       socket.on('call_user', (data) => {
-        // data: { to: receiverEmail, from: senderUser, type: 'audio'|'video' }
         socket.to(data.to).emit('incoming_call', { from: data.from, type: data.type });
       });
 
       socket.on('accept_call', (data) => {
-        // data: { to: callerEmail }
         socket.to(data.to).emit('call_accepted', { from: data.from });
       });
 
@@ -80,7 +101,6 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
       });
 
       socket.on('webrtc_signal', (data) => {
-        // data: { to: peerEmail, signal: offer/answer/candidate }
         socket.to(data.to).emit('webrtc_signal', data.signal);
       });
 
@@ -89,7 +109,12 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
       });
 
       socket.on("disconnect", () => {
-
+        const email = (socket as any).userEmail;
+        if (email) {
+          onlineUsers.delete(email);
+          io.emit("user_offline", { email });
+          console.log(`User ${email} went offline`);
+        }
         console.log("Socket disconnected:", socket.id);
       });
     });

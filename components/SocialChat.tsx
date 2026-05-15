@@ -63,6 +63,8 @@ export default function SocialChat() {
   const [incomingCall, setIncomingCall] = useState<{ from: any, type: 'audio' | 'video' } | null>(null);
   const [activeCall, setActiveCall] = useState<{ peer: any, type: 'audio' | 'video', isCaller: boolean } | null>(null);
   const [showAIMention, setShowAIMention] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 
   // Initialize Socket
@@ -77,9 +79,29 @@ export default function SocialChat() {
       }
     });
 
+    newSocket.on('online_users_list', (emails: string[]) => {
+      setUsers(prev => prev.map(u => ({ ...u, online: emails.includes(u.email) })));
+    });
+
+    newSocket.on('user_online', ({ email }) => {
+      setUsers(prev => prev.map(u => u.email === email ? { ...u, online: true } : u));
+      if (selectedUser?.email === email) {
+        setSelectedUser(prev => prev ? { ...prev, online: true } : null);
+      }
+    });
+
+    newSocket.on('user_offline', ({ email }) => {
+      setUsers(prev => prev.map(u => u.email === email ? { ...u, online: false } : u));
+      if (selectedUser?.email === email) {
+        setSelectedUser(prev => prev ? { ...prev, online: false } : null);
+      }
+    });
+
     newSocket.on('receive_social_message', (msg: Message) => {
+      // If the message is from the person we are chatting with OR from us (sync across tabs)
       setMessages((prev) => {
         if (prev.some(m => m.id === msg.id)) return prev;
+        // If it's an optimistic message update, replace it or skip adding
         return [...prev, msg];
       });
       // If we are currently chatting with this person, mark it as seen
@@ -135,12 +157,26 @@ export default function SocialChat() {
       setIncomingCall(null);
     });
 
+    newSocket.on('user_typing', ({ email }) => {
+      setTypingUsers(prev => new Set(prev).add(email));
+    });
+
+    newSocket.on('user_stop_typing', ({ email }) => {
+      setTypingUsers(prev => {
+        const next = new Set(prev);
+        next.delete(email);
+        return next;
+      });
+    });
+
     return () => { 
       newSocket.disconnect();
       newSocket.off('incoming_call');
       newSocket.off('call_accepted');
       newSocket.off('call_rejected');
       newSocket.off('call_ended');
+      newSocket.off('user_typing');
+      newSocket.off('user_stop_typing');
     };
   }, [session, selectedUser]);
 
@@ -237,15 +273,16 @@ export default function SocialChat() {
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!inputValue.trim() || !selectedUser || !socket) return;
+    if (!inputValue.trim() || !selectedUser || !socket || !session?.user) return;
 
     const currentContent = inputValue;
+    const senderId = (session.user as any).id;
     setInputValue('');
     setShowAIMention(false);
 
     if (currentContent.toLowerCase().startsWith('/ai ') || currentContent.toLowerCase().startsWith('@ai ')) {
-      const prompt = currentContent.startsWith('/ai ') ? currentContent.substring(4) : currentContent.substring(4);
-      const userMsg: any = { id: 'ai-user-' + Date.now(), content: currentContent, senderId: (session?.user as any).id, createdAt: new Date(), type: 'text' };
+      const prompt = currentContent.toLowerCase().startsWith('/ai ') ? currentContent.substring(4) : currentContent.substring(4);
+      const userMsg: any = { id: 'ai-user-' + Date.now(), content: currentContent, senderId, createdAt: new Date(), type: 'text' };
       setMessages(prev => [...prev, userMsg]);
 
       const aiResponse = await askAI(prompt);
@@ -254,13 +291,33 @@ export default function SocialChat() {
       return;
     }
 
+    // Optimistic UI Update
+    const tempId = 'temp-' + Date.now();
+    const optimisticMsg: Message = {
+      id: tempId,
+      senderId: senderId,
+      receiverId: selectedUser.id,
+      content: currentContent,
+      type: 'text',
+      createdAt: new Date(),
+      isSeen: false
+    };
+
+    setMessages(prev => [...prev, optimisticMsg]);
+
     try {
       const savedMsg = await saveSocialMessage(selectedUser.id, currentContent);
       if (savedMsg) {
+        // Replace optimistic message with real one
+        setMessages(prev => prev.map(m => m.id === tempId ? (savedMsg as any) : m));
         socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...savedMsg });
-        setMessages((prev) => [...prev, savedMsg as any]);
       }
-    } catch (err) { console.error("Failed to send message:", err); }
+    } catch (err) { 
+      console.error("Failed to send message:", err); 
+      // Optionally remove the optimistic message or show error
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      alert("Failed to send message. Please try again.");
+    }
   };
 
   const startRecording = async () => {
@@ -279,11 +336,31 @@ export default function SocialChat() {
         const reader = new FileReader();
         reader.onloadend = async () => {
           const base64Audio = reader.result as string;
-          if (selectedUser && socket) {
-            const savedMsg = await saveSocialMessage(selectedUser.id, base64Audio, 'voice');
-            if (savedMsg) {
-              socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...savedMsg });
-              setMessages((prev) => [...prev, savedMsg as any]);
+          if (selectedUser && socket && session?.user) {
+            const senderId = (session.user as any).id;
+            const tempId = 'temp-voice-' + Date.now();
+            
+            // Optimistic Update
+            const optimisticMsg: any = {
+              id: tempId,
+              senderId: senderId,
+              receiverId: selectedUser.id,
+              content: base64Audio,
+              type: 'voice',
+              createdAt: new Date(),
+              isSeen: false
+            };
+            setMessages(prev => [...prev, optimisticMsg]);
+
+            try {
+              const savedMsg = await saveSocialMessage(selectedUser.id, base64Audio, 'voice');
+              if (savedMsg) {
+                setMessages(prev => prev.map(m => m.id === tempId ? (savedMsg as any) : m));
+                socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...savedMsg });
+              }
+            } catch (err) {
+              console.error("Failed to send voice message:", err);
+              setMessages(prev => prev.filter(m => m.id !== tempId));
             }
           }
         };
@@ -308,15 +385,35 @@ export default function SocialChat() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !selectedUser || !socket) return;
+    if (!file || !selectedUser || !socket || !session?.user) return;
     const reader = new FileReader();
     reader.onload = async () => {
       const base64 = reader.result as string;
       const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'file';
-      const savedMsg = await saveSocialMessage(selectedUser.id, base64, type);
-      if (savedMsg) {
-        socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...savedMsg });
-        setMessages((prev) => [...prev, savedMsg as any]);
+      const senderId = (session.user as any).id;
+      const tempId = 'temp-file-' + Date.now();
+
+      // Optimistic Update
+      const optimisticMsg: any = {
+        id: tempId,
+        senderId: senderId,
+        receiverId: selectedUser.id,
+        content: base64,
+        type: type,
+        createdAt: new Date(),
+        isSeen: false
+      };
+      setMessages(prev => [...prev, optimisticMsg]);
+
+      try {
+        const savedMsg = await saveSocialMessage(selectedUser.id, base64, type);
+        if (savedMsg) {
+          setMessages(prev => prev.map(m => m.id === tempId ? (savedMsg as any) : m));
+          socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...savedMsg });
+        }
+      } catch (err) {
+        console.error("Failed to upload file:", err);
+        setMessages(prev => prev.filter(m => m.id !== tempId));
       }
     };
     reader.readAsDataURL(file);
@@ -394,8 +491,14 @@ export default function SocialChat() {
                   <div className="info">
                     <div className="name">{selectedUser.name}</div>
                     <div className="status-text">
-                      <span className={`status-dot ${selectedUser.online ? 'online' : ''}`} />
-                      {selectedUser.online ? 'online' : 'offline'}
+                      {typingUsers.has(selectedUser.email) ? (
+                        <span className="typing-indicator">typing...</span>
+                      ) : (
+                        <>
+                          <span className={`status-dot ${selectedUser.online ? 'online' : ''}`} />
+                          {selectedUser.online ? 'online' : 'offline'}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -503,6 +606,20 @@ export default function SocialChat() {
                       onChange={(e) => {
                         const val = e.target.value;
                         setInputValue(val);
+                        
+                        // Typing Indicator Logic
+                        if (socket && selectedUser) {
+                          if (!typingTimeoutRef.current) {
+                            socket.emit('typing', { receiverEmail: selectedUser.email });
+                          } else {
+                            clearTimeout(typingTimeoutRef.current);
+                          }
+                          typingTimeoutRef.current = setTimeout(() => {
+                            socket.emit('stop_typing', { receiverEmail: selectedUser.email });
+                            typingTimeoutRef.current = null;
+                          }, 2000);
+                        }
+
                         // Show popup if the last character is @ or if we're typing an @ mention
                         const lastWord = val.split(' ').pop() || '';
                         if (lastWord.startsWith('@')) {
