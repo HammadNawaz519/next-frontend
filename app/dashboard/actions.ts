@@ -300,15 +300,37 @@ export async function getRecentChats() {
 
   // Merge and sort
   const partners = new Map();
-  sent.forEach(m => partners.set(m.receiverId, { ...m.receiver, lastMessage: formatLastMessage(m), lastTime: m.createdAt }));
+  
+  // Get unseen counts for each sender
+  const unseenMessages = await prisma.socialMessage.groupBy({
+    by: ['senderId'],
+    where: {
+      receiverId: currentUser.id,
+      isSeen: false
+    },
+    _count: true
+  });
+  const unseenMap = new Map(unseenMessages.map(m => [m.senderId, m._count]));
+
+  sent.forEach(m => partners.set(m.receiverId, { ...m.receiver, lastMessage: formatLastMessage(m), lastTime: m.createdAt, isRequest: false, unseenCount: 0 }));
   received.forEach(m => {
     const existing = partners.get(m.senderId);
+    // If we have sent them a message, they are a contact (isRequest = false)
+    // If we have only received, they are a request (isRequest = true)
+    const isRequest = !partners.has(m.senderId);
+    
     if (!existing || m.createdAt > existing.lastTime) {
-      partners.set(m.senderId, { ...m.sender, lastMessage: formatLastMessage(m), lastTime: m.createdAt });
+      partners.set(m.senderId, { 
+        ...m.sender, 
+        lastMessage: formatLastMessage(m), 
+        lastTime: m.createdAt,
+        isRequest: isRequest,
+        unseenCount: unseenMap.get(m.senderId) || 0
+      });
     }
   });
 
-  return Array.from(partners.values()).sort((a, b) => b.lastTime - a.lastTime);
+  return Array.from(partners.values()).sort((a, b) => (b.lastTime as any) - (a.lastTime as any));
 }
 
 

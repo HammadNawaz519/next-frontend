@@ -30,7 +30,6 @@
   overflow: hidden;
   border-radius: var(--card-radius);
   position: relative;
-  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
 }
 
 /* =========================================
@@ -429,6 +428,7 @@
   top: 50%;
   transform: translateY(-50%);
   z-index: 20;
+  pointer-events: none;
 }
 
 .social-chat-container .msg-wrapper.sent .msg-actions {
@@ -442,6 +442,27 @@
 
 .social-chat-container .msg-wrapper:hover .msg-actions {
   opacity: 1;
+  pointer-events: auto;
+}
+
+.social-chat-container .msg-action-btn {
+  font-size: 1rem;
+  padding: 6px;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: all 0.2s;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  border-left: 1px solid #f3f4f6;
+  padding-left: 10px;
+}
+
+.social-chat-container .msg-action-btn:hover {
+  color: #ef4444;
+  background: #fee2e2;
 }
 
 /* FOOTER */
@@ -783,20 +804,117 @@
   position: relative;
 }
 
-.social-chat-container .msg[id^="temp-"]::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: inherit;
+.social-chat-container .search-wrap {
+  padding: 24px 20px 12px;
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+.social-chat-container .view-toggle {
+  display: flex;
+  background: var(--cream);
+  padding: 4px;
+  border-radius: 50px;
+  margin-top: 16px;
+  gap: 4px;
+}
+
+.social-chat-container .view-toggle button {
+  flex: 1;
+  padding: 8px;
+  border-radius: 50px;
+  border: none;
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.social-chat-container .view-toggle button.active {
+  background: var(--white);
+  color: var(--charcoal);
+  box-shadow: var(--shadow-sm);
+}
+
+.social-chat-container .view-toggle .count {
+  background: var(--charcoal);
+  color: var(--white);
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 50px;
+}
+
+.social-chat-container .accept-req-btn {
+  padding: 8px 16px;
+  background: var(--charcoal);
+  color: var(--white);
+  border: none;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 12px;
+}
+
+.social-chat-container .accept-req-btn:hover {
+  background: #333;
+  transform: translateY(-1px);
+}
+
+.social-chat-container .msg-del-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+  border-left: 1px solid #f3f4f6;
+  padding-left: 8px;
+}
+
+.social-chat-container .msg-del-actions .msg-action-btn {
+  margin-left: 0;
+  border-left: none;
+  padding-left: 6px;
+  font-size: 0.75rem;
+  gap: 4px;
+}
+
+.social-chat-container .msg-del-actions .msg-action-btn:hover[title="Delete for me"] {
+  color: #f59e0b;
+  background: #fef3c7;
+}
+
+.social-chat-container .msg-del-actions .msg-action-btn:hover[title="Delete for everyone"] {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.social-chat-container .side-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.social-chat-container .unseen-badge {
+  background: var(--charcoal);
+  color: var(--white);
+  font-size: 0.65rem;
+  font-weight: 800;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  animation: badge-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes badge-pop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
 }

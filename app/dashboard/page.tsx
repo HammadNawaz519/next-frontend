@@ -63,7 +63,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isAiTyping]);
+  }, [messages.length, isAiTyping, activeView]);
 
   if (status === 'loading' || isHistoryLoading) return (
     <div className="h-screen w-full flex items-center justify-center bg-white">
@@ -304,7 +304,7 @@ export default function DashboardPage() {
         {/* Profile Side Panel */}
         {isProfileOpen && (
           <div 
-            className="absolute left-2 top-2 bottom-2 w-[calc(50%-1rem)] z-50 bg-white/95 backdrop-blur-xl border border-gray-100 shadow-[20px_0_50px_rgba(0,0,0,0.03)] animate-in slide-in-from-left duration-500 ease-[var(--ease-premium)] will-change-transform flex flex-col rounded-[2.5rem]"
+            className="absolute left-2 top-2 bottom-2 w-[calc(50%-1rem)] z-50 bg-white/95 backdrop-blur-xl border border-gray-300 shadow-[20px_0_50px_rgba(0,0,0,0.03)] animate-in slide-in-from-left duration-500 ease-[var(--ease-premium)] will-change-transform flex flex-col rounded-[2.5rem]"
           >
             {/* Header / Avatar Section */}
             <div className="relative h-[30%] bg-white flex flex-col items-center justify-center overflow-hidden border-b border-gray-100 rounded-t-[2.5rem]">
@@ -332,7 +332,7 @@ export default function DashboardPage() {
                 { label: 'Mail Channel', value: fullUser?.email, icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
                 { label: 'Joined Date', value: fullUser?.createdAt ? new Date(fullUser.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '---', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
               ].map((detail) => (
-                <div key={detail.label} className="py-4 px-5 border border-gray-100 bg-gray-50/30 flex items-center justify-between group/item hover:bg-white hover:border-gray-200 hover:shadow-sm rounded-2xl transition-all">
+                <div key={detail.label} className="py-4 px-5 border border-gray-200 bg-gray-50/30 flex items-center justify-between group/item hover:bg-white hover:border-gray-200 hover:shadow-sm rounded-2xl transition-all">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center text-indigo-500 shadow-xs">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

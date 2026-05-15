@@ -25,6 +25,7 @@ interface User {
   image?: string;
   online?: boolean;
   lastMessage?: string;
+  unseenCount?: number;
 }
 
 interface Message {
@@ -65,6 +66,8 @@ export default function SocialChat() {
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [onlineEmails, setOnlineEmails] = useState<Set<string>>(new Set());
+  const [view, setView] = useState<'recent' | 'requests'>('recent');
+  const [requests, setRequests] = useState<User[]>([]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 
@@ -79,17 +82,17 @@ export default function SocialChat() {
     });
 
     newSocket.on('online_users_list', (emails: string[]) => {
-      setOnlineEmails(new Set(emails));
+      setOnlineEmails(new Set(emails.map(e => e.toLowerCase().trim())));
     });
 
     newSocket.on('user_online', ({ email }) => {
-      setOnlineEmails(prev => new Set(prev).add(email));
+      setOnlineEmails(prev => new Set(prev).add(email.toLowerCase().trim()));
     });
 
     newSocket.on('user_offline', ({ email }) => {
       setOnlineEmails(prev => {
         const next = new Set(prev);
-        next.delete(email);
+        next.delete(email.toLowerCase().trim());
         return next;
       });
     });
@@ -99,25 +102,18 @@ export default function SocialChat() {
         if (prev.some(m => m.id === msg.id)) return prev;
         return [...prev, msg];
       });
+
+      // Update unseenCount if not currently chatting with this person
+      if (!selectedUser || msg.senderId !== selectedUser.id) {
+        setUsers(prev => prev.map(u => u.id === msg.senderId ? { ...u, unseenCount: (u.unseenCount || 0) + 1 } : u));
+        setRequests(prev => prev.map(u => u.id === msg.senderId ? { ...u, unseenCount: (u.unseenCount || 0) + 1 } : u));
+      }
+
       // If we are currently chatting with this person, mark it as seen
       if (selectedUser && msg.senderId === selectedUser.id) {
         markMessagesAsSeen(selectedUser.id);
         newSocket.emit('mark_as_seen', { senderEmail: selectedUser.email });
       }
-    });
-
-    newSocket.on('receive_social_reaction', ({ messageId, emoji }) => {
-      setMessages(prev => prev.map(m => {
-        if (m.id === messageId) {
-          const reactions = m.reactions || [];
-          const existing = reactions.find(r => r.emoji === emoji);
-          if (existing) {
-             return { ...m, reactions: reactions.map(r => r.emoji === emoji ? { ...r, count: r.count + 1 } : r) };
-          }
-          return { ...m, reactions: [...reactions, { emoji, count: 1 }] };
-        }
-        return m;
-      }));
     });
 
     newSocket.on('receive_social_delete', ({ messageId }) => {
@@ -247,7 +243,19 @@ export default function SocialChat() {
       }, 300);
       return () => clearTimeout(delayDebounce);
     } else {
-      getRecentChats().then(results => setUsers(results as any));
+      getRecentChats().then(results => {
+        const contacts: User[] = [];
+        const reqs: User[] = [];
+        
+        results.forEach((u: any) => {
+          if (u.isRequest) reqs.push(u);
+          else contacts.push(u);
+        });
+        
+        setUsers(contacts);
+        // Ensure Mutual Exclusivity to prevent Duplicate Key errors
+        setRequests(reqs.filter(r => !contacts.some(c => c.id === r.id)));
+      });
     }
   }, [searchQuery]);
 
@@ -256,6 +264,11 @@ export default function SocialChat() {
     async function loadMessages() {
       if (!selectedUser) return;
       setIsLoadingMessages(true);
+      
+      // Clear local unseenCount immediately
+      setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, unseenCount: 0 } : u));
+      setRequests(prev => prev.map(u => u.id === selectedUser.id ? { ...u, unseenCount: 0 } : u));
+
       try {
         const history = await getSocialMessages(selectedUser.id);
         setMessages(history as any);
@@ -421,26 +434,27 @@ export default function SocialChat() {
     reader.readAsDataURL(file);
   };
 
-  const handleReact = async (msgId: string, emoji: string) => {
-    await reactToSocialMessage(msgId, emoji);
-    socket?.emit('react_social_message', { messageId: msgId, emoji, receiverEmail: selectedUser?.email });
-    setMessages(prev => prev.map(m => {
-      if (m.id === msgId) {
-        const reactions = m.reactions || [];
-        return { ...m, reactions: [...reactions, { emoji, count: 1 }] };
-      }
-      return m;
-    }));
+  const handleDelete = async (msgId: string, type: 'me' | 'everyone') => {
+    if (type === 'everyone' && !confirm("Delete for everyone?")) return;
+    
+    await deleteSocialMessage(msgId, type);
+    if (type === 'everyone') {
+      socket?.emit('delete_social_message', { messageId: msgId, receiverEmail: selectedUser?.email });
+      setMessages(prev => prev.map(m => {
+        if (m.id === msgId) return { ...m, content: "🚫 This message was deleted", type: "deleted" };
+        return m;
+      }));
+    } else {
+      // Local delete
+      setMessages(prev => prev.filter(m => m.id !== msgId));
+    }
   };
 
-  const handleDelete = async (msgId: string) => {
-    if (!confirm("Delete for everyone?")) return;
-    await deleteSocialMessage(msgId, 'everyone');
-    socket?.emit('delete_social_message', { messageId: msgId, receiverEmail: selectedUser?.email });
-    setMessages(prev => prev.map(m => {
-      if (m.id === msgId) return { ...m, content: "🚫 This message was deleted", type: "deleted" };
-      return m;
-    }));
+  const handleAcceptRequest = () => {
+    if (!selectedUser) return;
+    setUsers(prev => [...prev, { ...selectedUser, unseenCount: 0 }]);
+    setRequests(prev => prev.filter(u => u.id !== selectedUser.id));
+    setView('recent');
   };
 
   const initiateCall = (type: 'audio' | 'video') => {
@@ -460,26 +474,39 @@ export default function SocialChat() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            <div className="view-toggle">
+              <button className={view === 'recent' ? 'active' : ''} onClick={() => setView('recent')}>
+                Chats
+              </button>
+              <button className={view === 'requests' ? 'active' : ''} onClick={() => setView('requests')}>
+                Requests {requests.length > 0 && <span className="count">{requests.length}</span>}
+              </button>
+            </div>
           </div>
-                <div className="list">
-                  {users.map((user) => {
-                    const isOnline = onlineEmails.has(user.email);
-                    return (
-                      <div key={user.id} className={`item ${selectedUser?.id === user.id ? 'active' : ''}`} onClick={() => setSelectedUser(user)}>
-                        <div className="user-pfp">
-                          {user.image ? <img src={user.image} alt={user.name} /> : <div>{user.name?.charAt(0)}</div>}
-                        </div>
-                        <div className="meta">
-                          <b>{user.name} <span className={`online-dot ${isOnline ? 'online' : ''}`} /></b>
-                          <small>{user.lastMessage || `@${user.username}`}</small>
-                        </div>
+          <div className="list">
+            {(view === 'recent' ? users : requests).map((user) => {
+              const isOnline = onlineEmails.has(user.email);
+              return (
+                <div key={user.id} className={`item ${selectedUser?.id === user.id ? 'active' : ''}`} onClick={() => setSelectedUser(user)}>
+                  <div className="user-pfp">
+                    {user.image ? <img src={user.image} alt={user.name} /> : <div>{user.name?.charAt(0)}</div>}
+                  </div>
+                  <div className="meta">
+                    <b>
+                      {user.name} 
+                      <div className="side-meta">
+                        {user.unseenCount && user.unseenCount > 0 ? <span className="unseen-badge">{user.unseenCount}</span> : null}
+                        <span className={`online-dot ${isOnline ? 'online' : ''}`} />
                       </div>
-                    );
-                  })}
-                  {users.length === 0 && searchQuery.length < 2 && (
+                    </b>
+                    <small>{user.lastMessage || `@${user.username}`}</small>
+                  </div>
+                </div>
+              );
+            })}
+            {(view === 'recent' ? users : requests).length === 0 && searchQuery.length < 2 && (
               <div className="empty-state">
-                <div className="empty-icon">💬</div>
-                <p>No recent conversations</p>
+                <p>{view === 'recent' ? 'No recent conversations' : 'No message requests'}</p>
               </div>
             )}
           </div>
@@ -507,7 +534,12 @@ export default function SocialChat() {
                     </div>
                   </div>
                 </div>
-                <div className="chat-header-right">
+                  <div className="chat-header-right">
+                  {requests.some(r => r.id === selectedUser.id) && (
+                    <button className="accept-req-btn" onClick={handleAcceptRequest}>
+                      Accept Request
+                    </button>
+                  )}
                   <button className="call-btn" onClick={() => handleCall('audio')} title="Audio Call">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
                   </button>
@@ -570,28 +602,26 @@ export default function SocialChat() {
                           )}
 
                         </div>
-
-                        {msg.reactions && msg.reactions.length > 0 && (
-                          <div className="msg-reactions">
-                            {msg.reactions.map((r, i) => (
-                              <span key={i} className="reaction-badge">{r.emoji} {r.count}</span>
-                            ))}
-                          </div>
-                        )}
                       </div>
                       
-                      {msg.type !== 'deleted' && (
+                      {msg.type !== 'deleted' && msg.type !== 'call' && (
                         <div className="msg-actions">
-                          {['❤️', '😂', '😮', '😢', '👍'].map(em => (
-                            <span key={em} className="quick-react" onClick={() => handleReact(msg.id, em)}>{em}</span>
-                          ))}
-                          {isSent && <span className="msg-action-btn" title="Delete" onClick={() => handleDelete(msg.id)}>🗑</span>}
+                          <div className="msg-del-actions">
+                            <span className="msg-action-btn" title="Delete for me" onClick={() => handleDelete(msg.id, 'me')}>🗑 Me</span>
+                            {isSent && <span className="msg-action-btn" title="Delete for everyone" onClick={() => handleDelete(msg.id, 'everyone')}>🗑 All</span>}
+                          </div>
                         </div>
                       )}
                     </div>
 
                   );
                 })}
+                {!isLoadingMessages && messages.length === 0 && (
+                  <div className="empty-chat">
+                    <h3>Start a conversation</h3>
+                    <p>Send a message to start chatting with {selectedUser.name}</p>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -691,11 +721,6 @@ export default function SocialChat() {
             </>
           ) : (
             <div className="empty-state">
-              <div className="empty-icon">
-                <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor">
-                  <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z" />
-                </svg>
-              </div>
               <h3>Select a Chat</h3>
               <p>Choose a contact to start messaging or search for new people.</p>
             </div>
