@@ -322,7 +322,7 @@ export default function DashboardPage() {
                 {fullUser?.name?.slice(0, 1).toUpperCase() || 'U'}
               </div>
               <h3 className="text-xl font-normal tracking-tight text-gray-900 z-10">{fullUser?.name || 'User'}</h3>
-              <p className="text-[10px] text-indigo-500 uppercase tracking-[0.4em] mt-1 font-medium z-10">Access Tier: Pro</p>
+
             </div>
 
             {/* Content */}
