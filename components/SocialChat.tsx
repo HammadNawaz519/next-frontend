@@ -64,6 +64,7 @@ export default function SocialChat() {
   const [activeCall, setActiveCall] = useState<{ peer: any, type: 'audio' | 'video', isCaller: boolean } | null>(null);
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [onlineEmails, setOnlineEmails] = useState<Set<string>>(new Set());
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 
@@ -74,34 +75,28 @@ export default function SocialChat() {
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-      if (session?.user?.email) {
-        newSocket.emit('identify', { email: session.user.email });
-      }
+      console.log('Socket connected, identifying...');
     });
 
     newSocket.on('online_users_list', (emails: string[]) => {
-      setUsers(prev => prev.map(u => ({ ...u, online: emails.includes(u.email) })));
+      setOnlineEmails(new Set(emails));
     });
 
     newSocket.on('user_online', ({ email }) => {
-      setUsers(prev => prev.map(u => u.email === email ? { ...u, online: true } : u));
-      if (selectedUser?.email === email) {
-        setSelectedUser(prev => prev ? { ...prev, online: true } : null);
-      }
+      setOnlineEmails(prev => new Set(prev).add(email));
     });
 
     newSocket.on('user_offline', ({ email }) => {
-      setUsers(prev => prev.map(u => u.email === email ? { ...u, online: false } : u));
-      if (selectedUser?.email === email) {
-        setSelectedUser(prev => prev ? { ...prev, online: false } : null);
-      }
+      setOnlineEmails(prev => {
+        const next = new Set(prev);
+        next.delete(email);
+        return next;
+      });
     });
 
     newSocket.on('receive_social_message', (msg: Message) => {
-      // If the message is from the person we are chatting with OR from us (sync across tabs)
       setMessages((prev) => {
         if (prev.some(m => m.id === msg.id)) return prev;
-        // If it's an optimistic message update, replace it or skip adding
         return [...prev, msg];
       });
       // If we are currently chatting with this person, mark it as seen
@@ -171,41 +166,48 @@ export default function SocialChat() {
 
     return () => { 
       newSocket.disconnect();
-      newSocket.off('incoming_call');
-      newSocket.off('call_accepted');
-      newSocket.off('call_rejected');
-      newSocket.off('call_ended');
-      newSocket.off('user_typing');
-      newSocket.off('user_stop_typing');
     };
-  }, [session, selectedUser]);
+  }, [session?.user?.email]); 
+
+  // Re-identify if session becomes available after connection
+  useEffect(() => {
+    if (socket?.connected && session?.user?.email) {
+      socket.emit('identify', { email: session.user.email.toLowerCase().trim() });
+    }
+  }, [session?.user?.email, socket]);
 
   const handleCall = async (type: 'audio' | 'video') => {
     if (!selectedUser || !session?.user || !socket) return;
 
-    // 1. Save call to DB (initial record)
-    const result = await saveCall(selectedUser.id, type, 'missed');
-    if (result?.message && socket) {
-      socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...result.message });
-      setMessages(prev => [...prev, result.message as any]);
-    }
-
-    // 2. Emit call event
+    // 1. Emit call event IMMEDIATELY for low latency
+    const callTarget = selectedUser.email.toLowerCase().trim();
     socket.emit('call_user', {
-      to: selectedUser.email,
+      to: callTarget,
       from: session.user,
       type
     });
 
-    // 3. Set local active call state
+    // 2. Set local active call state
     setActiveCall({ peer: selectedUser, type, isCaller: true });
+
+    // 3. Save call to DB in background
+    try {
+      const result = await saveCall(selectedUser.id, type, 'missed');
+      if (result?.message && socket) {
+        socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...result.message });
+        setMessages(prev => [...prev, result.message as any]);
+      }
+    } catch (err) {
+      console.error("Failed to log call:", err);
+    }
   };
 
   const handleAcceptCall = () => {
     if (!incomingCall || !socket) return;
     
+    const target = incomingCall.from.email.toLowerCase().trim();
     socket.emit('accept_call', {
-      to: incomingCall.from.email,
+      to: target,
       from: session?.user
     });
 
@@ -215,11 +217,12 @@ export default function SocialChat() {
 
   const handleRejectCall = async () => {
     if (!incomingCall || !socket) return;
-    socket.emit('reject_call', { to: incomingCall.from.email });
+    const target = incomingCall.from.email.toLowerCase().trim();
+    socket.emit('reject_call', { to: target });
     // Save as rejected call
     const result = await saveCall(incomingCall.from.id, incomingCall.type, 'rejected');
     if (result?.message) {
-      socket.emit('send_social_message', { receiverEmail: incomingCall.from.email, ...result.message });
+      socket.emit('send_social_message', { receiverEmail: target, ...result.message });
       // If we are currently in that chat, add it
       if (selectedUser?.id === incomingCall.from.id) {
         setMessages(prev => [...prev, result.message as any]);
@@ -230,7 +233,8 @@ export default function SocialChat() {
 
   const handleEndCall = () => {
     if (!activeCall || !socket) return;
-    socket.emit('end_call', { to: activeCall.peer.email });
+    const target = activeCall.peer.email.toLowerCase().trim();
+    socket.emit('end_call', { to: target });
     // Note: The onEnd callback in CallInterface will handle the database save
   };
 
@@ -291,10 +295,10 @@ export default function SocialChat() {
       return;
     }
 
-    // Optimistic UI Update
-    const tempId = 'temp-' + Date.now();
+    // Immediate Socket Emission & UI Update
+    const stableId = (Math.random().toString(36) + Date.now().toString(36)).substring(2);
     const optimisticMsg: Message = {
-      id: tempId,
+      id: stableId,
       senderId: senderId,
       receiverId: selectedUser.id,
       content: currentContent,
@@ -304,19 +308,18 @@ export default function SocialChat() {
     };
 
     setMessages(prev => [...prev, optimisticMsg]);
+    socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...optimisticMsg });
 
     try {
+      // Background DB Save
       const savedMsg = await saveSocialMessage(selectedUser.id, currentContent);
       if (savedMsg) {
-        // Replace optimistic message with real one
-        setMessages(prev => prev.map(m => m.id === tempId ? (savedMsg as any) : m));
-        socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...savedMsg });
+        // Sync the ID if the backend assigned a different one (usually we'd want to keep the client ID if possible)
+        setMessages(prev => prev.map(m => m.id === stableId ? { ...(savedMsg as any), id: (savedMsg as any).id || stableId } : m));
       }
     } catch (err) { 
-      console.error("Failed to send message:", err); 
-      // Optionally remove the optimistic message or show error
-      setMessages(prev => prev.filter(m => m.id !== tempId));
-      alert("Failed to send message. Please try again.");
+      console.error("Failed to persist message:", err); 
+      // Optionally show a "failed" icon next to the message instead of removing it
     }
   };
 
@@ -340,9 +343,10 @@ export default function SocialChat() {
             const senderId = (session.user as any).id;
             const tempId = 'temp-voice-' + Date.now();
             
-            // Optimistic Update
+            // Immediate Update
+            const stableId = 'voice-' + Date.now() + Math.random().toString(36).substring(7);
             const optimisticMsg: any = {
-              id: tempId,
+              id: stableId,
               senderId: senderId,
               receiverId: selectedUser.id,
               content: base64Audio,
@@ -351,16 +355,15 @@ export default function SocialChat() {
               isSeen: false
             };
             setMessages(prev => [...prev, optimisticMsg]);
+            socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...optimisticMsg });
 
             try {
               const savedMsg = await saveSocialMessage(selectedUser.id, base64Audio, 'voice');
               if (savedMsg) {
-                setMessages(prev => prev.map(m => m.id === tempId ? (savedMsg as any) : m));
-                socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...savedMsg });
+                setMessages(prev => prev.map(m => m.id === stableId ? (savedMsg as any) : m));
               }
             } catch (err) {
-              console.error("Failed to send voice message:", err);
-              setMessages(prev => prev.filter(m => m.id !== tempId));
+              console.error("Failed to save voice message:", err);
             }
           }
         };
@@ -393,9 +396,9 @@ export default function SocialChat() {
       const senderId = (session.user as any).id;
       const tempId = 'temp-file-' + Date.now();
 
-      // Optimistic Update
+      const stableId = 'file-' + Date.now() + Math.random().toString(36).substring(7);
       const optimisticMsg: any = {
-        id: tempId,
+        id: stableId,
         senderId: senderId,
         receiverId: selectedUser.id,
         content: base64,
@@ -404,16 +407,15 @@ export default function SocialChat() {
         isSeen: false
       };
       setMessages(prev => [...prev, optimisticMsg]);
+      socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...optimisticMsg });
 
       try {
         const savedMsg = await saveSocialMessage(selectedUser.id, base64, type);
         if (savedMsg) {
-          setMessages(prev => prev.map(m => m.id === tempId ? (savedMsg as any) : m));
-          socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...savedMsg });
+          setMessages(prev => prev.map(m => m.id === stableId ? (savedMsg as any) : m));
         }
       } catch (err) {
-        console.error("Failed to upload file:", err);
-        setMessages(prev => prev.filter(m => m.id !== tempId));
+        console.error("Failed to save file:", err);
       }
     };
     reader.readAsDataURL(file);
@@ -459,19 +461,22 @@ export default function SocialChat() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="list">
-            {users.map((user) => (
-              <div key={user.id} className={`item ${selectedUser?.id === user.id ? 'active' : ''}`} onClick={() => setSelectedUser(user)}>
-                <div className="user-pfp">
-                  {user.image ? <img src={user.image} alt={user.name} /> : <div>{user.name?.charAt(0)}</div>}
-                </div>
-                <div className="meta">
-                  <b>{user.name} <span className={`online-dot ${user.online ? 'online' : ''}`} /></b>
-                  <small>{user.lastMessage || `@${user.username}`}</small>
-                </div>
-              </div>
-            ))}
-            {users.length === 0 && searchQuery.length < 2 && (
+                <div className="list">
+                  {users.map((user) => {
+                    const isOnline = onlineEmails.has(user.email);
+                    return (
+                      <div key={user.id} className={`item ${selectedUser?.id === user.id ? 'active' : ''}`} onClick={() => setSelectedUser(user)}>
+                        <div className="user-pfp">
+                          {user.image ? <img src={user.image} alt={user.name} /> : <div>{user.name?.charAt(0)}</div>}
+                        </div>
+                        <div className="meta">
+                          <b>{user.name} <span className={`online-dot ${isOnline ? 'online' : ''}`} /></b>
+                          <small>{user.lastMessage || `@${user.username}`}</small>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {users.length === 0 && searchQuery.length < 2 && (
               <div className="empty-state">
                 <div className="empty-icon">💬</div>
                 <p>No recent conversations</p>
@@ -495,8 +500,8 @@ export default function SocialChat() {
                         <span className="typing-indicator">typing...</span>
                       ) : (
                         <>
-                          <span className={`status-dot ${selectedUser.online ? 'online' : ''}`} />
-                          {selectedUser.online ? 'online' : 'offline'}
+                          <span className={`status-dot ${onlineEmails.has(selectedUser.email) ? 'online' : ''}`} />
+                          {onlineEmails.has(selectedUser.email) ? 'online' : 'offline'}
                         </>
                       )}
                     </div>

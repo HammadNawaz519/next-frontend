@@ -34,19 +34,24 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
     });
     res.socket.server.io = io;
 
-    // Use a map to track online users: email -> socketId
-    const onlineUsers = new Map<string, string>();
+    // Use a map to track online users: email -> Set of socketIds
+    const onlineUsers = new Map<string, Set<string>>();
 
     io.on("connection", (socket: Socket) => {
       console.log("Socket connected:", socket.id);
 
-      socket.on("identify", ({ email }: { email: string }) => {
-        if (!email) return;
-        socket.join(email); // Join a room for their email
-        onlineUsers.set(email, socket.id);
-        (socket as any).userEmail = email; // Store email on socket for disconnect handling
+      socket.on("identify", ({ email: rawEmail }: { email: string }) => {
+        if (!rawEmail) return;
+        const email = rawEmail.toLowerCase().trim();
+        socket.join(email); 
         
-        console.log(`User ${email} joined room`);
+        if (!onlineUsers.has(email)) {
+          onlineUsers.set(email, new Set());
+        }
+        onlineUsers.get(email)!.add(socket.id);
+        (socket as any).userEmail = email; 
+        
+        console.log(`User ${email} identified. Sockets: ${onlineUsers.get(email)!.size}`);
         
         // Broadcast that user is online
         io.emit("user_online", { email });
@@ -57,10 +62,10 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
 
       socket.on("send_social_message", (data: SocialMessageData) => {
         const { receiverEmail, ...msgData } = data;
-        // Emit to the receiver's room
-        socket.to(receiverEmail).emit("receive_social_message", msgData);
-        // Also emit back to the sender (optional, usually sender updates UI optimistically)
-        socket.emit("receive_social_message", msgData);
+        const target = receiverEmail.toLowerCase().trim();
+        socket.to(target).emit("receive_social_message", msgData);
+        // Also emit to other tabs of the same sender
+        socket.to((socket as any).userEmail).emit("receive_social_message", msgData);
       });
 
       socket.on("react_social_message", (data: SocialReactionData) => {
@@ -89,31 +94,42 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
 
       // --- CALL EVENTS ---
       socket.on('call_user', (data) => {
-        socket.to(data.to).emit('incoming_call', { from: data.from, type: data.type });
+        const target = data.to.toLowerCase().trim();
+        socket.to(target).emit('incoming_call', { from: data.from, type: data.type });
       });
 
       socket.on('accept_call', (data) => {
-        socket.to(data.to).emit('call_accepted', { from: data.from });
+        const target = data.to.toLowerCase().trim();
+        socket.to(target).emit('call_accepted', { from: data.from });
       });
 
       socket.on('reject_call', (data) => {
-        socket.to(data.to).emit('call_rejected');
+        const target = data.to.toLowerCase().trim();
+        socket.to(target).emit('call_rejected');
       });
 
       socket.on('webrtc_signal', (data) => {
-        socket.to(data.to).emit('webrtc_signal', data.signal);
+        const target = data.to.toLowerCase().trim();
+        socket.to(target).emit('webrtc_signal', data.signal);
       });
 
       socket.on('end_call', (data) => {
-        socket.to(data.to).emit('call_ended');
+        const target = data.to.toLowerCase().trim();
+        socket.to(target).emit('call_ended');
       });
 
       socket.on("disconnect", () => {
         const email = (socket as any).userEmail;
-        if (email) {
-          onlineUsers.delete(email);
-          io.emit("user_offline", { email });
-          console.log(`User ${email} went offline`);
+        if (email && onlineUsers.has(email)) {
+          const sockets = onlineUsers.get(email)!;
+          sockets.delete(socket.id);
+          if (sockets.size === 0) {
+            onlineUsers.delete(email);
+            io.emit("user_offline", { email });
+            console.log(`User ${email} went offline (all sockets closed)`);
+          } else {
+            console.log(`User ${email} closed one socket. Remaining: ${sockets.size}`);
+          }
         }
         console.log("Socket disconnected:", socket.id);
       });

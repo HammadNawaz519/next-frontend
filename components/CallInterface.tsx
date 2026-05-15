@@ -60,14 +60,16 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
 
         pc.onicecandidate = (event) => {
           if (event.candidate) {
-            socket.emit('webrtc_signal', { to: peer.email, signal: { candidate: event.candidate } });
+            const target = peer.email.toLowerCase().trim();
+            socket.emit('webrtc_signal', { to: target, signal: { candidate: event.candidate } });
           }
         };
 
         if (isCaller) {
           const offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
-          socket.emit('webrtc_signal', { to: peer.email, signal: { sdp: offer } });
+          const target = peer.email.toLowerCase().trim();
+          socket.emit('webrtc_signal', { to: target, signal: { sdp: offer } });
         }
 
         socket.on('webrtc_signal', async (signal) => {
@@ -76,7 +78,8 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
             if (signal.sdp.type === 'offer') {
               const answer = await pc.createAnswer();
               await pc.setLocalDescription(answer);
-              socket.emit('webrtc_signal', { to: peer.email, signal: { sdp: answer } });
+              const target = peer.email.toLowerCase().trim();
+              socket.emit('webrtc_signal', { to: target, signal: { sdp: answer } });
             }
           } else if (signal.candidate) {
             await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
@@ -211,7 +214,12 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
           )}
 
           <button 
-            onClick={() => { cleanup(); socket.emit('end_call', { to: peer.email }); onEnd(durationRef.current); }}
+            onClick={() => { 
+              cleanup(); 
+              const target = peer.email.toLowerCase().trim();
+              socket.emit('end_call', { to: target }); 
+              onEnd(durationRef.current); 
+            }}
             className="w-14 h-14 rounded-full bg-black text-white flex items-center justify-center hover:bg-red-600 transition-all shadow-xl active:scale-90"
           >
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
