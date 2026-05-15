@@ -18,6 +18,16 @@ model User {
 
   accounts Account[]
   sessions Session[]
+  messages Message[]
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  role      String   // 'user' or 'ai'
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model PendingUser {
