@@ -229,7 +229,7 @@ export async function deleteSocialMessage(messageId: string, deleteFor: 'me' | '
     return await prisma.socialMessage.update({
       where: { id: messageId },
       data: { 
-        content: "🚫 This message was deleted", 
+        content: "This message was deleted", 
         type: "deleted"
       }
     });

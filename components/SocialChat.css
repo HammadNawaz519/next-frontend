@@ -410,15 +410,15 @@
 /* ACTIONS */
 .social-chat-container .msg-actions {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 4px;
   opacity: 0;
-  transition: opacity .2s;
+  transition: opacity .2s, transform .2s;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 50px;
-  padding: 4px 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  padding: 4px 6px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -426,38 +426,110 @@
   pointer-events: none;
 }
 
+.social-chat-container .msg-del-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
 .social-chat-container .msg-wrapper.sent .msg-actions {
-  right: calc(100% + 12px);
+  right: calc(100% + 8px);
 }
 
 .social-chat-container .msg-wrapper.received .msg-actions,
 .social-chat-container .msg-wrapper.ai .msg-actions {
-  left: calc(100% + 12px);
+  left: calc(100% + 8px);
 }
 
-.social-chat-container .msg-wrapper:hover .msg-actions {
-  opacity: 1;
-  pointer-events: auto;
+/* Quick Reactions */
+.social-chat-container .quick-react-container {
+  display: flex;
+  gap: 4px;
+  padding-right: 6px;
+  border-right: 1px solid #f3f4f6;
+  margin-right: 6px;
+  align-items: center;
 }
 
-.social-chat-container .msg-action-btn {
-  font-size: 1rem;
-  padding: 6px;
+.social-chat-container .quick-react-emoji {
   cursor: pointer;
-  color: #9ca3af;
-  transition: all 0.2s;
-  border-radius: 50%;
+  font-size: 1.05rem;
+  transition: transform 0.2s, background 0.2s;
+  user-select: none;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-left: 4px;
-  border-left: 1px solid #f3f4f6;
-  padding-left: 10px;
+  border-radius: 50%;
+}
+
+.social-chat-container .quick-react-emoji:hover {
+  transform: scale(1.15);
+  background: var(--cream);
+}
+
+/* Delete Buttons Wrap */
+.social-chat-container .del-btn-wrap {
+  display: flex;
+  gap: 2px;
+}
+
+.social-chat-container .msg-action-btn {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: all 0.2s;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid transparent;
+}
+
+.social-chat-container .msg-action-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 .social-chat-container .msg-action-btn:hover {
   color: #ef4444;
   background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+/* Desktop Hover */
+@media (min-width: 769px) {
+  .social-chat-container .msg-wrapper:hover .msg-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* Mobile Click/Tap */
+@media (max-width: 768px) {
+  .social-chat-container .msg-actions {
+    top: auto;
+    bottom: calc(100% + 4px);
+    transform: translateY(10px);
+    right: 0 !important;
+    left: auto !important;
+  }
+  
+  .social-chat-container .msg-wrapper.received .msg-actions,
+  .social-chat-container .msg-wrapper.ai .msg-actions {
+    left: 0 !important;
+    right: auto !important;
+  }
+
+  .social-chat-container .msg-actions.show-mobile {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
 }
 
 /* FOOTER */

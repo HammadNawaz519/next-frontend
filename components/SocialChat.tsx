@@ -44,13 +44,39 @@ const EMOJI_CATEGORIES = {
   smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿']
 };
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete }: any) => {
   const isAI = msg.senderId === 'ai';
   // A message is "Sent" if the sender is the current user
   const isSent = !isAI && String(msg.senderId) === String(currentUserId);
+  const [showActionsMobile, setShowActionsMobile] = useState(false);
+
+  const toggleActions = (e: React.MouseEvent) => {
+    if (window.innerWidth <= 768) {
+      e.stopPropagation();
+      setShowActionsMobile(!showActionsMobile);
+    }
+  };
+
+  const handleDeleteClick = (type: 'me' | 'everyone') => {
+    if (onRequestDelete) {
+      onRequestDelete(msg.id, type);
+    } else {
+      onDelete(msg.id, type);
+    }
+  };
+
+  const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+  // Calculate reaction counts
+  const reactionCounts: Record<string, number> = {};
+  if (msg.reactions && msg.type !== 'deleted') {
+    msg.reactions.forEach((r: any) => {
+      reactionCounts[r.emoji] = (reactionCounts[r.emoji] || 0) + 1;
+    });
+  }
   
   return (
-    <div className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} animate-in slide-in-from-bottom-2 duration-300`}>
+    <div className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} animate-in slide-in-from-bottom-2 duration-300`} onClick={toggleActions}>
       <div className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''}`}>
         {isAI && <div className="system-sender">AI Assistant</div>}
         {msg.type === 'image' && <img src={msg.content} alt="media" onClick={() => window.open(msg.content, '_blank')} />}
@@ -84,13 +110,38 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete }: any) =
             </span>
           )}
         </div>
+
+        {Object.keys(reactionCounts).length > 0 && (
+          <div className="msg-reactions">
+            {Object.entries(reactionCounts).map(([emoji, count]) => (
+              <span key={emoji} className="reaction-badge" onClick={(e) => { e.stopPropagation(); onReact(msg.id, emoji); setShowActionsMobile(false); }}>
+                {emoji} {count > 1 && <span className="react-count">{count}</span>}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       
       {msg.type !== 'deleted' && msg.type !== 'call' && (
-        <div className="msg-actions">
+        <div className={`msg-actions ${showActionsMobile ? 'show-mobile' : ''}`}>
           <div className="msg-del-actions">
-            <span className="msg-action-btn" title="Delete for me" onClick={() => onDelete(msg.id, 'me')}>🗑 Me</span>
-            {isSent && <span className="msg-action-btn" title="Delete for everyone" onClick={() => onDelete(msg.id, 'everyone')}>🗑 All</span>}
+            <div className="quick-react-container">
+              {QUICK_REACTIONS.map(emoji => (
+                <span key={emoji} className="quick-react-emoji" onClick={(e) => { e.stopPropagation(); onReact(msg.id, emoji); setShowActionsMobile(false); }}>
+                  {emoji}
+                </span>
+              ))}
+            </div>
+            <div className="del-btn-wrap">
+              <span className="msg-action-btn" title="Delete for me" onClick={(e) => { e.stopPropagation(); handleDeleteClick('me'); }}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg> Me
+              </span>
+              {isSent && (
+                <span className="msg-action-btn" title="Delete for everyone" onClick={(e) => { e.stopPropagation(); handleDeleteClick('everyone'); }}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg> All
+                </span>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -188,6 +239,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     transition.finished
       .then(() => { transitionInProgress.current = false; })
       .catch(() => { transitionInProgress.current = false; });
+  };
+
+  // Custom Delete Modal State
+  const [deleteConfirm, setDeleteConfirm] = useState<{msgId: string, type: 'me' | 'everyone'} | null>(null);
+
+  const handleRequestDelete = (msgId: string, type: 'me' | 'everyone') => {
+    setDeleteConfirm({ msgId, type });
+  };
+
+  const confirmDelete = async () => {
+    if (deleteConfirm) {
+      await handleDelete(deleteConfirm.msgId, deleteConfirm.type);
+      setDeleteConfirm(null);
+    }
   };
 
   // Expose closeChat to parent via ref
@@ -431,7 +496,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       newSocket.on('receive_social_delete', ({ messageId }) => {
         setMessages(prev => prev.map(m => {
-          if (m.id === messageId) return { ...m, content: "🚫 This message was deleted", type: "deleted" };
+          if (m.id === messageId) return { ...m, content: "This message was deleted", type: "deleted" };
           return m;
         }));
         
@@ -440,7 +505,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           const newCache = { ...prev };
           Object.keys(newCache).forEach(userId => {
             newCache[userId] = newCache[userId].map(m => 
-              m.id === messageId ? { ...m, content: "🚫 This message was deleted", type: "deleted" } : m
+              m.id === messageId ? { ...m, content: "This message was deleted", type: "deleted" } : m
             );
           });
           return newCache;
@@ -811,19 +876,40 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const handleDelete = async (msgId: string, type: 'me' | 'everyone') => {
-    if (type === 'everyone' && !confirm("Delete for everyone?")) return;
-    
+    // Confirmation is now handled in the child MessageItem component before this is called
     await deleteSocialMessage(msgId, type);
     if (type === 'everyone') {
       socket?.emit('delete_social_message', { messageId: msgId, receiverEmail: selectedUser?.email });
       setMessages(prev => prev.map(m => {
-        if (m.id === msgId) return { ...m, content: "🚫 This message was deleted", type: "deleted" };
+        if (m.id === msgId) return { ...m, content: "This message was deleted", type: "deleted" };
         return m;
       }));
     } else {
       // Local delete
       setMessages(prev => prev.filter(m => m.id !== msgId));
     }
+  };
+
+  const handleReact = async (msgId: string, emoji: string) => {
+    // Local optimistic update
+    setMessages(prev => prev.map(m => {
+      if (m.id === msgId) {
+        const existingReactions = m.reactions || [];
+        const userHasReacted = existingReactions.find((r: any) => r.userId === (session?.user as any)?.id && r.emoji === emoji);
+        let newReactions;
+        if (userHasReacted) {
+          // Remove reaction
+          newReactions = existingReactions.filter((r: any) => !(r.userId === (session?.user as any)?.id && r.emoji === emoji));
+        } else {
+          // Add reaction
+          newReactions = [...existingReactions, { emoji, userId: (session?.user as any)?.id }];
+        }
+        return { ...m, reactions: newReactions };
+      }
+      return m;
+    }));
+    socket?.emit('react_social_message', { messageId: msgId, emoji, receiverEmail: selectedUser?.email });
+    await reactToSocialMessage(msgId, emoji);
   };
 
   const handleAcceptRequest = () => {
@@ -934,6 +1020,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     currentUserId={(session?.user as any)?.id}
                     selectedUser={selectedUser}
                     onDelete={handleDelete}
+                    onReact={handleReact}
+                    onRequestDelete={handleRequestDelete}
                   />
                 ))}
                 {!isLoadingMessages && messages.length === 0 && (
@@ -1176,6 +1264,37 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
              }
           }}
         />
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-200" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div className="bg-white rounded-[2rem] p-6 max-w-sm w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200 border border-gray-100 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4 text-red-500">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Message?</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              {deleteConfirm.type === 'everyone' 
+                ? "This will permanently delete the message for everyone in this chat. They will see that a message was deleted."
+                : "This message will be deleted for you, but others will still be able to see it."}
+            </p>
+            <div className="flex gap-3 w-full">
+              <button 
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 px-4 py-3 rounded-full font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-3 rounded-full font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
