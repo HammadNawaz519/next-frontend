@@ -224,7 +224,11 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
     
     const initSocket = async () => {
       const SOCKET_URL = 'https://server-production-265c.up.railway.app';
-      const newSocket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
+      const newSocket = io(SOCKET_URL, { 
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000
+      });
       setSocket(newSocket);
 
       newSocket.on('connect', () => {
@@ -237,6 +241,11 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
 
       newSocket.on('disconnect', () => {
         console.log('Socket disconnected');
+        setIsConnected(false);
+      });
+
+      newSocket.on('connect_error', (err) => {
+        console.error('Socket connection error:', err);
         setIsConnected(false);
       });
 
