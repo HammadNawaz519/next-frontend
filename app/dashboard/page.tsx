@@ -507,7 +507,7 @@ export default function DashboardPage() {
         {/* Profile Side Panel */}
         {isProfileOpen && (
           <div 
-            className="absolute right-0 top-0 bottom-0 w-full md:w-[400px] z-50 backdrop-blur-xl flex flex-col border-l md:border md:rounded-[40px] md:m-3 md:h-[calc(100%-24px)]"
+            className="absolute right-0 top-0 bottom-0 w-full md:w-[400px] z-50 backdrop-blur-xl flex flex-col border-l md:border md:rounded-[40px] md:overflow-hidden md:m-3 md:h-[calc(100%-24px)]"
             style={{ 
               background: isDark ? 'rgba(22,22,42,0.97)' : 'rgba(255,255,255,0.97)', 
               borderColor: 'var(--dm-border-main)', 
