@@ -225,7 +225,16 @@ body {
 @media (max-width: 1024px) {
   /* Hide sidebar on small screens, show bottom nav instead */
   .main-sidebar {
-    display: none !important;
+    width: 64px !important;
+    padding: 10px 5px !important;
+  }
+  
+  .main-sidebar .group-hover\:w-72 {
+    width: 64px !important; /* Disable expansion on mobile */
+  }
+
+  .main-sidebar span, .main-sidebar p {
+    display: none !important; /* Hide labels on mobile sidebar */
   }
   
   .main-layout {

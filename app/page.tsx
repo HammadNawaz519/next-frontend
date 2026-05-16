@@ -323,13 +323,36 @@ export default function LoginPage() {
     const isLogin = view === 'login';
     return (
       <div className="flex flex-col items-center justify-center p-4 lg:p-7 h-full overflow-y-auto">
+
+        {/* Mobile-only animated gradient header */}
+        <div className="lg:hidden w-full relative rounded-3xl overflow-hidden mb-6" style={{ height: '180px' }}>
+          <GrainGradient
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+            colorBack="#F8F9FA"
+            softness={0.5}
+            intensity={0.8}
+            noise={0.06}
+            shape="corners"
+            offsetX={0}
+            offsetY={0}
+            scale={0.8}
+            rotation={0}
+            speed={0.5}
+            colors={['#FF7A00', '#007AFF', '#7ED9D9']}
+          />
+          <div className="relative z-10 h-full flex items-center justify-center">
+            <p className="text-gray-800 font-light tracking-[0.5em] uppercase text-[10px]" style={{ opacity: 0.65 }}>
+              Imagination is the limit
+            </p>
+          </div>
+        </div>
+
         <div className="w-full max-w-[400px] space-y-3">
           <div className="text-left w-full">
-            <p className="lg:hidden text-gray-400 font-light tracking-[0.4em] uppercase text-[9px] mb-2">Imagination is the limit</p>
             <h1 className="text-[24px] font-normal tracking-tight text-gray-900">{isLogin ? 'Welcome back' : 'Create your account'}</h1>
           </div>
           {error && <div className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{error}</div>}
-          <div className="space-y-3">
+          <div className="space-y-2 md:space-y-3">
             <button type="button" disabled={googleLoading} onClick={async () => { setGoogleLoading(true); await signIn('google', { callbackUrl: '/dashboard' }); }} className="w-full h-[42px] flex items-center justify-center gap-3 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 rounded-xl font-normal text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
               <svg className="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -340,7 +363,7 @@ export default function LoginPage() {
               {googleLoading ? 'Redirecting...' : isLogin ? 'Sign in with Google' : 'Sign up with Google'}
             </button>
             <div className="flex items-center gap-3 text-gray-400 text-sm"><div className="h-px flex-1 bg-gray-200" />or<div className="h-px flex-1 bg-gray-200" /></div>
-            <form onSubmit={isLogin ? handleLogin : handleSignup} className="space-y-3">
+            <form onSubmit={isLogin ? handleLogin : handleSignup} className="space-y-2 md:space-y-3">
               {!isLogin && (
                 <div className="space-y-1">
                   <label htmlFor="username" className="text-[12px] font-normal text-gray-700">Username</label>
@@ -369,7 +392,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#F4F4F4] p-6 md:px-12 md:py-8">
       <div 
-        className="w-full max-w-[960px] h-full md:h-[auto] md:aspect-[16/9] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_-10px_rgba(0,0,0,0.4)] bg-white bg-opacity-20 bg-clip-padding backdrop-filter backdrop-blur-2xl border border-gray-100 flex flex-col lg:grid lg:grid-cols-2" 
+        className="w-full max-w-[960px] md:aspect-[16/9] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_-10px_rgba(0,0,0,0.4)] bg-white bg-opacity-20 bg-clip-padding backdrop-filter backdrop-blur-2xl border border-gray-100 flex flex-col lg:grid lg:grid-cols-2" 
         style={{ 
           position: 'relative', 
           zIndex: 1,

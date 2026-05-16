@@ -279,13 +279,18 @@ export default function DashboardPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </button>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 relative z-10">
                 {activeView === 'assistant' && (
                     <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
                 )}
                 <h2 className="text-[10px] md:text-lg font-bold uppercase tracking-[0.3em]" style={{ color: activeView === 'assistant' ? 'var(--dm-text-secondary)' : 'var(--dm-text-heading)' }}>
                     {activeView === 'chat' ? 'Messages' : activeView === 'assistant' ? 'Intelligence Core' : activeView}
                 </h2>
+            </div>
+            
+            {/* Animated Background for Mobile Header */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(45deg, #FF7A00, #007AFF, #7ED9D9)', filter: 'blur(20px)', animation: 'pulse 10s infinite alternate' }} />
             </div>
           </div>
         )}
@@ -491,36 +496,7 @@ export default function DashboardPage() {
 
       {/* Mobile Bottom Nav */}
       {activeView === 'home' && (
-        <nav className="mobile-nav">
-          {[
-            { id: 'home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-            { id: 'chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-            { id: 'assistant', icon: 'M13 10V3L4 14h7v7l9-11h-7z' }
-          ].map((item) => (
-            <button 
-              key={item.id}
-              onClick={(e) => handleNavClick(item.id, e)}
-              className="w-12 h-12 flex items-center justify-center rounded-full transition-all"
-              style={{ 
-                  background: activeView === item.id ? 'var(--dm-bg-active)' : 'transparent',
-                  color: activeView === item.id ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
-              }}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-              </svg>
-            </button>
-          ))}
-          <button 
-              onClick={() => setIsProfileOpen(true)}
-              className="w-12 h-12 flex items-center justify-center rounded-full"
-              style={{ color: 'var(--dm-text-muted)' }}
-          >
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] border border-[var(--dm-border)]" style={{ background: 'var(--dm-bg-active)' }}>
-                  {session.user?.name?.charAt(0) || 'U'}
-              </div>
-          </button>
-        </nav>
+        {/* Mobile Nav Removed */}
       )}
     </div>
   );
