@@ -98,6 +98,17 @@ html, body {
   padding: 0;
 }
 
+@keyframes slideFromLeft {
+  from {
+    transform: translateX(-40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

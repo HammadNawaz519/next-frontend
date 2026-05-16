@@ -3,6 +3,7 @@
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { askAI, getChatHistory, saveChatMessage, getUserDetails } from './actions';
 import SocialChat from '@/components/SocialChat';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -126,6 +127,42 @@ export default function DashboardPage() {
     }
   };
 
+  const handleNavClick = (viewId: any, e: React.MouseEvent) => {
+    if (activeView === viewId) return;
+
+    if (!(document as any).startViewTransition) {
+      setActiveView(viewId);
+      return;
+    }
+
+    const x = e.clientX;
+    const y = e.clientY;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    const transition = (document as any).startViewTransition(() => {
+      flushSync(() => {
+        setActiveView(viewId);
+      });
+    });
+
+    transition.ready.then(() => {
+      document.documentElement.animate(
+        [
+          { clipPath: `circle(0px at ${x}px ${y}px)` },
+          { clipPath: `circle(${endRadius}px at ${x}px ${y}px)` },
+        ],
+        {
+          duration: 700,
+          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+          pseudoElement: '::view-transition-new(root)',
+        }
+      );
+    });
+  };
+
   return (
     <div className="flex h-screen p-4 gap-4 overflow-hidden font-sans font-light text-[0.95em]" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
       {/* Fully Adaptive Sidebar */}
@@ -149,7 +186,7 @@ export default function DashboardPage() {
             ].map((item) => (
               <div 
                 key={item.name} 
-                onClick={() => setActiveView(item.id as any)}
+                onClick={(e) => handleNavClick(item.id, e)}
                 className={`flex items-center justify-start gap-0 group-hover:gap-4 px-1 py-1 rounded-full cursor-pointer transition-[gap] duration-500 ease-[var(--ease-premium)] group/item overflow-hidden`}
                 style={{ background: activeView === item.id ? 'var(--dm-bg-active)' : 'transparent' }}
                 onMouseEnter={e => { if (activeView !== item.id) (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
@@ -318,8 +355,13 @@ export default function DashboardPage() {
         {/* Profile Side Panel */}
         {isProfileOpen && (
           <div 
-            className="absolute left-2 top-2 bottom-2 w-[calc(50%-1rem)] z-50 backdrop-blur-xl animate-in slide-in-from-left duration-500 ease-[var(--ease-premium)] will-change-transform flex flex-col rounded-[2.5rem]"
-            style={{ background: isDark ? 'rgba(22,22,42,0.97)' : 'rgba(255,255,255,0.97)', border: '1px solid var(--dm-border-main)', boxShadow: isDark ? '20px 0 50px rgba(0,0,0,0.4)' : '20px 0 50px rgba(0,0,0,0.03)' }}
+            className="absolute left-2 top-2 bottom-2 w-[calc(50%-1rem)] z-50 backdrop-blur-xl flex flex-col rounded-[2.5rem]"
+            style={{ 
+              background: isDark ? 'rgba(22,22,42,0.97)' : 'rgba(255,255,255,0.97)', 
+              border: '1px solid var(--dm-border-main)', 
+              boxShadow: isDark ? '20px 0 50px rgba(0,0,0,0.4)' : '20px 0 50px rgba(0,0,0,0.03)',
+              animation: 'slideFromLeft 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
+            }}
           >
             {/* Header / Avatar Section */}
             <div className="relative h-[30%] flex flex-col items-center justify-center overflow-hidden rounded-t-[2.5rem]" style={{ background: 'var(--dm-bg-main)', borderBottom: '1px solid var(--dm-border)' }}>
