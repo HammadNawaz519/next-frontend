@@ -8,7 +8,7 @@ interface CallInterfaceProps {
   peer: any;
   type: 'audio' | 'video';
   isCaller: boolean;
-  onEnd: (duration?: number) => void;
+  onEnd: (duration?: number, wasConnected?: boolean) => void;
 }
 
 export default function CallInterface({ socket, peer, type, isCaller, onEnd }: CallInterfaceProps) {
@@ -28,7 +28,7 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
     if (hasEnded.current) return;
     hasEnded.current = true;
     cleanup();
-    onEnd(durationRef.current);
+    onEnd(durationRef.current, callStatus === 'active' || durationRef.current > 0);
   };
 
   // Ringing Sound Effect
