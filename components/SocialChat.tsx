@@ -878,25 +878,37 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
           peer={activeCall.peer}
           type={activeCall.type}
           isCaller={activeCall.isCaller}
-          onEnd={async (duration, wasConnected) => {
-            const callData = activeCall; // Capture closure
-            if (callData) {
-              if (callData.isCaller) {
-                const status = wasConnected ? 'completed' : 'missed';
-                const result = await saveCall(callData.peer.id, callData.type, status, duration);
-                if (result?.message && socket) {
-                  socket.emit('send_social_message', { receiverEmail: callData.peer.email, ...result.message });
-                  setMessages(prev => [...prev, result.message as any]);
-                }
-              } else if (duration && duration > 0) {
-                const result = await saveCall(callData.peer.id, callData.type, 'completed', duration);
-                if (result?.message && socket) {
-                  setMessages(prev => [...prev, result.message as any]);
-                }
-              }
-            }
+          isAccepted={(activeCall as any).connected}
+          onEnd={(duration, wasConnected) => {
+            const callData = activeCall;
             setActiveCall(null);
             setIncomingCall(null);
+            
+            if (callData) {
+              (async () => {
+                try {
+                  if (callData.isCaller) {
+                    const status = wasConnected ? 'completed' : 'missed';
+                    const result = await saveCall(callData.peer.id, callData.type, status, duration);
+                    if (result?.message && socket) {
+                      socket.emit('send_social_message', { receiverEmail: callData.peer.email, ...result.message });
+                      setMessages(prev => {
+                        if (prev.some(m => m.id === (result.message as any).id)) return prev;
+                        return [...prev, result.message as any];
+                      });
+                    }
+                  } else if (duration && duration > 0) {
+                    const result = await saveCall(callData.peer.id, callData.type, 'completed', duration);
+                    if (result?.message && socket) {
+                      setMessages(prev => {
+                        if (prev.some(m => m.id === (result.message as any).id)) return prev;
+                        return [...prev, result.message as any];
+                      });
+                    }
+                  }
+                } catch (e) { console.error("Call background save error:", e); }
+              })();
+            }
           }}
         />
       )}

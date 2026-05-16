@@ -8,11 +8,12 @@ interface CallInterfaceProps {
   peer: any;
   type: 'audio' | 'video';
   isCaller: boolean;
+  isAccepted?: boolean;
   onEnd: (duration?: number, wasConnected?: boolean) => void;
 }
 
-export default function CallInterface({ socket, peer, type, isCaller, onEnd }: CallInterfaceProps) {
-  const [callStatus, setCallStatus] = useState<'ringing' | 'connecting' | 'active' | 'ended'>('ringing');
+export default function CallInterface({ socket, peer, type, isCaller, isAccepted, onEnd }: CallInterfaceProps) {
+  const [callStatus, setCallStatus] = useState<'ringing' | 'connecting' | 'active' | 'ended'>(isCaller ? 'ringing' : 'connecting');
   const [isMuted, setIsMuted] = useState(false);
   const [isCamOff, setIsCamOff] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -95,30 +96,64 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
     return () => clearInterval(timer);
   }, [callStatus]);
 
+  // 1. Signaling Listener (Bound immediately on mount)
   useEffect(() => {
+    const handleSignal = async (signal: any) => {
+      // If PC is ready, process. If not, we might need a queue, but usually the UI flow prevents this.
+      if (!pcRef.current) {
+        console.log("Signal received but PC not ready, retrying in 100ms...");
+        setTimeout(() => handleSignal(signal), 100);
+        return;
+      }
+
+      try {
+        if (signal.sdp) {
+          await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+          if (signal.sdp.type === 'offer') {
+            const answer = await pcRef.current.createAnswer();
+            await pcRef.current.setLocalDescription(answer);
+            socket.emit('webrtc_signal', { to: peer.email, signal: { sdp: answer } });
+          }
+        } else if (signal.candidate) {
+          await pcRef.current.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        }
+      } catch (e) { console.error("WebRTC Signaling Error:", e); }
+    };
+
+    socket.on('webrtc_signal', handleSignal);
+    socket.on('call_ended', () => handleEnd());
+
+    return () => {
+      socket.off('webrtc_signal', handleSignal);
+      socket.off('call_ended');
+    };
+  }, []);
+
+  // 2. Acceptance Transition (For Caller)
+  useEffect(() => {
+    if (isAccepted && callStatus === 'ringing') {
+      setCallStatus('connecting');
+    }
+  }, [isAccepted]);
+
+  // 3. Media & Connection Initialization
+  useEffect(() => {
+    let isMounted = true;
     const initCall = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: 48000,
-            channelCount: 2
-          },
-          video: type === 'video' ? {
-            width: { ideal: 1920, min: 1280 },
-            height: { ideal: 1080, min: 720 },
-            frameRate: { ideal: 60, min: 30 }
-          } : false
+          audio: true,
+          video: type === 'video'
         });
+        if (!isMounted) return;
         localStreamRef.current = stream;
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
         const pc = new RTCPeerConnection({
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' }
           ]
         });
         pcRef.current = pc;
@@ -126,7 +161,6 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
         stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
         pc.ontrack = (event) => {
-          console.log("Remote track received:", event.streams[0]);
           if (remoteVideoRef.current && type === 'video') {
             remoteVideoRef.current.srcObject = event.streams[0];
           } else if (remoteAudioRef.current && type === 'audio') {
@@ -142,45 +176,21 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
           }
         };
 
+        // Start handshake: Receiver sends offer to Caller
         if (!isCaller) {
-          const offer = await pc.createOffer({
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: type === 'video'
-          });
+          const offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
-          const target = peer.email?.toLowerCase().trim();
-          if (target) socket.emit('webrtc_signal', { to: target, signal: { sdp: offer } });
+          socket.emit('webrtc_signal', { to: peer.email, signal: { sdp: offer } });
         }
-
-        socket.on('webrtc_signal', async (signal) => {
-          if (signal.sdp) {
-            await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-            if (signal.sdp.type === 'offer') {
-              const answer = await pc.createAnswer();
-              await pc.setLocalDescription(answer);
-              const target = peer.email?.toLowerCase().trim();
-              if (target) socket.emit('webrtc_signal', { to: target, signal: { sdp: answer } });
-            }
-          } else if (signal.candidate) {
-            await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
-          }
-        });
-
-        socket.on('call_ended', () => {
-          handleEnd();
-        });
-
-      } catch (err: any) {
-        console.error("Call error:", err);
-        alert(`Failed to access microphone/camera. Please check permissions. (${err.message})`);
+      } catch (err) {
+        console.error("Media error:", err);
         handleEnd();
       }
     };
 
     initCall();
-
-    return () => cleanup();
-  }, []);
+    return () => { isMounted = false; cleanup(); };
+  }, [isCaller]);
 
   const cleanup = () => {
     localStreamRef.current?.getTracks().forEach(t => t.stop());
