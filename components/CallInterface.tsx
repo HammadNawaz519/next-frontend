@@ -110,14 +110,8 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
         const pc = new RTCPeerConnection({
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' }
-          ],
-          iceCandidatePoolSize: 10,
-          bundlePolicy: 'max-bundle',
-          rtcpMuxPolicy: 'require'
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
         });
         pcRef.current = pc;
 
@@ -165,8 +159,9 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
           handleEnd();
         });
 
-      } catch (err) {
+      } catch (err: any) {
         console.error("Call error:", err);
+        alert(`Failed to access microphone/camera. Please check permissions. (${err.message})`);
         handleEnd();
       }
     };

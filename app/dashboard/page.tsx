@@ -361,9 +361,7 @@ export default function DashboardPage() {
           </>
         )}
 
-        {activeView === 'chat' && (
-          <SocialChat />
-        )}
+        <SocialChat isActive={activeView === 'chat'} />
 
         {/* Profile Side Panel */}
         {isProfileOpen && (

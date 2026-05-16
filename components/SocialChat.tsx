@@ -73,26 +73,77 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
   const [view, setView] = useState<'recent' | 'requests'>('recent');
   const [requests, setRequests] = useState<User[]>([]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const ringtoneRef = useRef<AudioContext | null>(null);
 
 
-  // Initialize Socket
+  // Ringing effect for incoming calls
   useEffect(() => {
+    let ringInterval: NodeJS.Timeout;
+    let audioCtx: AudioContext;
+
+    if (incomingCall && !activeCall) {
+      try {
+        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        ringtoneRef.current = audioCtx;
+
+        const playRing = () => {
+          const oscillator = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+          gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 1.5);
+        };
+
+        playRing();
+        ringInterval = setInterval(playRing, 3000);
+      } catch (e) {
+        console.error("Audio API blocked");
+      }
+    }
+
+    return () => {
+      if (ringInterval) clearInterval(ringInterval);
+      if (audioCtx && audioCtx.state !== 'closed') {
+        audioCtx.close().catch(() => { });
+      }
+    };
+  }, [incomingCall, activeCall]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     fetch('/api/socket');
     const newSocket = io({ path: "/api/socket" }); 
     setSocket(newSocket);
 
-    newSocket.on('connect', () => {
-      console.log('Socket connected, identifying...');
+    const identifyUser = () => {
       if (session?.user?.email) {
-        newSocket.emit('identify', { email: session?.user?.email.toLowerCase().trim() });
+        const email = session.user.email.toLowerCase().trim();
+        console.log('Identifying as:', email);
+        newSocket.emit('identify', { email });
       }
-    });
+    };
 
+    newSocket.on('connect', identifyUser);
 
     newSocket.on('receive_social_message', (msg: Message) => {
       setMessages((prev) => {
         if (prev.some(m => m.id === msg.id)) return prev;
         return [...prev, msg];
+      });
+
+      // Update cache
+      setMessagesCache(prev => {
+        const partnerId = msg.senderId === (session?.user as any)?.id ? msg.receiverId : msg.senderId;
+        const current = prev[partnerId] || [];
+        if (current.some(m => m.id === msg.id)) return prev;
+        return { ...prev, [partnerId]: [...current, msg] };
       });
 
       // Update unseenCount if not currently chatting with this person
@@ -152,11 +203,15 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
       });
     });
 
-    return () => { 
-      newSocket.disconnect();
-    };
-  }, [session?.user?.email]); 
+    // Re-identify if session becomes available after connection
+    if (session?.user?.email && newSocket.connected) {
+      identifyUser();
+    }
 
+    return () => {
+      newSocket.close();
+    };
+  }, [session, selectedUser]); // Re-bind when selectedUser changes to capture it in closure or use a Ref
   // Socket identity is handled in the connect event above
 
   const handleCall = async (type: 'audio' | 'video') => {
@@ -742,6 +797,7 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
 
         </section>
       </div>
+    </div>
 
       {/* --- INCOMING CALL OVERLAY --- */}
       {incomingCall && (
@@ -796,7 +852,6 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
       )}
 
 
-      {/* --- ACTIVE CALL OVERLAY --- */}
       {activeCall && socket && (
         <CallInterface 
           socket={socket}
@@ -804,8 +859,6 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
           type={activeCall.type}
           isCaller={activeCall.isCaller}
           onEnd={async (duration, wasConnected) => {
-            // Save call history on both ends if it was an active call
-            // but prioritize the caller to save the authoritative record
             if (activeCall.isCaller) {
               const status = wasConnected ? 'completed' : 'missed';
               const result = await saveCall(activeCall.peer.id, activeCall.type, status, duration);
@@ -814,7 +867,6 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
                 setMessages(prev => [...prev, result.message as any]);
               }
             } else if (duration && duration > 0) {
-              // receiver saves its own record if they actually talked
               const result = await saveCall(activeCall.peer.id, activeCall.type, 'completed', duration);
               if (result?.message && socket) {
                 setMessages(prev => [...prev, result.message as any]);
