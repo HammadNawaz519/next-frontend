@@ -1229,7 +1229,19 @@
     left: 0;
     right: 0;
     z-index: 200;
-    background: var(--white);
+    background: var(--dm-bg-main);
+    animation: slideInChat 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+
+  @keyframes slideInChat {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
   }
 
   .social-chat-container .mobile-back-btn {

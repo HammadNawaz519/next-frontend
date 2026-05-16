@@ -157,7 +157,14 @@ export default function DashboardPage() {
   };
 
   const handleNavClick = (viewId: any, e: React.MouseEvent) => {
-    if (activeView === viewId) return;
+    if (activeView === viewId && viewId !== 'chat') return;
+    
+    // Always show the chat list first when clicking the Chat nav button
+    if (viewId === 'chat') {
+      chatComponentRef.current?.closeChat();
+      setSelectedChatUser(null);
+      if (activeView === 'chat') return; // If already on chat list, don't re-animate
+    }
 
     if (!(document as any).startViewTransition) {
       setActiveView(viewId);
@@ -193,9 +200,9 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="main-layout flex h-screen p-4 gap-4 overflow-hidden font-sans font-light text-[0.95em]" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
+    <div className="main-layout flex h-screen overflow-hidden font-sans font-light text-[0.95em]" style={{ background: 'var(--dm-bg-main)', color: 'var(--dm-text-primary)' }}>
       {/* Fully Adaptive Sidebar */}
-      <div className="main-sidebar w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 rounded-[3rem] transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border-main)', boxShadow: 'var(--dm-shadow-sidebar)' }}>
+      <div className="main-sidebar w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden border-r" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border-main)' }}>
         <div className="flex flex-col h-full">
           {/* Logo */}
             <div className="mb-8 flex items-center justify-start gap-0 group-hover:gap-4 px-1 h-12 transition-[gap] duration-500 ease-[var(--ease-premium)]">
@@ -279,46 +286,10 @@ export default function DashboardPage() {
         </div>
 
       {/* Main Container */}
-      <div className="main-container flex-1 flex flex-col rounded-[2.5rem] overflow-hidden relative" style={{ background: 'var(--dm-bg-main)', border: '1px solid var(--dm-border-main)', boxShadow: 'var(--dm-shadow-main)' }}>
+      <div className="main-container flex-1 flex flex-col overflow-hidden relative" style={{ background: 'var(--dm-bg-main)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.02\'/%3E%3C/svg%3E")', opacity: 0.4, pointerEvents: 'none' }} />
 
-        {/* Shared Mobile Header for Sub-views (Baked in - Moved to Top) */}
-        {activeView !== 'home' && (
-          <div className="md:hidden flex items-center justify-center p-6 border-b relative z-[9999]" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
-            <button 
-              onClick={(e) => { e.stopPropagation(); handleMobileBack(); }}
-              className="absolute left-6 w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90"
-              style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-            <div className="flex items-center gap-3 relative z-10">
-                {activeView === 'assistant' && (
-                    <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
-                )}
-                <h2 className="text-[10px] md:text-lg font-bold uppercase tracking-[0.3em]" style={{ color: activeView === 'assistant' ? 'var(--dm-text-secondary)' : 'var(--dm-text-heading)' }}>
-                    {activeView === 'chat' ? (selectedChatUser ? selectedChatUser.name : 'Messages') : activeView === 'assistant' ? 'Intelligence Core' : activeView}
-                </h2>
-            </div>
 
-            <button 
-              onClick={() => setIsProfileOpen(true)}
-              className="absolute right-6 w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90 z-10"
-              style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}
-            >
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: 'var(--dm-bg-active)' }}>
-                {session.user?.name?.charAt(0) || 'U'}
-              </div>
-            </button>
-            
-            {/* Animated Background for Mobile Header */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(45deg, #FF7A00, #007AFF, #7ED9D9)', filter: 'blur(20px)', animation: 'pulse 10s infinite alternate' }} />
-            </div>
-          </div>
-        )}
 
         {/* Content Views */}
         {activeView === 'home' && (
@@ -368,24 +339,29 @@ export default function DashboardPage() {
 
         {activeView === 'assistant' && (
           <>
-            {/* Desktop Assistant Header (Centered + Back Btn) */}
-            <div className="hidden md:flex h-20 items-center px-10 justify-between backdrop-blur-lg sticky top-0 z-10" style={{ borderBottom: '1px solid var(--dm-border)', background: 'var(--dm-header-bg)' }}>
+            {/* Assistant Header - all screens */}
+            <div className="flex items-center justify-center p-4 border-b relative z-50" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '64px' }}>
               <button 
                 onClick={() => setActiveView('home')}
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-[var(--dm-bg-active)]"
-                style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
+                style={{ position: 'absolute', left: '16px', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', zIndex: 10 }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
               </button>
-              
-              <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
-                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
-                <h2 className="text-[11px] font-bold uppercase tracking-[0.4em]" style={{ color: 'var(--dm-text-secondary)' }}>Intelligence Core</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
+                <div style={{ width: '8px', height: '8px', background: '#6366f1', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
+                <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3em', color: 'var(--dm-text-secondary)', margin: 0 }}>Intelligence Core</h2>
               </div>
-              <div className="w-10 h-10" /> {/* Spacer */}
+              <button 
+                onClick={() => setIsProfileOpen(true)}
+                style={{ position: 'absolute', right: '16px', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer', zIndex: 10 }}
+              >
+                <div style={{ width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, background: 'var(--dm-bg-active)' }}>
+                  {session.user?.name?.charAt(0) || 'U'}
+                </div>
+              </button>
+              <div style={{ position: 'absolute', inset: 0, opacity: 0.08, background: 'linear-gradient(45deg, #FF7A00, #007AFF, #7ED9D9)', filter: 'blur(20px)', pointerEvents: 'none' }} />
             </div>
+
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-12 space-y-10 relative">
@@ -463,17 +439,18 @@ export default function DashboardPage() {
           isActive={activeView === 'chat'} 
           onStatusChange={setIsConnected} 
           onChatChange={setSelectedChatUser}
+          onBack={() => setActiveView('home')}
           ref={chatComponentRef as any}
         />
 
-        {/* Profile Side Panel - Full Screen on Mobile */}
+        {/* Profile Side Panel */}
         {isProfileOpen && (
           <div 
-            className="absolute inset-0 md:inset-auto md:left-2 md:top-2 md:bottom-2 md:w-[calc(50%-1rem)] z-50 backdrop-blur-xl flex flex-col md:rounded-[2.5rem]"
+            className="absolute right-0 top-0 bottom-0 w-full md:w-[400px] z-50 backdrop-blur-xl flex flex-col border-l"
             style={{ 
               background: isDark ? 'rgba(22,22,42,0.97)' : 'rgba(255,255,255,0.97)', 
-              border: 'none md:border md:border-[var(--dm-border-main)]', 
-              boxShadow: isDark ? '20px 0 50px rgba(0,0,0,0.4)' : '20px 0 50px rgba(0,0,0,0.03)',
+              borderColor: 'var(--dm-border-main)', 
+              boxShadow: isDark ? '-20px 0 50px rgba(0,0,0,0.4)' : '-20px 0 50px rgba(0,0,0,0.03)',
               animation: isClosingProfile 
                 ? 'slideToLeft 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
                 : 'slideFromLeft 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'

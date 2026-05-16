@@ -125,9 +125,10 @@ interface SocialChatProps {
   isActive: boolean;
   onStatusChange?: (status: boolean) => void;
   onChatChange?: (user: any) => void;
+  onBack?: () => void;
 }
 
-const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange }: SocialChatProps, ref) => {
+const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack }: SocialChatProps, ref) => {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -779,8 +780,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange }:
     <div className="social-chat-container" style={{ display: isActive ? 'flex' : 'none', width: '100%', height: '100%' }}>
       <div className="main-wrap">
         <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'}`}>
-          <div className="search-wrap">
-            <h2 className="text-xl font-bold mb-3" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
+          <div className="search-wrap relative">
+            <div className="flex items-center gap-3 mb-3">
+              <button style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', flexShrink: 0 }} onClick={() => onBack && onBack()}>
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              </button>
+              <h2 className="text-xl font-bold" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
+            </div>
             <input 
               type="text" 
               placeholder="Search contacts..." 
@@ -818,7 +824,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange }:
             <>
               <div className="chat-header">
                 <div className="to">
-                  {/* Mobile back button hidden as Dashboard header handles it */}
+                  <button 
+                    style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', marginRight: '10px', flexShrink: 0 }} 
+                    onClick={() => setSelectedUser(null)}
+                  >
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                  </button>
                   <div className="avatar">
                     {selectedUser.image && selectedUser.image.length > 5 ? (
                       <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
