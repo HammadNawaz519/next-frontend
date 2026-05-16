@@ -7,17 +7,25 @@ type Theme = 'light' | 'dark';
 interface ThemeContextType {
   theme: Theme;
   toggleTheme: (e: React.MouseEvent) => void;
+  ripple: {
+    active: boolean;
+    x: number;
+    y: number;
+    color: string;
+  };
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: 'light',
   toggleTheme: () => {},
+  ripple: { active: false, x: 0, y: 0, color: '#fff' }
 });
 
 export const useTheme = () => useContext(ThemeContext);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light');
+  const [ripple, setRipple] = useState({ active: false, x: 0, y: 0, color: '#fff' });
 
   // Persist theme
   useEffect(() => {
@@ -30,24 +38,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const toggleTheme = useCallback((e: React.MouseEvent) => {
     const next = theme === 'light' ? 'dark' : 'light';
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX || (rect.left + rect.width / 2);
+    const y = e.clientY || (rect.top + rect.height / 2);
+
+    // Trigger Ripple Overlay
+    setRipple({ 
+      active: true, 
+      x, 
+      y, 
+      color: next === 'dark' ? '#000' : '#fff' 
+    });
 
     if (!document.startViewTransition) {
-      // Fallback if View Transitions not supported
       setTheme(next);
       document.documentElement.setAttribute('data-theme', next);
       localStorage.setItem('theme', next);
+      setTimeout(() => setRipple(prev => ({ ...prev, active: false })), 1000);
       return;
     }
-
-    // Get click position for the ripple origin
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
-
-    // Calculate radius to cover the entire screen
-    const right = window.innerWidth - x;
-    const bottom = window.innerHeight - y;
-    const maxRadius = Math.hypot(Math.max(x, right), Math.max(y, bottom));
 
     const transition = document.startViewTransition(() => {
       setTheme(next);
@@ -55,25 +64,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('theme', next);
     });
 
-    transition.ready.then(() => {
-      document.documentElement.animate(
-        {
-          clipPath: [
-            `circle(0px at ${x}px ${y}px)`,
-            `circle(${maxRadius}px at ${x}px ${y}px)`
-          ]
-        },
-        {
-          duration: 800,
-          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
-          pseudoElement: '::view-transition-new(root)'
-        }
-      );
+    transition.finished.finally(() => {
+      setTimeout(() => {
+        setRipple(prev => ({ ...prev, active: false }));
+      }, 500);
     });
   }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, ripple }}>
       {children}
     </ThemeContext.Provider>
   );

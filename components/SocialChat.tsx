@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSession } from 'next-auth/react';
 import { 
@@ -43,6 +43,83 @@ const EMOJI_CATEGORIES = {
   smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿']
 };
 
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete }: any) => {
+  const isAI = msg.senderId === 'ai';
+  // A message is "Sent" if the sender is the current user
+  const isSent = !isAI && String(msg.senderId) === String(currentUserId);
+  
+  return (
+    <div className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} animate-in slide-in-from-bottom-2 duration-300`}>
+      <div className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''}`}>
+        {isAI && <div className="system-sender">AI Assistant</div>}
+        {msg.type === 'image' && <img src={msg.content} alt="media" onClick={() => window.open(msg.content, '_blank')} />}
+        {msg.type === 'video' && <video src={msg.content} controls />}
+        {msg.type === 'voice' && <audio src={msg.content} controls />}
+        {msg.type === 'call' && (
+          <div className="call-log-msg">
+            <div className={`call-icon ${msg.content.includes('Missed') ? 'missed' : msg.content.includes('rejected') ? 'rejected' : 'completed'}`}>
+              {msg.content.includes('video') ? (
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+              )}
+              {(msg.content.includes('Missed') || msg.content.includes('rejected')) && <div className="call-status-badge">!</div>}
+            </div>
+            <div className="call-details">
+              <span className="call-title">{msg.content.split(' • ')[0]}</span>
+              {msg.content.includes(' • ') && <span className="call-duration">{msg.content.split(' • ')[1]}</span>}
+            </div>
+          </div>
+        )}
+        {msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' && <div>{msg.content}</div>}
+        
+        <div className="time-row">
+          <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+          {isSent && (
+            <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+              </svg>
+            </span>
+          )}
+        </div>
+      </div>
+      
+      {msg.type !== 'deleted' && msg.type !== 'call' && (
+        <div className="msg-actions">
+          <div className="msg-del-actions">
+            <span className="msg-action-btn" title="Delete for me" onClick={() => onDelete(msg.id, 'me')}>🗑 Me</span>
+            {isSent && <span className="msg-action-btn" title="Delete for everyone" onClick={() => onDelete(msg.id, 'everyone')}>🗑 All</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+const SidebarItem = memo(({ user, isActive, onClick }: { user: User, isActive: boolean, onClick: any }) => {
+  return (
+    <div className={`item ${isActive ? 'active' : ''}`} onClick={onClick}>
+      <div className="user-pfp">
+        {user.image && user.image.length > 5 ? (
+          <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
+        ) : (
+          <span>{user.name?.charAt(0).toUpperCase()}</span>
+        )}
+      </div>
+      <div className="meta">
+        <b>
+          {user.name} 
+          <div className="side-meta">
+            {user.unseenCount && user.unseenCount > 0 ? <span className="unseen-badge">{user.unseenCount}</span> : null}
+          </div>
+        </b>
+        <small className="truncate">{user.lastMessage || `@${user.username || user.name?.toLowerCase().replace(/\s+/g, '')}`}</small>
+      </div>
+    </div>
+  );
+});
+
 interface SocialChatProps {
   isActive?: boolean;
 }
@@ -72,6 +149,10 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [view, setView] = useState<'recent' | 'requests'>('recent');
   const [requests, setRequests] = useState<User[]>([]);
+  const selectedUserRef = useRef<User | null>(null);
+  useEffect(() => {
+    selectedUserRef.current = selectedUser;
+  }, [selectedUser]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const ringtoneRef = useRef<AudioContext | null>(null);
 
@@ -115,103 +196,107 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
       }
     };
   }, [incomingCall, activeCall]);
+  // 1. Stable Socket Instance
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    fetch('/api/socket');
-    const newSocket = io({ path: "/api/socket" }); 
-    setSocket(newSocket);
+    const initSocket = async () => {
+      await fetch('/api/socket');
+      const newSocket = io({ path: "/api/socket" }); 
+      setSocket(newSocket);
 
-    const identifyUser = () => {
-      if (session?.user?.email) {
-        const email = session.user.email.toLowerCase().trim();
-        console.log('Identifying as:', email);
-        newSocket.emit('identify', { email });
-      }
+      newSocket.on('connect', () => {
+        console.log('Socket connected');
+        if (session?.user?.email) {
+          newSocket.emit('identify', { email: session.user.email.toLowerCase().trim() });
+        }
+      });
+
+      newSocket.on('receive_social_message', (msg: Message) => {
+        setMessages((prev) => {
+          if (prev.some(m => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
+
+        // Update cache
+        setMessagesCache(prev => {
+          const partnerId = msg.senderId === (session?.user as any)?.id ? msg.receiverId : msg.senderId;
+          const current = prev[partnerId] || [];
+          if (current.some(m => m.id === msg.id)) return prev;
+          return { ...prev, [partnerId]: [...current, msg] };
+        });
+
+        // Update unseenCount if not currently chatting with this person
+        const selUser = selectedUserRef.current;
+        if (!selUser || msg.senderId !== selUser.id) {
+          setUsers(prev => prev.map(u => u.id === msg.senderId ? { ...u, unseenCount: (u.unseenCount || 0) + 1 } : u));
+          setRequests(prev => prev.map(u => u.id === msg.senderId ? { ...u, unseenCount: (u.unseenCount || 0) + 1 } : u));
+        }
+
+        // If we are currently chatting with this person, mark it as seen
+        if (selUser && msg.senderId === selUser.id) {
+          markMessagesAsSeen(selUser.id);
+          newSocket.emit('mark_as_seen', { senderEmail: selUser.email });
+        }
+      });
+
+      newSocket.on('receive_social_delete', ({ messageId }) => {
+        setMessages(prev => prev.map(m => {
+          if (m.id === messageId) return { ...m, content: "🚫 This message was deleted", type: "deleted" };
+          return m;
+        }));
+      });
+
+      newSocket.on('messages_seen', () => {
+        setMessages(prev => prev.map(m => ({ ...m, isSeen: true })));
+      });
+
+      newSocket.on('incoming_call', (data) => {
+        console.log("Incoming call received:", data);
+        setIncomingCall(data);
+      });
+
+      newSocket.on('call_accepted', (data) => {
+        setActiveCall(prev => prev ? { ...prev, connected: true } as any : null);
+      });
+
+      newSocket.on('call_rejected', () => {
+        setActiveCall(null);
+        alert('Call rejected');
+      });
+
+      newSocket.on('call_ended', () => {
+        console.log("Call ended by peer");
+        setActiveCall(null);
+        setIncomingCall(null);
+      });
+
+      newSocket.on('user_typing', ({ email }) => {
+        setTypingUsers(prev => new Set(prev).add(email));
+      });
+
+      newSocket.on('user_stop_typing', ({ email }) => {
+        setTypingUsers(prev => {
+          const next = new Set(prev);
+          next.delete(email);
+          return next;
+        });
+      });
     };
 
-    newSocket.on('connect', identifyUser);
-
-    newSocket.on('receive_social_message', (msg: Message) => {
-      setMessages((prev) => {
-        if (prev.some(m => m.id === msg.id)) return prev;
-        return [...prev, msg];
-      });
-
-      // Update cache
-      setMessagesCache(prev => {
-        const partnerId = msg.senderId === (session?.user as any)?.id ? msg.receiverId : msg.senderId;
-        const current = prev[partnerId] || [];
-        if (current.some(m => m.id === msg.id)) return prev;
-        return { ...prev, [partnerId]: [...current, msg] };
-      });
-
-      // Update unseenCount if not currently chatting with this person
-      if (!selectedUser || msg.senderId !== selectedUser.id) {
-        setUsers(prev => prev.map(u => u.id === msg.senderId ? { ...u, unseenCount: (u.unseenCount || 0) + 1 } : u));
-        setRequests(prev => prev.map(u => u.id === msg.senderId ? { ...u, unseenCount: (u.unseenCount || 0) + 1 } : u));
-      }
-
-      // If we are currently chatting with this person, mark it as seen
-      if (selectedUser && msg.senderId === selectedUser.id) {
-        markMessagesAsSeen(selectedUser.id);
-        newSocket.emit('mark_as_seen', { senderEmail: selectedUser.email });
-      }
-    });
-
-    newSocket.on('receive_social_delete', ({ messageId }) => {
-      setMessages(prev => prev.map(m => {
-        if (m.id === messageId) {
-          return { ...m, content: "🚫 This message was deleted", type: "deleted" };
-        }
-        return m;
-      }));
-    });
-
-    newSocket.on('messages_seen', () => {
-      setMessages(prev => prev.map(m => ({ ...m, isSeen: true })));
-    });
-
-    // Call Listeners
-    newSocket.on('incoming_call', (data) => {
-      setIncomingCall(data);
-    });
-
-    newSocket.on('call_accepted', (data) => {
-      setActiveCall(prev => prev ? { ...prev, connected: true } as any : null);
-    });
-
-    newSocket.on('call_rejected', () => {
-      setActiveCall(null);
-      alert('Call rejected');
-    });
-
-    newSocket.on('call_ended', () => {
-      setActiveCall(null);
-      setIncomingCall(null);
-    });
-
-    newSocket.on('user_typing', ({ email }) => {
-      setTypingUsers(prev => new Set(prev).add(email));
-    });
-
-    newSocket.on('user_stop_typing', ({ email }) => {
-      setTypingUsers(prev => {
-        const next = new Set(prev);
-        next.delete(email);
-        return next;
-      });
-    });
-
-    // Re-identify if session becomes available after connection
-    if (session?.user?.email && newSocket.connected) {
-      identifyUser();
-    }
+    initSocket();
 
     return () => {
-      newSocket.close();
+      console.log("Cleaning up socket...");
     };
-  }, [session, selectedUser]); // Re-bind when selectedUser changes to capture it in closure or use a Ref
+  }, []); // MOUNT ONLY
+
+  // 2. Identify whenever session becomes available
+  useEffect(() => {
+    if (socket && socket.connected && session?.user?.email) {
+      socket.emit('identify', { email: session.user.email.toLowerCase().trim() });
+    }
+  }, [socket, session]);
   // Socket identity is handled in the connect event above
 
   const handleCall = async (type: 'audio' | 'video') => {
@@ -310,25 +395,25 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
     async function loadMessages() {
       if (!selectedUser) return;
       
-      // Flash load from cache if available
-      if (messagesCache[selectedUser.id]) {
-        setMessages(messagesCache[selectedUser.id]);
+      const cached = messagesCache[selectedUser.id];
+      if (cached) {
+        setMessages(cached);
         setIsLoadingMessages(false);
       } else {
         setIsLoadingMessages(true);
+        setMessages([]); // Clear while loading if no cache
       }
       
-      // Clear local unseenCount immediately
       setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, unseenCount: 0 } : u));
-      setRequests(prev => prev.map(u => u.id === selectedUser.id ? { ...u, unseenCount: 0 } : u));
 
       try {
         const history = await getSocialMessages(selectedUser.id);
-        // Update both UI and Cache with fresh data
-        setMessages(history as any);
-        setMessagesCache(prev => ({ ...prev, [selectedUser.id]: history as any }));
+        // Only update if it's different or we don't have cache
+        if (!cached || JSON.stringify(history) !== JSON.stringify(cached)) {
+          setMessages(history as any);
+          setMessagesCache(prev => ({ ...prev, [selectedUser.id]: history as any }));
+        }
         
-        // Mark as seen when opening the chat
         await markMessagesAsSeen(selectedUser.id);
         socket?.emit('mark_as_seen', { senderEmail: selectedUser.email });
       } catch (err) {
@@ -338,11 +423,17 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
       }
     }
     loadMessages();
-  }, [selectedUser, socket]);
+  }, [selectedUser?.id]); // Only re-run when ID changes, not the whole object
 
+  // Smart Scrolling
+  const lastMsgCount = useRef(0);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (messages.length > 0) {
+      const behavior = messages.length - lastMsgCount.current === 1 ? 'smooth' : 'auto';
+      messagesEndRef.current?.scrollIntoView({ behavior });
+      lastMsgCount.current = messages.length;
+    }
+  }, [messages.length]);
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -541,29 +632,14 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
             </div>
           </div>
           <div className="list">
-            {(view === 'recent' ? users : requests).map((user) => {
-              return (
-                <div key={user.id} className={`item ${selectedUser?.id === user.id ? 'active' : ''}`} onClick={() => setSelectedUser(user)}>
-                  <div className="user-pfp">
-                    {user.image && user.image.length > 5 ? (
-                      <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
-                    ) : (
-                      <span>{user.name?.charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                  <div className="meta">
-                    <b>
-                      {user.name} 
-                      <div className="side-meta">
-                        {user.unseenCount && user.unseenCount > 0 ? <span className="unseen-badge">{user.unseenCount}</span> : null}
-
-                      </div>
-                    </b>
-                    <small>{user.lastMessage || `@${user.username || user.name?.toLowerCase().replace(/\s+/g, '') || user.email?.split('@')[0] || 'user'}`}</small>
-                  </div>
-                </div>
-              );
-            })}
+            {(view === 'recent' ? users : requests).map((user) => (
+              <SidebarItem 
+                key={user.id} 
+                user={user} 
+                isActive={selectedUser?.id === user.id} 
+                onClick={() => setSelectedUser(user)} 
+              />
+            ))}
             {(view === 'recent' ? users : requests).length === 0 && searchQuery.length < 2 && (
               <div className="empty-state">
                 <p>{view === 'recent' ? 'No recent conversations' : 'No message requests'}</p>
@@ -610,71 +686,15 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
               </div>
 
               <div className="messages">
-                {messages.map((msg) => {
-                  const isAI = msg.senderId === 'ai';
-                  const currentUserId = (session?.user as any)?.id;
-                  
-                  // A message is "Sent" if the sender is the current user
-                  const isSent = !isAI && String(msg.senderId) === String(currentUserId);
-                  // A message is "Received" if the sender is the person we are chatting with
-                  const isReceived = !isAI && !isSent && String(msg.senderId) === String(selectedUser?.id);
-
-
-                  return (
-                    <div key={msg.id} className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'}`}>
-                      <div className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''}`}>
-                        {isAI && (
-                          <div className="system-sender">AI Assistant</div>
-                        )}
-                        {msg.type === 'image' && <img src={msg.content} alt="media" onClick={() => window.open(msg.content, '_blank')} />}
-
-                        {msg.type === 'video' && <video src={msg.content} controls />}
-                        {msg.type === 'voice' && <audio src={msg.content} controls />}
-                        {msg.type === 'call' && (
-                          <div className="call-log-msg">
-                            <div className={`call-icon ${msg.content.includes('Missed') ? 'missed' : msg.content.includes('rejected') ? 'rejected' : 'completed'}`}>
-                              {msg.content.includes('video') ? (
-                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-                              ) : (
-                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
-                              )}
-                              {msg.content.includes('Missed') || msg.content.includes('rejected') ? (
-                                <div className="call-status-badge">!</div>
-                              ) : null}
-                            </div>
-                            <div className="call-details">
-                              <span className="call-title">{msg.content.split(' • ')[0]}</span>
-                              {msg.content.includes(' • ') && <span className="call-duration">{msg.content.split(' • ')[1]}</span>}
-                            </div>
-                          </div>
-                        )}
-                        {msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' && <div>{msg.content}</div>}
-                        
-                        <div className="time-row">
-                          <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                          {isSent && (
-                            <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
-                              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                                <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-                              </svg>
-                            </span>
-                          )}
-
-                        </div>
-                      </div>
-                      
-                      {msg.type !== 'deleted' && msg.type !== 'call' && (
-                        <div className="msg-actions">
-                          <div className="msg-del-actions">
-                            <span className="msg-action-btn" title="Delete for me" onClick={() => handleDelete(msg.id, 'me')}>🗑 Me</span>
-                            {isSent && <span className="msg-action-btn" title="Delete for everyone" onClick={() => handleDelete(msg.id, 'everyone')}>🗑 All</span>}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                  );
-                })}
+                {messages.map((msg) => (
+                  <MessageItem 
+                    key={msg.id} 
+                    msg={msg} 
+                    currentUserId={(session?.user as any)?.id}
+                    selectedUser={selectedUser}
+                    onDelete={handleDelete}
+                  />
+                ))}
                 {!isLoadingMessages && messages.length === 0 && (
                   <div className="empty-chat-state">
                     <div className="empty-chat-pfp">
@@ -859,20 +879,24 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
           type={activeCall.type}
           isCaller={activeCall.isCaller}
           onEnd={async (duration, wasConnected) => {
-            if (activeCall.isCaller) {
-              const status = wasConnected ? 'completed' : 'missed';
-              const result = await saveCall(activeCall.peer.id, activeCall.type, status, duration);
-              if (result?.message && socket) {
-                socket.emit('send_social_message', { receiverEmail: activeCall.peer.email, ...result.message });
-                setMessages(prev => [...prev, result.message as any]);
-              }
-            } else if (duration && duration > 0) {
-              const result = await saveCall(activeCall.peer.id, activeCall.type, 'completed', duration);
-              if (result?.message && socket) {
-                setMessages(prev => [...prev, result.message as any]);
+            const callData = activeCall; // Capture closure
+            if (callData) {
+              if (callData.isCaller) {
+                const status = wasConnected ? 'completed' : 'missed';
+                const result = await saveCall(callData.peer.id, callData.type, status, duration);
+                if (result?.message && socket) {
+                  socket.emit('send_social_message', { receiverEmail: callData.peer.email, ...result.message });
+                  setMessages(prev => [...prev, result.message as any]);
+                }
+              } else if (duration && duration > 0) {
+                const result = await saveCall(callData.peer.id, callData.type, 'completed', duration);
+                if (result?.message && socket) {
+                  setMessages(prev => [...prev, result.message as any]);
+                }
               }
             }
             setActiveCall(null);
+            setIncomingCall(null);
           }}
         />
       )}

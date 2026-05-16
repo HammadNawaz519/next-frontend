@@ -20,6 +20,7 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const hasEnded = useRef(false);
@@ -27,6 +28,13 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
   const handleEnd = () => {
     if (hasEnded.current) return;
     hasEnded.current = true;
+    
+    // Explicitly notify peer to cut the call
+    const target = peer.email?.toLowerCase().trim();
+    if (target) {
+      socket.emit('end_call', { to: target });
+    }
+
     cleanup();
     onEnd(durationRef.current, callStatus === 'active' || durationRef.current > 0);
   };
@@ -118,10 +126,13 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
         stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
         pc.ontrack = (event) => {
-          if (remoteVideoRef.current) {
+          console.log("Remote track received:", event.streams[0]);
+          if (remoteVideoRef.current && type === 'video') {
             remoteVideoRef.current.srcObject = event.streams[0];
-            setCallStatus('active');
+          } else if (remoteAudioRef.current && type === 'audio') {
+            remoteAudioRef.current.srcObject = event.streams[0];
           }
+          setCallStatus('active');
         };
 
         pc.onicecandidate = (event) => {
@@ -202,14 +213,16 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: 'rgba(0,0,0,0.3)' }}>
-      {/* Remote Video Background (Video Call Only) */}
-      {type === 'video' && (
+      {/* Remote Audio/Video Elements */}
+      {type === 'video' ? (
         <video
           ref={remoteVideoRef}
           autoPlay
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
         />
+      ) : (
+        <audio ref={remoteAudioRef} autoPlay />
       )}
 
       {/* Main UI Layer */}
@@ -284,11 +297,7 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
           )}
 
           <button
-            onClick={() => {
-              const target = peer.email?.toLowerCase().trim();
-              if (target) socket.emit('end_call', { to: target });
-              handleEnd();
-            }}
+            onClick={handleEnd}
             className="w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 transition-all shadow-xl active:scale-90"
             style={{ background: '#ef4444', color: '#fff' }}
           >
