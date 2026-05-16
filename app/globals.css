@@ -223,48 +223,56 @@ body {
    GLOBAL RESPONSIVE UTILITIES
    ========================================= */
 @media (max-width: 1024px) {
-  /* Hide sidebar on small screens, show bottom nav instead */
+  /* Hide sidebar on mobile - Use Bottom Nav instead */
   .main-sidebar {
-    width: 64px !important;
-    padding: 10px 5px !important;
-  }
-  
-  .main-sidebar .group-hover\:w-72 {
-    width: 64px !important; /* Disable expansion on mobile */
+    display: none !important;
   }
 
-  .main-sidebar span, .main-sidebar p {
-    display: none !important; /* Hide labels on mobile sidebar */
-  }
-  
   .main-layout {
     flex-direction: column !important;
-    padding: 10px !important;
+    padding: 0 !important; /* Full screen - no padding */
+    margin: 0 !important;
+    gap: 0 !important;
     height: 100vh !important;
+    width: 100vw !important;
+    overflow: hidden !important;
   }
 
   .main-container {
-    border-radius: 2rem !important;
-    height: calc(100% - 80px) !important;
+    border-radius: 0 !important; /* Full bleed on mobile */
+    flex: 1 !important;
+    height: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
   }
 
-  /* Bottom Navigation */
+  /* Show horizontal bottom bar */
   .mobile-nav {
     display: flex !important;
+    position: fixed !important;
+    bottom: 20px !important;
+    left: 20px !important;
+    right: 20px !important;
+    z-index: 1000 !important;
+    background: rgba(var(--dm-bg-sidebar-rgb), 0.8) !important;
+    backdrop-filter: blur(20px) !important;
+    border: 1px solid var(--dm-border) !important;
+    border-radius: 2rem !important;
+    padding: 8px !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important;
   }
 }
 
 @media (max-width: 768px) {
   .main-layout {
-    padding: 0 !important;
-    gap: 0 !important;
+    padding: 8px !important;
   }
-  
+
   .main-container {
-    border-radius: 2.5rem !important;
+    border-radius: 1.75rem !important;
     border: 1px solid var(--dm-border-main) !important;
-    margin: 10px;
-    height: calc(100% - 100px) !important;
   }
 }
 

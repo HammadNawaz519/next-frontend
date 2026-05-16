@@ -122,17 +122,25 @@ const SidebarItem = memo(({ user, isActive, onClick }: { user: User, isActive: b
 });
 
 interface SocialChatProps {
-  isActive?: boolean;
-  onStatusChange?: (connected: boolean) => void;
+  isActive: boolean;
+  onStatusChange?: (status: boolean) => void;
+  onChatChange?: (user: any) => void;
 }
 
-export default function SocialChat({ isActive = true, onStatusChange }: SocialChatProps) {
+const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange }: SocialChatProps, ref) => {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  
+  // Expose closeChat to parent via ref
+  React.useImperativeHandle(ref, () => ({
+    closeChat: () => setSelectedUser(null)
+  }));
+
+  const [view, setView] = useState<'recent' | 'requests'>('recent');
   const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>(() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('social_messages_cache');
@@ -163,9 +171,15 @@ export default function SocialChat({ isActive = true, onStatusChange }: SocialCh
   const [activeCall, setActiveCall] = useState<{ peer: any, type: 'audio' | 'video', isCaller: boolean, initialOffer?: any } | null>(null);
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
-  const [view, setView] = useState<'recent' | 'requests'>('recent');
   const [requests, setRequests] = useState<User[]>([]);
   const selectedUserRef = useRef<User | null>(null);
+
+  // Sync with parent for header updates
+  useEffect(() => {
+    if (onChatChange) {
+      onChatChange(selectedUser);
+    }
+  }, [selectedUser, onChatChange]);
   const sessionRef = useRef<any>(session);
   const usersRef = useRef<User[]>(users);
   const requestsRef = useRef<User[]>(requests);
@@ -804,9 +818,7 @@ export default function SocialChat({ isActive = true, onStatusChange }: SocialCh
             <>
               <div className="chat-header">
                 <div className="to">
-                  <button className="mobile-back-btn" onClick={() => setSelectedUser(null)}>
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
-                  </button>
+                  {/* Mobile back button hidden as Dashboard header handles it */}
                   <div className="avatar">
                     {selectedUser.image && selectedUser.image.length > 5 ? (
                       <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
@@ -1059,5 +1071,7 @@ export default function SocialChat({ isActive = true, onStatusChange }: SocialCh
       )}
     </>
   );
-}
+});
+
+export default SocialChat;
 

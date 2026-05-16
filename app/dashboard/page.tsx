@@ -25,6 +25,11 @@ export default function DashboardPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
+  
+  // Expose closeChat to parent via ref if needed
+  const chatRef = useRef<{ closeChat: () => void } | null>(null);
+  
+  const [view, setView] = useState<'recent' | 'requests'>('recent');
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isClosingProfile, setIsClosingProfile] = useState(false);
@@ -39,7 +44,17 @@ export default function DashboardPage() {
   };
   const [fullUser, setFullUser] = useState<any>(null);
   const [activeView, setActiveView] = useState<'home' | 'assistant' | 'chat'>('home');
+  const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
+  const chatComponentRef = useRef<{ closeChat: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleMobileBack = () => {
+    if (activeView === 'chat' && selectedChatUser) {
+      chatComponentRef.current?.closeChat();
+    } else {
+      setActiveView('home');
+    }
+  };
 
   // Load History
   useEffect(() => {
@@ -269,9 +284,9 @@ export default function DashboardPage() {
 
         {/* Shared Mobile Header for Sub-views (Baked in - Moved to Top) */}
         {activeView !== 'home' && (
-          <div className="md:hidden flex items-center justify-center p-6 border-b relative" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
+          <div className="md:hidden flex items-center justify-center p-6 border-b relative z-[9999]" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
             <button 
-              onClick={() => setActiveView('home')}
+              onClick={(e) => { e.stopPropagation(); handleMobileBack(); }}
               className="absolute left-6 w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90"
               style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
             >
@@ -284,9 +299,19 @@ export default function DashboardPage() {
                     <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
                 )}
                 <h2 className="text-[10px] md:text-lg font-bold uppercase tracking-[0.3em]" style={{ color: activeView === 'assistant' ? 'var(--dm-text-secondary)' : 'var(--dm-text-heading)' }}>
-                    {activeView === 'chat' ? 'Messages' : activeView === 'assistant' ? 'Intelligence Core' : activeView}
+                    {activeView === 'chat' ? (selectedChatUser ? selectedChatUser.name : 'Messages') : activeView === 'assistant' ? 'Intelligence Core' : activeView}
                 </h2>
             </div>
+
+            <button 
+              onClick={() => setIsProfileOpen(true)}
+              className="absolute right-6 w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90 z-10"
+              style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}
+            >
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: 'var(--dm-bg-active)' }}>
+                {session.user?.name?.charAt(0) || 'U'}
+              </div>
+            </button>
             
             {/* Animated Background for Mobile Header */}
             <div className="absolute inset-0 opacity-10">
@@ -434,15 +459,20 @@ export default function DashboardPage() {
         )}
 
         {/* SocialChat Component */}
-        <SocialChat isActive={activeView === 'chat'} onStatusChange={setIsConnected} />
+        <SocialChat 
+          isActive={activeView === 'chat'} 
+          onStatusChange={setIsConnected} 
+          onChatChange={setSelectedChatUser}
+          ref={chatComponentRef as any}
+        />
 
-        {/* Profile Side Panel */}
+        {/* Profile Side Panel - Full Screen on Mobile */}
         {isProfileOpen && (
           <div 
-            className="absolute left-2 top-2 bottom-2 w-[calc(100%-1rem)] md:w-[calc(50%-1rem)] z-50 backdrop-blur-xl flex flex-col rounded-[2.5rem]"
+            className="absolute inset-0 md:inset-auto md:left-2 md:top-2 md:bottom-2 md:w-[calc(50%-1rem)] z-50 backdrop-blur-xl flex flex-col md:rounded-[2.5rem]"
             style={{ 
               background: isDark ? 'rgba(22,22,42,0.97)' : 'rgba(255,255,255,0.97)', 
-              border: '1px solid var(--dm-border-main)', 
+              border: 'none md:border md:border-[var(--dm-border-main)]', 
               boxShadow: isDark ? '20px 0 50px rgba(0,0,0,0.4)' : '20px 0 50px rgba(0,0,0,0.03)',
               animation: isClosingProfile 
                 ? 'slideToLeft 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
@@ -488,12 +518,60 @@ export default function DashboardPage() {
                   <span className="text-[14px] font-light truncate max-w-[160px]" style={{ color: 'var(--dm-text-primary)' }}>{detail.value}</span>
                 </div>
               ))}
+              <div className="mt-4 pt-4 border-t border-[var(--dm-border)]">
+                <button
+                  onClick={() => signOut({ callbackUrl: '/' })}
+                  className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl transition-all active:scale-95 text-red-500 font-medium"
+                  style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Sign Out
+                </button>
+              </div>
             </div>
 
           </div>
         )}
       </div>
 
+      {/* Mobile Bottom Navigation - always visible on mobile */}
+      {/* Mobile Bottom Navigation - visible on home and chat list */}
+      {(activeView === 'home' || (activeView === 'chat' && !selectedChatUser)) && (
+        <nav className="mobile-nav">
+          {[
+            { id: 'home', label: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+            { id: 'chat', label: 'Chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
+            { id: 'assistant', label: 'AI', icon: 'M13 10V3L4 14h7v7l9-11h-7z' }
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={(e) => handleNavClick(item.id, e)}
+              className="flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-2xl transition-all active:scale-90"
+              style={{ 
+                background: activeView === item.id ? 'var(--dm-bg-active)' : 'transparent',
+                color: activeView === item.id ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
+              }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+              </svg>
+              <span className="text-[9px] font-semibold uppercase tracking-widest">{item.label}</span>
+            </button>
+          ))}
+          <button
+            onClick={() => setIsProfileOpen(true)}
+            className="flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-2xl transition-all active:scale-90"
+            style={{ color: 'var(--dm-text-muted)' }}
+          >
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)' }}>
+              {session.user?.name?.charAt(0) || 'U'}
+            </div>
+            <span className="text-[9px] font-semibold uppercase tracking-widest">Profile</span>
+          </button>
+        </nav>
+      )}
 
     </div>
   );
