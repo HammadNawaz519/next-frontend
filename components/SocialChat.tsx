@@ -215,8 +215,8 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
     if (typeof window === 'undefined') return;
     
     const initSocket = async () => {
-      await fetch('/api/socket');
-      const newSocket = io({ path: "/api/socket" }); 
+      const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-production-265c.up.railway.app';
+      const newSocket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
       setSocket(newSocket);
 
       newSocket.on('connect', () => {
@@ -344,7 +344,13 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
 
       newSocket.on('call_rejected', () => {
         setActiveCall(null);
-        alert('Call rejected');
+        setIncomingCall(null);
+        alert('Call was declined.');
+      });
+
+      newSocket.on('call_busy', () => {
+        setActiveCall(null);
+        alert('User is currently in another call.');
       });
 
       newSocket.on('call_ended', () => {
