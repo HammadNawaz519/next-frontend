@@ -494,10 +494,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Mobile Bottom Nav */}
-      {activeView === 'home' && (
-        {/* Mobile Nav Removed */}
-      )}
+
     </div>
   );
 }
