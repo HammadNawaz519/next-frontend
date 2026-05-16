@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { 
   searchUsers, 
   getSocialMessages, 
+  getSocialUser,
   saveSocialMessage, 
   deleteSocialMessage, 
   reactToSocialMessage,
@@ -225,31 +226,99 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
         }
       });
 
-      newSocket.on('receive_social_message', (msg: Message) => {
+      newSocket.on('receive_social_message', async (msg: Message) => {
+        const partnerId = msg.senderId === (session?.user as any)?.id ? msg.receiverId : msg.senderId;
+        
+        // 1. Update Message Stream
         setMessages((prev) => {
           if (prev.some(m => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
 
-        // Update cache
+        // 2. Update Sidebar (Users/Requests)
+        const formatMsg = (m: Message) => {
+          if (m.type === 'voice') return 'Voice Message';
+          if (m.type === 'image') return 'Image';
+          if (m.type === 'video') return 'Video';
+          if (m.type === 'file') return 'Attachment';
+          return m.content.length > 30 ? m.content.substring(0, 30) + '...' : m.content;
+        };
+
+        const updateSidebarList = async (prevList: User[]) => {
+          const existingIndex = prevList.findIndex(u => u.id === partnerId);
+          if (existingIndex > -1) {
+            const updatedUser = { 
+              ...prevList[existingIndex], 
+              lastMessage: formatMsg(msg),
+              unseenCount: (selectedUserRef.current?.id === partnerId) ? 0 : (prevList[existingIndex].unseenCount || 0) + 1
+            };
+            const newList = [...prevList];
+            newList.splice(existingIndex, 1);
+            return [updatedUser, ...newList];
+          }
+          
+          // If NOT in list, fetch user and add as request
+          if (msg.senderId !== (session?.user as any)?.id) {
+            const newUser = await getSocialUser(msg.senderId);
+            if (newUser) {
+              return [{ 
+                ...(newUser as any), 
+                lastMessage: formatMsg(msg), 
+                isRequest: true, 
+                unseenCount: 1 
+              }, ...prevList];
+            }
+          }
+          return prevList;
+        };
+
+        setUsers(prev => {
+          const existing = prev.find(u => u.id === partnerId);
+          if (existing) {
+            const index = prev.indexOf(existing);
+            const updated = { ...existing, lastMessage: formatMsg(msg), unseenCount: (selectedUserRef.current?.id === partnerId) ? 0 : (existing.unseenCount || 0) + 1 };
+            const next = [...prev];
+            next.splice(index, 1);
+            return [updated, ...next];
+          }
+          return prev;
+        });
+
+        setRequests(prev => {
+          const existing = prev.find(u => u.id === partnerId);
+          if (existing) {
+            const index = prev.indexOf(existing);
+            const updated = { ...existing, lastMessage: formatMsg(msg), unseenCount: (selectedUserRef.current?.id === partnerId) ? 0 : (existing.unseenCount || 0) + 1 };
+            const next = [...prev];
+            next.splice(index, 1);
+            return [updated, ...next];
+          }
+          
+          // If it's a completely new person who messaged us
+          if (msg.senderId !== (session?.user as any)?.id && !users.some(u => u.id === msg.senderId)) {
+            getSocialUser(msg.senderId).then(newUser => {
+              if (newUser) {
+                setRequests(current => {
+                  if (current.some(u => u.id === newUser.id)) return current;
+                  return [{ ...(newUser as any), lastMessage: formatMsg(msg), isRequest: true, unseenCount: 1 }, ...current];
+                });
+              }
+            });
+          }
+          return prev;
+        });
+
+        // 3. Update Cache
         setMessagesCache(prev => {
-          const partnerId = msg.senderId === (session?.user as any)?.id ? msg.receiverId : msg.senderId;
           const current = prev[partnerId] || [];
           if (current.some(m => m.id === msg.id)) return prev;
           return { ...prev, [partnerId]: [...current, msg] };
         });
 
-        // Update unseenCount if not currently chatting with this person
-        const selUser = selectedUserRef.current;
-        if (!selUser || msg.senderId !== selUser.id) {
-          setUsers(prev => prev.map(u => u.id === msg.senderId ? { ...u, unseenCount: (u.unseenCount || 0) + 1 } : u));
-          setRequests(prev => prev.map(u => u.id === msg.senderId ? { ...u, unseenCount: (u.unseenCount || 0) + 1 } : u));
-        }
-
-        // If we are currently chatting with this person, mark it as seen
-        if (selUser && msg.senderId === selUser.id) {
-          markMessagesAsSeen(selUser.id);
-          newSocket.emit('mark_as_seen', { senderEmail: selUser.email });
+        // 4. Mark as seen if active
+        if (selectedUserRef.current?.id === partnerId) {
+          markMessagesAsSeen(partnerId);
+          newSocket.emit('mark_as_seen', { senderEmail: selectedUserRef.current.email });
         }
       });
 

@@ -38,9 +38,9 @@ export default function RippleOverlay() {
           top: ripple.y,
           transform: 'translate(-50%, -50%)',
           transition: ripple.active
-            ? 'width 1s cubic-bezier(0.4, 0, 0.2, 1), height 1s cubic-bezier(0.4, 0, 0.2, 1), opacity 1s ease'
+            ? 'width 1.2s cubic-bezier(0.4, 0, 0.2, 1), height 1.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s ease'
             : 'width 0.3s ease, height 0.3s ease, opacity 0.3s ease',
-          opacity: ripple.active ? 0.97 : 0,
+          opacity: ripple.active ? 1 : 0,
           pointerEvents: 'none',
         }}
       />

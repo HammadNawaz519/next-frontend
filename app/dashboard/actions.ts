@@ -44,6 +44,19 @@ export async function askAI(prompt: string) {
   }
 }
 
+export async function getSocialUser(userId: string) {
+  return await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      image: true
+    }
+  });
+}
+
 export async function getChatHistory() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return [];

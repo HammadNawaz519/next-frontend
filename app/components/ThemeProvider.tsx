@@ -38,11 +38,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const toggleTheme = useCallback((e: React.MouseEvent) => {
     const next = theme === 'light' ? 'dark' : 'light';
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = e.clientX || (rect.left + rect.width / 2);
-    const y = e.clientY || (rect.top + rect.height / 2);
+    
+    // Get click position or default to top-right
+    const x = e.clientX || window.innerWidth;
+    const y = e.clientY || 0;
 
-    // Trigger Ripple Overlay
+    // Calculate max diagonal to ensure full coverage
+    const maxRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    // 1. Set Ripple state for CSS fallback overlay
     setRipple({ 
       active: true, 
       x, 
@@ -64,10 +71,26 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('theme', next);
     });
 
+    transition.ready.then(() => {
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${maxRadius}px at ${x}px ${y}px)`
+          ]
+        },
+        {
+          duration: 700,
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          pseudoElement: '::view-transition-new(root)'
+        }
+      );
+    });
+
     transition.finished.finally(() => {
       setTimeout(() => {
         setRipple(prev => ({ ...prev, active: false }));
-      }, 500);
+      }, 300);
     });
   }, [theme]);
 
