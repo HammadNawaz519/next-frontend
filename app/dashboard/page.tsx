@@ -27,6 +27,15 @@ export default function DashboardPage() {
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isClosingProfile, setIsClosingProfile] = useState(false);
+  
+  const handleCloseProfile = () => {
+    setIsClosingProfile(true);
+    setTimeout(() => {
+      setIsProfileOpen(false);
+      setIsClosingProfile(false);
+    }, 450); // match animation duration slightly less to prevent blink
+  };
   const [fullUser, setFullUser] = useState<any>(null);
   const [activeView, setActiveView] = useState<'home' | 'assistant' | 'chat'>('home');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -364,14 +373,16 @@ export default function DashboardPage() {
               background: isDark ? 'rgba(22,22,42,0.97)' : 'rgba(255,255,255,0.97)', 
               border: '1px solid var(--dm-border-main)', 
               boxShadow: isDark ? '20px 0 50px rgba(0,0,0,0.4)' : '20px 0 50px rgba(0,0,0,0.03)',
-              animation: 'slideFromLeft 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
+              animation: isClosingProfile 
+                ? 'slideToLeft 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
+                : 'slideFromLeft 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
             }}
           >
             {/* Header / Avatar Section */}
             <div className="relative h-[30%] flex flex-col items-center justify-center overflow-hidden rounded-t-[2.5rem]" style={{ background: 'var(--dm-bg-main)', borderBottom: '1px solid var(--dm-border)' }}>
               <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
               <button 
-                onClick={() => setIsProfileOpen(false)}
+                onClick={handleCloseProfile}
                 className="absolute top-6 right-6 w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-sm z-10"
                 style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}
               >
