@@ -975,7 +975,7 @@ export default function SocialChat({ isActive = true, onStatusChange }: SocialCh
 
       {/* --- INCOMING CALL OVERLAY --- */}
       {incomingCall && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: 'rgba(0,0,0,0.3)' }}>
+        <div className="fixed inset-0 z-[550] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: 'rgba(0,0,0,0.3)' }}>
           <div className="relative z-10 w-full h-full flex flex-col items-center justify-center" style={{ background: incomingCall.type === 'video' ? 'rgba(0,0,0,0.5)' : 'transparent' }}>
             
             <div className="flex flex-col items-center gap-6 text-center animate-in zoom-in duration-700">

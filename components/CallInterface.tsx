@@ -235,7 +235,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: 'rgba(0,0,0,0.3)' }}>
+    <div className="fixed inset-0 z-[500] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: 'rgba(0,0,0,0.3)' }}>
       {/* Remote Audio/Video Elements */}
       {type === 'video' ? (
         <video
