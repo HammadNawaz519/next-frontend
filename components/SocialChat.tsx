@@ -49,6 +49,7 @@ export default function SocialChat() {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>({});
   const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -160,7 +161,9 @@ export default function SocialChat() {
     if (!selectedUser || !session?.user || !socket) return;
 
     // 1. Emit call event IMMEDIATELY for low latency
-    const callTarget = selectedUser.email.toLowerCase().trim();
+    const callTarget = selectedUser.email?.toLowerCase().trim();
+    if (!callTarget) return;
+
     socket.emit('call_user', {
       to: callTarget,
       from: session.user,
@@ -169,23 +172,16 @@ export default function SocialChat() {
 
     // 2. Set local active call state
     setActiveCall({ peer: selectedUser, type, isCaller: true });
-
-    // 3. Save call to DB in background
-    try {
-      const result = await saveCall(selectedUser.id, type, 'missed');
-      if (result?.message && socket) {
-        socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...result.message });
-        setMessages(prev => [...prev, result.message as any]);
-      }
-    } catch (err) {
-      console.error("Failed to log call:", err);
-    }
+    
+    // 3. Call is logged when it ends (onEnd) or is rejected (handleRejectCall)
   };
 
   const handleAcceptCall = () => {
     if (!incomingCall || !socket) return;
     
-    const target = incomingCall.from.email.toLowerCase().trim();
+    const target = incomingCall.from.email?.toLowerCase().trim();
+    if (!target) return;
+    
     socket.emit('accept_call', {
       to: target,
       from: session?.user
@@ -197,8 +193,8 @@ export default function SocialChat() {
 
   const handleRejectCall = async () => {
     if (!incomingCall || !socket) return;
-    const target = incomingCall.from.email.toLowerCase().trim();
-    socket.emit('reject_call', { to: target });
+    const target = incomingCall.from.email?.toLowerCase().trim();
+    if (target) socket.emit('reject_call', { to: target });
     // Save as rejected call
     const result = await saveCall(incomingCall.from.id, incomingCall.type, 'rejected');
     if (result?.message) {
@@ -213,8 +209,8 @@ export default function SocialChat() {
 
   const handleEndCall = () => {
     if (!activeCall || !socket) return;
-    const target = activeCall.peer.email.toLowerCase().trim();
-    socket.emit('end_call', { to: target });
+    const target = activeCall.peer.email?.toLowerCase().trim();
+    if (target) socket.emit('end_call', { to: target });
     // Note: The onEnd callback in CallInterface will handle the database save
   };
 
@@ -237,8 +233,17 @@ export default function SocialChat() {
         });
         
         setUsers(contacts);
-        // Ensure Mutual Exclusivity to prevent Duplicate Key errors
         setRequests(reqs.filter(r => !contacts.some(c => c.id === r.id)));
+
+        // --- EAGER PREFETCH --- 
+        // Instantly background load messages for all contacts to make clicking "flash" fast
+        contacts.forEach(u => {
+          if (!messagesCache[u.id]) {
+            getSocialMessages(u.id).then(history => {
+              setMessagesCache(prev => ({ ...prev, [u.id]: history as any }));
+            }).catch(() => {});
+          }
+        });
       });
     }
   }, [searchQuery]);
@@ -247,7 +252,14 @@ export default function SocialChat() {
   useEffect(() => {
     async function loadMessages() {
       if (!selectedUser) return;
-      setIsLoadingMessages(true);
+      
+      // Flash load from cache if available
+      if (messagesCache[selectedUser.id]) {
+        setMessages(messagesCache[selectedUser.id]);
+        setIsLoadingMessages(false);
+      } else {
+        setIsLoadingMessages(true);
+      }
       
       // Clear local unseenCount immediately
       setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, unseenCount: 0 } : u));
@@ -255,7 +267,10 @@ export default function SocialChat() {
 
       try {
         const history = await getSocialMessages(selectedUser.id);
+        // Update both UI and Cache with fresh data
         setMessages(history as any);
+        setMessagesCache(prev => ({ ...prev, [selectedUser.id]: history as any }));
+        
         // Mark as seen when opening the chat
         await markMessagesAsSeen(selectedUser.id);
         socket?.emit('mark_as_seen', { senderEmail: selectedUser.email });
@@ -727,18 +742,18 @@ export default function SocialChat() {
 
       {/* --- INCOMING CALL OVERLAY --- */}
       {incomingCall && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-white/80 backdrop-blur-xl animate-in fade-in duration-500">
-          <div className="flex flex-col items-center gap-10 text-center p-14 bg-white border border-gray-100 rounded-[3.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.12)]">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center backdrop-blur-2xl animate-in fade-in duration-500" style={{ background: 'rgba(0,0,0,0.5)' }}>
+          <div className="flex flex-col items-center gap-10 text-center p-14 rounded-[3.5rem] backdrop-blur-xl shadow-2xl" style={{ background: 'rgba(15,15,19,0.7)', border: '1px solid rgba(255,255,255,0.1)' }}>
             <div className="relative">
-              <div className="absolute inset-0 bg-gray-100 rounded-full animate-ping [animation-duration:2s]" />
-              <div className="relative w-36 h-36 rounded-full overflow-hidden border-[6px] border-white shadow-2xl bg-gray-50 flex items-center justify-center text-5xl font-bold text-black">
+              <div className="absolute inset-0 rounded-full animate-ping [animation-duration:2s]" style={{ background: 'var(--dm-bg-input)' }} />
+              <div className="relative w-36 h-36 rounded-full overflow-hidden border-[6px] shadow-2xl flex items-center justify-center text-5xl font-bold" style={{ borderColor: 'var(--dm-bg-main)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)' }}>
                 {incomingCall.from.image ? <img src={incomingCall.from.image} className="w-full h-full object-cover" /> : incomingCall.from.name?.charAt(0)}
               </div>
             </div>
             
             <div className="space-y-3">
-              <h2 className="text-3xl font-extrabold text-black tracking-tight">{incomingCall.from.name}</h2>
-              <div className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-bold uppercase tracking-widest inline-block">
+              <h2 className="text-3xl font-extrabold tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>{incomingCall.from.name}</h2>
+              <div className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest inline-block" style={{ background: 'var(--dm-bg-active)', color: 'var(--dm-text-secondary)' }}>
                 Incoming {incomingCall.type} Call
               </div>
             </div>
@@ -746,7 +761,8 @@ export default function SocialChat() {
             <div className="flex gap-8">
               <button 
                 onClick={handleRejectCall}
-                className="w-18 h-18 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white active:scale-90 transition-all shadow-lg"
+                className="w-18 h-18 rounded-full flex items-center justify-center hover:scale-105 active:scale-90 transition-all shadow-lg"
+                style={{ background: '#ef4444', color: '#fff' }}
               >
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -754,7 +770,8 @@ export default function SocialChat() {
               </button>
               <button 
                 onClick={handleAcceptCall}
-                className="w-18 h-18 rounded-full bg-black text-white flex items-center justify-center hover:scale-105 active:scale-90 transition-all shadow-xl shadow-black/20"
+                className="w-18 h-18 rounded-full flex items-center justify-center hover:scale-105 active:scale-90 transition-all shadow-xl"
+                style={{ background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)' }}
               >
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

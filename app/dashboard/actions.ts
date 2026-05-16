@@ -277,7 +277,7 @@ export async function getRecentChats() {
     distinct: ['receiverId'],
     orderBy: { createdAt: 'desc' },
     take: 10,
-    include: { receiver: { select: { id: true, name: true, username: true, image: true } } }
+    include: { receiver: { select: { id: true, name: true, username: true, email: true, image: true } } }
   });
 
   const received = await prisma.socialMessage.findMany({
@@ -285,7 +285,7 @@ export async function getRecentChats() {
     distinct: ['senderId'],
     orderBy: { createdAt: 'desc' },
     take: 10,
-    include: { sender: { select: { id: true, name: true, username: true, image: true } } }
+    include: { sender: { select: { id: true, name: true, username: true, email: true, image: true } } }
   });
 
   const formatLastMessage = (m: any) => {

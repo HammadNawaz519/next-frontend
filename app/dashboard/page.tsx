@@ -53,11 +53,12 @@ export default function DashboardPage() {
     loadHistory();
   }, [status]);
 
+  // Eager load User Details for Profile Panel
   useEffect(() => {
-    if (isProfileOpen && !fullUser) {
+    if (status === 'authenticated' && !fullUser) {
       getUserDetails().then(setFullUser);
     }
-  }, [isProfileOpen, fullUser]);
+  }, [status, fullUser]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -69,7 +70,8 @@ export default function DashboardPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, isAiTyping, activeView]);
 
-  if (status === 'loading' || isHistoryLoading) return (
+  // Render instantly if authenticated, background load data
+  if (status === 'loading') return (
     <div className="h-screen w-full flex items-center justify-center" style={{ background: 'var(--dm-bg-page)' }}>
       <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: 'var(--dm-border)', borderTopColor: 'var(--dm-text-primary)' }} />
     </div>
