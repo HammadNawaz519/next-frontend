@@ -757,16 +757,7 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
       <div className="main-wrap">
         <aside className="sidebar">
           <div className="search-wrap">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-bold" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: isConnected ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: isConnected ? '#22c55e' : '#ef4444' }}>
-                <span className="relative flex h-2 w-2">
-                  {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                </span>
-                {isConnected ? 'Connected' : 'Connecting...'}
-              </div>
-            </div>
+            <h2 className="text-xl font-bold mb-3" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
             <input 
               type="text" 
               placeholder="Search contacts..." 
@@ -961,8 +952,17 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
             </>
           ) : (
             <div className="empty-state">
-              <h3>Select a Chat</h3>
-              <p>Choose a contact to start messaging or search for new people.</p>
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold shadow-lg" style={{ background: isConnected ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: isConnected ? '#22c55e' : '#ef4444', border: `1px solid ${isConnected ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
+                  <span className="relative flex h-2.5 w-2.5">
+                    {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
+                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                  </span>
+                  {isConnected ? 'Real-time Server Connected' : 'Connecting to Server...'}
+                </div>
+                <h3>Select a Chat</h3>
+                <p>Choose a contact to start messaging or search for new people.</p>
+              </div>
             </div>
           )}
 
