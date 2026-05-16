@@ -225,7 +225,7 @@ export default function LoginPage() {
     }
 
     return (
-      <div className="relative lg:rounded-[2rem] m-0 lg:m-4 overflow-hidden flex lg:flex flex-col items-center justify-center min-h-[200px] lg:min-h-0">
+      <div className="relative lg:rounded-[2rem] m-0 lg:m-4 overflow-hidden hidden lg:flex flex-col items-center justify-center">
         <GrainGradient
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
           colorBack="#F8F9FA"
@@ -324,7 +324,8 @@ export default function LoginPage() {
     return (
       <div className="flex flex-col items-center justify-center p-4 lg:p-7 h-full overflow-y-auto">
         <div className="w-full max-w-[400px] space-y-3">
-          <div className="text-left">
+          <div className="text-left w-full">
+            <p className="lg:hidden text-gray-400 font-light tracking-[0.4em] uppercase text-[9px] mb-2">Imagination is the limit</p>
             <h1 className="text-[24px] font-normal tracking-tight text-gray-900">{isLogin ? 'Welcome back' : 'Create your account'}</h1>
           </div>
           {error && <div className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{error}</div>}
