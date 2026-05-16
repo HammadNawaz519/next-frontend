@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isClosingProfile, setIsClosingProfile] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   
   const handleCloseProfile = () => {
     setIsClosingProfile(true);
@@ -268,8 +269,20 @@ export default function DashboardPage() {
 
         {/* Content Views */}
         {activeView === 'home' && (
-          <div className="relative w-full h-full flex p-10 justify-end z-10">
-             <ThemeToggle />
+          <div className="relative w-full h-full flex flex-col p-10 z-10">
+            <div className="flex justify-between items-start w-full">
+              <div className="flex flex-col gap-2">
+                <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>Welcome back, {session.user?.name || 'User'}</h1>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold w-fit shadow-sm" style={{ background: isConnected ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: isConnected ? '#22c55e' : '#ef4444', border: `1px solid ${isConnected ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
+                  <span className="relative flex h-2.5 w-2.5">
+                    {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
+                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                  </span>
+                  {isConnected ? 'Real-time Server Connected' : 'Connecting to Server...'}
+                </div>
+              </div>
+              <ThemeToggle />
+            </div>
           </div>
         )}
 
@@ -361,7 +374,7 @@ export default function DashboardPage() {
           </>
         )}
 
-        <SocialChat isActive={activeView === 'chat'} />
+        <SocialChat isActive={activeView === 'chat'} onStatusChange={setIsConnected} />
 
         {/* Profile Side Panel */}
         {isProfileOpen && (

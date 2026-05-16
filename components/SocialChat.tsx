@@ -123,9 +123,10 @@ const SidebarItem = memo(({ user, isActive, onClick }: { user: User, isActive: b
 
 interface SocialChatProps {
   isActive?: boolean;
+  onStatusChange?: (connected: boolean) => void;
 }
 
-export default function SocialChat({ isActive = true }: SocialChatProps) {
+export default function SocialChat({ isActive = true, onStatusChange }: SocialChatProps) {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -223,7 +224,7 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
     if (typeof window === 'undefined' || !session?.user) return;
     
     const initSocket = async () => {
-      const SOCKET_URL = 'https://server-production-265c.up.railway.app';
+      const SOCKET_URL = 'https://server-production-2856.up.railway.app';
       const newSocket = io(SOCKET_URL, { 
         reconnection: true,
         reconnectionAttempts: 5,
@@ -234,6 +235,7 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
       newSocket.on('connect', () => {
         console.log('Socket connected');
         setIsConnected(true);
+        if (onStatusChange) onStatusChange(true);
         if (sessionRef.current?.user?.email) {
           newSocket.emit('identify', { email: sessionRef.current.user.email.toLowerCase().trim() });
         }
@@ -242,11 +244,13 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
       newSocket.on('disconnect', () => {
         console.log('Socket disconnected');
         setIsConnected(false);
+        if (onStatusChange) onStatusChange(false);
       });
 
       newSocket.on('connect_error', (err) => {
         console.error('Socket connection error:', err);
         setIsConnected(false);
+        if (onStatusChange) onStatusChange(false);
       });
 
       newSocket.on('receive_social_message', async (msg: Message) => {
@@ -952,17 +956,8 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
             </>
           ) : (
             <div className="empty-state">
-              <div className="flex flex-col items-center gap-4">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold shadow-lg" style={{ background: isConnected ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: isConnected ? '#22c55e' : '#ef4444', border: `1px solid ${isConnected ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
-                  <span className="relative flex h-2.5 w-2.5">
-                    {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
-                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                  </span>
-                  {isConnected ? 'Real-time Server Connected' : 'Connecting to Server...'}
-                </div>
-                <h3>Select a Chat</h3>
-                <p>Choose a contact to start messaging or search for new people.</p>
-              </div>
+              <h3>Select a Chat</h3>
+              <p>Choose a contact to start messaging or search for new people.</p>
             </div>
           )}
 
