@@ -154,7 +154,9 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' }
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' }
           ]
         });
         pcRef.current = pc;
@@ -162,10 +164,14 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
         pc.ontrack = (event) => {
+          console.log("Remote track received:", event.track.kind);
+          const remoteStream = event.streams[0];
           if (remoteVideoRef.current && type === 'video') {
-            remoteVideoRef.current.srcObject = event.streams[0];
+            remoteVideoRef.current.srcObject = remoteStream;
           } else if (remoteAudioRef.current && type === 'audio') {
-            remoteAudioRef.current.srcObject = event.streams[0];
+            remoteAudioRef.current.srcObject = remoteStream;
+            // Force play if needed
+            remoteAudioRef.current.play().catch(e => console.error("Audio play error:", e));
           }
           setCallStatus('active');
         };
