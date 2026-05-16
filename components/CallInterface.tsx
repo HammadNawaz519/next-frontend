@@ -9,10 +9,11 @@ interface CallInterfaceProps {
   type: 'audio' | 'video';
   isCaller: boolean;
   isAccepted?: boolean;
+  initialOffer?: any;
   onEnd: (duration?: number, wasConnected?: boolean) => void;
 }
 
-export default function CallInterface({ socket, peer, type, isCaller, isAccepted, onEnd }: CallInterfaceProps) {
+export default function CallInterface({ socket, peer, type, isCaller, isAccepted, initialOffer, onEnd }: CallInterfaceProps) {
   const [callStatus, setCallStatus] = useState<'ringing' | 'connecting' | 'active' | 'ended'>(isCaller ? 'ringing' : 'connecting');
   const [isMuted, setIsMuted] = useState(false);
   const [isCamOff, setIsCamOff] = useState(false);
@@ -96,30 +97,29 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     return () => clearInterval(timer);
   }, [callStatus]);
 
-  // 1. Signaling Listener (Bound immediately on mount)
-  useEffect(() => {
-    const handleSignal = async (signal: any) => {
-      // If PC is ready, process. If not, we might need a queue, but usually the UI flow prevents this.
-      if (!pcRef.current) {
-        console.log("Signal received but PC not ready, retrying in 100ms...");
-        setTimeout(() => handleSignal(signal), 100);
-        return;
-      }
+  // 1. Unified Signal Handler
+  const handleSignal = async (signal: any) => {
+    if (!pcRef.current) {
+      console.log("Signal received but PC not ready, retrying in 100ms...");
+      setTimeout(() => handleSignal(signal), 100);
+      return;
+    }
 
-      try {
-        if (signal.sdp) {
-          await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-          if (signal.sdp.type === 'offer') {
-            const answer = await pcRef.current.createAnswer();
-            await pcRef.current.setLocalDescription(answer);
-            socket.emit('webrtc_signal', { to: peer.email, signal: { sdp: answer } });
-          }
-        } else if (signal.candidate) {
-          await pcRef.current.addIceCandidate(new RTCIceCandidate(signal.candidate));
+    try {
+      if (signal.sdp) {
+        await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+        if (signal.sdp.type === 'offer') {
+          const answer = await pcRef.current.createAnswer();
+          await pcRef.current.setLocalDescription(answer);
+          socket.emit('webrtc_signal', { to: peer.email, signal: { sdp: answer } });
         }
-      } catch (e) { console.error("WebRTC Signaling Error:", e); }
-    };
+      } else if (signal.candidate) {
+        await pcRef.current.addIceCandidate(new RTCIceCandidate(signal.candidate));
+      }
+    } catch (e) { console.error("WebRTC Signaling Error:", e); }
+  };
 
+  useEffect(() => {
     const handleCallEnded = () => handleEnd();
     socket.on('webrtc_signal', handleSignal);
     socket.on('call_ended', handleCallEnded);
@@ -140,6 +140,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   // 3. Media & Connection Initialization
   useEffect(() => {
     let isMounted = true;
+    const target = peer.email?.toLowerCase().trim();
     const initCall = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -178,16 +179,21 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         pc.onicecandidate = (event) => {
           if (event.candidate) {
-            const target = peer.email?.toLowerCase().trim();
             if (target) socket.emit('webrtc_signal', { to: target, signal: { candidate: event.candidate } });
           }
         };
 
-        // Start handshake: Receiver sends offer to Caller
-        if (!isCaller) {
+        // If we have an initial offer (Receiver), process it immediately
+        if (!isCaller && initialOffer) {
+          console.log("Processing initial offer from SocialChat...");
+          handleSignal(initialOffer);
+        }
+
+        // Start handshake: Receiver sends offer to Caller (if no initial offer)
+        if (!isCaller && !initialOffer) {
           const offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
-          socket.emit('webrtc_signal', { to: peer.email, signal: { sdp: offer } });
+          socket.emit('webrtc_signal', { to: target, signal: { sdp: offer } });
         }
       } catch (err) {
         console.error("Media error:", err);
@@ -283,13 +289,13 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         {/* Local Video (PiP - Minimal Round) */}
         {type === 'video' && (
-          <div className="absolute top-6 right-6 w-32 h-44 rounded-3xl overflow-hidden shadow-xl z-20 group hover:scale-105 transition-transform duration-300" style={{ border: '2px solid var(--dm-border)', background: 'var(--dm-bg-input)' }}>
+          <div className="absolute top-4 right-4 md:top-6 md:right-6 w-24 h-32 md:w-32 md:h-44 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl z-20 group hover:scale-105 transition-transform duration-300" style={{ border: '2px solid var(--dm-border)', background: 'var(--dm-bg-input)' }}>
             <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
           </div>
         )}
 
         {/* Action Bar (The Vibe) */}
-        <div className="absolute bottom-10 flex items-center gap-6 px-8 py-4 backdrop-blur-2xl rounded-full shadow-2xl z-30" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
+        <div className="absolute bottom-10 md:bottom-12 flex items-center gap-4 md:gap-6 px-6 md:px-8 py-3 md:py-4 backdrop-blur-2xl rounded-full shadow-2xl z-30" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
 
           <button
             onClick={toggleMute}

@@ -178,9 +178,9 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex h-screen p-4 gap-4 overflow-hidden font-sans font-light text-[0.95em]" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
+    <div className="main-layout flex h-screen p-4 gap-4 overflow-hidden font-sans font-light text-[0.95em]" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
       {/* Fully Adaptive Sidebar */}
-      <div className="w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 rounded-[3rem] transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border-main)', boxShadow: 'var(--dm-shadow-sidebar)' }}>
+      <div className="main-sidebar w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 rounded-[3rem] transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border-main)', boxShadow: 'var(--dm-shadow-sidebar)' }}>
         <div className="flex flex-col h-full">
           {/* Logo */}
             <div className="mb-8 flex items-center justify-start gap-0 group-hover:gap-4 px-1 h-12 transition-[gap] duration-500 ease-[var(--ease-premium)]">
@@ -264,36 +264,97 @@ export default function DashboardPage() {
         </div>
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col rounded-[2.5rem] overflow-hidden relative" style={{ background: 'var(--dm-bg-main)', border: '1px solid var(--dm-border-main)', boxShadow: 'var(--dm-shadow-main)' }}>
+      <div className="main-container flex-1 flex flex-col rounded-[2.5rem] overflow-hidden relative" style={{ background: 'var(--dm-bg-main)', border: '1px solid var(--dm-border-main)', boxShadow: 'var(--dm-shadow-main)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.02\'/%3E%3C/svg%3E")', opacity: 0.4, pointerEvents: 'none' }} />
+
+        {/* Shared Mobile Header for Sub-views (Baked in - Moved to Top) */}
+        {activeView !== 'home' && (
+          <div className="md:hidden flex items-center justify-center p-6 border-b relative" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
+            <button 
+              onClick={() => setActiveView('home')}
+              className="absolute left-6 w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90"
+              style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+            <div className="flex items-center gap-3">
+                {activeView === 'assistant' && (
+                    <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
+                )}
+                <h2 className="text-[10px] md:text-lg font-bold uppercase tracking-[0.3em]" style={{ color: activeView === 'assistant' ? 'var(--dm-text-secondary)' : 'var(--dm-text-heading)' }}>
+                    {activeView === 'chat' ? 'Messages' : activeView === 'assistant' ? 'Intelligence Core' : activeView}
+                </h2>
+            </div>
+          </div>
+        )}
 
         {/* Content Views */}
         {activeView === 'home' && (
-          <div className="relative w-full h-full flex flex-col p-10 z-10">
-            <div className="flex justify-between items-start w-full">
-              <div className="flex flex-col gap-2">
-                <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>Welcome back, {session.user?.name || 'User'}</h1>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold w-fit shadow-sm" style={{ background: isConnected ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: isConnected ? '#22c55e' : '#ef4444', border: `1px solid ${isConnected ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
-                  <span className="relative flex h-2.5 w-2.5">
+          <div className="relative w-full h-full flex flex-col p-6 md:p-12 z-10 overflow-y-auto scrollbar-hide">
+            {/* Premium Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start w-full gap-8 md:gap-0 animate-in fade-in slide-in-from-top-4 duration-700">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold uppercase tracking-[0.2em] opacity-40">Dashboard</span>
+                    <div className="h-[1px] w-8 bg-current opacity-20"></div>
+                </div>
+                <h1 className="text-4xl md:text-6xl font-bold tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>
+                  Welcome back, <br className="md:hidden" />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--dm-text-primary)] to-[var(--dm-text-muted)]">{session.user?.name || 'User'}</span>
+                </h1>
+                
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full text-[11px] font-black uppercase tracking-widest w-fit shadow-sm transition-all hover:scale-105 cursor-default" 
+                     style={{ 
+                        background: isConnected ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', 
+                        color: isConnected ? '#22c55e' : '#ef4444', 
+                        border: `1px solid ${isConnected ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}` 
+                     }}>
+                  <span className="relative flex h-2 w-2">
                     {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
-                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                    <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
                   </span>
-                  {isConnected ? 'Real-time Server Connected' : 'Connecting to Server...'}
+                  {isConnected ? 'Real-time System Live' : 'System Connecting...'}
                 </div>
               </div>
               <ThemeToggle />
+            </div>
+            {/* Mobile Profile Card */}
+            <div className="md:hidden mt-8 p-6 rounded-[2.5rem] flex items-center gap-4 shadow-sm active:scale-95 transition-transform" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }} onClick={() => setIsProfileOpen(true)}>
+                <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl shadow-inner" style={{ background: 'var(--dm-bg-active)', color: 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}>
+                    {session.user?.name?.charAt(0) || 'U'}
+                </div>
+                <div className="flex-1">
+                    <h3 className="font-bold text-lg tracking-tight">{session.user?.name}</h3>
+                    <p className="text-xs uppercase tracking-widest opacity-40 font-bold">Personal Account</p>
+                </div>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)' }}>
+                    <svg className="w-5 h-5 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </div>
             </div>
           </div>
         )}
 
         {activeView === 'assistant' && (
           <>
-            {/* Chat Header */}
-            <div className="h-20 flex items-center px-10 justify-between backdrop-blur-lg sticky top-0 z-10" style={{ borderBottom: '1px solid var(--dm-border)', background: 'var(--dm-header-bg)' }}>
-              <div className="flex items-center gap-3">
+            {/* Desktop Assistant Header (Centered + Back Btn) */}
+            <div className="hidden md:flex h-20 items-center px-10 justify-between backdrop-blur-lg sticky top-0 z-10" style={{ borderBottom: '1px solid var(--dm-border)', background: 'var(--dm-header-bg)' }}>
+              <button 
+                onClick={() => setActiveView('home')}
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-[var(--dm-bg-active)]"
+                style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </button>
+              
+              <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
                 <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
-                <h2 className="text-[11px] font-light uppercase tracking-[0.4em]" style={{ color: 'var(--dm-text-secondary)' }}>Intelligence Core</h2>
+                <h2 className="text-[11px] font-bold uppercase tracking-[0.4em]" style={{ color: 'var(--dm-text-secondary)' }}>Intelligence Core</h2>
               </div>
+              <div className="w-10 h-10" /> {/* Spacer */}
             </div>
 
             {/* Messages */}
@@ -317,16 +378,7 @@ export default function DashboardPage() {
                     ? { background: 'var(--dm-chat-sent-bg)', color: 'var(--dm-chat-sent-text)' }
                     : { background: 'var(--dm-chat-recv-bg)', color: 'var(--dm-chat-recv-text)', border: '1px solid var(--dm-input-border)' }
                   }>
-                    {msg.role === 'ai' && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-5 h-5 rounded-full bg-black flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2L9.09 8.26 2 9.27l5 4.87L5.82 21 12 17.77 18.18 21l-1.18-6.86L22 9.27l-7.09-1.01L12 2z"/>
-                          </svg>
-                        </div>
-                        <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-indigo-500">AI Assistant</span>
-                      </div>
-                    )}
+                    {/* Removed 'AI Assistant' label from bubble as requested */}
                     <p className="text-[0.9rem] leading-relaxed whitespace-pre-wrap font-light tracking-tight">{msg.content}</p>
                   </div>
                 </div>
@@ -348,38 +400,41 @@ export default function DashboardPage() {
             </div>
 
             {/* Input Area */}
-            <div className="p-12 pt-0 bg-transparent relative z-10">
-              <form onSubmit={handleSendMessage} className="relative group">
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Start a new discussion..."
-                  className="w-full h-18 px-10 rounded-full focus:outline-none transition-all text-sm font-light shadow-[0_10px_30px_rgba(0,0,0,0.02)]"
-                  style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
-                  disabled={isAiTyping}
-                />
-                <button
-                  type="submit"
-                  disabled={!inputValue.trim() || isAiTyping}
-                  className="absolute right-4 top-4 w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-5 shadow-xl"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </button>
-              </form>
+            <div className="p-6 md:p-12 pt-0 bg-transparent relative z-10">
+              <div className="max-w-4xl mx-auto w-full">
+                <form onSubmit={handleSendMessage} className="relative group">
+                  <input
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder="Start a new discussion..."
+                    className="w-full h-14 md:h-18 px-8 md:px-10 rounded-full focus:outline-none transition-all text-sm font-light shadow-lg"
+                    style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
+                    disabled={isAiTyping}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!inputValue.trim() || isAiTyping}
+                    className="absolute right-2 md:right-4 top-2 md:top-4 w-10 md:h-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-5 shadow-xl"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                </form>
+              </div>
             </div>
 
           </>
         )}
 
+        {/* SocialChat Component */}
         <SocialChat isActive={activeView === 'chat'} onStatusChange={setIsConnected} />
 
         {/* Profile Side Panel */}
         {isProfileOpen && (
           <div 
-            className="absolute left-2 top-2 bottom-2 w-[calc(50%-1rem)] z-50 backdrop-blur-xl flex flex-col rounded-[2.5rem]"
+            className="absolute left-2 top-2 bottom-2 w-[calc(100%-1rem)] md:w-[calc(50%-1rem)] z-50 backdrop-blur-xl flex flex-col rounded-[2.5rem]"
             style={{ 
               background: isDark ? 'rgba(22,22,42,0.97)' : 'rgba(255,255,255,0.97)', 
               border: '1px solid var(--dm-border-main)', 
@@ -433,6 +488,40 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Mobile Bottom Nav */}
+      {activeView === 'home' && (
+        <nav className="mobile-nav">
+          {[
+            { id: 'home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+            { id: 'chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
+            { id: 'assistant', icon: 'M13 10V3L4 14h7v7l9-11h-7z' }
+          ].map((item) => (
+            <button 
+              key={item.id}
+              onClick={(e) => handleNavClick(item.id, e)}
+              className="w-12 h-12 flex items-center justify-center rounded-full transition-all"
+              style={{ 
+                  background: activeView === item.id ? 'var(--dm-bg-active)' : 'transparent',
+                  color: activeView === item.id ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
+              }}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+              </svg>
+            </button>
+          ))}
+          <button 
+              onClick={() => setIsProfileOpen(true)}
+              className="w-12 h-12 flex items-center justify-center rounded-full"
+              style={{ color: 'var(--dm-text-muted)' }}
+          >
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] border border-[var(--dm-border)]" style={{ background: 'var(--dm-bg-active)' }}>
+                  {session.user?.name?.charAt(0) || 'U'}
+              </div>
+          </button>
+        </nav>
+      )}
     </div>
   );
 }

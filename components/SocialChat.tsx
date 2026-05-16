@@ -159,8 +159,8 @@ export default function SocialChat({ isActive = true, onStatusChange }: SocialCh
   const audioChunksRef = useRef<Blob[]>([]);
   
   // Call States
-  const [incomingCall, setIncomingCall] = useState<{ from: any, type: 'audio' | 'video' } | null>(null);
-  const [activeCall, setActiveCall] = useState<{ peer: any, type: 'audio' | 'video', isCaller: boolean } | null>(null);
+  const [incomingCall, setIncomingCall] = useState<{ from: any, type: 'audio' | 'video', offer?: any } | null>(null);
+  const [activeCall, setActiveCall] = useState<{ peer: any, type: 'audio' | 'video', isCaller: boolean, initialOffer?: any } | null>(null);
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [view, setView] = useState<'recent' | 'requests'>('recent');
@@ -472,7 +472,12 @@ export default function SocialChat({ isActive = true, onStatusChange }: SocialCh
       from: session?.user
     });
 
-    setActiveCall({ peer: incomingCall.from, type: incomingCall.type, isCaller: false });
+    setActiveCall({ 
+      peer: incomingCall.from, 
+      type: incomingCall.type, 
+      isCaller: false,
+      initialOffer: incomingCall.offer 
+    });
     setIncomingCall(null);
   };
 
@@ -759,7 +764,7 @@ export default function SocialChat({ isActive = true, onStatusChange }: SocialCh
     <>
     <div className="social-chat-container" style={{ display: isActive ? 'flex' : 'none', width: '100%', height: '100%' }}>
       <div className="main-wrap">
-        <aside className="sidebar">
+        <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'}`}>
           <div className="search-wrap">
             <h2 className="text-xl font-bold mb-3" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
             <input 
@@ -794,11 +799,14 @@ export default function SocialChat({ isActive = true, onStatusChange }: SocialCh
           </div>
         </aside>
 
-        <section className={`chat-area ${selectedUser ? 'active' : ''}`}>
+        <section className={`chat-area ${selectedUser ? 'active' : ''} ${selectedUser ? 'show-on-mobile' : 'hide-on-mobile'}`}>
           {selectedUser ? (
             <>
               <div className="chat-header">
                 <div className="to">
+                  <button className="mobile-back-btn" onClick={() => setSelectedUser(null)}>
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
+                  </button>
                   <div className="avatar">
                     {selectedUser.image && selectedUser.image.length > 5 ? (
                       <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
@@ -1025,6 +1033,7 @@ export default function SocialChat({ isActive = true, onStatusChange }: SocialCh
           type={activeCall.type}
           isCaller={activeCall.isCaller}
           isAccepted={(activeCall as any).connected}
+          initialOffer={(activeCall as any).initialOffer}
           onEnd={(duration, wasConnected) => {
             const callData = activeCall;
             setActiveCall(null);

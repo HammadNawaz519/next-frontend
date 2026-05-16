@@ -218,3 +218,58 @@ body {
 }
 
 
+
+/* =========================================
+   GLOBAL RESPONSIVE UTILITIES
+   ========================================= */
+@media (max-width: 1024px) {
+  /* Hide sidebar on small screens, show bottom nav instead */
+  .main-sidebar {
+    display: none !important;
+  }
+  
+  .main-layout {
+    flex-direction: column !important;
+    padding: 10px !important;
+    height: 100vh !important;
+  }
+
+  .main-container {
+    border-radius: 2rem !important;
+    height: calc(100% - 80px) !important;
+  }
+
+  /* Bottom Navigation */
+  .mobile-nav {
+    display: flex !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-layout {
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+  
+  .main-container {
+    border-radius: 0 !important;
+    border: none !important;
+  }
+}
+
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  height: 70px;
+  background: var(--dm-bg-sidebar);
+  border: 1px solid var(--dm-border-main);
+  border-radius: 50px;
+  box-shadow: var(--dm-shadow-sidebar);
+  z-index: 1000;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 10px;
+}
