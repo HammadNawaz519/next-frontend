@@ -130,7 +130,20 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>({});
+  const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('social_messages_cache');
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
+  });
+
+  // Sync cache to session storage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('social_messages_cache', JSON.stringify(messagesCache));
+    }
+  }, [messagesCache]);
   const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -291,11 +304,16 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
     };
   }, []); // MOUNT ONLY
 
-  // 2. Identify whenever session becomes available
+  // 2. Identify whenever session becomes available + Heartbeat
   useEffect(() => {
-    if (socket && socket.connected && session?.user?.email) {
-      socket.emit('identify', { email: session.user.email.toLowerCase().trim() });
-    }
+    const identify = () => {
+      if (socket && socket.connected && session?.user?.email) {
+        socket.emit('identify', { email: session.user.email.toLowerCase().trim() });
+      }
+    };
+    identify();
+    const interval = setInterval(identify, 15000); // Re-identify every 15s to keep room alive
+    return () => clearInterval(interval);
   }, [socket, session]);
   // Socket identity is handled in the connect event above
 
@@ -408,10 +426,12 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
 
       try {
         const history = await getSocialMessages(selectedUser.id);
-        // Only update if it's different or we don't have cache
-        if (!cached || JSON.stringify(history) !== JSON.stringify(cached)) {
-          setMessages(history as any);
-          setMessagesCache(prev => ({ ...prev, [selectedUser.id]: history as any }));
+        const fresh = history as any[];
+        
+        // Fast update check
+        if (!cached || fresh.length !== cached.length || (fresh.length > 0 && fresh[fresh.length-1].id !== cached[cached.length-1].id)) {
+          setMessages(fresh);
+          setMessagesCache(prev => ({ ...prev, [selectedUser.id]: fresh }));
         }
         
         await markMessagesAsSeen(selectedUser.id);
