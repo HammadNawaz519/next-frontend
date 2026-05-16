@@ -252,8 +252,10 @@ body {
   }
   
   .main-container {
-    border-radius: 0 !important;
-    border: none !important;
+    border-radius: 2.5rem !important;
+    border: 1px solid var(--dm-border-main) !important;
+    margin: 10px;
+    height: calc(100% - 100px) !important;
   }
 }
 

@@ -366,9 +366,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#F4F4F4] p-6 md:p-12">
+    <div className="min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#F4F4F4] p-6 md:px-12 md:py-8">
       <div 
-        className="w-full max-w-[960px] rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.1)] bg-white border border-gray-200 flex flex-col lg:grid lg:grid-cols-2" 
+        className="w-full max-w-[960px] h-full md:h-[auto] md:aspect-[16/9] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_-10px_rgba(0,0,0,0.4)] bg-white bg-opacity-20 bg-clip-padding backdrop-filter backdrop-blur-2xl border border-gray-100 flex flex-col lg:grid lg:grid-cols-2" 
         style={{ 
           position: 'relative', 
           zIndex: 1,

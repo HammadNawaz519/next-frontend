@@ -292,7 +292,7 @@ export default function DashboardPage() {
 
         {/* Content Views */}
         {activeView === 'home' && (
-          <div className="relative w-full h-full flex flex-col p-6 md:p-12 z-10 overflow-y-auto scrollbar-hide">
+          <div className="relative w-full h-full flex flex-col p-4 pt-4 md:p-12 z-10 overflow-y-auto scrollbar-hide">
             {/* Premium Header */}
             <div className="flex flex-col md:flex-row justify-between items-start w-full gap-8 md:gap-0 animate-in fade-in slide-in-from-top-4 duration-700">
               <div className="flex flex-col gap-3">
