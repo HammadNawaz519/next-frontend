@@ -241,10 +241,9 @@ export default function LoginPage() {
           colors={['#FF7A00', '#007AFF', '#7ED9D9']}
         />
         <div className="relative z-10 flex flex-col items-center justify-center gap-4 px-6 text-center">
-          <h1 className="lg:hidden text-white font-black text-4xl tracking-tighter mix-blend-overlay opacity-80 mb-4">DEV CORE</h1>
           <p
-            className="text-gray-900 font-light lg:tracking-[0.35em] uppercase text-xs lg:block hidden"
-            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.4em', opacity: 0.7 }}
+            className="text-gray-900 font-light lg:tracking-[0.35em] uppercase text-xs lg:[writing-mode:vertical-rl] lg:rotate-180"
+            style={{ letterSpacing: '0.4em', opacity: 0.7 }}
           >
             Imagination is the limit
           </p>
@@ -367,9 +366,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#F4F4F4] p-0 md:p-6 lg:p-12">
+    <div className="min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#F4F4F4] p-6 md:p-12">
       <div 
-        className="w-full max-w-[960px] h-full md:h-[auto] md:aspect-[16/10] lg:rounded-[2rem] md:rounded-2xl overflow-hidden shadow-2xl bg-white flex flex-col lg:grid lg:grid-cols-2" 
+        className="w-full max-w-[960px] rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.1)] bg-white border border-gray-200 flex flex-col lg:grid lg:grid-cols-2" 
         style={{ 
           position: 'relative', 
           zIndex: 1,
