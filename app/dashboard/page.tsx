@@ -67,8 +67,12 @@ export default function DashboardPage() {
     }
   }, [status, router]);
 
+  const prevViewRef = useRef(activeView);
+  
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const isViewChange = prevViewRef.current !== activeView;
+    prevViewRef.current = activeView;
+    messagesEndRef.current?.scrollIntoView({ behavior: isViewChange ? 'instant' : 'smooth' });
   }, [messages.length, isAiTyping, activeView]);
 
   // Render instantly if authenticated, background load data

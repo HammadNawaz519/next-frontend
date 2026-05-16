@@ -99,13 +99,15 @@ html, body {
 }
 
 @keyframes slideFromLeft {
-  from {
-    transform: translateX(-40px);
+  0% {
+    transform: translateX(-50px) scale(0.92);
     opacity: 0;
+    filter: blur(8px);
   }
-  to {
-    transform: translateX(0);
+  100% {
+    transform: translateX(0) scale(1);
     opacity: 1;
+    filter: blur(0px);
   }
 }
 
