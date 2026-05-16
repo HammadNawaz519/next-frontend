@@ -225,7 +225,7 @@ export default function LoginPage() {
     }
 
     return (
-      <div className="relative lg:rounded-[2rem] m-0 lg:m-4 overflow-hidden hidden lg:flex flex-col items-center justify-center">
+      <div className="relative lg:rounded-[2rem] m-0 lg:m-4 overflow-hidden flex lg:flex flex-col items-center justify-center min-h-[200px] lg:min-h-0">
         <GrainGradient
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
           colorBack="#F8F9FA"
@@ -241,8 +241,9 @@ export default function LoginPage() {
           colors={['#FF7A00', '#007AFF', '#7ED9D9']}
         />
         <div className="relative z-10 flex flex-col items-center justify-center gap-4 px-6 text-center">
+          <h1 className="lg:hidden text-white font-black text-4xl tracking-tighter mix-blend-overlay opacity-80 mb-4">DEV CORE</h1>
           <p
-            className="text-gray-900 font-light tracking-[0.35em] uppercase text-xs"
+            className="text-gray-900 font-light lg:tracking-[0.35em] uppercase text-xs lg:block hidden"
             style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.4em', opacity: 0.7 }}
           >
             Imagination is the limit
@@ -366,18 +367,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-screen w-full flex items-center justify-center overflow-hidden bg-[#F4F4F4]" style={{ padding: '24px 1.5rem' }}>
+    <div className="min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#F4F4F4] p-0 md:p-6 lg:p-12">
       <div 
-        className="w-full max-w-[960px] rounded-2xl md:rounded-[2rem] overflow-hidden shadow-[0_0_80px_-10px_rgba(0,0,0,0.4)] bg-white bg-opacity-20 bg-clip-padding backdrop-filter backdrop-blur-2xl border border-gray-100" 
+        className="w-full max-w-[960px] h-full md:h-[auto] md:aspect-[16/10] lg:rounded-[2rem] md:rounded-2xl overflow-hidden shadow-2xl bg-white flex flex-col lg:grid lg:grid-cols-2" 
         style={{ 
-          height: 'calc(100vh - 48px)', 
           position: 'relative', 
           zIndex: 1,
         }}
       >
-        <div className="grid lg:grid-cols-2 gap-0 h-full">
-          {renderLeft()}
-          {renderRight()}
+        {renderLeft()}
+        <div className="flex-1 overflow-y-auto">
+            {renderRight()}
         </div>
       </div>
     </div>

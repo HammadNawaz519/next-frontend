@@ -337,10 +337,23 @@
 
 .social-chat-container .msg img,
 .social-chat-container .msg video {
-  max-width: 260px;
-  border-radius: 1rem;
-  margin-bottom: 6px;
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 1.5rem;
+  margin-bottom: 8px;
   display: block;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  background: var(--dm-bg-active);
+}
+
+@media (max-width: 768px) {
+  .social-chat-container .msg img,
+  .social-chat-container .msg video {
+    max-width: 240px;
+    border-radius: 1.25rem;
+  }
 }
 
 .social-chat-container .msg audio {
@@ -1252,6 +1265,7 @@
   .social-chat-container .type-box {
     margin-right: 5px;
     max-width: calc(100% - 60px);
+    padding: 6px 12px 6px 20px;
   }
 
   .social-chat-container .msg-wrapper {
