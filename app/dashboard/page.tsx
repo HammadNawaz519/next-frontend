@@ -4,7 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { flushSync } from 'react-dom';
-import { askAI, getChatHistory, saveChatMessage, getUserDetails, updateUsername } from './actions';
+import { askAI, getChatHistory, saveChatMessage, getUserDetails, updateUsername, updateName } from './actions';
 import SocialChat from '@/components/SocialChat';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/app/components/ThemeProvider';
@@ -175,6 +175,28 @@ export default function DashboardPage() {
     }
   };
 
+  const handleSaveName = async () => {
+    if (!usernameInput.trim() || usernameInput.trim().length < 2) {
+      setUsernameError('Name must be at least 2 characters');
+      return;
+    }
+    setUsernameSaving(true);
+    try {
+      const res = await updateName(usernameInput);
+      if (res.error) {
+        setUsernameError(res.error);
+      } else {
+        setEditingUsername(false);
+        // Instant UI update
+        if (fullUser) setFullUser({ ...fullUser, name: res.name || usernameInput });
+      }
+    } catch {
+      setUsernameError('Failed to save name');
+    } finally {
+      setUsernameSaving(false);
+    }
+  };
+
   const handleNavClick = (viewId: any, e: React.MouseEvent, reverse = false) => {
     if (activeView === viewId && viewId !== 'chat') return;
     
@@ -231,7 +253,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="main-layout flex h-screen overflow-hidden font-sans font-light text-[0.95em] md:p-3 md:gap-3" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
+    <div className="main-layout flex h-[100dvh] overflow-hidden font-sans font-light text-[0.95em] md:p-3 md:gap-3" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
       {/* Fully Adaptive Sidebar */}
       <div className="main-sidebar w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden border-r md:border-none md:rounded-[40px] shadow-sm" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border-main)' }}>
         <div className="flex flex-col h-full">
@@ -454,6 +476,12 @@ export default function DashboardPage() {
                   <button
                     type="submit"
                     disabled={!inputValue.trim() || isAiTyping}
+                    onTouchStart={(e) => {
+                      if (inputValue.trim() && !isAiTyping) {
+                        e.preventDefault();
+                        handleSendMessage(e);
+                      }
+                    }}
                     className="absolute right-2 md:right-4 top-2 md:top-4 w-10 md:h-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-5 shadow-xl"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -519,21 +547,21 @@ export default function DashboardPage() {
 
             {/* Content */}
             <div className="flex-1 p-6 space-y-3 overflow-y-auto">
-              {/* Username Edit Row */}
+              {/* Name Edit Row */}
               <div style={{ padding: '16px', borderRadius: '16px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-hover)', marginBottom: '4px' }}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: '#6366f1' }}>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     </div>
-                    <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, color: 'var(--dm-text-muted)' }}>Username</span>
+                    <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, color: 'var(--dm-text-muted)' }}>Name</span>
                   </div>
                   {!editingUsername ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                       <span style={{ fontSize: '14px', fontWeight: 300, color: 'var(--dm-text-primary)' }}>
-                        @{fullUser?.username || session.user?.name?.toLowerCase().replace(/\s+/g, '') || 'user'}
+                        {fullUser?.name || session.user?.name || 'User'}
                       </span>
-                      <button onClick={() => { setUsernameInput(fullUser?.username || ''); setEditingUsername(true); setUsernameError(''); }} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)', cursor: 'pointer' }}>Edit</button>
+                      <button onClick={() => { setUsernameInput(fullUser?.name || ''); setEditingUsername(true); setUsernameError(''); }} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)', cursor: 'pointer' }}>Edit</button>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
@@ -541,46 +569,46 @@ export default function DashboardPage() {
                         autoFocus
                         value={usernameInput}
                         onChange={e => { setUsernameInput(e.target.value); setUsernameError(''); }}
-                        onKeyDown={async e => { if (e.key === 'Enter') { e.preventDefault(); await handleSaveUsername(); } if (e.key === 'Escape') setEditingUsername(false); }}
+                        onKeyDown={async e => { if (e.key === 'Enter') { e.preventDefault(); await handleSaveName(); } if (e.key === 'Escape') setEditingUsername(false); }}
                         style={{ flex: 1, width: '100%', padding: '6px 10px', borderRadius: '20px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', fontSize: '13px', outline: 'none' }}
-                        placeholder="new_username"
+                        placeholder="Display Name"
                       />
-                      <button onClick={handleSaveUsername} disabled={usernameSaving} style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '20px', background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1, flexShrink: 0 }}>{usernameSaving ? '...' : 'Save'}</button>
+                      <button onClick={handleSaveName} disabled={usernameSaving} style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '20px', background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1, flexShrink: 0 }}>{usernameSaving ? '...' : 'Save'}</button>
                       <button onClick={() => setEditingUsername(false)} style={{ fontSize: '11px', padding: '6px 10px', borderRadius: '20px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer', flexShrink: 0 }}>✕</button>
                     </div>
                   )}
                 </div>
                 {usernameError && <p style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', marginLeft: '42px' }}>{usernameError}</p>}
               </div>
-              {[
-                { label: 'Username', value: `@${fullUser?.username || fullUser?.name?.toLowerCase().replace(/\s+/g, '') || fullUser?.email?.split('@')[0] || 'user'}`, icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-                { label: 'Mail Channel', value: fullUser?.email, icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
-                { label: 'Joined Date', value: fullUser?.createdAt ? new Date(fullUser.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '---', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
-              ].map((detail) => (
-                <div key={detail.label} className="py-4 px-5 flex items-center justify-between rounded-2xl transition-all" style={{ border: '1px solid var(--dm-border)', background: 'var(--dm-bg-hover)' }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-indigo-500 shadow-xs" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)' }}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={detail.icon} />
-                      </svg>
-                    </div>
-                    <span className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--dm-text-muted)' }}>{detail.label}</span>
+
+              {/* Mail Channel Row */}
+              <div className="py-4 px-5 flex items-center justify-between rounded-2xl transition-all" style={{ border: '1px solid var(--dm-border)', background: 'var(--dm-bg-hover)' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-indigo-500 shadow-xs" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)' }}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
                   </div>
-                  <span className="text-[14px] font-light truncate max-w-[160px]" style={{ color: 'var(--dm-text-primary)' }}>{detail.value}</span>
+                  <span className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--dm-text-muted)' }}>Mail Channel</span>
                 </div>
-              ))}
-              <div className="mt-4 pt-4 border-t border-[var(--dm-border)]">
-                <button
-                  onClick={() => signOut({ callbackUrl: '/' })}
-                  className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl transition-all active:scale-95 text-red-500 font-medium"
-                  style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  Sign Out
-                </button>
+                <span className="text-[14px] font-light truncate max-w-[160px]" style={{ color: 'var(--dm-text-primary)' }}>{fullUser?.email}</span>
               </div>
+
+              {/* Sign Out Button (Replaces Joined Date) */}
+              <button
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all active:scale-95"
+                style={{ border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.05)' }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-red-500 shadow-xs" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                  </div>
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-red-500">Sign Out</span>
+                </div>
+              </button>
             </div>
 
           </div>

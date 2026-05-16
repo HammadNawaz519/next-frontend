@@ -449,3 +449,17 @@ export async function updateUsername(newUsername: string) {
   });
   return { success: true, username: updated.username };
 }
+
+export async function updateName(newName: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { error: 'Not authenticated' };
+
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed.length < 2) return { error: 'Name must be at least 2 characters' };
+
+  const updated = await prisma.user.update({
+    where: { email: session.user.email },
+    data: { name: trimmed }
+  });
+  return { success: true, name: updated.name };
+}

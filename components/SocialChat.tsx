@@ -1048,13 +1048,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 
                 <button 
                   className="send-btn" 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
                     if (inputValue.trim()) {
                       handleSendMessage();
                     } else if (!isRecording) {
                       startRecording();
                     } else {
                       stopRecording();
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    if (inputValue.trim()) {
+                      e.preventDefault(); // Prevents input from losing focus
+                      handleSendMessage();
                     }
                   }}
                 >
