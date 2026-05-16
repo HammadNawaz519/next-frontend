@@ -128,6 +128,7 @@ interface SocialChatProps {
 export default function SocialChat({ isActive = true }: SocialChatProps) {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -219,7 +220,7 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
   }, [incomingCall, activeCall]);
   // 1. Stable Socket Instance
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !session?.user) return;
     
     const initSocket = async () => {
       const SOCKET_URL = 'https://server-production-265c.up.railway.app';
@@ -228,9 +229,15 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
 
       newSocket.on('connect', () => {
         console.log('Socket connected');
+        setIsConnected(true);
         if (sessionRef.current?.user?.email) {
           newSocket.emit('identify', { email: sessionRef.current.user.email.toLowerCase().trim() });
         }
+      });
+
+      newSocket.on('disconnect', () => {
+        console.log('Socket disconnected');
+        setIsConnected(false);
       });
 
       newSocket.on('receive_social_message', async (msg: Message) => {
@@ -335,10 +342,30 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
           if (m.id === messageId) return { ...m, content: "🚫 This message was deleted", type: "deleted" };
           return m;
         }));
+        
+        // Update cache as well
+        setMessagesCache(prev => {
+          const newCache = { ...prev };
+          Object.keys(newCache).forEach(userId => {
+            newCache[userId] = newCache[userId].map(m => 
+              m.id === messageId ? { ...m, content: "🚫 This message was deleted", type: "deleted" } : m
+            );
+          });
+          return newCache;
+        });
       });
 
       newSocket.on('messages_seen', () => {
         setMessages(prev => prev.map(m => ({ ...m, isSeen: true })));
+        
+        // Update cache as well
+        setMessagesCache(prev => {
+          const newCache = { ...prev };
+          Object.keys(newCache).forEach(userId => {
+            newCache[userId] = newCache[userId].map(m => ({ ...m, isSeen: true }));
+          });
+          return newCache;
+        });
       });
 
       newSocket.on('incoming_call', (data) => {
@@ -378,14 +405,16 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
           return next;
         });
       });
+      return newSocket;
     };
 
-    initSocket();
+    const socketInstancePromise = initSocket();
 
     return () => {
       console.log("Cleaning up socket...");
+      socketInstancePromise.then(s => s?.disconnect());
     };
-  }, []); // MOUNT ONLY
+  }, [session?.user?.email]); // Run when session loads
 
   // 2. Identify whenever session becomes available + Heartbeat
   useEffect(() => {
@@ -719,6 +748,16 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
       <div className="main-wrap">
         <aside className="sidebar">
           <div className="search-wrap">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xl font-bold" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: isConnected ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: isConnected ? '#22c55e' : '#ef4444' }}>
+                <span className="relative flex h-2 w-2">
+                  {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                </span>
+                {isConnected ? 'Connected' : 'Connecting...'}
+              </div>
+            </div>
             <input 
               type="text" 
               placeholder="Search contacts..." 

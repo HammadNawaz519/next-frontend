@@ -120,12 +120,13 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
       } catch (e) { console.error("WebRTC Signaling Error:", e); }
     };
 
+    const handleCallEnded = () => handleEnd();
     socket.on('webrtc_signal', handleSignal);
-    socket.on('call_ended', () => handleEnd());
+    socket.on('call_ended', handleCallEnded);
 
     return () => {
       socket.off('webrtc_signal', handleSignal);
-      socket.off('call_ended');
+      socket.off('call_ended', handleCallEnded);
     };
   }, []);
 
