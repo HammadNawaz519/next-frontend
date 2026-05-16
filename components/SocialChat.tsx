@@ -136,10 +136,74 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   
+  const [isSlidingOut, setIsSlidingOut] = useState(false);
+  const transitionInProgress = React.useRef(false);
+
+  // Circular ripple transition helper
+  const runCircleTransition = (
+    action: () => void,
+    x: number,
+    y: number,
+    reverse = false
+  ) => {
+    // If transition is already running, just execute action directly
+    if (transitionInProgress.current || !(document as any).startViewTransition) {
+      action();
+      return;
+    }
+
+    transitionInProgress.current = true;
+
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    let transition: any;
+    try {
+      transition = (document as any).startViewTransition(() => {
+        action();
+      });
+    } catch {
+      action();
+      transitionInProgress.current = false;
+      return;
+    }
+
+    transition.ready
+      .then(() => {
+        const keyframes = reverse
+          ? [{ clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }, { clipPath: `circle(0px at ${x}px ${y}px)` }]
+          : [{ clipPath: `circle(0px at ${x}px ${y}px)` }, { clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }];
+        document.documentElement.animate(keyframes, {
+          duration: 450,
+          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+          pseudoElement: reverse ? '::view-transition-old(root)' : '::view-transition-new(root)',
+        });
+      })
+      .catch(() => {
+        // Transition was skipped/aborted — no action needed, state already updated
+      });
+
+    transition.finished
+      .then(() => { transitionInProgress.current = false; })
+      .catch(() => { transitionInProgress.current = false; });
+  };
+
   // Expose closeChat to parent via ref
   React.useImperativeHandle(ref, () => ({
-    closeChat: () => setSelectedUser(null)
+    closeChat: () => {
+      runCircleTransition(() => setSelectedUser(null), 28, 28, true);
+    }
   }));
+
+  const handleChatBack = (e: React.MouseEvent) => {
+    runCircleTransition(() => setSelectedUser(null), e.clientX, e.clientY, true);
+  };
+
+  const handleSelectUser = (user: any, e: React.MouseEvent) => {
+    runCircleTransition(() => setSelectedUser(user), e.clientX, e.clientY, false);
+  };
 
   const [view, setView] = useState<'recent' | 'requests'>('recent');
   const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>(() => {
@@ -808,7 +872,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 key={user.id} 
                 user={user} 
                 isActive={selectedUser?.id === user.id} 
-                onClick={() => setSelectedUser(user)} 
+                onClick={(e: React.MouseEvent) => handleSelectUser(user, e)} 
               />
             ))}
             {(view === 'recent' ? users : requests).length === 0 && searchQuery.length < 2 && (
@@ -826,7 +890,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 <div className="to">
                   <button 
                     style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', marginRight: '10px', flexShrink: 0 }} 
-                    onClick={() => setSelectedUser(null)}
+                    onClick={(e) => handleChatBack(e)}
                   >
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                   </button>
@@ -897,9 +961,42 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Send Media">
                       <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
                     </button>
-                    <button className="icon-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)} title="Emoji">
-                      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3.5-9c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm7 0c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
-                    </button>
+                    {/* Gap between image and emoji */}
+                    <div style={{ width: '6px', flexShrink: 0 }} />
+                    <div style={{ position: 'relative' }}>
+                      <button className="icon-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)} title="Emoji" style={{ color: showEmojiPicker ? 'var(--dm-text-primary)' : undefined }}>
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3.5-9c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm7 0c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
+                      </button>
+                      {showEmojiPicker && (
+                        <div className="emoji-picker-bar" style={{
+                          position: 'absolute', bottom: '48px', left: '-8px',
+                          background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)',
+                          borderRadius: '16px', padding: '12px 8px', zIndex: 999,
+                          boxShadow: '0 -4px 30px rgba(0,0,0,0.15)',
+                          animation: 'emojiBarIn 0.25s cubic-bezier(0.2,0.8,0.2,1) forwards',
+                          display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '280px'
+                        }}>
+                          {[
+                            { label: 'Smileys', emojis: ['😀','😂','😍','🥰','😎','🤔','😅','😭','🥹','😇','🤩','😏','😒','🙄','😤','🤯','😴','🤢','🥶','😱'] },
+                            { label: 'Gestures', emojis: ['👍','👎','👋','🤝','🙏','👏','🤜','💪','✌️','🤞','👌','🤙','☝️','🖐️','🫶','🤲','🫱','🤟','🤘','👊'] },
+                            { label: 'Hearts', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💖','💗','💓','💞','💝','❤️‍🔥','💔','❣️','💟','♥️','🫀','💕'] },
+                            { label: 'Nature', emojis: ['🌟','⭐','🌙','☀️','🌈','🌊','🔥','❄️','⚡','🌸','🌺','🍀','🌿','🐶','🐱','🦋','🐝','🌴','🍁','🌻'] },
+                            { label: 'Food', emojis: ['🍕','🍔','🍜','🍣','🍰','🎂','🍩','🍪','☕','🧋','🍷','🎉','🎊','🎈','🎁','🏆','💯','✅','🔥','⚡'] },
+                          ].map(group => (
+                            <div key={group.label}>
+                              <div style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--dm-text-muted)', marginBottom: '6px', paddingLeft: '4px' }}>{group.label}</div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
+                                {group.emojis.map(emoji => (
+                                  <button key={emoji} onClick={() => { setInputValue(prev => prev + emoji); setShowEmojiPicker(false); }} style={{ fontSize: '20px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '8px', lineHeight: 1, transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--dm-bg-active)')} onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <input 
                       type="text" 
                       placeholder="Write a message..." 
@@ -974,15 +1071,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </button>
               </footer>
 
-              {showEmojiPicker && (
-                <div className="emoji-popup">
-                  <div className="emoji-grid">
-                    {EMOJI_CATEGORIES.smileys.map(em => (
-                      <span key={em} className="emoji-item" onClick={() => { setInputValue(prev => prev + em); setShowEmojiPicker(false); }}>{em}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
+
+
               <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="*" />
             </>
           ) : (

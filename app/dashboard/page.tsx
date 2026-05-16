@@ -4,7 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { flushSync } from 'react-dom';
-import { askAI, getChatHistory, saveChatMessage, getUserDetails } from './actions';
+import { askAI, getChatHistory, saveChatMessage, getUserDetails, updateUsername } from './actions';
 import SocialChat from '@/components/SocialChat';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/app/components/ThemeProvider';
@@ -47,6 +47,24 @@ export default function DashboardPage() {
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const chatComponentRef = useRef<{ closeChat: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [usernameInput, setUsernameInput] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [usernameSaving, setUsernameSaving] = useState(false);
+
+  const handleSaveUsername = async () => {
+    setUsernameSaving(true);
+    setUsernameError('');
+    const result = await updateUsername(usernameInput);
+    setUsernameSaving(false);
+    if ((result as any)?.error) {
+      setUsernameError((result as any).error);
+    } else {
+      setEditingUsername(false);
+      // Refresh user details
+      getUserDetails().then(setFullUser);
+    }
+  };
 
   const handleMobileBack = () => {
     if (activeView === 'chat' && selectedChatUser) {
@@ -351,9 +369,11 @@ export default function DashboardPage() {
                 <div style={{ width: '8px', height: '8px', background: '#6366f1', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
                 <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3em', color: 'var(--dm-text-secondary)', margin: 0 }}>Intelligence Core</h2>
               </div>
+              {/* Profile button - desktop only */}
               <button 
                 onClick={() => setIsProfileOpen(true)}
-                style={{ position: 'absolute', right: '16px', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer', zIndex: 10 }}
+                className="hidden md:flex"
+                style={{ position: 'absolute', right: '16px', width: '40px', height: '40px', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer', zIndex: 10 }}
               >
                 <div style={{ width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, background: 'var(--dm-bg-active)' }}>
                   {session.user?.name?.charAt(0) || 'U'}
@@ -456,28 +476,66 @@ export default function DashboardPage() {
                 : 'slideFromLeft 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
             }}
           >
-            {/* Header / Avatar Section */}
-            <div className="relative h-[30%] flex flex-col items-center justify-center overflow-hidden rounded-t-[2.5rem]" style={{ background: 'var(--dm-bg-main)', borderBottom: '1px solid var(--dm-border)' }}>
-              <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+            {/* Header / Avatar Section - Premium Mobile Design */}
+            <div className="relative flex flex-col items-center justify-end pb-8 overflow-hidden" style={{ minHeight: '220px', background: isDark ? 'linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' : 'linear-gradient(160deg, #667eea 0%, #764ba2 100%)' }}>
+              {/* Decorative circles */}
+              <div style={{ position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', top: '-60px', right: '-40px' }} />
+              <div style={{ position: 'absolute', width: '150px', height: '150px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', top: '20px', left: '-50px' }} />
               <button 
                 onClick={handleCloseProfile}
-                className="absolute top-6 right-6 w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-sm z-10"
-                style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}
+                className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center z-10"
+                style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff' }}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
-              
-              <div className="relative w-22 h-22 rounded-[2.25rem] shadow-sm flex items-center justify-center text-3xl font-light mb-4 z-10" style={{ background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}>
-                {fullUser?.name?.slice(0, 1).toUpperCase() || 'U'}
+              {/* Avatar */}
+              <div className="relative z-10 mb-3">
+                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', border: '3px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 300, color: '#fff' }}>
+                  {fullUser?.name?.slice(0, 1).toUpperCase() || 'U'}
+                </div>
+                <div style={{ position: 'absolute', bottom: 0, right: 0, width: '22px', height: '22px', borderRadius: '50%', background: '#22c55e', border: '3px solid white' }} />
               </div>
-              <h3 className="text-xl font-normal tracking-tight z-10" style={{ color: 'var(--dm-text-heading)' }}>{fullUser?.name || 'User'}</h3>
-
+              <h3 style={{ color: '#fff', fontSize: '20px', fontWeight: 600, margin: '0 0 4px', zIndex: 10 }}>{fullUser?.name || session.user?.name || 'User'}</h3>
+              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', margin: 0, zIndex: 10 }}>{fullUser?.email || session.user?.email || ''}</p>
             </div>
 
             {/* Content */}
-            <div className="flex-1 p-10 space-y-3.5 overflow-hidden">
+            <div className="flex-1 p-6 space-y-3 overflow-y-auto">
+              {/* Username Edit Row */}
+              <div style={{ padding: '16px', borderRadius: '16px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-hover)', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: '#6366f1' }}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    </div>
+                    <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, color: 'var(--dm-text-muted)' }}>Username</span>
+                  </div>
+                  {!editingUsername ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 300, color: 'var(--dm-text-primary)' }}>
+                        @{fullUser?.username || session.user?.name?.toLowerCase().replace(/\s+/g, '') || 'user'}
+                      </span>
+                      <button onClick={() => { setUsernameInput(fullUser?.username || ''); setEditingUsername(true); setUsernameError(''); }} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)', cursor: 'pointer' }}>Edit</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, marginLeft: '10px' }}>
+                      <input
+                        autoFocus
+                        value={usernameInput}
+                        onChange={e => { setUsernameInput(e.target.value); setUsernameError(''); }}
+                        onKeyDown={async e => { if (e.key === 'Enter') { e.preventDefault(); await handleSaveUsername(); } if (e.key === 'Escape') setEditingUsername(false); }}
+                        style={{ flex: 1, padding: '6px 10px', borderRadius: '20px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', fontSize: '13px', outline: 'none', minWidth: 0 }}
+                        placeholder="new_username"
+                      />
+                      <button onClick={handleSaveUsername} disabled={usernameSaving} style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '20px', background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1 }}>{usernameSaving ? '...' : 'Save'}</button>
+                      <button onClick={() => setEditingUsername(false)} style={{ fontSize: '11px', padding: '6px 10px', borderRadius: '20px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer' }}>✕</button>
+                    </div>
+                  )}
+                </div>
+                {usernameError && <p style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', marginLeft: '42px' }}>{usernameError}</p>}
+              </div>
               {[
                 { label: 'Username', value: `@${fullUser?.username || fullUser?.name?.toLowerCase().replace(/\s+/g, '') || fullUser?.email?.split('@')[0] || 'user'}`, icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
                 { label: 'Mail Channel', value: fullUser?.email, icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },

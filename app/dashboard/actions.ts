@@ -431,3 +431,21 @@ export async function getCallHistory() {
 }
 
 
+export async function updateUsername(newUsername: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { error: 'Not authenticated' };
+
+  const trimmed = newUsername.trim().toLowerCase().replace(/\s+/g, '');
+  if (!trimmed || trimmed.length < 3) return { error: 'Username must be at least 3 characters' };
+
+  const existing = await prisma.user.findFirst({
+    where: { username: trimmed, NOT: { email: session.user.email } }
+  });
+  if (existing) return { error: 'Username already taken' };
+
+  const updated = await prisma.user.update({
+    where: { email: session.user.email },
+    data: { username: trimmed }
+  });
+  return { success: true, username: updated.username };
+}
