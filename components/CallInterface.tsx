@@ -91,14 +91,33 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
     const initCall = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: type === 'video'
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 48000,
+            channelCount: 2
+          },
+          video: type === 'video' ? {
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
+            frameRate: { ideal: 60, min: 30 }
+          } : false
         });
         localStreamRef.current = stream;
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
         const pc = new RTCPeerConnection({
-          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' }
+          ],
+          iceCandidatePoolSize: 10,
+          bundlePolicy: 'max-bundle',
+          rtcpMuxPolicy: 'require'
         });
         pcRef.current = pc;
 
@@ -118,8 +137,11 @@ export default function CallInterface({ socket, peer, type, isCaller, onEnd }: C
           }
         };
 
-        if (isCaller) {
-          const offer = await pc.createOffer();
+        if (!isCaller) {
+          const offer = await pc.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: type === 'video'
+          });
           await pc.setLocalDescription(offer);
           const target = peer.email?.toLowerCase().trim();
           if (target) socket.emit('webrtc_signal', { to: target, signal: { sdp: offer } });
