@@ -164,9 +164,16 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
   const [view, setView] = useState<'recent' | 'requests'>('recent');
   const [requests, setRequests] = useState<User[]>([]);
   const selectedUserRef = useRef<User | null>(null);
+  const sessionRef = useRef<any>(session);
+  const usersRef = useRef<User[]>(users);
+  const requestsRef = useRef<User[]>(requests);
+  
   useEffect(() => {
     selectedUserRef.current = selectedUser;
-  }, [selectedUser]);
+    sessionRef.current = session;
+    usersRef.current = users;
+    requestsRef.current = requests;
+  }, [selectedUser, session, users, requests]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const ringtoneRef = useRef<AudioContext | null>(null);
 
@@ -221,13 +228,13 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
 
       newSocket.on('connect', () => {
         console.log('Socket connected');
-        if (session?.user?.email) {
-          newSocket.emit('identify', { email: session.user.email.toLowerCase().trim() });
+        if (sessionRef.current?.user?.email) {
+          newSocket.emit('identify', { email: sessionRef.current.user.email.toLowerCase().trim() });
         }
       });
 
       newSocket.on('receive_social_message', async (msg: Message) => {
-        const partnerId = msg.senderId === (session?.user as any)?.id ? msg.receiverId : msg.senderId;
+        const partnerId = msg.senderId === (sessionRef.current?.user as any)?.id ? msg.receiverId : msg.senderId;
         
         // 1. Update Message Stream
         setMessages((prev) => {
@@ -259,7 +266,7 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
           }
           
           // If NOT in list, fetch user and add as request
-          if (msg.senderId !== (session?.user as any)?.id) {
+          if (msg.senderId !== (sessionRef.current?.user as any)?.id) {
             const newUser = await getSocialUser(msg.senderId);
             if (newUser) {
               return [{ 
@@ -296,7 +303,7 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
           }
           
           // If it's a completely new person who messaged us
-          if (msg.senderId !== (session?.user as any)?.id && !users.some(u => u.id === msg.senderId)) {
+          if (msg.senderId !== (sessionRef.current?.user as any)?.id && !usersRef.current.some(u => u.id === msg.senderId)) {
             getSocialUser(msg.senderId).then(newUser => {
               if (newUser) {
                 setRequests(current => {
