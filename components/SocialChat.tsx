@@ -215,7 +215,7 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
     if (typeof window === 'undefined') return;
     
     const initSocket = async () => {
-      const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-production-265c.up.railway.app';
+      const SOCKET_URL = 'https://server-production-265c.up.railway.app';
       const newSocket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
       setSocket(newSocket);
 
@@ -231,6 +231,7 @@ export default function SocialChat({ isActive = true }: SocialChatProps) {
         
         // 1. Update Message Stream
         setMessages((prev) => {
+          if (selectedUserRef.current?.id !== partnerId) return prev; // Only append if we are looking at this user's chat!
           if (prev.some(m => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
