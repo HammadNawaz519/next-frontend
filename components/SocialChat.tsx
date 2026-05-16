@@ -43,7 +43,11 @@ const EMOJI_CATEGORIES = {
   smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿']
 };
 
-export default function SocialChat() {
+interface SocialChatProps {
+  isActive?: boolean;
+}
+
+export default function SocialChat({ isActive = true }: SocialChatProps) {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -461,7 +465,8 @@ export default function SocialChat() {
   };
 
   return (
-    <div className="social-chat-container">
+    <>
+    <div className="social-chat-container" style={{ display: isActive ? 'flex' : 'none', width: '100%', height: '100%' }}>
       <div className="main-wrap">
         <aside className="sidebar">
           <div className="search-wrap">
@@ -809,14 +814,17 @@ export default function SocialChat() {
                 setMessages(prev => [...prev, result.message as any]);
               }
             } else if (duration && duration > 0) {
-              // Receiver can also save if it was a completed call they were part of
-              // but we'll check if we need to emit (optional, usually caller handles it)
+              // receiver saves its own record if they actually talked
+              const result = await saveCall(activeCall.peer.id, activeCall.type, 'completed', duration);
+              if (result?.message && socket) {
+                setMessages(prev => [...prev, result.message as any]);
+              }
             }
             setActiveCall(null);
           }}
         />
       )}
-    </div>
+    </>
   );
 }
 
