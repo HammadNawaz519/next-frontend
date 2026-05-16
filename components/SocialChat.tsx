@@ -79,6 +79,9 @@ export default function SocialChat() {
 
     newSocket.on('connect', () => {
       console.log('Socket connected, identifying...');
+      if (session?.user?.email) {
+        newSocket.emit('identify', { email: session?.user?.email.toLowerCase().trim() });
+      }
     });
 
 
@@ -150,12 +153,7 @@ export default function SocialChat() {
     };
   }, [session?.user?.email]); 
 
-  // Re-identify if session becomes available after connection
-  useEffect(() => {
-    if (socket?.connected && session?.user?.email) {
-      socket.emit('identify', { email: session.user.email.toLowerCase().trim() });
-    }
-  }, [session?.user?.email, socket]);
+  // Socket identity is handled in the connect event above
 
   const handleCall = async (type: 'audio' | 'video') => {
     if (!selectedUser || !session?.user || !socket) return;
