@@ -208,8 +208,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const cleanup = () => {
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     pcRef.current?.close();
-    socket.off('webrtc_signal');
-    socket.off('call_ended');
+    // Do NOT call socket.off('webrtc_signal') without a specific handler, 
+    // as it removes ALL listeners including the parent's! The useEffect cleanup handles its own.
   };
 
   const formatDuration = (s: number) => {
