@@ -176,7 +176,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           ? [{ clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }, { clipPath: `circle(0px at ${x}px ${y}px)` }]
           : [{ clipPath: `circle(0px at ${x}px ${y}px)` }, { clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }];
         document.documentElement.animate(keyframes, {
-          duration: 450,
+          duration: 700,
           easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
           pseudoElement: reverse ? '::view-transition-old(root)' : '::view-transition-new(root)',
         });

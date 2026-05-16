@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const chatComponentRef = useRef<{ closeChat: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const navTransitionInProgress = useRef(false);
   const [editingUsername, setEditingUsername] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameError, setUsernameError] = useState('');
@@ -174,7 +175,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleNavClick = (viewId: any, e: React.MouseEvent) => {
+  const handleNavClick = (viewId: any, e: React.MouseEvent, reverse = false) => {
     if (activeView === viewId && viewId !== 'chat') return;
     
     // Always show the chat list first when clicking the Chat nav button
@@ -184,10 +185,12 @@ export default function DashboardPage() {
       if (activeView === 'chat') return; // If already on chat list, don't re-animate
     }
 
-    if (!(document as any).startViewTransition) {
+    if (navTransitionInProgress.current || !(document as any).startViewTransition) {
       setActiveView(viewId);
       return;
     }
+    
+    navTransitionInProgress.current = true;
 
     const x = e.clientX;
     const y = e.clientY;
@@ -196,31 +199,41 @@ export default function DashboardPage() {
       Math.max(y, window.innerHeight - y)
     );
 
-    const transition = (document as any).startViewTransition(() => {
-      flushSync(() => {
-        setActiveView(viewId);
+    let transition: any;
+    try {
+      transition = (document as any).startViewTransition(() => {
+        flushSync(() => {
+          setActiveView(viewId);
+        });
       });
-    });
+    } catch {
+      setActiveView(viewId);
+      navTransitionInProgress.current = false;
+      return;
+    }
 
-    transition.ready.then(() => {
-      document.documentElement.animate(
-        [
-          { clipPath: `circle(0px at ${x}px ${y}px)` },
-          { clipPath: `circle(${endRadius}px at ${x}px ${y}px)` },
-        ],
-        {
+    transition.ready
+      .then(() => {
+        const keyframes = reverse
+          ? [{ clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }, { clipPath: `circle(0px at ${x}px ${y}px)` }]
+          : [{ clipPath: `circle(0px at ${x}px ${y}px)` }, { clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }];
+        document.documentElement.animate(keyframes, {
           duration: 700,
           easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
-          pseudoElement: '::view-transition-new(root)',
-        }
-      );
-    });
+          pseudoElement: reverse ? '::view-transition-old(root)' : '::view-transition-new(root)',
+        });
+      })
+      .catch(() => {});
+      
+    transition.finished
+      .then(() => { navTransitionInProgress.current = false; })
+      .catch(() => { navTransitionInProgress.current = false; });
   };
 
   return (
-    <div className="main-layout flex h-screen overflow-hidden font-sans font-light text-[0.95em]" style={{ background: 'var(--dm-bg-main)', color: 'var(--dm-text-primary)' }}>
+    <div className="main-layout flex h-screen overflow-hidden font-sans font-light text-[0.95em] md:p-3 md:gap-3" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
       {/* Fully Adaptive Sidebar */}
-      <div className="main-sidebar w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden border-r" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border-main)' }}>
+      <div className="main-sidebar w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden border-r md:border-none md:rounded-[40px] shadow-sm" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border-main)' }}>
         <div className="flex flex-col h-full">
           {/* Logo */}
             <div className="mb-8 flex items-center justify-start gap-0 group-hover:gap-4 px-1 h-12 transition-[gap] duration-500 ease-[var(--ease-premium)]">
@@ -304,7 +317,7 @@ export default function DashboardPage() {
         </div>
 
       {/* Main Container */}
-      <div className="main-container flex-1 flex flex-col overflow-hidden relative" style={{ background: 'var(--dm-bg-main)' }}>
+      <div className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[40px] shadow-sm md:border" style={{ background: 'var(--dm-bg-main)', borderColor: 'var(--dm-border-main)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.02\'/%3E%3C/svg%3E")', opacity: 0.4, pointerEvents: 'none' }} />
 
 
@@ -360,7 +373,7 @@ export default function DashboardPage() {
             {/* Assistant Header - all screens */}
             <div className="flex items-center justify-center p-4 border-b relative z-50" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '64px' }}>
               <button 
-                onClick={() => setActiveView('home')}
+                onClick={(e) => handleNavClick('home', e, true)}
                 style={{ position: 'absolute', left: '16px', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', zIndex: 10 }}
               >
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -466,7 +479,7 @@ export default function DashboardPage() {
         {/* Profile Side Panel */}
         {isProfileOpen && (
           <div 
-            className="absolute right-0 top-0 bottom-0 w-full md:w-[400px] z-50 backdrop-blur-xl flex flex-col border-l"
+            className="absolute right-0 top-0 bottom-0 w-full md:w-[400px] z-50 backdrop-blur-xl flex flex-col border-l md:border md:rounded-[40px] md:m-3 md:h-[calc(100%-24px)]"
             style={{ 
               background: isDark ? 'rgba(22,22,42,0.97)' : 'rgba(255,255,255,0.97)', 
               borderColor: 'var(--dm-border-main)', 
@@ -476,36 +489,39 @@ export default function DashboardPage() {
                 : 'slideFromLeft 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
             }}
           >
-            {/* Header / Avatar Section - Premium Mobile Design */}
-            <div className="relative flex flex-col items-center justify-end pb-8 overflow-hidden" style={{ minHeight: '220px', background: isDark ? 'linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' : 'linear-gradient(160deg, #667eea 0%, #764ba2 100%)' }}>
-              {/* Decorative circles */}
-              <div style={{ position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', top: '-60px', right: '-40px' }} />
-              <div style={{ position: 'absolute', width: '150px', height: '150px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', top: '20px', left: '-50px' }} />
+            {/* Header / Avatar Section - Premium Minimal Design */}
+            <div className="relative flex flex-col items-center justify-end pb-8 overflow-hidden" style={{ minHeight: '220px', background: 'var(--dm-bg-main)', borderBottom: '1px solid var(--dm-border)' }}>
+              {/* Decorative circles - subtle theme-based rings */}
+              <div style={{ position: 'absolute', width: '300px', height: '300px', borderRadius: '50%', border: '1px solid var(--dm-border)', top: '-100px', right: '-100px', opacity: 0.5 }} />
+              <div style={{ position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', border: '1px solid var(--dm-border)', top: '20px', left: '-80px', opacity: 0.3 }} />
+              
               <button 
                 onClick={handleCloseProfile}
-                className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center z-10"
-                style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff' }}
+                className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center z-10 transition-transform active:scale-90"
+                style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+              
               {/* Avatar */}
               <div className="relative z-10 mb-3">
-                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', border: '3px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 300, color: '#fff' }}>
+                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--dm-bg-input)', border: '2px solid var(--dm-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 300, color: 'var(--dm-text-primary)' }}>
                   {fullUser?.name?.slice(0, 1).toUpperCase() || 'U'}
                 </div>
-                <div style={{ position: 'absolute', bottom: 0, right: 0, width: '22px', height: '22px', borderRadius: '50%', background: '#22c55e', border: '3px solid white' }} />
+                <div style={{ position: 'absolute', bottom: 2, right: 2, width: '18px', height: '18px', borderRadius: '50%', background: '#10b981', border: '3px solid var(--dm-bg-main)' }} />
               </div>
-              <h3 style={{ color: '#fff', fontSize: '20px', fontWeight: 600, margin: '0 0 4px', zIndex: 10 }}>{fullUser?.name || session.user?.name || 'User'}</h3>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', margin: 0, zIndex: 10 }}>{fullUser?.email || session.user?.email || ''}</p>
+              
+              <h3 style={{ color: 'var(--dm-text-heading)', fontSize: '20px', fontWeight: 600, margin: '0 0 4px', zIndex: 10 }}>{fullUser?.name || session.user?.name || 'User'}</h3>
+              <p style={{ color: 'var(--dm-text-secondary)', fontSize: '12px', margin: 0, zIndex: 10 }}>{fullUser?.email || session.user?.email || ''}</p>
             </div>
 
             {/* Content */}
             <div className="flex-1 p-6 space-y-3 overflow-y-auto">
               {/* Username Edit Row */}
               <div style={{ padding: '16px', borderRadius: '16px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-hover)', marginBottom: '4px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: '#6366f1' }}>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -513,24 +529,24 @@ export default function DashboardPage() {
                     <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, color: 'var(--dm-text-muted)' }}>Username</span>
                   </div>
                   {!editingUsername ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                       <span style={{ fontSize: '14px', fontWeight: 300, color: 'var(--dm-text-primary)' }}>
                         @{fullUser?.username || session.user?.name?.toLowerCase().replace(/\s+/g, '') || 'user'}
                       </span>
                       <button onClick={() => { setUsernameInput(fullUser?.username || ''); setEditingUsername(true); setUsernameError(''); }} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)', cursor: 'pointer' }}>Edit</button>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, marginLeft: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
                       <input
                         autoFocus
                         value={usernameInput}
                         onChange={e => { setUsernameInput(e.target.value); setUsernameError(''); }}
                         onKeyDown={async e => { if (e.key === 'Enter') { e.preventDefault(); await handleSaveUsername(); } if (e.key === 'Escape') setEditingUsername(false); }}
-                        style={{ flex: 1, padding: '6px 10px', borderRadius: '20px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', fontSize: '13px', outline: 'none', minWidth: 0 }}
+                        style={{ flex: 1, width: '100%', padding: '6px 10px', borderRadius: '20px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', fontSize: '13px', outline: 'none' }}
                         placeholder="new_username"
                       />
-                      <button onClick={handleSaveUsername} disabled={usernameSaving} style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '20px', background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1 }}>{usernameSaving ? '...' : 'Save'}</button>
-                      <button onClick={() => setEditingUsername(false)} style={{ fontSize: '11px', padding: '6px 10px', borderRadius: '20px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer' }}>✕</button>
+                      <button onClick={handleSaveUsername} disabled={usernameSaving} style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '20px', background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1, flexShrink: 0 }}>{usernameSaving ? '...' : 'Save'}</button>
+                      <button onClick={() => setEditingUsername(false)} style={{ fontSize: '11px', padding: '6px 10px', borderRadius: '20px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer', flexShrink: 0 }}>✕</button>
                     </div>
                   )}
                 </div>
@@ -583,7 +599,7 @@ export default function DashboardPage() {
             <button
               key={item.id}
               onClick={(e) => handleNavClick(item.id, e)}
-              className="flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-2xl transition-all active:scale-90"
+              className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-full transition-all active:scale-90"
               style={{ 
                 background: activeView === item.id ? 'var(--dm-bg-active)' : 'transparent',
                 color: activeView === item.id ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
@@ -597,7 +613,7 @@ export default function DashboardPage() {
           ))}
           <button
             onClick={() => setIsProfileOpen(true)}
-            className="flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-2xl transition-all active:scale-90"
+            className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-full transition-all active:scale-90"
             style={{ color: 'var(--dm-text-muted)' }}
           >
             <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)' }}>
