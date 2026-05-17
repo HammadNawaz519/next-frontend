@@ -17,6 +17,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const [callStatus, setCallStatus] = useState<'ringing' | 'connecting' | 'active' | 'ended'>(isCaller ? 'ringing' : 'connecting');
   const [isMuted, setIsMuted] = useState(false);
   const [isCamOff, setIsCamOff] = useState(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(false); // Default to false (earpiece preference)
   const [duration, setDuration] = useState(0);
   const durationRef = useRef(0);
 
@@ -234,8 +235,36 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     }
   };
 
+  const toggleSpeaker = async () => {
+    const targetAudio = type === 'video' ? remoteVideoRef.current : remoteAudioRef.current;
+    if (!targetAudio) return;
+    
+    // Toggle state visually
+    const nextState = !isSpeakerOn;
+    setIsSpeakerOn(nextState);
+
+    // Attempt hardware routing if supported (setSinkId)
+    if (typeof (targetAudio as any).setSinkId !== 'undefined') {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+        if (audioOutputs.length > 0) {
+          if (nextState) {
+            const speaker = audioOutputs.find(d => d.label.toLowerCase().includes('speaker')) || audioOutputs[audioOutputs.length - 1];
+            if (speaker) await (targetAudio as any).setSinkId(speaker.deviceId);
+          } else {
+            const earpiece = audioOutputs.find(d => d.label.toLowerCase().includes('earpiece') || d.label.toLowerCase().includes('receiver')) || audioOutputs[0];
+            if (earpiece) await (targetAudio as any).setSinkId(earpiece.deviceId);
+          }
+        }
+      } catch (e) {
+        console.log('Audio routing not supported by device/browser');
+      }
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: 'rgba(0,0,0,0.3)' }}>
+    <div className="fixed inset-0 z-[1500] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: 'rgba(0,0,0,0.3)' }}>
       {/* Remote Audio/Video Elements */}
       {type === 'video' ? (
         <video
@@ -296,6 +325,26 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         {/* Action Bar (The Vibe) */}
         <div className="absolute bottom-10 md:bottom-12 flex items-center gap-4 md:gap-6 px-6 md:px-8 py-3 md:py-4 backdrop-blur-2xl rounded-full shadow-2xl z-30" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
+
+          <button
+            onClick={toggleSpeaker}
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105`}
+            style={{ 
+              background: isSpeakerOn ? 'var(--dm-bg-active)' : 'var(--dm-bg-input)', 
+              color: isSpeakerOn ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)',
+              border: '1px solid var(--dm-border)'
+            }}
+          >
+            {isSpeakerOn ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+            )}
+          </button>
 
           <button
             onClick={toggleMute}
