@@ -297,7 +297,13 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         
         recognition.onend = () => {
            if (callStatus === 'active' && !isMuted && isCaptionsOn) {
-             try { recognition.start(); } catch(e) {}
+             setTimeout(() => {
+               try {
+                 recognition.start();
+               } catch(e) {
+                 console.warn("Speech recognition restart skipped (likely already running):", e);
+               }
+             }, 100);
            }
         };
 
@@ -389,7 +395,9 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     return () => clearInterval(timer);
   }, [callStatus]);
 
-  // 1. Unified Signal Handler
+  // 1. Unified Signal Handler with Stable Ref to prevent stale closures
+  const handleSignalRef = useRef<any>(null);
+
   const handleSignal = async (signal: any) => {
     if (signal.caption !== undefined) {
       setPeerCaption(signal.caption);
@@ -400,7 +408,9 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
     if (!pcRef.current) {
       console.log("Signal received but PC not ready, retrying in 100ms...");
-      setTimeout(() => handleSignal(signal), 100);
+      setTimeout(() => {
+        if (handleSignalRef.current) handleSignalRef.current(signal);
+      }, 100);
       return;
     }
 
@@ -439,15 +449,24 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   };
 
   useEffect(() => {
+    handleSignalRef.current = handleSignal;
+  });
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleSignalWrapper = (data: any) => {
+      if (handleSignalRef.current) handleSignalRef.current(data);
+    };
     const handleCallEnded = () => handleEnd();
-    socket.on('webrtc_signal', handleSignal);
+
+    socket.on('webrtc_signal', handleSignalWrapper);
     socket.on('call_ended', handleCallEnded);
 
     return () => {
-      socket.off('webrtc_signal', handleSignal);
+      socket.off('webrtc_signal', handleSignalWrapper);
       socket.off('call_ended', handleCallEnded);
     };
-  }, []);
+  }, [socket]);
 
   // 2. Acceptance Transition (For Caller)
   useEffect(() => {
@@ -701,6 +720,18 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         {type === 'video' && (
           <div className="absolute top-4 right-4 md:top-6 md:right-6 w-24 h-32 md:w-32 md:h-44 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl z-20 group hover:scale-105 transition-transform duration-300" style={{ border: '2px solid var(--dm-border)', background: 'var(--dm-bg-input)' }}>
             <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
+            
+            {/* Elegant overlay showing live ASL sign prediction directly on the local video source */}
+            {currentLetter && currentLetter !== 'nothing' && (
+              <div className="absolute bottom-2 inset-x-2 backdrop-blur-md bg-black/70 rounded-xl py-1 md:py-1.5 flex flex-col items-center justify-center border border-white/10 z-30 animate-in fade-in zoom-in duration-300">
+                <span className="text-[12px] md:text-[14px] font-black tracking-wider text-amber-400 font-mono leading-none">
+                  {LABEL_DISPLAY[currentLetter] ?? currentLetter}
+                </span>
+                <span className="text-[6.5px] md:text-[7.5px] text-zinc-300 font-mono tracking-widest uppercase mt-0.5 scale-90">
+                  {(currentConf * 100).toFixed(0)}%
+                </span>
+              </div>
+            )}
           </div>
         )}
 
@@ -732,11 +763,6 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
                 </span>
               )}
             </p>
-            {currentLetter && currentLetter !== 'nothing' && (
-              <span className="text-[8px] font-mono mt-0.5 px-2 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }}>
-                CURRENT SIGN: {LABEL_DISPLAY[currentLetter] ?? currentLetter} ({(currentConf * 100).toFixed(0)}%)
-              </span>
-            )}
           </div>
         )}
 

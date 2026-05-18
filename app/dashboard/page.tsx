@@ -529,7 +529,7 @@ export default function DashboardPage() {
                   ✦ Interactive Practice Core
                 </p>
                 <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-wider">
-                  26 Alphabets Standby
+                  29 Interactive Signs Active
                 </span>
               </div>
 
@@ -541,7 +541,7 @@ export default function DashboardPage() {
                 {/* Header of the output box */}
                 <div className="flex items-center justify-between flex-shrink-0 mb-2">
                   <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--dm-text-secondary)' }}>
-                    {selectedLetter ? `✦ ASL Guide: Letter ${selectedLetter}` : '✦ Instruction Terminal'}
+                    {selectedLetter ? `✦ ASL Guide: ${selectedLetter === 'space' ? 'SPACE' : selectedLetter === 'del' ? 'DELETE' : selectedLetter === 'nothing' ? 'NOTHING (NEUTRAL)' : `Letter ${selectedLetter}`}` : '✦ Instruction Terminal'}
                   </p>
                   {selectedLetter && (
                     <button 
@@ -567,7 +567,9 @@ export default function DashboardPage() {
                     <div className="w-full flex items-start gap-4 animate-in fade-in duration-300">
                       {/* Left side: Large active letter badge */}
                       <div 
-                        className="w-16 h-16 rounded-2xl border flex items-center justify-center text-3xl font-black shadow-inner flex-shrink-0"
+                        className={`w-16 h-16 rounded-2xl border flex items-center justify-center font-black shadow-inner flex-shrink-0 ${
+                          ['space', 'del', 'nothing'].includes(selectedLetter) ? 'text-[9px] md:text-[10px] tracking-wider text-center font-bold px-0.5' : 'text-3xl'
+                        }`}
                         style={{ 
                           borderColor: '#f59e0b',
                           color: '#f59e0b',
@@ -576,7 +578,7 @@ export default function DashboardPage() {
                           boxShadow: 'inset 0 0 12px rgba(245,158,11,0.1), 0 4px 12px rgba(0,0,0,0.05)'
                         }}
                       >
-                        {selectedLetter}
+                        {selectedLetter === 'space' ? 'SPACE' : selectedLetter === 'del' ? 'DEL' : selectedLetter === 'nothing' ? 'NOTHING' : selectedLetter}
                       </div>
 
                       {/* Right side: The 3-4 line response */}
@@ -593,7 +595,7 @@ export default function DashboardPage() {
                     <div className="w-full text-center py-4 animate-in fade-in duration-300">
                       <span className="text-2xl mb-1.5 block animate-bounce">🤟</span>
                       <p className="text-[11px] font-normal italic" style={{ color: 'var(--dm-text-muted)' }}>
-                        Terminal Standby. Click any letter in the grid below to display signing instructions...
+                        Terminal Standby. Click any letter or special key in the grid below to display signing instructions...
                       </p>
                     </div>
                   )}
@@ -611,33 +613,54 @@ export default function DashboardPage() {
               </div>
 
               {/* Alphabet Grid */}
-              <div className="flex-shrink-0 grid grid-cols-7 sm:grid-cols-9 md:grid-cols-13 gap-2">
-                {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
-                  <button
-                    key={letter}
-                    disabled={practiceLoading}
-                    onClick={async () => {
-                      if (selectedLetter === letter) { setSelectedLetter(null); setPracticeAiResponse(''); return; }
-                      setSelectedLetter(letter);
-                      setPracticeAiResponse('');
-                      setPracticeLoading(true);
-                      try {
-                        const res = await askAI(`You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly how to sign the letter "${letter}" in ASL. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.`);
-                        setPracticeAiResponse(res);
-                      } catch { setPracticeAiResponse('Could not load instructions. Please try again.'); }
-                      setPracticeLoading(false);
-                    }}
-                    className="aspect-square rounded-2xl flex flex-col items-center justify-center gap-0.5 hover:scale-110 active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
-                    style={{ 
-                      background: selectedLetter === letter ? 'rgba(245,158,11,0.15)' : 'var(--dm-bg-sidebar)', 
-                      border: selectedLetter === letter ? '2px solid #f59e0b' : '1px solid var(--dm-border)',
-                      outline: 'none'
-                    }}
-                  >
-                    <span className="text-lg md:text-xl font-black" style={{ color: selectedLetter === letter ? '#f59e0b' : 'var(--dm-text-primary)' }}>{letter}</span>
-                    <span className="text-[7px] font-mono uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>TAP</span>
-                  </button>
-                ))}
+              <div className="flex-shrink-0 grid grid-cols-7 sm:grid-cols-10 md:grid-cols-15 gap-2">
+                {[
+                  ...('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')),
+                  'space',
+                  'del',
+                  'nothing'
+                ].map(letter => {
+                  const isSpecial = ['space', 'del', 'nothing'].includes(letter);
+                  const labelText = letter === 'space' ? 'SPACE' : letter === 'del' ? 'DEL' : letter === 'nothing' ? 'NOTHING' : letter;
+                  return (
+                    <button
+                      key={letter}
+                      disabled={practiceLoading}
+                      onClick={async () => {
+                        if (selectedLetter === letter) { setSelectedLetter(null); setPracticeAiResponse(''); return; }
+                        setSelectedLetter(letter);
+                        setPracticeAiResponse('');
+                        setPracticeLoading(true);
+                        try {
+                          let promptText = '';
+                          if (letter === 'space') {
+                            promptText = 'You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly how to sign the "Space" gesture or pause in ASL. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.';
+                          } else if (letter === 'del') {
+                            promptText = 'You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly how to sign the "Delete" gesture (which erases the last letter) in ASL. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.';
+                          } else if (letter === 'nothing') {
+                            promptText = 'You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly what the "Nothing" or neutral standby posture is in ASL recognition. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.';
+                          } else {
+                            promptText = `You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly how to sign the letter "${letter}" in ASL. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.`;
+                          }
+                          const res = await askAI(promptText);
+                          setPracticeAiResponse(res);
+                        } catch { setPracticeAiResponse('Could not load instructions. Please try again.'); }
+                        setPracticeLoading(false);
+                      }}
+                      className="aspect-square rounded-2xl flex flex-col items-center justify-center gap-0.5 hover:scale-110 active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                      style={{ 
+                        background: selectedLetter === letter ? 'rgba(245,158,11,0.15)' : 'var(--dm-bg-sidebar)', 
+                        border: selectedLetter === letter ? '2px solid #f59e0b' : '1px solid var(--dm-border)',
+                        outline: 'none'
+                      }}
+                    >
+                      <span className={`font-black ${isSpecial ? 'text-[9px] md:text-[10px] tracking-tight text-center font-bold px-0.5' : 'text-lg md:text-xl'}`} style={{ color: selectedLetter === letter ? '#f59e0b' : 'var(--dm-text-primary)' }}>
+                        {labelText}
+                      </span>
+                      <span className="text-[6px] md:text-[7px] font-mono uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>TAP</span>
+                    </button>
+                  );
+                })}
               </div>
 
             </div>
