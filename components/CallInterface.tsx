@@ -127,12 +127,18 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
   // ── Speech Recognition for Live Captions ──
   useEffect(() => {
+    let recognition: any = null;
+
     if (callStatus === 'active' && !isMuted && isCaptionsOn) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
+        recognition = new SpeechRecognition();
         recognition.lang = 'en-US';
-        recognition.continuous = true;
+        // Mobile browsers (especially Android/iOS) often crash or block continuous listening 
+        // when WebRTC is also using the microphone. Setting continuous = false and 
+        // manually restarting onend is a proven workaround.
+        const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+        recognition.continuous = !isMobile;
         recognition.interimResults = true;
 
         recognition.onresult = (event: any) => {
@@ -163,29 +169,32 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           }
         };
 
-        recognition.onerror = (e: any) => console.error("Speech recognition error:", e.error);
+        recognition.onerror = (e: any) => {
+          console.error("Speech recognition error:", e.error);
+          // If network or capture fails, it will hit onend and we try to restart
+        };
         
         recognition.onend = () => {
-           if (callStatus === 'active' && !isMuted) {
+           if (callStatus === 'active' && !isMuted && isCaptionsOn) {
              try { recognition.start(); } catch(e) {}
            }
         };
 
         speechRecognitionRef.current = recognition;
-        try { recognition.start(); } catch(e) {}
-      }
-    } else {
-      if (speechRecognitionRef.current) {
-        speechRecognitionRef.current.stop();
-        speechRecognitionRef.current = null;
+        
+        // Slight delay to allow WebRTC to secure the microphone first, preventing instant block
+        setTimeout(() => {
+          try { recognition.start(); } catch(e) { console.error("Speech Rec Start Error", e); }
+        }, 500);
       }
     }
 
     return () => {
-      if (speechRecognitionRef.current) {
-        speechRecognitionRef.current.onend = null;
-        speechRecognitionRef.current.stop();
+      if (recognition) {
+        recognition.onend = null; // Prevent memory leak restart loop
+        try { recognition.stop(); } catch(e) {}
       }
+      speechRecognitionRef.current = null;
     };
   }, [callStatus, isMuted, isCaptionsOn, peer.email, socket]);
 
@@ -350,24 +359,10 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' },
-            // Public, high-quality, free STUN/TURN relays from OpenRelayProject (Metered.ca)
-            {
-              urls: 'turn:openrelay.metered.ca:80',
-              username: 'openrelayproject',
-              credential: 'openrelayproject'
-            },
-            {
-              urls: 'turn:openrelay.metered.ca:443',
-              username: 'openrelayproject',
-              credential: 'openrelayproject'
-            },
-            {
-              urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-              username: 'openrelayproject',
-              credential: 'openrelayproject'
-            }
+            { urls: 'stun:global.stun.twilio.com:3478' },
+            { urls: 'stun:stun.services.mozilla.com' },
+            { urls: 'stun:stun.cloudflare.com:3478' },
+            { urls: 'stun:stun.miwifi.com:3478' }
           ]
         });
         pcRef.current = pc;
