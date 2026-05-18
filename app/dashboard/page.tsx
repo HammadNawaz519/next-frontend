@@ -567,9 +567,7 @@ export default function DashboardPage() {
                     <div className="w-full flex items-start gap-4 animate-in fade-in duration-300">
                       {/* Left side: Large active letter badge */}
                       <div 
-                        className={`w-16 h-16 rounded-2xl border flex items-center justify-center font-black shadow-inner flex-shrink-0 ${
-                          ['space', 'del', 'nothing'].includes(selectedLetter) ? 'text-[9px] md:text-[10px] tracking-wider text-center font-bold px-0.5' : 'text-3xl'
-                        }`}
+                        className="w-16 h-16 rounded-2xl border flex items-center justify-center font-black shadow-inner flex-shrink-0 text-3xl"
                         style={{ 
                           borderColor: '#f59e0b',
                           color: '#f59e0b',
@@ -578,7 +576,7 @@ export default function DashboardPage() {
                           boxShadow: 'inset 0 0 12px rgba(245,158,11,0.1), 0 4px 12px rgba(0,0,0,0.05)'
                         }}
                       >
-                        {selectedLetter === 'space' ? 'SPACE' : selectedLetter === 'del' ? 'DEL' : selectedLetter === 'nothing' ? 'NOTHING' : selectedLetter}
+                        {selectedLetter === 'space' ? '␣' : selectedLetter === 'del' ? '⌫' : selectedLetter === 'nothing' ? '—' : selectedLetter}
                       </div>
 
                       {/* Right side: The 3-4 line response */}
@@ -620,8 +618,7 @@ export default function DashboardPage() {
                   'del',
                   'nothing'
                 ].map(letter => {
-                  const isSpecial = ['space', 'del', 'nothing'].includes(letter);
-                  const labelText = letter === 'space' ? 'SPACE' : letter === 'del' ? 'DEL' : letter === 'nothing' ? 'NOTHING' : letter;
+                  const labelText = letter === 'space' ? '␣' : letter === 'del' ? '⌫' : letter === 'nothing' ? '—' : letter;
                   return (
                     <button
                       key={letter}
@@ -654,7 +651,7 @@ export default function DashboardPage() {
                         outline: 'none'
                       }}
                     >
-                      <span className={`font-black ${isSpecial ? 'text-[9px] md:text-[10px] tracking-tight text-center font-bold px-0.5' : 'text-lg md:text-xl'}`} style={{ color: selectedLetter === letter ? '#f59e0b' : 'var(--dm-text-primary)' }}>
+                      <span className="font-black text-lg md:text-xl" style={{ color: selectedLetter === letter ? '#f59e0b' : 'var(--dm-text-primary)' }}>
                         {labelText}
                       </span>
                       <span className="text-[6px] md:text-[7px] font-mono uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>TAP</span>
