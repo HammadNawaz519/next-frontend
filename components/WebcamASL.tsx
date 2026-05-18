@@ -1,0 +1,758 @@
+'use client';
+
+import { useEffect, useRef, useState, useCallback } from 'react';
+
+type PredictionResult = {
+  prediction: string;
+  confidence: number;
+  stability: number;
+  raw: string;
+  raw_conf: number;
+  top3: { label: string; confidence: number }[];
+};
+
+const BACKEND_URL = 'http://localhost:5000';
+
+// Map prediction labels to display-friendly names
+const LABEL_DISPLAY: Record<string, string> = {
+  nothing: '—',
+  space: 'Space',
+  del: 'Delete',
+};
+
+const getColor = (conf: number) => {
+  if (conf >= 0.85) return '#10b981'; // Emerald Green
+  if (conf >= 0.65) return '#f59e0b'; // Amber Yellow
+  return '#ef4444'; // Rose Red
+};
+
+export default function WebcamASL() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isPredicting = useRef(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [result, setResult] = useState<PredictionResult | null>(null);
+  const [camError, setCamError] = useState<string | null>(null);
+  const [backendError, setBackendError] = useState<string | null>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [backendOnline, setBackendOnline] = useState<boolean | null>(null); // null = checking
+  const [sentence, setSentence] = useState<string>('');
+  const [lastAdded, setLastAdded] = useState<string | null>(null);
+  const lastAddedAt = useRef<number>(0);
+
+  // ── Check backend health on mount ─────────────────────────────────────────
+  const checkBackend = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/health`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) {
+        setBackendOnline(true);
+        setBackendError(null);
+      } else {
+        setBackendOnline(false);
+        setBackendError('Backend returned an error. Check server.py is running.');
+      }
+    } catch {
+      setBackendOnline(false);
+      setBackendError('Cannot reach Flask backend on port 5000. Run: python server.py');
+    }
+  }, []);
+
+  useEffect(() => {
+    checkBackend();
+    // Re-check every 10 seconds if offline
+    const healthTimer = setInterval(() => {
+      if (!backendOnline) checkBackend();
+    }, 10000);
+    return () => clearInterval(healthTimer);
+  }, [checkBackend, backendOnline]);
+
+  // ── Camera control ────────────────────────────────────────────────────────
+  const startCamera = async () => {
+    if (!backendOnline) {
+      await checkBackend();
+      if (!backendOnline) return; // still offline, don't start
+    }
+    setCamError(null);
+    setResult(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().then(() => {
+            setIsCameraActive(true);
+            fetch(`${BACKEND_URL}/reset`, { method: 'POST' }).catch(() => {});
+          }).catch(() => {
+            setCamError('Could not start video playback.');
+          });
+        };
+      }
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError') {
+        setCamError('Camera permission denied. Please allow access in browser settings.');
+      } else if (err?.name === 'NotFoundError') {
+        setCamError('No camera found. Please connect a webcam.');
+      } else {
+        setCamError('Could not access webcam: ' + (err?.message || 'Unknown error'));
+      }
+    }
+  };
+
+  const stopCamera = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (videoRef.current?.srcObject) {
+      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+    setResult(null);
+    isPredicting.current = false;
+  }, []);
+
+  // ── Capture + predict ─────────────────────────────────────────────────────
+  const captureAndPredict = useCallback(async () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || isPredicting.current) return;
+    if (video.videoWidth === 0 || video.readyState < 2 || video.paused) return;
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    isPredicting.current = true;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) { isPredicting.current = false; return; }
+      const form = new FormData();
+      form.append('image', blob, 'frame.jpg');
+      try {
+        const res = await fetch(`${BACKEND_URL}/predict`, {
+          method: 'POST',
+          body: form,
+          signal: AbortSignal.timeout(5000),
+        });
+        if (res.ok) {
+          const data: PredictionResult = await res.json();
+          setResult(data);
+          setBackendError(null);
+        } else {
+          setBackendError(`Backend error: ${res.status}`);
+        }
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          setBackendError('Lost connection to backend. Is server.py still running?');
+          setBackendOnline(false);
+        }
+      } finally {
+        isPredicting.current = false;
+      }
+    }, 'image/jpeg', 0.8);
+  }, []);
+
+  // ── Prediction loop ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (isCameraActive) {
+      intervalRef.current = setInterval(() => {
+        if (!isPredicting.current) captureAndPredict();
+      }, 80); // ~12 FPS
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [isCameraActive, captureAndPredict]);
+
+  // ── Auto-append letter to sentence ───────────────────────────────────────
+  useEffect(() => {
+    if (!result || !isCameraActive) return;
+    const { prediction, stability, confidence } = result;
+    const now = Date.now();
+    const cooldown = prediction === lastAdded ? 2000 : 1500;
+    if (
+      stability >= 0.7 &&
+      confidence >= 0.65 &&
+      prediction !== 'nothing' &&
+      now - lastAddedAt.current > cooldown
+    ) {
+      if (prediction === 'del') {
+        setSentence(s => s.slice(0, -1));
+      } else if (prediction === 'space') {
+        setSentence(s => s + ' ');
+      } else {
+        setSentence(s => s + prediction);
+      }
+      setLastAdded(prediction);
+      lastAddedAt.current = now;
+    }
+  }, [result, isCameraActive, lastAdded]);
+
+  // ── Cleanup on unmount ────────────────────────────────────────────────────
+  useEffect(() => () => stopCamera(), [stopCamera]);
+
+  // ── Speech Synthesis & Copy Utilities ─────────────────────────────────────
+  const [copied, setCopied] = useState(false);
+
+  const speakSentence = () => {
+    if (!sentence) return;
+    const utterance = new SpeechSynthesisUtterance(sentence);
+    const voices = window.speechSynthesis.getVoices();
+    const premiumVoice = voices.find(
+      v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Microsoft'))
+    );
+    if (premiumVoice) utterance.voice = premiumVoice;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const copySentence = () => {
+    if (!sentence) return;
+    navigator.clipboard.writeText(sentence);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // ── Display computations ──────────────────────────────────────────────────
+  const displayChar = result ? (LABEL_DISPLAY[result.prediction] ? result.prediction === 'del' ? '⌫' : '␣' : result.prediction) : '?';
+  const conf = result?.confidence ?? 0;
+  const stability = result?.stability ?? 0;
+  const color = result ? getColor(conf) : '#6366f1';
+
+  const isBackendChecking = backendOnline === null;
+
+  return (
+    <div className="w-full h-full flex flex-col min-h-0 select-none bg-transparent">
+      {/* ── Dynamic Sci-fi CSS Keyframes & Hacks ── */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes laser-sweep {
+          0% { top: 0%; opacity: 0; }
+          5% { opacity: 0.8; }
+          50% { opacity: 1; }
+          95% { opacity: 0.8; }
+          100% { top: 100%; opacity: 0; }
+        }
+        @keyframes pulse-soft {
+          0%, 100% { opacity: 0.2; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.02); }
+        }
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes spin-reverse {
+          from { transform: rotate(360deg); }
+          to { transform: rotate(0deg); }
+        }
+        @keyframes cursor-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        .tech-dot-grid {
+          background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px);
+          background-size: 18px 18px;
+        }
+        [data-theme="dark"] .tech-dot-grid {
+          background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px);
+        }
+        [data-theme="light"] .tech-dot-grid {
+          background-image: radial-gradient(rgba(0, 0, 0, 0.04) 1.5px, transparent 1.5px);
+        }
+      `}} />
+
+      {/* ── Offline Exception Overlay ── */}
+      {backendError && (
+        <div
+          className="mx-6 lg:mx-8 mt-4 px-5 py-4 rounded-2xl flex items-start gap-3.5 text-xs flex-shrink-0 animate-in fade-in slide-in-from-top-2 duration-300"
+          style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', color: '#ef4444' }}
+        >
+          <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <div>
+            <p className="font-mono uppercase tracking-wider text-[10px] font-bold">System Connection Interrupted</p>
+            <p className="text-[11px] opacity-80 mt-0.5">{backendError}</p>
+            <button
+              onClick={checkBackend}
+              className="mt-2 text-[10px] font-mono uppercase tracking-widest font-bold underline underline-offset-2 opacity-80 hover:opacity-100 cursor-pointer"
+            >
+              Force Retry Connection →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Core Translation Workspace (Equal-height Columns) ── */}
+      <div className="flex-grow flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-6 p-6 lg:p-8">
+        
+        {/* Column 1: Optical Feed Core (Perfect height stretch) */}
+        <div className="flex flex-col h-full min-h-0">
+          <div
+            className="flex-grow flex-1 min-h-0 w-full relative bg-zinc-950 rounded-2xl overflow-hidden transition-all duration-500 shadow-lg flex flex-col items-center justify-center border"
+            style={{ 
+              borderColor: isCameraActive ? `${color}35` : 'var(--dm-border)',
+              boxShadow: isCameraActive ? `0 0 35px ${color}1a, 0 10px 30px rgba(0,0,0,0.3)` : '0 10px 30px rgba(0,0,0,0.15)'
+            }}
+          >
+            {/* Tech scanner dot grid overlay */}
+            <div className="absolute inset-0 tech-dot-grid opacity-30 pointer-events-none z-10" />
+
+            {/* Video Feed */}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="absolute inset-0 w-full h-full object-cover z-0"
+              style={{
+                transform: 'scaleX(-1)',
+                display: isCameraActive ? 'block' : 'none',
+              }}
+            />
+
+            {/* Hidden capture canvas */}
+            <canvas ref={canvasRef} className="hidden" />
+
+            {/* Live Camera Overlays */}
+            {isCameraActive && (
+              <>
+                {/* Tech Telemetry Badges */}
+                <div className="absolute top-4 left-4 z-20 text-[8px] font-mono tracking-[0.2em] text-zinc-400 opacity-60 pointer-events-none uppercase">
+                  LIVE FEED // SYS ACTIVE // FPS: 12
+                </div>
+                <div className="absolute top-4 right-4 z-20 text-[8px] font-mono tracking-[0.2em] text-zinc-400 opacity-60 pointer-events-none uppercase">
+                  MODEL: EFFICIENTNETV2_S
+                </div>
+                <div className="absolute bottom-4 left-4 z-20 text-[8px] font-mono tracking-[0.2em] text-zinc-400 opacity-60 pointer-events-none uppercase">
+                  STREAM: 640X480
+                </div>
+                <div className="absolute bottom-4 right-4 z-20 text-[8px] font-mono tracking-[0.2em] text-zinc-400 opacity-60 pointer-events-none uppercase">
+                  TELEMETRY: SECURE
+                </div>
+
+                {/* Laser Scanning line */}
+                <div 
+                  className="absolute left-0 w-full h-[2px] z-20 pointer-events-none" 
+                  style={{
+                    background: `linear-gradient(90deg, transparent 5%, ${color} 50%, transparent 95%)`,
+                    boxShadow: `0 0 10px ${color}, 0 0 3px ${color}`,
+                    animation: 'laser-sweep 3.5s linear infinite',
+                  }}
+                />
+
+                {/* Concentric Target Guidance box */}
+                <div className="absolute inset-[24%] rounded-2xl border border-dashed opacity-25 z-20 pointer-events-none transition-colors duration-500"
+                  style={{ borderColor: color, animation: 'pulse-soft 2s infinite' }} 
+                />
+                
+                {/* Corners Brackets */}
+                {[
+                  ['top-4 left-4', 'border-t-[1.5px] border-l-[1.5px]'],
+                  ['top-4 right-4', 'border-t-[1.5px] border-r-[1.5px]'],
+                  ['bottom-4 left-4', 'border-b-[1.5px] border-l-[1.5px]'],
+                  ['bottom-4 right-4', 'border-b-[1.5px] border-r-[1.5px]']
+                ].map(([pos, border], i) => (
+                  <div 
+                    key={i} 
+                    className={`absolute ${pos} w-3.5 h-3.5 transition-colors duration-500 z-20 pointer-events-none`}
+                    style={{ borderColor: color }} 
+                  />
+                ))}
+
+                {/* Centering overlay banner */}
+                <div className="absolute bottom-8 inset-x-0 text-center z-20 pointer-events-none">
+                  <span className="px-2.5 py-1 rounded bg-black/60 backdrop-blur-xs text-[8px] font-mono tracking-widest text-zinc-400 uppercase border border-white/5">
+                    Position hand in active grid
+                  </span>
+                </div>
+
+                {/* Floating Glass Terminate Button */}
+                <button
+                  onClick={stopCamera}
+                  className="absolute top-8 right-4 z-30 px-3.5 py-1.5 rounded-full text-[9px] font-mono uppercase tracking-widest backdrop-blur-md bg-black/60 text-red-400 border border-red-500/25 transition-all hover:bg-red-500/20 active:scale-95 shadow-lg shadow-black/20 cursor-pointer animate-in fade-in duration-300"
+                >
+                  Terminate
+                </button>
+              </>
+            )}
+
+            {/* Local Hardware error overlay */}
+            {camError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 bg-zinc-950/95 z-20 border border-red-500/20 animate-in fade-in duration-300">
+                <svg className="w-8 h-8 text-red-500 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                <p className="text-red-400 text-xs font-mono tracking-wide text-center uppercase">Hardware Exception</p>
+                <p className="text-zinc-500 text-[10px] text-center max-w-[220px]">{camError}</p>
+                <button
+                  onClick={() => { setCamError(null); startCamera(); }}
+                  className="text-[9px] font-mono uppercase tracking-widest font-bold px-4 py-2 rounded-full mt-2 transition-all active:scale-95 cursor-pointer"
+                  style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}
+                >
+                  Restart Interface
+                </button>
+              </div>
+            )}
+
+            {/* Optical Stream Standby Display */}
+            {!isCameraActive && !camError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-zinc-950/95 p-6 text-center z-10">
+                {!backendOnline && !isBackendChecking ? (
+                  <>
+                    <div className="w-11 h-11 rounded-full flex items-center justify-center bg-red-950/15 border border-red-900/30 animate-pulse">
+                      <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                    </div>
+                    <p className="text-red-400 text-[10px] font-mono tracking-widest uppercase">System Initialization Blocked</p>
+                    <p className="text-zinc-500 text-[11px] max-w-[200px]">Flask backend must be active to initiate optical translation.</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center bg-zinc-900/60 border border-zinc-800/80 shadow-inner">
+                      <svg className="w-6 h-6 text-indigo-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.069A1 1 0 0121 8.868v6.264a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                      </svg>
+                    </div>
+                    <button
+                      onClick={startCamera}
+                      disabled={isBackendChecking}
+                      className="px-6 py-3 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-white text-black hover:bg-zinc-200 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2 shadow-xl shadow-black/40 cursor-pointer"
+                    >
+                      {isBackendChecking ? 'INITIALIZING TERMINAL...' : '▶ Start Translation Feed'}
+                    </button>
+                    <p className="text-zinc-600 text-[9px] font-mono uppercase tracking-widest mt-1">
+                      Securing camera stream link
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Column 2: Holographic HUD Diagnostics */}
+        <div className="flex flex-col gap-4 h-full min-h-0">
+          
+          {/* Real-time matrix capture (Flexible height) */}
+          <div
+            className="flex-grow flex-1 min-h-0 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 transition-all duration-500 relative overflow-hidden bg-transparent border"
+            style={{ 
+              background: 'var(--dm-bg-hover)', 
+              borderColor: isCameraActive ? `${color}22` : 'var(--dm-border)',
+              boxShadow: isCameraActive ? `0 0 30px ${color}06` : 'none'
+            }}
+          >
+            {/* Holographic scanner dot grid */}
+            <div className="absolute inset-0 tech-dot-grid opacity-15 pointer-events-none" />
+
+            {/* Backend AI Telemetry Pill */}
+            <div
+              className="absolute top-4 right-4 text-[8px] font-mono uppercase tracking-widest px-2.5 py-1 rounded-full transition-all duration-300 pointer-events-none"
+              style={{
+                background: isBackendChecking
+                  ? 'rgba(107,114,128,0.06)'
+                  : backendOnline
+                  ? 'rgba(16,185,129,0.08)'
+                  : 'rgba(239,68,68,0.08)',
+                color: isBackendChecking ? '#9ca3af' : backendOnline ? '#10b981' : '#ef4444',
+                border: `1px solid ${isBackendChecking ? 'rgba(107,114,128,0.15)' : backendOnline ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
+              }}
+            >
+              {isBackendChecking ? 'CONNECTING...' : backendOnline ? 'AI ACTIVE' : 'AI OFFLINE'}
+            </div>
+
+            <div className="text-[8px] font-mono tracking-[0.25em] text-zinc-400 opacity-60 uppercase absolute top-5 left-6 pointer-events-none">
+              Capture Matrix
+            </div>
+
+            <div className="relative flex items-center justify-center w-28 h-28 md:w-32 md:h-32 rounded-full transition-all duration-500 mt-2">
+              {/* Rotating Outer HUD Ring */}
+              <div 
+                className="absolute inset-0 rounded-full border border-dashed opacity-40 transition-colors duration-500"
+                style={{ 
+                  borderColor: color,
+                  animation: isCameraActive ? 'spin-slow 25s linear infinite' : undefined,
+                }}
+              />
+              {/* Rotating Inner HUD Ring */}
+              <div 
+                className="absolute inset-2.5 rounded-full border border-double opacity-20 transition-colors duration-500"
+                style={{ 
+                  borderColor: color,
+                  animation: isCameraActive ? 'spin-reverse 15s linear infinite' : undefined,
+                }}
+              />
+              {/* Glowing Background Radial */}
+              <div 
+                className="absolute inset-4 rounded-full transition-all duration-500 opacity-10"
+                style={{ background: color, filter: 'blur(10px)' }}
+              />
+              {/* Centered Character */}
+              <span
+                className="text-5xl md:text-6xl font-black tracking-tighter transition-all duration-300 z-10 select-none cursor-default"
+                style={{ 
+                  color: isCameraActive ? color : 'var(--dm-text-muted)', 
+                  fontFamily: 'monospace',
+                  textShadow: isCameraActive ? `0 0 20px ${color}35` : 'none',
+                }}
+              >
+                {displayChar}
+              </span>
+            </div>
+
+            {result && (
+              <div className="flex flex-col items-center gap-1 mt-2 z-10">
+                <span 
+                  className="text-[8px] font-mono font-bold uppercase tracking-[0.2em] px-2.5 py-0.5 rounded-full" 
+                  style={{ 
+                    background: `${color}12`,
+                    color: color,
+                    border: `1px solid ${color}20`
+                  }}
+                >
+                  {conf >= 0.85 ? '✦ Excellent Stability' : conf >= 0.65 ? '◆ Nominal Stability' : '◇ Variable Quality'}
+                </span>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 mt-1">
+                  Confidence: <span className="font-bold" style={{ color }}>{(conf * 100).toFixed(1)}%</span>
+                </span>
+              </div>
+            )}
+
+            {!result && isCameraActive && (
+              <p className="text-[10px] font-mono uppercase tracking-widest animate-pulse mt-2" style={{ color: 'var(--dm-text-muted)' }}>
+                Waiting for optical data…
+              </p>
+            )}
+            {!isCameraActive && (
+              <p className="text-[10px] font-mono uppercase tracking-widest mt-2" style={{ color: 'var(--dm-text-muted)' }}>
+                Feed Standby
+              </p>
+            )}
+          </div>
+
+          {/* Dynamic Stability Gauge (Fixed height) */}
+          <div className="rounded-2xl p-5 border flex-shrink-0" style={{ background: 'var(--dm-bg-hover)', borderColor: 'var(--dm-border)' }}>
+            <div className="flex justify-between items-center mb-2.5">
+              <span className="text-[8px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--dm-text-secondary)' }}>
+                Consensus Stability
+              </span>
+              <span className="text-[10px] font-mono font-bold" style={{ color: isCameraActive ? color : 'var(--dm-text-muted)' }}>
+                {Math.round(stability * 100)}%
+              </span>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden relative" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)' }}>
+              <div
+                className="h-full rounded-full transition-all duration-500 ease-[var(--ease-premium)]"
+                style={{ 
+                  width: `${stability * 100}%`, 
+                  background: isCameraActive ? `linear-gradient(90deg, ${color}cc, ${color})` : 'var(--dm-text-muted)',
+                  boxShadow: isCameraActive ? `0 0 6px ${color}aa` : 'none'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Top 3 Matrix Logs (Fixed height) */}
+          <div className="rounded-2xl p-5 border flex-shrink-0" style={{ background: 'var(--dm-bg-hover)', borderColor: 'var(--dm-border)' }}>
+            <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em] mb-3.5" style={{ color: 'var(--dm-text-secondary)' }}>
+              Top Output Matrices
+            </p>
+            {result?.top3 ? (
+              <div className="space-y-3">
+                {result.top3.map((item, i) => (
+                  <div key={item.label} className="flex items-center gap-3">
+                    <span
+                      className="w-4 h-4 rounded flex items-center justify-center text-[8px] font-mono font-bold"
+                      style={{
+                        background: i === 0 ? `${color}15` : 'var(--dm-bg-input)',
+                        color: i === 0 ? color : 'var(--dm-text-muted)',
+                        border: `1px solid ${i === 0 ? `${color}25` : 'var(--dm-border)'}`
+                      }}
+                    >
+                      0{i + 1}
+                    </span>
+                    <span className="text-[11px] font-mono font-semibold w-12 truncate" style={{ color: i === 0 ? 'var(--dm-text-heading)' : 'var(--dm-text-secondary)' }}>
+                      {LABEL_DISPLAY[item.label] ?? item.label}
+                    </span>
+                    <div className="flex-1 h-1.5 rounded-full overflow-hidden relative" style={{ background: 'var(--dm-bg-input)' }}>
+                      <div
+                        className="h-full rounded-full transition-all duration-500 ease-[var(--ease-premium)]"
+                        style={{ 
+                          width: `${item.confidence * 100}%`, 
+                          background: i === 0 ? color : 'var(--dm-text-muted)',
+                          boxShadow: i === 0 ? `0 0 4px ${color}66` : 'none'
+                        }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-mono w-9 text-right" style={{ color: 'var(--dm-text-muted)' }}>
+                      {(item.confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3 opacity-35">
+                {[1, 2, 3].map((idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <span className="w-4 h-4 rounded flex items-center justify-center text-[8px] font-mono font-bold bg-zinc-900 text-zinc-600 border border-zinc-800">
+                      0{idx}
+                    </span>
+                    <span className="text-[11px] font-mono text-zinc-500 w-12">—</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-zinc-900" />
+                    <span className="text-[10px] font-mono w-9 text-right text-zinc-600">0%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Column 3: Output Comms Terminal */}
+        <div className="flex flex-col gap-4 h-full min-h-0">
+          
+          {/* Compiled sentence board (Flexible height) */}
+          <div 
+            className="flex-grow flex-1 min-h-0 w-full rounded-2xl p-6 overflow-hidden border flex flex-col relative"
+            style={{ background: 'var(--dm-bg-hover)', borderColor: 'var(--dm-border)' }}
+          >
+            {/* Diagnostic dot grid texture */}
+            <div className="absolute inset-0 tech-dot-grid opacity-10 pointer-events-none" />
+
+            <div className="flex items-center justify-between mb-4 flex-shrink-0 z-10">
+              <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--dm-text-secondary)' }}>
+                ✦ Compiled Output Terminal
+              </p>
+              {copied && (
+                <span className="text-[8px] font-mono font-bold text-emerald-500 uppercase tracking-widest animate-pulse">
+                  📋 COPIED TO CLIPBOARD
+                </span>
+              )}
+            </div>
+            
+            <div className="flex-grow flex-1 overflow-y-auto pr-1 min-h-0 flex items-start justify-start z-10">
+              <p
+                className="text-[17px] font-bold tracking-wider leading-relaxed transition-all break-all select-text"
+                style={{ color: 'var(--dm-text-heading)', fontFamily: 'monospace' }}
+              >
+                {sentence ? (
+                  <>
+                    {sentence}
+                    {/* Pulsing terminal solid cursor block */}
+                    <span 
+                      className="inline-block w-2.5 h-4 ml-1.5 bg-current opacity-85 align-middle animate-[cursor-blink_1s_step-start_infinite]"
+                      style={{ background: 'var(--dm-text-primary)' }}
+                    />
+                  </>
+                ) : (
+                  <span className="text-xs font-normal font-sans italic" style={{ color: 'var(--dm-text-muted)' }}>
+                    Optical buffer empty. Perform signs in camera view to compile characters…
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Action buttons control panel (Fixed height) */}
+          <div className="grid grid-cols-2 gap-3 flex-shrink-0 z-10">
+            {/* Backspace Button */}
+            <button
+              onClick={() => setSentence(s => s.slice(0, -1))}
+              disabled={!sentence}
+              className="py-3.5 px-4 rounded-xl text-[10px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer border"
+              style={{ 
+                color: 'var(--dm-text-secondary)', 
+                background: 'var(--dm-bg-input)', 
+                borderColor: 'var(--dm-border)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+              }}
+              onMouseEnter={e => { if (sentence) { e.currentTarget.style.borderColor = 'var(--dm-thumb)'; e.currentTarget.style.color = 'var(--dm-text-primary)'; } }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M11 19h6a2 2 0 002-2V7a2 2 0 00-2-2h-6a2 2 0 00-1.6 2.8L7.8 12l1.6 4.2A2 2 0 0011 19z" />
+              </svg>
+              Backspace
+            </button>
+
+            {/* Clear All Button */}
+            <button
+              onClick={() => { setSentence(''); setLastAdded(null); }}
+              disabled={!sentence}
+              className="py-3.5 px-4 rounded-xl text-[10px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer border"
+              style={{ 
+                color: 'var(--dm-text-secondary)', 
+                background: 'var(--dm-bg-input)', 
+                borderColor: 'var(--dm-border)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+              }}
+              onMouseEnter={e => { if (sentence) { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ef4444'; } }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Clear Buffer
+            </button>
+
+            {/* Copy Clipboard Button */}
+            <button
+              onClick={copySentence}
+              disabled={!sentence}
+              className="py-3.5 px-4 rounded-xl text-[10px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer border"
+              style={{ 
+                color: 'var(--dm-text-secondary)', 
+                background: 'var(--dm-bg-input)', 
+                borderColor: 'var(--dm-border)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+              }}
+              onMouseEnter={e => { if (sentence) { e.currentTarget.style.borderColor = 'var(--dm-thumb)'; e.currentTarget.style.color = 'var(--dm-text-primary)'; } }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              Copy Text
+            </button>
+
+            {/* Voice Speech Synthesis Button */}
+            <button
+              onClick={speakSentence}
+              disabled={!sentence}
+              className="py-3.5 px-4 rounded-xl text-[10px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer border"
+              style={{ 
+                color: 'var(--dm-text-secondary)', 
+                background: 'var(--dm-bg-input)', 
+                borderColor: 'var(--dm-border)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+              }}
+              onMouseEnter={e => { if (sentence) { e.currentTarget.style.borderColor = 'var(--dm-thumb)'; e.currentTarget.style.color = 'var(--dm-text-primary)'; } }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+              Speak Out
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}

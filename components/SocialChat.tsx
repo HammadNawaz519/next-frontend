@@ -177,9 +177,10 @@ interface SocialChatProps {
   onStatusChange?: (status: boolean) => void;
   onChatChange?: (user: any) => void;
   onBack?: () => void;
+  onCallStateChange?: (isCallActive: boolean) => void;
 }
 
-const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack }: SocialChatProps, ref) => {
+const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange }: SocialChatProps, ref) => {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -323,6 +324,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const ringtoneRef = useRef<AudioContext | null>(null);
 
+  // Notify parent of active call status to free up camera locks
+  useEffect(() => {
+    if (onCallStateChange) {
+      onCallStateChange(!!activeCall);
+    }
+  }, [activeCall, onCallStateChange]);
 
   // Ringing effect for incoming calls
   useEffect(() => {

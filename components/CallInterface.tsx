@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
 
 interface CallInterfaceProps {
@@ -27,6 +27,92 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const hasEnded = useRef(false);
+
+  // ── Unified ASL Real-time Call Translation ──
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isPredicting = useRef(false);
+  const lastAddedAt = useRef<number>(0);
+
+  const [sentence, setSentence] = useState<string>('');
+  const [lastAdded, setLastAdded] = useState<string | null>(null);
+  const [currentLetter, setCurrentLetter] = useState<string>('');
+  const [currentConf, setCurrentConf] = useState<number>(0);
+
+  const BACKEND_URL = 'http://localhost:5000';
+  const LABEL_DISPLAY: Record<string, string> = {
+    nothing: '—',
+    space: 'Space',
+    del: 'Delete',
+  };
+
+  const captureAndPredict = useCallback(async () => {
+    const video = localVideoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || isPredicting.current) return;
+    if (video.videoWidth === 0 || video.readyState < 2 || video.paused) return;
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    isPredicting.current = true;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) { isPredicting.current = false; return; }
+      const form = new FormData();
+      form.append('image', blob, 'frame.jpg');
+      try {
+        const res = await fetch(`${BACKEND_URL}/predict`, {
+          method: 'POST',
+          body: form,
+          signal: AbortSignal.timeout(3000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentLetter(data.prediction);
+          setCurrentConf(data.confidence);
+
+          const now = Date.now();
+          const { prediction, stability, confidence } = data;
+          const cooldown = prediction === lastAdded ? 2000 : 1500;
+          if (
+            stability >= 0.7 &&
+            confidence >= 0.65 &&
+            prediction !== 'nothing' &&
+            now - lastAddedAt.current > cooldown
+          ) {
+            if (prediction === 'del') {
+              setSentence(s => s.slice(0, -1));
+            } else if (prediction === 'space') {
+              setSentence(s => s + ' ');
+            } else {
+              setSentence(s => s + prediction);
+            }
+            setLastAdded(prediction);
+            lastAddedAt.current = now;
+          }
+        }
+      } catch (err) {
+        console.error("VideoCall translation error:", err);
+      } finally {
+        isPredicting.current = false;
+      }
+    }, 'image/jpeg', 0.7);
+  }, [lastAdded]);
+
+  useEffect(() => {
+    let callInterval: NodeJS.Timeout | null = null;
+    if (callStatus === 'active' && type === 'video') {
+      callInterval = setInterval(() => {
+        if (!isPredicting.current) captureAndPredict();
+      }, 100); // 10 FPS is perfect for live overlays
+    }
+    return () => {
+      if (callInterval) clearInterval(callInterval);
+    };
+  }, [callStatus, type, captureAndPredict]);
 
   const handleEnd = () => {
     if (hasEnded.current) return;
@@ -323,6 +409,45 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           </div>
         )}
 
+        {/* Real-time Cinematic Live Subtitles Caption Box */}
+        {type === 'video' && callStatus === 'active' && (
+          <div className="absolute bottom-28 md:bottom-32 left-1/2 -translate-x-1/2 w-[85%] max-w-xl px-5 py-3 rounded-2xl backdrop-blur-md bg-black/60 border border-white/10 shadow-2xl z-30 flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-500 text-white">
+            <div className="flex items-center justify-between w-full opacity-60">
+              <span className="text-[7.5px] font-mono tracking-[0.2em] text-zinc-300 uppercase">
+                ✦ LIVE ASL TRANSLATION CAPTIONS
+              </span>
+              {sentence && (
+                <button
+                  onClick={() => { setSentence(''); setLastAdded(null); }}
+                  className="text-[7.5px] font-mono tracking-widest text-red-400 hover:text-red-300 cursor-pointer uppercase transition-colors bg-transparent border-none p-0"
+                >
+                  [ Clear ]
+                </button>
+              )}
+            </div>
+            <p className="text-sm md:text-base font-bold tracking-wider text-center text-white" style={{ fontFamily: 'monospace', margin: 0 }}>
+              {sentence ? (
+                <>
+                  {sentence}
+                  <span className="inline-block w-1.5 h-3.5 ml-1 bg-white align-middle animate-[cursor-blink_1s_step-start_infinite]" style={{ animation: 'cursor-blink 1s step-start infinite' }} />
+                </>
+              ) : (
+                <span className="text-[11px] font-normal italic text-zinc-500">
+                  Begin signing in camera to display live translated captions…
+                </span>
+              )}
+            </p>
+            {currentLetter && currentLetter !== 'nothing' && (
+              <span className="text-[8px] font-mono mt-0.5 px-2 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }}>
+                CURRENT SIGN: {LABEL_DISPLAY[currentLetter] ?? currentLetter} ({(currentConf * 100).toFixed(0)}%)
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Hidden capture canvas */}
+        <canvas ref={canvasRef} className="hidden" />
+
         {/* Action Bar (The Vibe) */}
         <div className="absolute bottom-10 md:bottom-12 flex items-center gap-4 md:gap-6 px-6 md:px-8 py-3 md:py-4 backdrop-blur-2xl rounded-full shadow-2xl z-30" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
 
@@ -387,6 +512,10 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
       <style jsx>{`
         .mirror { transform: scaleX(-1); }
+        @keyframes cursor-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
       `}</style>
     </div>
   );
