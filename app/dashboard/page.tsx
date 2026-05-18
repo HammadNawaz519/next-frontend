@@ -47,6 +47,8 @@ export default function DashboardPage() {
   const [fullUser, setFullUser] = useState<any>(null);
   const [activeView, setActiveView] = useState<'home' | 'assistant' | 'chat' | 'practice'>('home');
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
+  const [practiceAiResponse, setPracticeAiResponse] = useState<string>('');
+  const [practiceLoading, setPracticeLoading] = useState(false);
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const chatComponentRef = useRef<{ closeChat: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -501,49 +503,19 @@ export default function DashboardPage() {
         )}
 
         {/* Practice View */}
-        {activeView === 'practice' && (() => {
-          const ASL_SIGNS: Record<string, { desc: string; svg: string }> = {
-            A: { desc: 'Make a fist with your thumb resting alongside your index finger.', svg: 'M50 85 C30 85 20 70 20 55 L20 40 C20 25 30 20 40 20 L42 20 C42 15 45 12 50 12 C55 12 58 15 58 20 L60 20 C70 20 80 25 80 40 L80 55 C80 70 70 85 50 85Z M35 35 Q35 30 40 28 L60 28 Q65 30 65 35 L65 50 Q65 55 60 55 L40 55 Q35 55 35 50Z M25 42 C22 42 20 45 20 48 C20 52 22 55 26 55' },
-            B: { desc: 'Hold your hand flat with fingers together pointing up. Thumb tucked across palm.', svg: 'M30 85 L30 30 L35 15 Q37 10 40 10 L60 10 Q63 10 65 15 L70 30 L70 85Z M35 30 L35 15 M45 30 L45 10 M55 30 L55 10 M65 30 L65 15 M30 55 L30 70 Q30 75 35 75' },
-            C: { desc: 'Curve your hand into a C shape, as if holding a small cup.', svg: 'M65 25 Q65 15 55 12 Q45 8 35 15 Q25 22 25 35 L25 55 Q25 68 35 75 Q45 82 55 78 Q65 75 65 65' },
-            D: { desc: 'Index finger points up. Other fingers curl down to touch the thumb tip.', svg: 'M50 10 L50 40 M35 45 Q30 45 28 50 Q25 55 28 60 Q30 65 35 65 L50 65 L65 65 Q70 65 72 60 Q75 55 72 50 Q70 45 65 45 L50 45 M50 65 L50 85' },
-            E: { desc: 'Curl all fingers down toward the palm. Thumb tucked across the front of fingers.', svg: 'M30 40 Q25 40 22 45 L22 60 Q22 70 30 75 L70 75 Q78 75 78 65 L78 50 Q78 40 70 40 L30 40Z M30 45 Q30 35 38 30 Q42 28 45 32 M50 45 Q50 35 55 30 Q58 28 60 32 M65 45 Q65 37 68 34' },
-            F: { desc: 'Touch your index finger to your thumb making a circle. Other three fingers point up.', svg: 'M35 55 Q30 50 30 42 Q30 35 35 32 Q40 30 45 35 Q48 38 45 45 Q42 50 35 55Z M50 35 L50 10 M58 38 L60 12 M66 40 L68 15' },
-            G: { desc: 'Point your index finger and thumb sideways, parallel to the ground.', svg: 'M20 50 L70 50 M70 45 L80 50 L70 55 M20 45 Q15 45 15 50 Q15 55 20 55 L25 55 L25 65 Q25 72 32 72 L40 72 Q45 72 45 65 L45 55' },
-            H: { desc: 'Extend your index and middle fingers sideways together, like a horizontal peace sign.', svg: 'M20 45 L75 45 M20 55 L75 55 M75 42 L82 45 M75 52 L82 55 M20 42 Q15 40 15 45 Q15 55 20 58 L25 60 L25 72 Q25 78 32 78 L38 78 Q42 78 42 72 L42 60' },
-            I: { desc: 'Make a fist with your pinky finger extended straight up.', svg: 'M30 85 L30 50 Q30 42 38 42 L62 42 Q70 42 70 50 L70 85 M70 42 L70 15 Q70 10 72 10 Q75 10 75 15 L75 42' },
-            J: { desc: 'Start with pinky up (like I), then trace a J motion downward.', svg: 'M30 85 L30 50 Q30 42 38 42 L62 42 Q70 42 70 50 L70 85 M70 42 L70 15 Q70 10 72 10 Q75 10 75 15 L75 35 M72 30 Q68 38 60 38 Q52 38 50 30' },
-            K: { desc: 'Index and middle fingers point up in a V. Thumb rests between them.', svg: 'M40 85 L40 50 M40 50 L30 15 M40 50 L55 15 M40 50 Q38 55 35 55 L30 55 Q25 55 25 60 L25 70 Q25 78 32 78 M43 42 L50 42 Q50 38 47 35 L43 42' },
-            L: { desc: 'Make an L-shape with your thumb pointing right and index finger pointing up.', svg: 'M35 15 L35 60 L75 60 M35 60 L35 80 Q35 85 40 85 L55 85 Q60 85 60 78 L60 65' },
-            M: { desc: 'Place three fingers (index, middle, ring) over your thumb, which peeks out under the pinky.', svg: 'M25 40 Q22 40 22 45 L22 65 Q22 75 30 75 L70 75 Q78 75 78 65 L78 45 Q78 40 75 40 M30 40 L30 30 Q30 25 35 25 M42 40 L42 28 Q42 23 47 23 M55 40 L55 28 Q55 23 60 23 M68 40 L68 32' },
-            N: { desc: 'Place two fingers (index, middle) over your thumb, which peeks out under the ring finger.', svg: 'M25 42 Q22 42 22 48 L22 65 Q22 75 30 75 L70 75 Q78 75 78 65 L78 48 Q78 42 75 42 M32 42 L32 30 Q32 25 37 25 M47 42 L47 28 Q47 23 52 23 M62 42 L62 32' },
-            O: { desc: 'All fingertips touch the thumb tip, forming a round O shape.', svg: 'M50 20 Q30 20 25 35 Q20 50 25 60 Q30 72 50 72 Q70 72 75 60 Q80 50 75 35 Q70 20 50 20Z' },
-            P: { desc: 'Like K, but pointing downward. Index and middle form a V pointing down.', svg: 'M35 20 L35 50 M35 50 L25 82 M35 50 L50 82 M35 50 Q33 45 30 45 L25 45 Q20 45 20 40 L20 30 Q20 22 27 22 M38 42 L45 42 Q45 38 42 35' },
-            Q: { desc: 'Like G, but pointing downward. Index and thumb point down.', svg: 'M40 20 L40 55 L40 80 M55 20 L55 50 Q55 58 48 60 Q42 62 40 58 M40 75 L35 82 L40 80 L45 82' },
-            R: { desc: 'Cross your index and middle fingers (for good luck). Other fingers curl down.', svg: 'M40 80 L40 50 Q40 42 45 42 L55 42 Q60 42 60 50 L60 80 M42 42 L35 12 M55 42 L48 12 M38 25 L52 22' },
-            S: { desc: 'Make a tight fist with your thumb wrapped across the front of your fingers.', svg: 'M28 35 Q25 35 25 40 L25 65 Q25 78 35 78 L65 78 Q75 78 75 65 L75 40 Q75 35 72 35 L28 35Z M25 52 L20 52 Q16 52 16 48 Q16 42 20 40 L25 40' },
-            T: { desc: 'Make a fist with your thumb poking up between your index and middle fingers.', svg: 'M28 38 Q25 38 25 42 L25 65 Q25 78 35 78 L65 78 Q75 78 75 65 L75 42 Q75 38 72 38 L28 38Z M42 38 L42 25 Q42 20 45 18 Q48 16 50 20 L52 38' },
-            U: { desc: 'Extend your index and middle fingers straight up together. Other fingers curl down.', svg: 'M38 80 L38 55 Q38 48 42 48 L58 48 Q62 48 62 55 L62 80 M42 48 L42 12 M52 48 L52 12 M42 12 Q42 8 47 8 Q52 8 52 12' },
-            V: { desc: 'Make a peace/victory sign — index and middle fingers spread in a V.', svg: 'M40 80 L40 55 Q40 48 44 48 L56 48 Q60 48 60 55 L60 80 M44 48 L32 12 M56 48 L68 12' },
-            W: { desc: 'Extend your index, middle, and ring fingers spread apart. Thumb holds pinky down.', svg: 'M30 80 L30 55 Q30 48 34 48 L66 48 Q70 48 70 55 L70 80 M34 48 L28 12 M50 48 L50 12 M66 48 L72 12' },
-            X: { desc: 'Make a fist and bend your index finger into a hook shape.', svg: 'M30 45 Q25 45 25 50 L25 68 Q25 78 35 78 L65 78 Q75 78 75 68 L75 50 Q75 45 70 45 L30 45Z M35 45 L35 30 Q35 22 40 22 Q45 22 45 28 L42 38' },
-            Y: { desc: 'Extend your thumb and pinky finger out. Other fingers curl into your palm (hang loose).', svg: 'M25 20 L25 45 Q25 52 32 52 L68 52 Q75 52 75 45 L75 20 M25 52 L25 82 M75 52 L75 82 M32 52 L32 80 Q32 85 40 85 L60 85 Q68 85 68 80 L68 52' },
-            Z: { desc: 'Trace the letter Z in the air with your index finger.', svg: 'M25 20 L75 20 L25 75 L75 75 M72 20 L78 15 M25 72 L20 78' },
-          };
-          const sign = selectedLetter ? ASL_SIGNS[selectedLetter] : null;
-          return (
+        {activeView === 'practice' && (
           <>
             {/* Practice Header */}
             <div className="flex items-center justify-center p-4 border-b relative z-50" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '64px' }}>
               <button 
-                onClick={(e) => handleNavClick('home', e, true)}
+                onClick={(e) => { setSelectedLetter(null); setPracticeAiResponse(''); handleNavClick('home', e, true); }}
                 style={{ position: 'absolute', left: '16px', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', zIndex: 10 }}
               >
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
               </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
                 <div style={{ width: '8px', height: '8px', background: '#f59e0b', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-                <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3em', color: 'var(--dm-text-secondary)', margin: 0 }}>Sign Practice</h2>
+                <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3em', color: 'var(--dm-text-secondary)', margin: 0 }}>ASL Practice Studio</h2>
               </div>
               <div style={{ position: 'absolute', inset: 0, opacity: 0.06, background: 'linear-gradient(45deg, #f59e0b, #ef4444, #8b5cf6)', filter: 'blur(20px)', pointerEvents: 'none' }} />
             </div>
@@ -553,32 +525,41 @@ export default function DashboardPage() {
               
               {/* Hero */}
               <div className="text-center space-y-3 animate-in fade-in duration-500">
-                <h1 className="text-xl md:text-2xl font-extrabold tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>🤟 ASL Alphabet Practice</h1>
-                <p className="text-xs max-w-sm mx-auto" style={{ color: 'var(--dm-text-muted)' }}>Tap any letter to see its hand sign illustration and instructions.</p>
+                <div className="w-16 h-16 mx-auto rounded-[1.5rem] flex items-center justify-center shadow-inner" style={{ background: 'var(--dm-bg-active)' }}>
+                  <span className="text-2xl">🤟</span>
+                </div>
+                <h1 className="text-xl md:text-2xl font-extrabold tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>ASL Alphabet Practice</h1>
+                <p className="text-xs max-w-sm mx-auto" style={{ color: 'var(--dm-text-muted)' }}>Tap any letter below to learn how to sign it in American Sign Language.</p>
               </div>
 
-              {/* Selected Letter Detail Card */}
-              {selectedLetter && sign && (
-                <div className="max-w-md mx-auto rounded-3xl p-6 shadow-lg animate-in zoom-in-95 duration-300" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
-                  <div className="flex items-center justify-between mb-4">
+              {/* AI Response Card */}
+              {selectedLetter && (
+                <div className="max-w-lg mx-auto rounded-[2rem] p-6 shadow-lg animate-in zoom-in-95 duration-300" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
+                  <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-3">
                       <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black" style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}>
                         {selectedLetter}
                       </div>
                       <div>
-                        <div className="text-[10px] font-mono uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>ASL Sign</div>
+                        <div className="text-[10px] font-mono uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>ASL Sign Guide</div>
                         <div className="text-lg font-bold" style={{ color: 'var(--dm-text-heading)' }}>Letter {selectedLetter}</div>
                       </div>
                     </div>
-                    <button onClick={() => setSelectedLetter(null)} className="w-8 h-8 rounded-full flex items-center justify-center hover:scale-110 transition-transform" style={{ background: 'var(--dm-bg-input)', color: 'var(--dm-text-muted)' }}>✕</button>
+                    <button onClick={() => { setSelectedLetter(null); setPracticeAiResponse(''); }} className="w-8 h-8 rounded-full flex items-center justify-center hover:scale-110 transition-transform cursor-pointer" style={{ background: 'var(--dm-bg-input)', color: 'var(--dm-text-muted)' }}>✕</button>
                   </div>
-                  {/* SVG Hand Sign */}
-                  <div className="w-full flex justify-center py-6 rounded-2xl mb-4" style={{ background: 'var(--dm-bg-main)' }}>
-                    <svg width="120" height="120" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#6366f1' }}>
-                      <path d={sign.svg} />
-                    </svg>
-                  </div>
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--dm-text-secondary)' }}>{sign.desc}</p>
+                  
+                  {practiceLoading ? (
+                    <div className="flex flex-col items-center gap-3 py-8">
+                      <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--dm-border)', borderTopColor: 'transparent' }} />
+                      <p className="text-[10px] font-mono uppercase tracking-widest animate-pulse" style={{ color: 'var(--dm-text-muted)' }}>AI is generating instructions...</p>
+                    </div>
+                  ) : practiceAiResponse ? (
+                    <div className="rounded-2xl p-5" style={{ background: 'var(--dm-bg-main)' }}>
+                      <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'var(--dm-text-secondary)' }}>
+                        {practiceAiResponse}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               )}
 
@@ -587,8 +568,19 @@ export default function DashboardPage() {
                 {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
                   <button
                     key={letter}
-                    onClick={() => setSelectedLetter(selectedLetter === letter ? null : letter)}
-                    className="aspect-square rounded-2xl flex flex-col items-center justify-center gap-0.5 hover:scale-110 active:scale-95 transition-all shadow-sm cursor-pointer"
+                    disabled={practiceLoading}
+                    onClick={async () => {
+                      if (selectedLetter === letter) { setSelectedLetter(null); setPracticeAiResponse(''); return; }
+                      setSelectedLetter(letter);
+                      setPracticeAiResponse('');
+                      setPracticeLoading(true);
+                      try {
+                        const res = await askAI(`You are an ASL (American Sign Language) expert teacher. Explain clearly and concisely how to sign the letter "${letter}" in ASL. Include: 1) Hand shape description 2) Finger positions 3) Palm orientation 4) Common mistakes to avoid. Keep it brief, practical, and easy to follow. Do not use markdown formatting.`);
+                        setPracticeAiResponse(res);
+                      } catch { setPracticeAiResponse('Could not load instructions. Please try again.'); }
+                      setPracticeLoading(false);
+                    }}
+                    className="aspect-square rounded-2xl flex flex-col items-center justify-center gap-0.5 hover:scale-110 active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
                     style={{ 
                       background: selectedLetter === letter ? 'rgba(99,102,241,0.15)' : 'var(--dm-bg-sidebar)', 
                       border: selectedLetter === letter ? '2px solid #6366f1' : '1px solid var(--dm-border)',
@@ -603,8 +595,7 @@ export default function DashboardPage() {
 
             </div>
           </>
-          );
-        })()}
+        )}
 
         {/* SocialChat Component */}
         <SocialChat 
