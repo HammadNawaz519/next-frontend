@@ -27,6 +27,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const hasEnded = useRef(false);
+  const remoteDescriptionSetRef = useRef(false);
+  const candidateQueueRef = useRef<any[]>([]);
 
   // ── Unified ASL Real-time Call Translation ──
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -195,13 +197,33 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     try {
       if (signal.sdp) {
         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+        remoteDescriptionSetRef.current = true;
+        console.log("Remote description set successfully!");
+
+        // Process queued candidates
+        while (candidateQueueRef.current.length > 0) {
+          const candidate = candidateQueueRef.current.shift();
+          try {
+            await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+            console.log("Queued ICE candidate applied!");
+          } catch (err) {
+            console.error("Error applying queued candidate:", err);
+          }
+        }
+
         if (signal.sdp.type === 'offer') {
           const answer = await pcRef.current.createAnswer();
           await pcRef.current.setLocalDescription(answer);
           socket.emit('webrtc_signal', { to: peer.email, signal: { sdp: answer } });
         }
       } else if (signal.candidate) {
-        await pcRef.current.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        if (remoteDescriptionSetRef.current) {
+          await pcRef.current.addIceCandidate(new RTCIceCandidate(signal.candidate));
+          console.log("ICE candidate added immediately!");
+        } else {
+          console.log("Remote description not set yet, queuing candidate...");
+          candidateQueueRef.current.push(signal.candidate);
+        }
       }
     } catch (e) { console.error("WebRTC Signaling Error:", e); }
   };
@@ -249,7 +271,23 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' },
             { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' }
+            { urls: 'stun:stun4.l.google.com:19302' },
+            // Public, high-quality, free STUN/TURN relays from OpenRelayProject (Metered.ca)
+            {
+              urls: 'turn:openrelay.metered.ca:80',
+              username: 'openrelayproject',
+              credential: 'openrelayproject'
+            },
+            {
+              urls: 'turn:openrelay.metered.ca:443',
+              username: 'openrelayproject',
+              credential: 'openrelayproject'
+            },
+            {
+              urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+              username: 'openrelayproject',
+              credential: 'openrelayproject'
+            }
           ]
         });
         pcRef.current = pc;
