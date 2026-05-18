@@ -463,18 +463,11 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
               {/* Clean Camera HUD Overlay */}
               {isCameraActive && (
                 <>
-                  {/* Minimalist Camera status pill */}
-                  <div className="absolute top-4 left-4 z-20 flex flex-col gap-1.5 pointer-events-none select-none">
-                    <div className="px-3 py-1 rounded-full backdrop-blur-md bg-black/50 text-[8px] font-mono tracking-widest text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5 font-bold shadow-md">
-                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                      SYSTEM FEED: ACTIVE
-                    </div>
-                  </div>
-
                   {/* Terminate camera */}
                   <button
                     onClick={stopCamera}
-                    className="absolute top-4 right-4 z-30 px-3.5 py-1.5 rounded-full text-[9px] font-mono uppercase tracking-widest backdrop-blur-md bg-black/60 text-red-400 border border-red-500/25 transition-all hover:bg-red-500/20 active:scale-95 shadow-lg shadow-black/20 cursor-pointer animate-in fade-in duration-300"
+                    className="absolute z-30 px-3.5 py-1.5 rounded-full text-[9px] font-mono uppercase tracking-widest backdrop-blur-md bg-black/60 text-red-400 border border-red-500/25 transition-all hover:bg-red-500/20 active:scale-95 shadow-lg shadow-black/20 cursor-pointer animate-in fade-in duration-300"
+                    style={{ top: '4%', right: '4%' }}
                   >
                     Turn Off
                   </button>
