@@ -53,11 +53,9 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
   const [showHistory, setShowHistory] = useState<boolean>(false);
   const [history, setHistory] = useState<any[]>([]);
 
-  // AI Web Search Verification state
-  const [searchVerifyResult, setSearchVerifyResult] = useState<any | null>(null);
-  const [isVerifyingSearch, setIsVerifyingSearch] = useState<boolean>(false);
-  const [searchVerifyError, setSearchVerifyError] = useState<string | null>(null);
-  const [showSearchModal, setShowSearchModal] = useState<boolean>(false);
+  // Background Verification state
+  const [backgroundVerifyData, setBackgroundVerifyData] = useState<Record<string, any>>({});
+  const [verifyingLetters, setVerifyingLetters] = useState<Record<string, boolean>>({});
 
   // ── Check backend health on mount ─────────────────────────────────────────
   const checkBackend = useCallback(async () => {
@@ -199,69 +197,82 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
   }, []);
 
   // ── AI Search Verification ────────────────────────────────────────────────
-  const verifySignWithSearch = async () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas || !result?.prediction || result.prediction === 'nothing' || result.prediction === 'space' || result.prediction === 'del') {
-      setSearchVerifyError('Please hold a valid letter gesture to verify!');
-      return;
-    }
+  // ── AI Search Verification (Background Execution) ─────────────────────────
+  useEffect(() => {
+    if (!result?.prediction || ['nothing', 'space', 'del'].includes(result.prediction)) return;
 
-    setIsVerifyingSearch(true);
-    setSearchVerifyError(null);
-    setSearchVerifyResult(null);
-    setShowSearchModal(true);
+    const letter = result.prediction;
+    const conf = result.confidence ?? 0;
 
-    try {
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (!ctx) throw new Error('Could not get 2D canvas context');
+    // Trigger background check once prediction stabilizes at high confidence (>= 0.85)
+    if (conf >= 0.85 && !backgroundVerifyData[letter] && !verifyingLetters[letter]) {
+      // Lock verification for this letter to prevent double hits
+      setVerifyingLetters(prev => ({ ...prev, [letter]: true }));
 
-      const vWidth = video.videoWidth;
-      const vHeight = video.videoHeight;
-      const cropSize = Math.min(vWidth, vHeight) * 0.55;
-      const sx = (vWidth - cropSize) / 2;
-      const sy = (vHeight - cropSize) / 2;
-
-      canvas.width = 224;
-      canvas.height = 224;
-      ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, 224, 224);
-
-      canvas.toBlob(async (blob) => {
-        if (!blob) {
-          setIsVerifyingSearch(false);
-          setSearchVerifyError('Failed to capture frame from webcam.');
+      (async () => {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!video || !canvas) {
+          setVerifyingLetters(prev => ({ ...prev, [letter]: false }));
           return;
         }
 
-        const form = new FormData();
-        form.append('image', blob, 'verify.jpg');
-        form.append('predicted', result.prediction);
-
         try {
-          const res = await fetch(`${BACKEND_URL}/verify-with-search`, {
-            method: 'POST',
-            body: form,
-          });
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (!ctx) throw new Error('Failed to get canvas context');
 
-          if (res.ok) {
-            const data = await res.json();
-            setSearchVerifyResult(data);
-          } else {
-            const errData = await res.json();
-            setSearchVerifyError(errData.error || `Verification failed with code ${res.status}`);
-          }
-        } catch (err: any) {
-          setSearchVerifyError('Could not reach backend server. Make sure server.py is running.');
-        } finally {
-          setIsVerifyingSearch(false);
+          const vWidth = video.videoWidth;
+          const vHeight = video.videoHeight;
+          const cropSize = Math.min(vWidth, vHeight) * 0.55;
+          const sx = (vWidth - cropSize) / 2;
+          const sy = (vHeight - cropSize) / 2;
+
+          canvas.width = 224;
+          canvas.height = 224;
+          ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, 224, 224);
+
+          canvas.toBlob(async (blob) => {
+            if (!blob) {
+              setVerifyingLetters(prev => ({ ...prev, [letter]: false }));
+              return;
+            }
+
+            const form = new FormData();
+            form.append('image', blob, 'verify.jpg');
+            form.append('predicted', letter);
+
+            try {
+              const res = await fetch(`${BACKEND_URL}/verify-with-search`, {
+                method: 'POST',
+                body: form,
+              });
+
+              if (res.ok) {
+                const data = await res.json();
+                setBackgroundVerifyData(prev => ({
+                  ...prev,
+                  [letter]: {
+                    matched: data.verification.matched,
+                    confidence_score: data.verification.confidence_score,
+                    search_summary: data.verification.search_summary || data.search_query_description,
+                    analysis: data.verification.analysis,
+                    correction_tips: data.verification.correction_tips
+                  }
+                }));
+              }
+            } catch (err) {
+              console.error('[ASL Background verify error]', err);
+            } finally {
+              setVerifyingLetters(prev => ({ ...prev, [letter]: false }));
+            }
+          }, 'image/jpeg', 0.92);
+
+        } catch (err) {
+          setVerifyingLetters(prev => ({ ...prev, [letter]: false }));
         }
-      }, 'image/jpeg', 0.92);
-
-    } catch (err: any) {
-      setSearchVerifyError(err?.message || 'Verification failed');
-      setIsVerifyingSearch(false);
+      })();
     }
-  };
+  }, [result, backgroundVerifyData, verifyingLetters]);
 
   // ── Prediction loop ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -729,17 +740,44 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                       Confidence: <span className="font-bold" style={{ color }}>{(conf * 100).toFixed(1)}%</span>
                     </span>
 
-                    {result.prediction !== 'nothing' && result.prediction !== 'space' && result.prediction !== 'del' && (
-                      <button
-                        onClick={verifySignWithSearch}
-                        disabled={isVerifyingSearch}
-                        className="mt-3.5 py-1.5 px-4 rounded-full text-[9px] font-mono uppercase tracking-widest font-extrabold transition-all active:scale-95 disabled:opacity-40 flex items-center gap-2 cursor-pointer shadow-md bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white border border-indigo-400/20"
-                      >
-                        <svg className={`w-3.5 h-3.5 ${isVerifyingSearch ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    {/* Background Verification Loader */}
+                    {verifyingLetters[result.prediction] && (
+                      <div className="mt-3 py-1 px-3 rounded-full text-[8px] font-mono uppercase tracking-[0.2em] bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 animate-pulse flex items-center gap-1.5 shadow-sm">
+                        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3 3L22 4" />
                         </svg>
-                        {isVerifyingSearch ? 'Verifying...' : '🌐 AI Verify Sign'}
-                      </button>
+                        🌐 Internet Pose Audit...
+                      </div>
+                    )}
+
+                    {/* Background Verification Result Display */}
+                    {backgroundVerifyData[result.prediction] && (
+                      <div className="mt-3.5 w-full border-t pt-3 flex flex-col gap-2.5 animate-in fade-in duration-300 text-center animate-in slide-in-from-bottom-2" style={{ borderColor: 'var(--dm-border)' }}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-zinc-500">ASL Pose Alignment</span>
+                          <span 
+                            className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full"
+                            style={{ 
+                              background: backgroundVerifyData[result.prediction].matched ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                              color: backgroundVerifyData[result.prediction].matched ? '#10b981' : '#ef4444',
+                              border: `1px solid ${backgroundVerifyData[result.prediction].matched ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`
+                            }}
+                          >
+                            {backgroundVerifyData[result.prediction].confidence_score}% Match
+                          </span>
+                        </div>
+                        
+                        <p className="text-[10px] text-zinc-400 font-sans leading-relaxed italic px-1 select-text">
+                          &ldquo;{backgroundVerifyData[result.prediction].analysis.slice(0, 110)}...&rdquo;
+                        </p>
+                        
+                        {backgroundVerifyData[result.prediction].correction_tips && (
+                          <div className="rounded-xl p-2.5 text-left border border-amber-500/15 bg-amber-500/5 text-[9px] font-sans leading-relaxed text-amber-300/90 shadow-sm flex items-start gap-1.5">
+                            <span className="text-xs">💡</span>
+                            <span>{backgroundVerifyData[result.prediction].correction_tips}</span>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -816,176 +854,6 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
 
       </div>
 
-      {/* ── AI Search Verification Modal (Premium Glassmorphic Overlay) ── */}
-      {showSearchModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-300">
-          <div 
-            className="w-full max-w-[550px] max-h-[90vh] rounded-[2.5rem] p-6 md:p-8 border flex flex-col justify-between overflow-y-auto animate-in zoom-in-95 duration-300 shadow-[0_0_80px_rgba(99,102,241,0.25)] text-left"
-            style={{ 
-              background: 'rgba(9,9,11,0.95)',
-              borderColor: 'rgba(99,102,241,0.3)',
-            }}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b pb-4 mb-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                  </svg>
-                </span>
-                <div>
-                  <h3 className="text-xs font-mono tracking-widest text-indigo-300 uppercase font-extrabold">ASL Visual Search Verification</h3>
-                  <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider mt-0.5">Real-time internet cross-reference</p>
-                </div>
-              </div>
-              
-              <button 
-                onClick={() => { setShowSearchModal(false); setSearchVerifyResult(null); setSearchVerifyError(null); }}
-                className="p-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-all active:scale-90 cursor-pointer"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Loading / Searching State */}
-            {isVerifyingSearch && (
-              <div className="flex-1 py-12 flex flex-col items-center justify-center gap-4">
-                <div className="relative w-16 h-16 flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full border-2 border-dashed border-indigo-500/20 animate-spin" style={{ animationDuration: '8s' }} />
-                  <div className="absolute inset-2 rounded-full border border-indigo-500/40 animate-pulse" />
-                  <div className="w-6 h-6 rounded-full bg-indigo-500/10 border-2 border-indigo-400 flex items-center justify-center text-[10px] font-black text-indigo-300 font-mono">
-                    {result?.prediction}
-                  </div>
-                </div>
-                
-                <div className="text-center space-y-1 mt-2">
-                  <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-indigo-400 font-extrabold animate-pulse">
-                    INTEGRATED VERIFICATION IN PROGRESS
-                  </p>
-                  <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">
-                    Fetching web descriptions & analyzing hand posture...
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Error State */}
-            {searchVerifyError && (
-              <div className="flex-1 py-8 flex flex-col items-center justify-center gap-3 text-center">
-                <span className="p-3 rounded-full bg-red-950/20 border border-red-500/30 text-red-400">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                  </svg>
-                </span>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-red-400 font-extrabold">Verification Exception</p>
-                  <p className="text-[11px] text-zinc-400 max-w-[320px] font-sans">{searchVerifyError}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Successful Result Panel */}
-            {searchVerifyResult && !isVerifyingSearch && !searchVerifyError && (
-              <div className="flex-grow space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {/* Visual score banner */}
-                <div 
-                  className="rounded-2xl p-4 border flex items-center justify-between shadow-lg"
-                  style={{
-                    background: searchVerifyResult.verification.matched ? 'rgba(16,185,129,0.04)' : 'rgba(239,68,68,0.04)',
-                    borderColor: searchVerifyResult.verification.matched ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <span 
-                      className="w-10 h-10 rounded-full flex items-center justify-center border font-black text-lg"
-                      style={{
-                        background: searchVerifyResult.verification.matched ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-                        color: searchVerifyResult.verification.matched ? '#10b981' : '#ef4444',
-                        borderColor: searchVerifyResult.verification.matched ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)',
-                      }}
-                    >
-                      {searchVerifyResult.letter}
-                    </span>
-                    <div>
-                      <h4 
-                        className="text-[11px] font-mono uppercase tracking-widest font-extrabold"
-                        style={{ color: searchVerifyResult.verification.matched ? '#10b981' : '#ef4444' }}
-                      >
-                        {searchVerifyResult.verification.matched ? 'VALIDATED SIGN' : 'INCORRECT SIGN'}
-                      </h4>
-                      <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mt-0.5">
-                        Matches web ASL descriptions
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <div className="text-xl font-black font-mono tracking-tight" style={{ color: searchVerifyResult.verification.matched ? '#10b981' : '#ef4444' }}>
-                      {searchVerifyResult.verification.confidence_score}%
-                    </div>
-                    <div className="text-[8px] font-mono uppercase tracking-wider text-zinc-600">Match score</div>
-                  </div>
-                </div>
-
-                {/* Internet Search Description Card */}
-                <div className="rounded-2xl p-4 bg-zinc-950/80 border border-zinc-800/80 space-y-2 shadow-inner">
-                  <div className="flex items-center gap-1.5 text-zinc-400">
-                    <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                    </svg>
-                    <span className="text-[9px] font-mono uppercase tracking-widest font-bold">Official Web Search Description</span>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 font-sans leading-relaxed italic border-l-2 border-indigo-500/40 pl-3">
-                    &ldquo;{searchVerifyResult.verification.search_summary || searchVerifyResult.search_query_description}&rdquo;
-                  </p>
-                </div>
-
-                {/* AI Visual Critique */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-zinc-400">
-                    <svg className="w-3.5 h-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                    <span className="text-[9px] font-mono uppercase tracking-widest font-bold">Llama 3.2 Vision Critique</span>
-                  </div>
-                  <div className="rounded-2xl p-4 bg-zinc-950/40 border border-zinc-900 text-[11px] text-zinc-300 font-sans leading-relaxed space-y-1.5 select-text max-h-[140px] overflow-y-auto pr-1">
-                    {searchVerifyResult.verification.analysis}
-                  </div>
-                </div>
-
-                {/* AI Correction Tips */}
-                {searchVerifyResult.verification.correction_tips && (
-                  <div className="rounded-2xl p-4 border border-amber-500/15 bg-amber-500/5 space-y-2">
-                    <div className="flex items-center gap-1.5 text-amber-400">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                      </svg>
-                      <span className="text-[9px] font-mono uppercase tracking-widest font-extrabold">Onboarding Correction Tips</span>
-                    </div>
-                    <p className="text-[11px] text-zinc-400 font-sans leading-relaxed">
-                      {searchVerifyResult.verification.correction_tips}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Bottom Actions */}
-            <div className="mt-6 pt-4 border-t flex justify-end" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-              <button 
-                onClick={() => { setShowSearchModal(false); setSearchVerifyResult(null); setSearchVerifyError(null); }}
-                className="px-5 py-2 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-white text-black hover:bg-zinc-200 transition-all active:scale-95 cursor-pointer shadow-md"
-              >
-                Close Verification
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
     </div>
   );
 }
