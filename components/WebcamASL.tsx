@@ -53,13 +53,14 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
   const [showHistory, setShowHistory] = useState<boolean>(false);
   const [history, setHistory] = useState<any[]>([]);
   // Advanced Interactive Scanning System States
-  const [cropRatio, setCropRatio] = useState<number>(0.55);
-  const [filterMode, setFilterMode] = useState<'normal' | 'boost' | 'high_contrast'>('normal');
+  const [cropRatio, setCropRatio] = useState<number>(1.0);
+  const [filterMode, setFilterMode] = useState<'normal' | 'boost' | 'high_contrast'>('boost');
   const [scannerTelemetry, setScannerTelemetry] = useState<{
     brightness: number;
     latencyMs: number;
     quality: 'optimal' | 'low_light' | 'overexposed';
   }>({ brightness: 120, latencyMs: 0, quality: 'optimal' });
+  const [aiPredictions, setAiPredictions] = useState<string[]>([]);
 
 
   // ── Check backend health on mount ─────────────────────────────────────────
@@ -289,6 +290,37 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
     }
   }, [result, isCameraActive, lastAdded]);
 
+  // ── Smart AI Sentence Autocomplete Prediction Hook ──────────────────────────
+  useEffect(() => {
+    if (!sentence || sentence.trim().length === 0) {
+      setAiPredictions([]);
+      return;
+    }
+
+    const delayDebounce = setTimeout(async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/predict-sentence`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: sentence }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAiPredictions(data.predictions || []);
+        }
+      } catch (err) {
+        console.error('[ASL Sentence Predict error]', err);
+      }
+    }, 250); // 250ms premium debounce
+
+    return () => clearTimeout(delayDebounce);
+  }, [sentence]);
+
+  const applyAiPrediction = (predictionText: string) => {
+    setSentence(predictionText);
+  };
+
+
   // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => () => stopCamera(), [stopCamera]);
 
@@ -396,13 +428,13 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
       )}
 
       {/* ── Centered Workspace aligned with Chat Area sizing ── */}
-      <div className="flex-grow flex-1 min-h-0 w-full max-w-5xl mx-auto p-4 md:p-5 flex flex-col justify-between">
+      <div className="flex-grow flex-1 min-h-0 w-full max-w-[1440px] mx-auto px-6 lg:px-10 py-4 md:py-5 flex flex-col justify-between">
         
-        {/* The 2-Column Side-by-Side HUD */}
-        <div className="flex-grow flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5">
+        {/* The 3-Column Side-by-Side HUD */}
+        <div className="flex-grow flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 mb-5">
           
-          {/* Left Column (3/5ths): Camera & Output Document */}
-          <div className="lg:col-span-3 flex flex-col gap-5 min-h-0 h-full">
+          {/* Left Column (5/12ths ~ 40% width): Camera & Output Document */}
+          <div className="lg:col-span-5 flex flex-col gap-5 min-h-0 h-full">
             
             {/* Camera Frame */}
             <div
@@ -431,33 +463,11 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
               {/* Clean Camera HUD Overlay */}
               {isCameraActive && (
                 <>
-                  {/* Minimalist Camera status pill + Telemetry */}
+                  {/* Minimalist Camera status pill */}
                   <div className="absolute top-4 left-4 z-20 flex flex-col gap-1.5 pointer-events-none select-none">
                     <div className="px-3 py-1 rounded-full backdrop-blur-md bg-black/50 text-[8px] font-mono tracking-widest text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5 font-bold shadow-md">
                       <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                       SYSTEM FEED: ACTIVE
-                    </div>
-
-                    <div className="px-2.5 py-1 rounded-md backdrop-blur-md bg-zinc-950/70 border border-zinc-800 text-[8px] font-mono text-zinc-400 flex flex-col gap-0.5 shadow-md max-w-[135px]">
-                      <div className="flex items-center justify-between gap-3">
-                        <span>LUMA:</span>
-                        <span className="font-bold text-zinc-200">{scannerTelemetry.brightness} Lm</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span>JIT LATENCY:</span>
-                        <span className="font-bold text-zinc-200">{scannerTelemetry.latencyMs} ms</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span>LIGHTING:</span>
-                        <span 
-                          className="font-bold uppercase"
-                          style={{
-                            color: scannerTelemetry.quality === 'optimal' ? '#10b981' : '#f59e0b'
-                          }}
-                        >
-                          {scannerTelemetry.quality.replace('_', ' ')}
-                        </span>
-                      </div>
                     </div>
                   </div>
 
@@ -472,13 +482,10 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                   {/* High-Tech Crop Zone Indicator (Region of Interest) */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 select-none animate-in fade-in zoom-in-95 duration-500">
                     <div 
-                      className="relative border-2 border-dashed border-indigo-500/40 rounded-[2.5rem] bg-indigo-500/5 shadow-[0_0_40px_rgba(99,102,241,0.12)] flex flex-col items-center justify-center backdrop-blur-[1px] transition-all duration-300"
+                      className="relative border border-dashed border-indigo-500/40 rounded-[2.5rem] bg-indigo-500/5 shadow-[0_0_40px_rgba(99,102,241,0.08)] flex flex-col items-center justify-center backdrop-blur-[0.5px] transition-all duration-300"
                       style={{
-                        width: `${cropRatio * 100}%`,
-                        height: `${cropRatio * 100}%`,
-                        maxWidth: 'min(320px, 90%)',
-                        maxHeight: 'min(320px, 90%)',
-                        aspectRatio: '1',
+                        width: '92%',
+                        height: '92%',
                       }}
                     >
                       {/* Corner Brackets */}
@@ -488,11 +495,11 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                       <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-indigo-400 rounded-br-2xl -mb-1 -mr-1" />
                       
                       {/* Live scanning line effect */}
-                      <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-indigo-400/60 to-transparent top-1/2 animate-[scan_2.5s_ease-in-out_infinite]" />
+                      <div className="absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-indigo-400/60 to-transparent top-1/2 animate-[scan_2.5s_ease-in-out_infinite]" />
                       
                       {/* Sub-label */}
-                      <span className="text-[9px] font-mono tracking-widest text-indigo-200 font-extrabold bg-zinc-950/85 px-3.5 py-1.5 rounded-full border border-indigo-500/35 shadow-lg select-none">
-                        PLACE HAND HERE
+                      <span className="text-[9px] font-mono tracking-widest text-indigo-300 font-extrabold bg-zinc-950/85 px-4 py-2 rounded-full border border-indigo-500/35 shadow-lg select-none">
+                        ASL REAL-TIME OPTICAL FEED
                       </span>
                     </div>
                   </div>
@@ -558,88 +565,6 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
               )}
             </div>
 
-            {/* Advanced Scanner Control Deck Card */}
-            {isCameraActive && (
-              <div 
-                className="rounded-[1.8rem] p-4 border flex flex-col gap-3.5 animate-in slide-in-from-bottom-3 duration-500 shadow-sm"
-                style={{ 
-                  background: 'var(--dm-bg-sidebar)',
-                  borderColor: 'var(--dm-border)',
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="p-1 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                      </svg>
-                    </span>
-                    <div>
-                      <h4 className="text-[10px] font-mono tracking-widest text-indigo-300 uppercase font-extrabold">Fidelity Scan Adjuster</h4>
-                      <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-wider mt-0.5">Adjust scan zone zoom and hardware filters</p>
-                    </div>
-                  </div>
-                  
-                  {/* Dynamic illumination tag */}
-                  <span 
-                    className="text-[8px] font-mono font-bold px-2 py-0.5 rounded-full border flex items-center gap-1"
-                    style={{
-                      background: scannerTelemetry.quality === 'optimal' ? 'rgba(16,185,129,0.06)' : 'rgba(245,158,11,0.06)',
-                      borderColor: scannerTelemetry.quality === 'optimal' ? 'rgba(16,185,129,0.18)' : 'rgba(245,158,11,0.18)',
-                      color: scannerTelemetry.quality === 'optimal' ? '#10b981' : '#f59e0b',
-                    }}
-                  >
-                    <span className={`w-1 h-1 rounded-full ${scannerTelemetry.quality === 'optimal' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                    {scannerTelemetry.quality.replace('_', ' ').toUpperCase()} FEED
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Zoom Slider */}
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between text-[9px] font-mono text-zinc-400">
-                      <span>SCAN BOX HEIGHT / ZOOM</span>
-                      <span className="font-bold text-indigo-400">{(cropRatio * 100).toFixed(0)}%</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[9px] font-mono text-zinc-600">35%</span>
-                      <input 
-                        type="range"
-                        min="0.35"
-                        max="0.75"
-                        step="0.05"
-                        value={cropRatio}
-                        onChange={(e) => setCropRatio(parseFloat(e.target.value))}
-                        className="flex-1 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                        style={{ background: 'var(--dm-bg-input)' }}
-                      />
-                      <span className="text-[9px] font-mono text-zinc-600">75%</span>
-                    </div>
-                  </div>
-
-                  {/* Preprocessing Toggles */}
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[9px] font-mono text-zinc-400 uppercase">JIT Hardware Processing</span>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {(['normal', 'boost', 'high_contrast'] as const).map((mode) => (
-                        <button
-                          key={mode}
-                          onClick={() => setFilterMode(mode)}
-                          className="py-1 px-2 rounded-lg text-[8px] font-mono uppercase font-bold transition-all active:scale-95 cursor-pointer border"
-                          style={{
-                            background: filterMode === mode ? 'rgba(99,102,241,0.15)' : 'var(--dm-bg-input)',
-                            borderColor: filterMode === mode ? 'rgba(99,102,241,0.4)' : 'var(--dm-border)',
-                            color: filterMode === mode ? '#818cf8' : 'var(--dm-text-secondary)',
-                          }}
-                        >
-                          {mode.replace('_', ' ')}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Compiled Output Workspace Document */}
             <div 
@@ -732,41 +657,13 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                     Copy
                   </button>
 
-                  {/* Speak Button */}
-                  <button
-                    onClick={speakSentence}
-                    disabled={!sentence}
-                    className="py-1.5 px-3 rounded-full text-[9px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-30 flex items-center gap-1.5 cursor-pointer border bg-[var(--dm-bg-input)]"
-                    style={{ 
-                      color: 'var(--dm-text-secondary)', 
-                      borderColor: 'var(--dm-border)',
-                    }}
-                    onMouseEnter={e => { if (sentence) { e.currentTarget.style.borderColor = 'var(--dm-thumb)'; e.currentTarget.style.color = 'var(--dm-text-primary)'; } }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
-                  >
-                    Speak
-                  </button>
-
-                  {/* Listen Button */}
-                  <button
-                    onClick={startListening}
-                    className={`py-1.5 px-3 rounded-full text-[9px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer border ${isListening ? 'animate-pulse' : ''} bg-[var(--dm-bg-input)]`}
-                    style={{ 
-                      color: isListening ? '#10b981' : 'var(--dm-text-secondary)', 
-                      borderColor: isListening ? '#10b981' : 'var(--dm-border)',
-                    }}
-                    onMouseEnter={e => { if (!isListening) { e.currentTarget.style.borderColor = 'var(--dm-thumb)'; e.currentTarget.style.color = 'var(--dm-text-primary)'; } }}
-                    onMouseLeave={e => { if (!isListening) { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; } }}
-                  >
-                    {isListening ? 'Listening...' : 'Listen'}
-                  </button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column (2/5ths): AI Telemetry & Predictions */}
-          <div className="lg:col-span-2 flex flex-col gap-5 min-h-0 h-full">
+          {/* Middle Column (3/12ths ~ 25% width): AI Telemetry & Predictions */}
+          <div className="lg:col-span-3 flex flex-col gap-5 min-h-0 h-full">
             
             {/* AI Diagnostics HUD - Height Increased significantly, pushing others down */}
             <div
@@ -776,22 +673,6 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                 borderColor: 'var(--dm-border)',
               }}
             >
-              {/* AI Status badge */}
-              <div
-                className="absolute top-4 right-4 text-[8px] font-mono uppercase tracking-widest px-2.5 py-1 rounded-full transition-all duration-300 pointer-events-none"
-                style={{
-                  background: isBackendChecking
-                    ? 'rgba(107,114,128,0.06)'
-                    : backendOnline
-                    ? 'rgba(16,185,129,0.08)'
-                    : 'rgba(239,68,68,0.08)',
-                  color: isBackendChecking ? '#9ca3af' : backendOnline ? '#10b981' : '#ef4444',
-                  border: `1px solid ${isBackendChecking ? 'rgba(107,114,128,0.15)' : backendOnline ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
-                }}
-              >
-                {isBackendChecking ? 'CONNECTING...' : backendOnline ? 'AI ACTIVE' : 'AI OFFLINE'}
-              </div>
-
               <div className="text-[8px] font-mono tracking-[0.25em] text-zinc-400 opacity-60 uppercase absolute top-5 left-6 pointer-events-none">
                 Capture Matrix
               </div>
@@ -851,52 +732,117 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
               </p>
               {result?.top3 ? (
                 <div className="space-y-2.5">
-                  {result.top3.map((item, i) => (
-                    <div key={item.label} className="flex items-center gap-2.5">
-                      <span
-                        className="w-4 h-4 rounded-md flex items-center justify-center text-[8px] font-mono font-bold"
-                        style={{
-                          background: i === 0 ? `${color}12` : 'var(--dm-bg-input)',
-                          color: i === 0 ? color : 'var(--dm-text-muted)',
-                          border: `1px solid ${i === 0 ? `${color}20` : 'var(--dm-border)'}`
-                        }}
-                      >
-                        0{i + 1}
-                      </span>
-                      <span className="text-[10px] font-mono font-semibold w-10 truncate" style={{ color: i === 0 ? 'var(--dm-text-heading)' : 'var(--dm-text-secondary)' }}>
-                        {LABEL_DISPLAY[item.label] ?? item.label}
-                      </span>
-                      <div className="flex-1 h-1.5 rounded-full overflow-hidden relative" style={{ background: 'var(--dm-bg-input)' }}>
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${item.confidence * 100}%`, 
-                            background: i === 0 ? color : 'var(--dm-text-muted)',
+                  {result.top3.map((item, i) => {
+                    return (
+                      <div key={item.label} className="flex items-center gap-2.5">
+                        <span
+                          className="w-4 h-4 rounded-md flex items-center justify-center text-[8px] font-mono font-bold"
+                          style={{
+                            background: i === 0 ? `${color}12` : 'var(--dm-bg-input)',
+                            color: i === 0 ? color : 'var(--dm-text-muted)',
+                            border: `1px solid ${i === 0 ? `${color}20` : 'var(--dm-border)'}`
                           }}
-                        />
+                        >
+                          0{i + 1}
+                        </span>
+                        <span className="text-[10px] font-mono font-semibold w-10 truncate" style={{ color: i === 0 ? 'var(--dm-text-heading)' : 'var(--dm-text-secondary)' }}>
+                          {LABEL_DISPLAY[item.label] ?? item.label}
+                        </span>
+                        <div className="flex-1 h-1.5 rounded-full overflow-hidden relative" style={{ background: 'var(--dm-bg-input)' }}>
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ 
+                              width: `${item.confidence * 100}%`, 
+                              background: i === 0 ? color : 'var(--dm-text-muted)',
+                            }}
+                          />
+                        </div>
+                        <span className="text-[9px] font-mono w-8 text-right" style={{ color: 'var(--dm-text-muted)' }}>
+                          {(item.confidence * 100).toFixed(0)}%
+                        </span>
                       </div>
-                      <span className="text-[9px] font-mono w-8 text-right" style={{ color: 'var(--dm-text-muted)' }}>
-                        {(item.confidence * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="space-y-2.5 opacity-30">
-                  {[1, 2, 3].map((idx) => (
-                    <div key={idx} className="flex items-center gap-2.5">
-                      <span className="w-4 h-4 rounded-md flex items-center justify-center text-[8px] font-mono font-bold bg-zinc-900 text-zinc-600 border border-zinc-800">
-                        0{idx}
-                      </span>
-                      <span className="text-[10px] font-mono text-zinc-500 w-10">—</span>
-                      <div className="flex-1 h-1.5 rounded-full bg-zinc-900" />
-                      <span className="text-[9px] font-mono w-8 text-right text-zinc-600">0%</span>
-                    </div>
-                  ))}
+                  {[1, 2, 3].map((idx) => {
+                    return (
+                      <div key={idx} className="flex items-center gap-2.5">
+                        <span className="w-4 h-4 rounded-md flex items-center justify-center text-[8px] font-mono font-bold bg-zinc-900 text-zinc-600 border border-zinc-800">
+                          0{idx}
+                        </span>
+                        <span className="text-[10px] font-mono text-zinc-500 w-10">—</span>
+                        <div className="flex-1 h-1.5 rounded-full bg-zinc-900" />
+                        <span className="text-[9px] font-mono w-8 text-right text-zinc-600">0%</span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
+          </div>
+
+          {/* Right Column (4/12ths ~ 33.3% width): Smart AI Predictive Suggestions */}
+          <div className="lg:col-span-4 flex flex-col gap-5 min-h-0 h-full">
+            <div 
+              className="flex-grow flex-1 rounded-[2rem] p-5 border flex flex-col justify-between"
+              style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}
+            >
+              <div className="flex flex-col gap-3.5 min-h-0 h-full">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </span>
+                  <div>
+                    <h4 className="text-[10px] font-mono tracking-widest text-indigo-300 uppercase font-extrabold">ASL AI Suggest</h4>
+                    <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-wider mt-0.5">Real-time autocomplete & text predictions</p>
+                  </div>
+                </div>
+
+                {/* Suggestions List */}
+                <div className="flex-1 overflow-y-auto mt-2 space-y-2 pr-1">
+                  {aiPredictions.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-[8px] font-mono uppercase tracking-[0.2em] text-zinc-500 mb-2">Predicted Phrases</p>
+                      {aiPredictions.map((pred, i) => (
+                        <button
+                          key={i}
+                          onClick={() => applyAiPrediction(pred)}
+                          className="w-full text-left p-3 rounded-2xl border transition-all duration-300 active:scale-[0.98] flex flex-col gap-1.5 cursor-pointer bg-[var(--dm-bg-input)] hover:border-indigo-500/40 text-zinc-200"
+                          style={{ borderColor: 'var(--dm-border)' }}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className="text-[8px] font-mono px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 font-bold border border-indigo-500/20">
+                              SUGGESTION 0{i + 1}
+                            </span>
+                            <span className="text-[8px] font-mono text-zinc-500">✦ AI MATCH</span>
+                          </div>
+                          <span className="text-[10px] font-mono font-bold leading-snug break-words">
+                            {pred}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-3 mt-10">
+                      <div className="w-10 h-10 rounded-full bg-zinc-900/60 border border-zinc-800 flex items-center justify-center mb-2.5">
+                        <svg className="w-5 h-5 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <p className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 font-bold">Awaiting Input...</p>
+                      <p className="text-[8px] font-mono text-zinc-600 mt-1 uppercase max-w-[130px] leading-relaxed">
+                        AI autocomplete suggestions will generate here as you spell letters
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
         </div>
