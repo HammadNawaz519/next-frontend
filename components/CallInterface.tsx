@@ -44,6 +44,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const [myCaption, setMyCaption] = useState<string>('');
   const [peerCaption, setPeerCaption] = useState<string>('');
   const [isCaptionsOn, setIsCaptionsOn] = useState<boolean>(true);
+  const areCaptionsVisible = isCaptionsOn && (!!myCaption || !!peerCaption) && callStatus === 'active';
   const clearPeerCaptionRef = useRef<NodeJS.Timeout | null>(null);
   const clearMyCaptionRef = useRef<NodeJS.Timeout | null>(null);
   const speechRecognitionRef = useRef<any>(null);
@@ -507,7 +508,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         {/* Center Content (Audio Call or Ringing) */}
         {(type === 'audio' || callStatus !== 'active') && (
-          <div className="flex flex-col items-center gap-6 text-center animate-in zoom-in duration-700">
+          <div className={`flex flex-col items-center gap-6 text-center animate-in zoom-in duration-700 transition-transform ${areCaptionsVisible ? 'md:-translate-y-24' : ''}`}>
             <div className="relative">
               {callStatus === 'ringing' && (
                 <>
@@ -580,15 +581,15 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         <div className="absolute bottom-4 md:bottom-5 left-1/2 -translate-x-1/2 w-fit min-w-[290px] md:min-w-[340px] max-w-[90vw] flex flex-col items-stretch justify-end gap-3 z-40 pointer-events-none">
           
           {/* Speech Subtitles */}
-          {isCaptionsOn && (myCaption || peerCaption) && callStatus === 'active' && (
+          {areCaptionsVisible && (
             <div className="w-full flex flex-col gap-2 pointer-events-auto">
               {/* Peer's Caption */}
               {peerCaption && (
-                <div className="w-full px-5 py-3 rounded-2xl md:rounded-[1.5rem] backdrop-blur-2xl bg-white border border-white/50 shadow-[0_10px_40px_rgba(0,0,0,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300 text-center">
-                  <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-indigo-500 uppercase mb-1.5 block">
+                <div className="w-full px-5 py-2 md:py-2.5 rounded-2xl md:rounded-3xl backdrop-blur-2xl bg-white border border-white/50 shadow-[0_10px_40px_rgba(0,0,0,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300 text-center">
+                  <span className="text-[8.5px] font-mono font-bold tracking-[0.2em] text-indigo-500 uppercase mb-0.5 block">
                     {peer.name}
                   </span>
-                  <p className="text-sm md:text-base font-bold text-black leading-relaxed">
+                  <p className="text-sm md:text-[15px] font-bold text-black leading-snug">
                     {peerCaption}
                   </p>
                 </div>
@@ -596,11 +597,11 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
               
               {/* My Caption */}
               {myCaption && (
-                <div className="w-full px-5 py-3 rounded-2xl md:rounded-[1.5rem] backdrop-blur-2xl bg-white border border-white/50 shadow-[0_10px_40px_rgba(0,0,0,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300 text-center">
-                  <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-emerald-600 uppercase mb-1.5 block">
+                <div className="w-full px-5 py-2 md:py-2.5 rounded-2xl md:rounded-3xl backdrop-blur-2xl bg-white border border-white/50 shadow-[0_10px_40px_rgba(0,0,0,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300 text-center">
+                  <span className="text-[8.5px] font-mono font-bold tracking-[0.2em] text-emerald-600 uppercase mb-0.5 block">
                     You
                   </span>
-                  <p className="text-sm md:text-base font-bold text-black leading-relaxed">
+                  <p className="text-sm md:text-[15px] font-bold text-black leading-snug">
                     {myCaption}
                   </p>
                 </div>
