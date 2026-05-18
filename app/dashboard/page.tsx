@@ -520,51 +520,98 @@ export default function DashboardPage() {
               <div style={{ position: 'absolute', inset: 0, opacity: 0.06, background: 'linear-gradient(45deg, #f59e0b, #ef4444, #8b5cf6)', filter: 'blur(20px)', pointerEvents: 'none' }} />
             </div>
 
-            {/* Practice Content */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 relative">
+            {/* Practice Content - perfectly non-scrollable, unified HUD */}
+            <div className="flex-grow flex-1 min-h-0 w-full max-w-5xl mx-auto p-4 md:p-6 flex flex-col justify-between select-none">
               
-              {/* Hero */}
-              <div className="text-center space-y-3 animate-in fade-in duration-500">
-                <div className="w-16 h-16 mx-auto rounded-[1.5rem] flex items-center justify-center shadow-inner" style={{ background: 'var(--dm-bg-active)' }}>
-                  <span className="text-2xl">🤟</span>
-                </div>
-                <h1 className="text-xl md:text-2xl font-extrabold tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>ASL Alphabet Practice</h1>
-                <p className="text-xs max-w-sm mx-auto" style={{ color: 'var(--dm-text-muted)' }}>Tap any letter below to learn how to sign it in American Sign Language.</p>
+              {/* Compact HUD Sub-Header */}
+              <div className="flex items-center justify-between mb-2 flex-shrink-0">
+                <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--dm-text-secondary)' }}>
+                  ✦ Interactive Practice Core
+                </p>
+                <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-wider">
+                  26 Alphabets Standby
+                </span>
               </div>
 
-              {/* AI Response Card */}
-              {selectedLetter && (
-                <div className="max-w-lg mx-auto rounded-[2rem] p-6 shadow-lg animate-in zoom-in-95 duration-300" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black" style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}>
+              {/* Central Output Console - Covers full width of the container */}
+              <div 
+                className="flex-1 min-h-[180px] w-full rounded-[2rem] p-5 border flex flex-col justify-between mb-5 transition-all duration-300 shadow-sm"
+                style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}
+              >
+                {/* Header of the output box */}
+                <div className="flex items-center justify-between flex-shrink-0 mb-2">
+                  <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--dm-text-secondary)' }}>
+                    {selectedLetter ? `✦ ASL Guide: Letter ${selectedLetter}` : '✦ Instruction Terminal'}
+                  </p>
+                  {selectedLetter && (
+                    <button 
+                      onClick={() => { setSelectedLetter(null); setPracticeAiResponse(''); }} 
+                      className="text-[9px] font-mono uppercase tracking-widest font-semibold py-1.5 px-3 rounded-full border bg-[var(--dm-bg-input)] cursor-pointer active:scale-95 transition-all"
+                      style={{ color: 'var(--dm-text-secondary)', borderColor: 'var(--dm-border)' }}
+                    >
+                      Clear Guide
+                    </button>
+                  )}
+                </div>
+
+                {/* Body Content of the output box */}
+                <div className="flex-grow flex items-center justify-start min-h-0 py-2">
+                  {practiceLoading ? (
+                    <div className="w-full flex flex-col items-center justify-center gap-3">
+                      <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--dm-border)', borderTopColor: '#f59e0b' }} />
+                      <p className="text-[9px] font-mono uppercase tracking-widest animate-pulse" style={{ color: 'var(--dm-text-muted)' }}>
+                        AI is compiling sign instructions...
+                      </p>
+                    </div>
+                  ) : selectedLetter && practiceAiResponse ? (
+                    <div className="w-full flex items-start gap-4 animate-in fade-in duration-300">
+                      {/* Left side: Large active letter badge */}
+                      <div 
+                        className="w-16 h-16 rounded-2xl border flex items-center justify-center text-3xl font-black shadow-inner flex-shrink-0"
+                        style={{ 
+                          borderColor: '#f59e0b',
+                          color: '#f59e0b',
+                          background: 'var(--dm-bg-input)',
+                          fontFamily: 'monospace',
+                          boxShadow: 'inset 0 0 12px rgba(245,158,11,0.1), 0 4px 12px rgba(0,0,0,0.05)'
+                        }}
+                      >
                         {selectedLetter}
                       </div>
-                      <div>
-                        <div className="text-[10px] font-mono uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>ASL Sign Guide</div>
-                        <div className="text-lg font-bold" style={{ color: 'var(--dm-text-heading)' }}>Letter {selectedLetter}</div>
+
+                      {/* Right side: The 3-4 line response */}
+                      <div className="flex-1 min-w-0">
+                        <p 
+                          className="text-[13px] font-semibold tracking-wide leading-relaxed select-text"
+                          style={{ color: 'var(--dm-text-heading)', fontFamily: 'monospace' }}
+                        >
+                          {practiceAiResponse}
+                        </p>
                       </div>
                     </div>
-                    <button onClick={() => { setSelectedLetter(null); setPracticeAiResponse(''); }} className="w-8 h-8 rounded-full flex items-center justify-center hover:scale-110 transition-transform cursor-pointer" style={{ background: 'var(--dm-bg-input)', color: 'var(--dm-text-muted)' }}>✕</button>
-                  </div>
-                  
-                  {practiceLoading ? (
-                    <div className="flex flex-col items-center gap-3 py-8">
-                      <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--dm-border)', borderTopColor: 'transparent' }} />
-                      <p className="text-[10px] font-mono uppercase tracking-widest animate-pulse" style={{ color: 'var(--dm-text-muted)' }}>AI is generating instructions...</p>
+                  ) : (
+                    <div className="w-full text-center py-4 animate-in fade-in duration-300">
+                      <span className="text-2xl mb-1.5 block animate-bounce">🤟</span>
+                      <p className="text-[11px] font-normal italic" style={{ color: 'var(--dm-text-muted)' }}>
+                        Terminal Standby. Click any letter in the grid below to display signing instructions...
+                      </p>
                     </div>
-                  ) : practiceAiResponse ? (
-                    <div className="rounded-2xl p-5" style={{ background: 'var(--dm-bg-main)' }}>
-                      <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'var(--dm-text-secondary)' }}>
-                        {practiceAiResponse}
-                      </div>
-                    </div>
-                  ) : null}
+                  )}
                 </div>
-              )}
+
+                {/* Footer of the output box */}
+                <div className="flex items-center justify-between mt-3 pt-2.5 border-t flex-shrink-0" style={{ borderColor: 'var(--dm-border)' }}>
+                  <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-wider">
+                    {selectedLetter ? `State: Visualizing ${selectedLetter}` : 'State: Awaiting Input'}
+                  </span>
+                  <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-wider">
+                    Core V1.0.0
+                  </span>
+                </div>
+              </div>
 
               {/* Alphabet Grid */}
-              <div className="grid grid-cols-7 sm:grid-cols-9 md:grid-cols-13 gap-2">
+              <div className="flex-shrink-0 grid grid-cols-7 sm:grid-cols-9 md:grid-cols-13 gap-2">
                 {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
                   <button
                     key={letter}
@@ -575,19 +622,19 @@ export default function DashboardPage() {
                       setPracticeAiResponse('');
                       setPracticeLoading(true);
                       try {
-                        const res = await askAI(`You are an ASL (American Sign Language) expert teacher. Explain clearly and concisely how to sign the letter "${letter}" in ASL. Include: 1) Hand shape description 2) Finger positions 3) Palm orientation 4) Common mistakes to avoid. Keep it brief, practical, and easy to follow. Do not use markdown formatting.`);
+                        const res = await askAI(`You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly how to sign the letter "${letter}" in ASL. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.`);
                         setPracticeAiResponse(res);
                       } catch { setPracticeAiResponse('Could not load instructions. Please try again.'); }
                       setPracticeLoading(false);
                     }}
                     className="aspect-square rounded-2xl flex flex-col items-center justify-center gap-0.5 hover:scale-110 active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
                     style={{ 
-                      background: selectedLetter === letter ? 'rgba(99,102,241,0.15)' : 'var(--dm-bg-sidebar)', 
-                      border: selectedLetter === letter ? '2px solid #6366f1' : '1px solid var(--dm-border)',
+                      background: selectedLetter === letter ? 'rgba(245,158,11,0.15)' : 'var(--dm-bg-sidebar)', 
+                      border: selectedLetter === letter ? '2px solid #f59e0b' : '1px solid var(--dm-border)',
                       outline: 'none'
                     }}
                   >
-                    <span className="text-lg md:text-xl font-black" style={{ color: selectedLetter === letter ? '#6366f1' : 'var(--dm-text-primary)' }}>{letter}</span>
+                    <span className="text-lg md:text-xl font-black" style={{ color: selectedLetter === letter ? '#f59e0b' : 'var(--dm-text-primary)' }}>{letter}</span>
                     <span className="text-[7px] font-mono uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>TAP</span>
                   </button>
                 ))}
