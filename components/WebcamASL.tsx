@@ -53,9 +53,6 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
   const [showHistory, setShowHistory] = useState<boolean>(false);
   const [history, setHistory] = useState<any[]>([]);
 
-  // Background Verification state
-  const [backgroundVerifyData, setBackgroundVerifyData] = useState<Record<string, any>>({});
-  const [verifyingLetters, setVerifyingLetters] = useState<Record<string, boolean>>({});
 
   // ── Check backend health on mount ─────────────────────────────────────────
   const checkBackend = useCallback(async () => {
@@ -196,83 +193,6 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
     }, 'image/jpeg', 0.92);
   }, []);
 
-  // ── AI Search Verification ────────────────────────────────────────────────
-  // ── AI Search Verification (Background Execution) ─────────────────────────
-  useEffect(() => {
-    if (!result?.prediction || ['nothing', 'space', 'del'].includes(result.prediction)) return;
-
-    const letter = result.prediction;
-    const conf = result.confidence ?? 0;
-
-    // Trigger background check once prediction stabilizes at high confidence (>= 0.85)
-    if (conf >= 0.85 && !backgroundVerifyData[letter] && !verifyingLetters[letter]) {
-      // Lock verification for this letter to prevent double hits
-      setVerifyingLetters(prev => ({ ...prev, [letter]: true }));
-
-      (async () => {
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        if (!video || !canvas) {
-          setVerifyingLetters(prev => ({ ...prev, [letter]: false }));
-          return;
-        }
-
-        try {
-          const ctx = canvas.getContext('2d', { willReadFrequently: true });
-          if (!ctx) throw new Error('Failed to get canvas context');
-
-          const vWidth = video.videoWidth;
-          const vHeight = video.videoHeight;
-          const cropSize = Math.min(vWidth, vHeight) * 0.55;
-          const sx = (vWidth - cropSize) / 2;
-          const sy = (vHeight - cropSize) / 2;
-
-          canvas.width = 224;
-          canvas.height = 224;
-          ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, 224, 224);
-
-          canvas.toBlob(async (blob) => {
-            if (!blob) {
-              setVerifyingLetters(prev => ({ ...prev, [letter]: false }));
-              return;
-            }
-
-            const form = new FormData();
-            form.append('image', blob, 'verify.jpg');
-            form.append('predicted', letter);
-
-            try {
-              const res = await fetch(`${BACKEND_URL}/verify-with-search`, {
-                method: 'POST',
-                body: form,
-              });
-
-              if (res.ok) {
-                const data = await res.json();
-                setBackgroundVerifyData(prev => ({
-                  ...prev,
-                  [letter]: {
-                    matched: data.verification.matched,
-                    confidence_score: data.verification.confidence_score,
-                    search_summary: data.verification.search_summary || data.search_query_description,
-                    analysis: data.verification.analysis,
-                    correction_tips: data.verification.correction_tips
-                  }
-                }));
-              }
-            } catch (err) {
-              console.error('[ASL Background verify error]', err);
-            } finally {
-              setVerifyingLetters(prev => ({ ...prev, [letter]: false }));
-            }
-          }, 'image/jpeg', 0.92);
-
-        } catch (err) {
-          setVerifyingLetters(prev => ({ ...prev, [letter]: false }));
-        }
-      })();
-    }
-  }, [result, backgroundVerifyData, verifyingLetters]);
 
   // ── Prediction loop ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -740,45 +660,7 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                       Confidence: <span className="font-bold" style={{ color }}>{(conf * 100).toFixed(1)}%</span>
                     </span>
 
-                    {/* Background Verification Loader */}
-                    {verifyingLetters[result.prediction] && (
-                      <div className="mt-3 py-1 px-3 rounded-full text-[8px] font-mono uppercase tracking-[0.2em] bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 animate-pulse flex items-center gap-1.5 shadow-sm">
-                        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3 3L22 4" />
-                        </svg>
-                        🌐 Internet Pose Audit...
-                      </div>
-                    )}
 
-                    {/* Background Verification Result Display */}
-                    {backgroundVerifyData[result.prediction] && (
-                      <div className="mt-3.5 w-full border-t pt-3 flex flex-col gap-2.5 animate-in fade-in duration-300 text-center animate-in slide-in-from-bottom-2" style={{ borderColor: 'var(--dm-border)' }}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-zinc-500">ASL Pose Alignment</span>
-                          <span 
-                            className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full"
-                            style={{ 
-                              background: backgroundVerifyData[result.prediction].matched ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-                              color: backgroundVerifyData[result.prediction].matched ? '#10b981' : '#ef4444',
-                              border: `1px solid ${backgroundVerifyData[result.prediction].matched ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`
-                            }}
-                          >
-                            {backgroundVerifyData[result.prediction].confidence_score}% Match
-                          </span>
-                        </div>
-                        
-                        <p className="text-[10px] text-zinc-400 font-sans leading-relaxed italic px-1 select-text">
-                          &ldquo;{backgroundVerifyData[result.prediction].analysis.slice(0, 110)}...&rdquo;
-                        </p>
-                        
-                        {backgroundVerifyData[result.prediction].correction_tips && (
-                          <div className="rounded-xl p-2.5 text-left border border-amber-500/15 bg-amber-500/5 text-[9px] font-sans leading-relaxed text-amber-300/90 shadow-sm flex items-start gap-1.5">
-                            <span className="text-xs">💡</span>
-                            <span>{backgroundVerifyData[result.prediction].correction_tips}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 )}
 
