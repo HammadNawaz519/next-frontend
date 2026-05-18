@@ -539,70 +539,74 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           </div>
         )}
 
-        {/* ── Speech Subtitles (Audio & Video Calls) ── */}
-        {(myCaption || peerCaption) && callStatus === 'active' && (
-          <div className={`absolute ${type === 'video' ? 'top-20 md:top-24' : 'bottom-32'} left-1/2 -translate-x-1/2 w-[90%] max-w-2xl flex flex-col gap-3 z-40`}>
-            {/* Peer's Caption */}
-            {peerCaption && (
-              <div className="self-start max-w-[85%] px-5 py-3 rounded-[1.5rem] backdrop-blur-xl bg-white border border-gray-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-zinc-500 uppercase mb-1.5 block">
-                  {peer.name}
-                </span>
-                <p className="text-sm md:text-base font-semibold text-black leading-relaxed">
-                  {peerCaption}
-                </p>
-              </div>
-            )}
-            
-            {/* My Caption */}
-            {myCaption && (
-              <div className="self-end max-w-[85%] px-5 py-3 rounded-[1.5rem] backdrop-blur-xl bg-black border border-zinc-800 shadow-[0_10px_40px_rgba(0,0,0,0.2)] animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-emerald-500 uppercase mb-1.5 block">
-                  You
-                </span>
-                <p className="text-sm md:text-base font-semibold text-white leading-relaxed">
-                  {myCaption}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Real-time Cinematic Live Subtitles Caption Box */}
-        {type === 'video' && callStatus === 'active' && (
-          <div className="absolute bottom-22 md:bottom-24 left-1/2 -translate-x-1/2 w-[85%] max-w-xl px-5 py-3 rounded-2xl backdrop-blur-md bg-black/60 border border-white/10 shadow-2xl z-30 flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-500 text-white">
-            <div className="flex items-center justify-between w-full opacity-60">
-              <span className="text-[7.5px] font-mono tracking-[0.2em] text-zinc-300 uppercase">
-                ✦ LIVE ASL TRANSLATION CAPTIONS
-              </span>
-              {sentence && (
-                <button
-                  onClick={() => { setSentence(''); setLastAdded(null); }}
-                  className="text-[7.5px] font-mono tracking-widest text-red-400 hover:text-red-300 cursor-pointer uppercase transition-colors bg-transparent border-none p-0"
-                >
-                  [ Clear ]
-                </button>
+        {/* ── UNIFIED BOTTOM CAPTIONS & ASL STACK ── */}
+        <div className="absolute bottom-24 md:bottom-28 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl flex flex-col items-center justify-end gap-3 z-40 pointer-events-none">
+          
+          {/* Speech Subtitles */}
+          {(myCaption || peerCaption) && callStatus === 'active' && (
+            <div className="w-full flex flex-col gap-3 pointer-events-auto">
+              {/* Peer's Caption */}
+              {peerCaption && (
+                <div className="self-start max-w-[85%] px-5 py-3 rounded-[1.5rem] backdrop-blur-xl bg-white border border-gray-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-zinc-500 uppercase mb-1.5 block">
+                    {peer.name}
+                  </span>
+                  <p className="text-sm md:text-base font-semibold text-black leading-relaxed">
+                    {peerCaption}
+                  </p>
+                </div>
+              )}
+              
+              {/* My Caption */}
+              {myCaption && (
+                <div className="self-end max-w-[85%] px-5 py-3 rounded-[1.5rem] backdrop-blur-xl bg-black border border-zinc-800 shadow-[0_10px_40px_rgba(0,0,0,0.2)] animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-emerald-500 uppercase mb-1.5 block">
+                    You
+                  </span>
+                  <p className="text-sm md:text-base font-semibold text-white leading-relaxed">
+                    {myCaption}
+                  </p>
+                </div>
               )}
             </div>
-            <p className="text-sm md:text-base font-bold tracking-wider text-center text-white" style={{ fontFamily: 'monospace', margin: 0 }}>
-              {sentence ? (
-                <>
-                  {sentence}
-                  <span className="inline-block w-1.5 h-3.5 ml-1 bg-white align-middle animate-[cursor-blink_1s_step-start_infinite]" style={{ animation: 'cursor-blink 1s step-start infinite' }} />
-                </>
-              ) : (
-                <span className="text-[11px] font-normal italic text-zinc-500">
-                  Begin signing in camera to display live translated captions…
+          )}
+
+          {/* ASL Live Translation Captions (Video Only) */}
+          {type === 'video' && callStatus === 'active' && (
+            <div className="w-full px-5 py-3 rounded-2xl backdrop-blur-md bg-black/60 border border-white/10 shadow-2xl flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-500 text-white pointer-events-auto">
+              <div className="flex items-center justify-between w-full opacity-60">
+                <span className="text-[7.5px] font-mono tracking-[0.2em] text-zinc-300 uppercase">
+                  ✦ LIVE ASL TRANSLATION CAPTIONS
+                </span>
+                {sentence && (
+                  <button
+                    onClick={() => { setSentence(''); setLastAdded(null); }}
+                    className="text-[7.5px] font-mono tracking-widest text-red-400 hover:text-red-300 cursor-pointer uppercase transition-colors bg-transparent border-none p-0"
+                  >
+                    [ Clear ]
+                  </button>
+                )}
+              </div>
+              <p className="text-sm md:text-base font-bold tracking-wider text-center text-white" style={{ fontFamily: 'monospace', margin: 0 }}>
+                {sentence ? (
+                  <>
+                    {sentence}
+                    <span className="inline-block w-1.5 h-3.5 ml-1 bg-white align-middle animate-[cursor-blink_1s_step-start_infinite]" style={{ animation: 'cursor-blink 1s step-start infinite' }} />
+                  </>
+                ) : (
+                  <span className="text-[11px] font-normal italic text-zinc-500">
+                    Begin signing in camera to display live translated captions…
+                  </span>
+                )}
+              </p>
+              {currentLetter && currentLetter !== 'nothing' && (
+                <span className="text-[8px] font-mono mt-0.5 px-2 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }}>
+                  CURRENT SIGN: {LABEL_DISPLAY[currentLetter] ?? currentLetter} ({(currentConf * 100).toFixed(0)}%)
                 </span>
               )}
-            </p>
-            {currentLetter && currentLetter !== 'nothing' && (
-              <span className="text-[8px] font-mono mt-0.5 px-2 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }}>
-                CURRENT SIGN: {LABEL_DISPLAY[currentLetter] ?? currentLetter} ({(currentConf * 100).toFixed(0)}%)
-              </span>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
         {/* Hidden capture canvas */}
         <canvas ref={canvasRef} className="hidden" />
