@@ -45,30 +45,6 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
   const [lastAdded, setLastAdded] = useState<string | null>(null);
   const lastAddedAt = useRef<number>(0);
 
-  // ── Conversational ChatCore Logs ──────────────────────────────────────────
-  const [chatMessages, setChatMessages] = useState<{ id: string; text: string; timestamp: string }[]>([
-    { id: '1', text: 'Welcome to your real-time ASL ChatCore translation hub! Enable your camera on the top right to start signing directly into conversational messages.', timestamp: 'System' }
-  ]);
-  const [isCameraCollapsed, setIsCameraCollapsed] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll chat to the bottom when new message arrives
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
-
-  const handleSendMessage = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!sentence.trim()) return;
-    const newMsg = {
-      id: Date.now().toString(),
-      text: sentence.trim(),
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    setChatMessages(prev => [...prev, newMsg]);
-    setSentence('');
-    setLastAdded(null);
-  };
 
   // ── Check backend health on mount ─────────────────────────────────────────
   const checkBackend = useCallback(async () => {
@@ -273,32 +249,19 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
   const isBackendChecking = backendOnline === null;
 
   return (
-    <div className="w-full h-full flex flex-col min-h-0 select-none bg-transparent relative">
-      {/* Styles */}
+    <div className="w-full h-full flex flex-col min-h-0 select-none bg-transparent">
+      {/* ── Minimal Premium Styles ── */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes cursor-blink {
           0%, 100% { opacity: 1; }
           50% { opacity: 0; }
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: var(--dm-border);
-          border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: var(--dm-text-muted);
         }
       `}} />
 
       {/* ── Offline Exception Overlay ── */}
       {backendError && (
         <div
-          className="mx-6 lg:mx-8 mt-4 px-5 py-4 rounded-2xl flex items-start gap-3.5 text-xs flex-shrink-0 animate-in fade-in slide-in-from-top-2 duration-300 z-50"
+          className="mx-6 lg:mx-8 mt-4 px-5 py-4 rounded-2xl flex items-start gap-3.5 text-xs flex-shrink-0 animate-in fade-in slide-in-from-top-2 duration-300"
           style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', color: '#ef4444' }}
         >
           <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -317,293 +280,383 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
         </div>
       )}
 
-      {/* ── Floating Picture-in-Picture Webcam HUD ── */}
-      <div 
-        className="absolute top-4 right-4 z-40 transition-all duration-500 ease-out select-none"
-        style={{ pointerEvents: 'auto' }}
-      >
-        {isCameraCollapsed ? (
-          <button
-            onClick={() => setIsCameraCollapsed(false)}
-            className="px-4 py-2.5 rounded-full text-[10px] font-mono uppercase tracking-widest bg-black/85 text-white border border-white/10 shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-            </span>
-            🎥 Expand Camera Stream
-          </button>
-        ) : (
-          <div 
-            className="w-64 md:w-72 bg-black/85 backdrop-blur-md rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col transition-all duration-500 animate-in zoom-in-95 duration-300"
-          >
-            {/* Header / Controls */}
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5 bg-white/5">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-1.5 w-1.5">
-                  {isCameraActive && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
-                  <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${isCameraActive ? 'bg-emerald-500' : 'bg-zinc-500'}`}></span>
-                </span>
-                <span className="text-[9px] font-mono tracking-widest text-zinc-300 font-bold uppercase">
-                  {isCameraActive ? 'Live Predictor' : 'Feed Standby'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                {isCameraActive && (
-                  <button
-                    onClick={stopCamera}
-                    className="text-[8px] font-mono tracking-widest text-red-400 hover:text-red-300 uppercase cursor-pointer"
-                  >
-                    Off
-                  </button>
-                )}
-                <button
-                  onClick={() => setIsCameraCollapsed(true)}
-                  className="text-[9px] font-mono text-zinc-400 hover:text-white uppercase cursor-pointer"
-                >
-                  Minimize
-                </button>
-              </div>
-            </div>
-
-            {/* Video Box */}
-            <div className="aspect-video w-full relative bg-zinc-950 flex flex-col items-center justify-center">
+      {/* ── Centered Workspace aligned with Chat Area sizing ── */}
+      <div className="flex-grow flex-1 min-h-0 w-full max-w-5xl mx-auto p-4 md:p-6 lg:p-8 flex flex-col justify-between">
+        
+        {/* The 2-Column Side-by-Side HUD */}
+        <div className="flex-grow flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+          
+          {/* Left Column (3/5ths): Camera & Output Document */}
+          <div className="lg:col-span-3 flex flex-col gap-6 min-h-0 h-full">
+            
+            {/* Camera Frame */}
+            <div
+              className="flex-grow flex-1 min-h-[260px] w-full relative bg-zinc-950 rounded-[2rem] overflow-hidden transition-all duration-500 shadow-sm flex flex-col items-center justify-center border animate-in fade-in duration-500"
+              style={{ 
+                borderColor: 'var(--dm-border)',
+                background: 'var(--dm-bg-sidebar)',
+              }}
+            >
+              {/* Video Element */}
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover z-0"
                 style={{
                   transform: 'scaleX(-1)',
                   display: isCameraActive ? 'block' : 'none',
                 }}
               />
+
+              {/* Hidden capture canvas */}
               <canvas ref={canvasRef} className="hidden" />
 
-              {!isCameraActive && (
-                <div className="flex flex-col items-center gap-2 text-center p-4">
+              {/* Clean Camera HUD Overlay */}
+              {isCameraActive && (
+                <>
+                  {/* Minimalist Camera status pill */}
+                  <div className="absolute top-4 left-4 z-20 px-3 py-1 rounded-full backdrop-blur-md bg-black/40 text-[9px] font-mono tracking-widest text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5 font-bold">
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                    CAMERA LINK ACTIVE
+                  </div>
+
+                  {/* Terminate camera */}
                   <button
-                    onClick={startCamera}
-                    disabled={isBackendChecking}
-                    className="px-4 py-2 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider bg-white text-black hover:bg-zinc-200 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-md"
+                    onClick={stopCamera}
+                    className="absolute top-4 right-4 z-30 px-3.5 py-1.5 rounded-full text-[9px] font-mono uppercase tracking-widest backdrop-blur-md bg-black/60 text-red-400 border border-red-500/25 transition-all hover:bg-red-500/20 active:scale-95 shadow-lg shadow-black/20 cursor-pointer animate-in fade-in duration-300"
                   >
-                    {isBackendChecking ? 'CONNECTING...' : 'Start Camera'}
+                    Turn Off
                   </button>
-                </div>
+
+                  {/* Clean watermark bottom-right */}
+                  <div className="absolute bottom-4 right-4 z-20 text-[8px] font-mono tracking-[0.2em] text-zinc-400 opacity-60 pointer-events-none uppercase">
+                    ASL PREDICTOR CORE
+                  </div>
+                </>
               )}
 
-              {/* Local Hardware error */}
+              {/* Local Hardware error overlay */}
               {camError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-3 bg-zinc-950/95 z-20">
-                  <span className="text-red-400 text-[8px] font-mono uppercase tracking-wider">Error</span>
-                  <span className="text-zinc-500 text-[8px] text-center line-clamp-2">{camError}</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 bg-zinc-950/95 z-20 border border-red-500/20 animate-in fade-in duration-300">
+                  <svg className="w-8 h-8 text-red-500 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                  <p className="text-red-400 text-xs font-mono tracking-wide text-center uppercase">Hardware Exception</p>
+                  <p className="text-zinc-500 text-[10px] text-center max-w-[220px]">{camError}</p>
                   <button
                     onClick={() => { setCamError(null); startCamera(); }}
-                    className="text-[8px] font-mono uppercase px-2.5 py-1 rounded bg-red-500/10 text-red-400 border border-red-500/20 mt-1 cursor-pointer"
+                    className="text-[9px] font-mono uppercase tracking-widest font-bold px-4 py-2 rounded-full mt-2 transition-all active:scale-95 cursor-pointer"
+                    style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}
                   >
-                    Retry
+                    Restart Interface
                   </button>
                 </div>
               )}
-            </div>
 
-            {/* Diagnostics Telemetry HUD (Only shown if active) */}
-            {isCameraActive && (
-              <div className="p-4 border-t border-white/5 bg-zinc-900/40 flex flex-col gap-3">
-                {/* Real-time guess letter bubble */}
-                <div className="flex items-center justify-between">
-                  <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Prediction:</span>
-                  <div className="flex items-center gap-2">
-                    <span 
-                      className="text-lg font-black tracking-tight"
-                      style={{ color, fontFamily: 'monospace' }}
-                    >
-                      {displayChar}
-                    </span>
-                    {result && (
-                      <span className="text-[9px] font-mono opacity-65" style={{ color }}>
-                        {(conf * 100).toFixed(0)}%
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Stability Progress bar */}
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-[7.5px] font-mono text-zinc-500 uppercase tracking-widest">
-                    <span>Consensus Stability:</span>
-                    <span>{Math.round(stability * 100)}%</span>
-                  </div>
-                  <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{ width: `${stability * 100}%`, background: color }}
-                    />
-                  </div>
-                </div>
-
-                {/* Alternative predictions list */}
-                {result?.top3 && (
-                  <div className="flex flex-col gap-1 mt-1">
-                    <span className="text-[7.5px] font-mono text-zinc-500 uppercase tracking-widest">Alternatives:</span>
-                    <div className="flex items-center gap-3">
-                      {result.top3.slice(1, 3).map((item, i) => (
-                        <div key={item.label} className="flex items-center gap-1 text-[9px] font-mono text-zinc-400">
-                          <span className="font-bold uppercase text-zinc-500">{LABEL_DISPLAY[item.label] ?? item.label}:</span>
-                          <span>{(item.confidence * 100).toFixed(0)}%</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── Center Chat History Board ── */}
-      <div 
-        className="flex-grow flex-1 overflow-y-auto p-6 md:p-12 space-y-6 min-h-0 custom-scrollbar z-10"
-      >
-        {chatMessages.map((msg) => {
-          const isSystem = msg.timestamp === 'System';
-          return (
-            <div 
-              key={msg.id} 
-              className={`flex ${isSystem ? 'justify-center' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
-            >
-              {isSystem ? (
-                <div className="max-w-[80%] text-center px-6 py-4 rounded-3xl backdrop-blur-sm border" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
-                  <p className="text-[11px] leading-relaxed text-zinc-500 font-light tracking-wide">
-                    {msg.text}
-                  </p>
-                </div>
-              ) : (
-                <div 
-                  className="max-w-[70%] rounded-3xl rounded-tl-none px-5 py-3 shadow-sm border group relative transition-all animate-in fade-in duration-350" 
-                  style={{ 
-                    background: 'var(--dm-bg-hover)', 
-                    borderColor: 'var(--dm-border)',
-                    color: 'var(--dm-text-primary)'
-                  }}
-                >
-                  <p className="text-[13px] leading-relaxed font-light tracking-tight pr-8">{msg.text}</p>
-                  
-                  {/* Subtle actions panel appearing on message hover */}
-                  <div className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-2">
-                    {/* Speak message button */}
-                    <button
-                      onClick={() => {
-                        const utterance = new SpeechSynthesisUtterance(msg.text);
-                        window.speechSynthesis.speak(utterance);
-                      }}
-                      title="Speak message"
-                      className="text-zinc-500 hover:text-indigo-400 cursor-pointer transition-colors p-0.5 bg-transparent border-none"
-                    >
-                      🔊
-                    </button>
-                    {/* Copy message button */}
-                    <button
-                      onClick={() => navigator.clipboard.writeText(msg.text)}
-                      title="Copy message"
-                      className="text-zinc-500 hover:text-emerald-400 cursor-pointer transition-colors p-0.5 bg-transparent border-none"
-                    >
-                      📋
-                    </button>
-                  </div>
-
-                  <span className="text-[7.5px] font-mono opacity-30 mt-1 block text-right select-none">{msg.timestamp}</span>
+              {/* Standby screen */}
+              {!isCameraActive && !camError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center z-10" style={{ background: 'var(--dm-bg-sidebar)' }}>
+                  {!backendOnline && !isBackendChecking ? (
+                    <>
+                      <div className="w-11 h-11 rounded-full flex items-center justify-center bg-red-950/15 border border-red-900/30 animate-pulse">
+                        <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                      </div>
+                      <p className="text-red-400 text-[10px] font-mono tracking-widest uppercase">System Initialization Blocked</p>
+                      <p className="text-zinc-500 text-[11px] max-w-[200px]">Flask backend must be active to initiate optical translation.</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-14 h-14 rounded-full flex items-center justify-center bg-zinc-900/40 border border-zinc-800/80 shadow-inner" style={{ background: 'var(--dm-bg-input)', borderColor: 'var(--dm-border)' }}>
+                        <svg className="w-6 h-6 text-indigo-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.069A1 1 0 0121 8.868v6.264a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                        </svg>
+                      </div>
+                      <button
+                        onClick={startCamera}
+                        disabled={isBackendChecking}
+                        className="px-6 py-3 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-white text-black hover:bg-zinc-200 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2 shadow-lg cursor-pointer"
+                      >
+                        {isBackendChecking ? 'INITIALIZING TERMINAL...' : '▶ Start Translation Feed'}
+                      </button>
+                      <p className="text-zinc-600 text-[9px] font-mono uppercase tracking-widest mt-1">
+                        Camera translation standby
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
             </div>
-          );
-        })}
-        <div ref={chatEndRef} />
-      </div>
 
-      {/* ── Compilation Input Panel (The Vibe Input Row) ── */}
-      <div className="p-6 md:p-12 pt-0 bg-transparent relative z-20 flex-shrink-0">
-        <div className="max-w-4xl mx-auto w-full">
-          <form onSubmit={handleSendMessage} className="relative group">
-            
-            {/* The live compiling input field */}
-            <input
-              type="text"
-              value={sentence}
-              onChange={(e) => setSentence(e.target.value)}
-              placeholder={isCameraActive ? "Sign in camera view or type to compose message..." : "Standby. Enable camera to start ASL compilation..."}
-              className="w-full h-14 md:h-18 pl-24 pr-44 rounded-full focus:outline-none transition-all text-xs md:text-sm font-light shadow-lg pr-48"
-              style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
-            />
-
-            {/* Left aligned utility buttons inside input box */}
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 z-30">
-              {/* Backspace Icon Button */}
-              <button
-                type="button"
-                onClick={() => setSentence(s => s.slice(0, -1))}
-                disabled={!sentence}
-                title="Backspace"
-                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/20 active:scale-95 disabled:opacity-30 transition-all cursor-pointer bg-transparent border-none p-0 text-sm"
-              >
-                ⌫
-              </button>
-              {/* Clear Icon Button */}
-              <button
-                type="button"
-                onClick={() => { setSentence(''); setLastAdded(null); }}
-                disabled={!sentence}
-                title="Clear buffer"
-                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 active:scale-95 disabled:opacity-30 transition-all cursor-pointer bg-transparent border-none p-0 text-sm"
-              >
-                🗑️
-              </button>
-            </div>
-
-            {/* Right aligned action buttons inside input box */}
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 z-30">
+            {/* Compiled Output Workspace Document */}
+            <div 
+              className="h-36 flex-shrink-0 w-full rounded-[2rem] p-5 border flex flex-col relative"
+              style={{ background: 'var(--dm-bg-hover)', borderColor: 'var(--dm-border)' }}
+            >
+              <div className="flex items-center justify-between mb-2.5 flex-shrink-0">
+                <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--dm-text-secondary)' }}>
+                  ✦ Compiled Output Terminal
+                </p>
+                {copied && (
+                  <span className="text-[8px] font-mono font-bold text-emerald-500 uppercase tracking-widest animate-pulse">
+                    📋 COPIED TO CLIPBOARD
+                  </span>
+                )}
+              </div>
               
-              {/* Speak Audio Button */}
-              <button
-                type="button"
-                onClick={speakSentence}
-                disabled={!sentence}
-                title="Speak Out"
-                className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-zinc-500 hover:text-indigo-400 hover:bg-zinc-800/25 active:scale-95 disabled:opacity-30 transition-all cursor-pointer bg-transparent border-none text-sm"
-              >
-                🔊
-              </button>
+              <div className="flex-grow overflow-y-auto pr-1 flex items-start justify-start">
+                <p
+                  className="text-[15px] font-bold tracking-wider leading-relaxed transition-all break-all select-text"
+                  style={{ color: 'var(--dm-text-heading)', fontFamily: 'monospace' }}
+                >
+                  {sentence ? (
+                    <>
+                      {sentence}
+                      <span 
+                        className="inline-block w-2.5 h-3.5 ml-1.5 bg-current opacity-85 align-middle animate-[cursor-blink_1s_step-start_infinite]"
+                        style={{ background: 'var(--dm-text-primary)' }}
+                      />
+                    </>
+                  ) : (
+                    <span className="text-[11px] font-normal font-sans italic" style={{ color: 'var(--dm-text-muted)' }}>
+                      Optical buffer empty. Perform signs in camera view to compile characters…
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
 
-              {/* Copy Clipboard Button */}
-              <button
-                type="button"
-                onClick={copySentence}
-                disabled={!sentence}
-                title="Copy Text"
-                className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-zinc-500 hover:text-emerald-400 hover:bg-zinc-800/25 active:scale-95 disabled:opacity-30 transition-all cursor-pointer bg-transparent border-none text-sm"
+          {/* Right Column (2/5ths): AI Telemetry & Predictions */}
+          <div className="lg:col-span-2 flex flex-col gap-6 min-h-0 h-full">
+            
+            {/* AI Diagnostics HUD */}
+            <div
+              className="flex-grow flex-1 min-h-0 rounded-[2rem] p-5 flex flex-col items-center justify-center gap-4 border relative overflow-hidden"
+              style={{ 
+                background: 'var(--dm-bg-hover)', 
+                borderColor: 'var(--dm-border)',
+              }}
+            >
+              {/* AI Status badge */}
+              <div
+                className="absolute top-4 right-4 text-[8px] font-mono uppercase tracking-widest px-2.5 py-1 rounded-full transition-all duration-300 pointer-events-none"
+                style={{
+                  background: isBackendChecking
+                    ? 'rgba(107,114,128,0.06)'
+                    : backendOnline
+                    ? 'rgba(16,185,129,0.08)'
+                    : 'rgba(239,68,68,0.08)',
+                  color: isBackendChecking ? '#9ca3af' : backendOnline ? '#10b981' : '#ef4444',
+                  border: `1px solid ${isBackendChecking ? 'rgba(107,114,128,0.15)' : backendOnline ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
+                }}
               >
-                {copied ? '✅' : '📋'}
-              </button>
+                {isBackendChecking ? 'CONNECTING...' : backendOnline ? 'AI ACTIVE' : 'AI OFFLINE'}
+              </div>
 
-              {/* Send / Push to Chat Button */}
-              <button
-                type="submit"
-                disabled={!sentence.trim()}
-                title="Send Message"
-                className="w-8 h-8 md:w-9 md:h-9 bg-white text-black hover:bg-zinc-200 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-20 disabled:scale-100 shadow-md cursor-pointer ml-1"
-              >
-                <svg className="w-4 h-4 md:w-4.5 md:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                </svg>
-              </button>
+              <div className="text-[8px] font-mono tracking-[0.25em] text-zinc-400 opacity-60 uppercase absolute top-5 left-6 pointer-events-none">
+                Capture Matrix
+              </div>
+
+              {/* Clean AI Telemetry Display */}
+              <div className="flex flex-col items-center gap-1.5 mt-2">
+                <div 
+                  className="w-20 h-20 rounded-full border flex items-center justify-center text-3xl font-black shadow-inner transition-all duration-300"
+                  style={{ 
+                    borderColor: isCameraActive ? color : 'var(--dm-border)',
+                    color: isCameraActive ? color : 'var(--dm-text-muted)',
+                    background: 'var(--dm-bg-input)',
+                    fontFamily: 'monospace',
+                    boxShadow: isCameraActive ? `inset 0 0 12px ${color}15, 0 4px 12px rgba(0,0,0,0.05)` : 'none'
+                  }}
+                >
+                  {displayChar}
+                </div>
+
+                {result && (
+                  <div className="flex flex-col items-center gap-0.5 mt-1">
+                    <span 
+                      className="text-[8px] font-mono font-bold uppercase tracking-[0.2em] px-2 rounded-full" 
+                      style={{ 
+                        background: `${color}12`,
+                        color: color,
+                        border: `1px solid ${color}20`
+                      }}
+                    >
+                      {conf >= 0.85 ? '✦ Stable Consensus' : conf >= 0.65 ? '◆ Nominal Quality' : '◇ Scanning...'}
+                    </span>
+                    <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 mt-1">
+                      Confidence: <span className="font-bold" style={{ color }}>{(conf * 100).toFixed(1)}%</span>
+                    </span>
+                  </div>
+                )}
+
+                {!result && isCameraActive && (
+                  <p className="text-[9px] font-mono uppercase tracking-widest animate-pulse mt-2.5" style={{ color: 'var(--dm-text-muted)' }}>
+                    Awaiting sign...
+                  </p>
+                )}
+                {!isCameraActive && (
+                  <p className="text-[9px] font-mono uppercase tracking-widest mt-2.5" style={{ color: 'var(--dm-text-muted)' }}>
+                    Feed Standby
+                  </p>
+                )}
+              </div>
             </div>
 
-          </form>
-        </div>
-      </div>
+            {/* Clean Consensus Stability progress bar */}
+            <div className="rounded-[2rem] p-4.5 border flex-shrink-0" style={{ background: 'var(--dm-bg-hover)', borderColor: 'var(--dm-border)' }}>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[8px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--dm-text-secondary)' }}>
+                  Stability Consensus
+                </span>
+                <span className="text-[9px] font-mono font-bold" style={{ color: isCameraActive ? color : 'var(--dm-text-muted)' }}>
+                  {Math.round(stability * 100)}%
+                </span>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden relative" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ 
+                    width: `${stability * 100}%`, 
+                    background: isCameraActive ? color : 'var(--dm-text-muted)',
+                  }}
+                />
+              </div>
+            </div>
 
+            {/* Clean Top Output Matrices Data List */}
+            <div className="rounded-[2rem] p-4.5 border flex-shrink-0" style={{ background: 'var(--dm-bg-hover)', borderColor: 'var(--dm-border)' }}>
+              <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em] mb-3" style={{ color: 'var(--dm-text-secondary)' }}>
+                Top Predicted Outputs
+              </p>
+              {result?.top3 ? (
+                <div className="space-y-2.5">
+                  {result.top3.map((item, i) => (
+                    <div key={item.label} className="flex items-center gap-2.5">
+                      <span
+                        className="w-4 h-4 rounded-md flex items-center justify-center text-[8px] font-mono font-bold"
+                        style={{
+                          background: i === 0 ? `${color}12` : 'var(--dm-bg-input)',
+                          color: i === 0 ? color : 'var(--dm-text-muted)',
+                          border: `1px solid ${i === 0 ? `${color}20` : 'var(--dm-border)'}`
+                        }}
+                      >
+                        0{i + 1}
+                      </span>
+                      <span className="text-[10px] font-mono font-semibold w-10 truncate" style={{ color: i === 0 ? 'var(--dm-text-heading)' : 'var(--dm-text-secondary)' }}>
+                        {LABEL_DISPLAY[item.label] ?? item.label}
+                      </span>
+                      <div className="flex-1 h-1.5 rounded-full overflow-hidden relative" style={{ background: 'var(--dm-bg-input)' }}>
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${item.confidence * 100}%`, 
+                            background: i === 0 ? color : 'var(--dm-text-muted)',
+                          }}
+                        />
+                      </div>
+                      <span className="text-[9px] font-mono w-8 text-right" style={{ color: 'var(--dm-text-muted)' }}>
+                        {(item.confidence * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2.5 opacity-30">
+                  {[1, 2, 3].map((idx) => (
+                    <div key={idx} className="flex items-center gap-2.5">
+                      <span className="w-4 h-4 rounded-md flex items-center justify-center text-[8px] font-mono font-bold bg-zinc-900 text-zinc-600 border border-zinc-800">
+                        0{idx}
+                      </span>
+                      <span className="text-[10px] font-mono text-zinc-500 w-10">—</span>
+                      <div className="flex-1 h-1.5 rounded-full bg-zinc-900" />
+                      <span className="text-[9px] font-mono w-8 text-right text-zinc-600">0%</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* Bottom Control Actions (Direct grid aligned with Dashboard style) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 flex-shrink-0 max-w-2xl mx-auto w-full">
+          {/* Backspace Button */}
+          <button
+            onClick={() => setSentence(s => s.slice(0, -1))}
+            disabled={!sentence}
+            className="py-3 px-4 rounded-2xl text-[10px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer border"
+            style={{ 
+              color: 'var(--dm-text-secondary)', 
+              background: 'var(--dm-bg-input)', 
+              borderColor: 'var(--dm-border)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+            }}
+            onMouseEnter={e => { if (sentence) { e.currentTarget.style.borderColor = 'var(--dm-thumb)'; e.currentTarget.style.color = 'var(--dm-text-primary)'; } }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
+          >
+            Backspace
+          </button>
+
+          {/* Clear All Button */}
+          <button
+            onClick={() => { setSentence(''); setLastAdded(null); }}
+            disabled={!sentence}
+            className="py-3 px-4 rounded-2xl text-[10px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer border"
+            style={{ 
+              color: 'var(--dm-text-secondary)', 
+              background: 'var(--dm-bg-input)', 
+              borderColor: 'var(--dm-border)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+            }}
+            onMouseEnter={e => { if (sentence) { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ef4444'; } }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
+          >
+            Clear Buffer
+          </button>
+
+          {/* Copy Clipboard Button */}
+          <button
+            onClick={copySentence}
+            disabled={!sentence}
+            className="py-3 px-4 rounded-2xl text-[10px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer border"
+            style={{ 
+              color: 'var(--dm-text-secondary)', 
+              background: 'var(--dm-bg-input)', 
+              borderColor: 'var(--dm-border)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+            }}
+            onMouseEnter={e => { if (sentence) { e.currentTarget.style.borderColor = 'var(--dm-thumb)'; e.currentTarget.style.color = 'var(--dm-text-primary)'; } }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
+          >
+            Copy Text
+          </button>
+
+          {/* Voice Speech Synthesis Button */}
+          <button
+            onClick={speakSentence}
+            disabled={!sentence}
+            className="py-3 px-4 rounded-2xl text-[10px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer border"
+            style={{ 
+              color: 'var(--dm-text-secondary)', 
+              background: 'var(--dm-bg-input)', 
+              borderColor: 'var(--dm-border)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+            }}
+            onMouseEnter={e => { if (sentence) { e.currentTarget.style.borderColor = 'var(--dm-thumb)'; e.currentTarget.style.color = 'var(--dm-text-primary)'; } }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
+          >
+            Speak Out
+          </button>
+        </div>
+
+      </div>
     </div>
   );
 }
