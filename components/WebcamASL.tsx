@@ -251,7 +251,28 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
     const utterance = new SpeechSynthesisUtterance(sentence);
     const voices = window.speechSynthesis.getVoices();
     const premiumVoice = voices.find(
-      v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Microsoft')  return (
+      v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Microsoft'))
+    );
+    if (premiumVoice) utterance.voice = premiumVoice;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const copySentence = () => {
+    if (!sentence) return;
+    navigator.clipboard.writeText(sentence);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // ── Display computations ──────────────────────────────────────────────────
+  const displayChar = result ? (LABEL_DISPLAY[result.prediction] ? result.prediction === 'del' ? '⌫' : '␣' : result.prediction) : '?';
+  const conf = result?.confidence ?? 0;
+  const stability = result?.stability ?? 0;
+  const color = result ? getColor(conf) : '#6366f1';
+
+  const isBackendChecking = backendOnline === null;
+
+  return (
     <div className="w-full h-full flex flex-col min-h-0 select-none bg-transparent relative">
       {/* Styles */}
       <style dangerouslySetInnerHTML={{ __html: `
