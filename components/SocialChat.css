@@ -276,36 +276,37 @@
 }
 
 .social-chat-container .msg {
-  padding: 12px 18px;
-  border-radius: 1.5rem;
-  font-size: .88rem;
+  padding: 14px 20px;
+  border-radius: 1.25rem;
+  font-size: 0.95rem;
   line-height: 1.5;
   position: relative;
   word-wrap: break-word;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
 }
 
 .social-chat-container .msg.sent {
-  background: #000000;
+  background: linear-gradient(135deg, #18181b 0%, #000000 100%);
   color: #ffffff;
   border-bottom-right-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .social-chat-container .msg.received {
   background: #ffffff;
   color: #111827;
-  border: 1px solid #f3f4f6;
+  border: 1px solid #e5e7eb;
   border-bottom-left-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.04);
 }
 
 .social-chat-container .msg.ai {
-  background: #ffffff;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   color: #111827;
-  border: 1px solid #f3f4f6;
+  border: 1px solid #e2e8f0;
   border-bottom-left-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
 }
 
 .social-chat-container .ai-badge {

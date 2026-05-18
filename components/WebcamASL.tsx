@@ -585,27 +585,6 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
               </div>
             </div>
 
-            {/* Clean Consensus Stability progress bar */}
-            <div className="rounded-[2rem] p-4.5 border flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[8px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--dm-text-secondary)' }}>
-                  Stability Consensus
-                </span>
-                <span className="text-[9px] font-mono font-bold" style={{ color: isCameraActive ? color : 'var(--dm-text-muted)' }}>
-                  {Math.round(stability * 100)}%
-                </span>
-              </div>
-              <div className="h-2 rounded-full overflow-hidden relative" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{ 
-                    width: `${stability * 100}%`, 
-                    background: isCameraActive ? color : 'var(--dm-text-muted)',
-                  }}
-                />
-              </div>
-            </div>
-
             {/* Clean Top Output Matrices Data List */}
             <div className="rounded-[2rem] p-4.5 border flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
               <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em] mb-3" style={{ color: 'var(--dm-text-secondary)' }}>
