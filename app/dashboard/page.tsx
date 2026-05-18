@@ -46,6 +46,7 @@ export default function DashboardPage() {
   };
   const [fullUser, setFullUser] = useState<any>(null);
   const [activeView, setActiveView] = useState<'home' | 'assistant' | 'chat' | 'practice'>('home');
+  const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const chatComponentRef = useRef<{ closeChat: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -529,7 +530,6 @@ export default function DashboardPage() {
             Y: { desc: 'Extend your thumb and pinky finger out. Other fingers curl into your palm (hang loose).', svg: 'M25 20 L25 45 Q25 52 32 52 L68 52 Q75 52 75 45 L75 20 M25 52 L25 82 M75 52 L75 82 M32 52 L32 80 Q32 85 40 85 L60 85 Q68 85 68 80 L68 52' },
             Z: { desc: 'Trace the letter Z in the air with your index finger.', svg: 'M25 20 L75 20 L25 75 L75 75 M72 20 L78 15 M25 72 L20 78' },
           };
-          const [selectedLetter, setSelectedLetter] = React.useState<string | null>(null);
           const sign = selectedLetter ? ASL_SIGNS[selectedLetter] : null;
           return (
           <>

@@ -176,7 +176,7 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
       } finally {
         isPredicting.current = false;
       }
-    }, 'image/jpeg', 0.8);
+    }, 'image/jpeg', 0.92);
   }, []);
 
   // ── Prediction loop ───────────────────────────────────────────────────────
@@ -184,7 +184,7 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
     if (isCameraActive) {
       intervalRef.current = setInterval(() => {
         if (!isPredicting.current) captureAndPredict();
-      }, 80); // ~12 FPS
+      }, 60); // ~16 FPS for maximum responsiveness
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -204,10 +204,10 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
     if (!result || !isCameraActive) return;
     const { prediction, stability, confidence } = result;
     const now = Date.now();
-    const cooldown = prediction === lastAdded ? 2000 : 1500;
+    const cooldown = prediction === lastAdded ? 1200 : 800;
     if (
-      stability >= 0.7 &&
-      confidence >= 0.65 &&
+      stability >= 0.5 &&
+      confidence >= 0.45 &&
       prediction !== 'nothing' &&
       now - lastAddedAt.current > cooldown
     ) {
