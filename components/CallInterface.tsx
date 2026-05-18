@@ -228,6 +228,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   useEffect(() => {
     let isMounted = true;
     const target = peer.email?.toLowerCase().trim();
+    let initTimer: NodeJS.Timeout;
+
     const initCall = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -236,7 +238,10 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         });
         if (!isMounted) return;
         localStreamRef.current = stream;
-        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+          localVideoRef.current.play().catch(e => console.error("Local video play error:", e));
+        }
 
         const pc = new RTCPeerConnection({
           iceServers: [
@@ -256,6 +261,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           const remoteStream = event.streams[0];
           if (remoteVideoRef.current && type === 'video') {
             remoteVideoRef.current.srcObject = remoteStream;
+            remoteVideoRef.current.play().catch(e => console.error("Remote video play error:", e));
           } else if (remoteAudioRef.current && type === 'audio') {
             remoteAudioRef.current.srcObject = remoteStream;
             // Force play if needed
@@ -288,8 +294,16 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
       }
     };
 
-    initCall();
-    return () => { isMounted = false; cleanup(); };
+    // Add a 250ms delay to ensure WebcamASL has fully released the camera driver lock
+    initTimer = setTimeout(() => {
+      initCall();
+    }, 250);
+
+    return () => { 
+      isMounted = false; 
+      clearTimeout(initTimer);
+      cleanup(); 
+    };
   }, [isCaller]);
 
   const cleanup = () => {
@@ -411,7 +425,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         {/* Real-time Cinematic Live Subtitles Caption Box */}
         {type === 'video' && callStatus === 'active' && (
-          <div className="absolute bottom-28 md:bottom-32 left-1/2 -translate-x-1/2 w-[85%] max-w-xl px-5 py-3 rounded-2xl backdrop-blur-md bg-black/60 border border-white/10 shadow-2xl z-30 flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-500 text-white">
+          <div className="absolute bottom-22 md:bottom-24 left-1/2 -translate-x-1/2 w-[85%] max-w-xl px-5 py-3 rounded-2xl backdrop-blur-md bg-black/60 border border-white/10 shadow-2xl z-30 flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-500 text-white">
             <div className="flex items-center justify-between w-full opacity-60">
               <span className="text-[7.5px] font-mono tracking-[0.2em] text-zinc-300 uppercase">
                 ✦ LIVE ASL TRANSLATION CAPTIONS
@@ -449,7 +463,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         <canvas ref={canvasRef} className="hidden" />
 
         {/* Action Bar (The Vibe) */}
-        <div className="absolute bottom-10 md:bottom-12 flex items-center gap-4 md:gap-6 px-6 md:px-8 py-3 md:py-4 backdrop-blur-2xl rounded-full shadow-2xl z-30" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
+        <div className="absolute bottom-4 md:bottom-5 flex items-center gap-4 md:gap-6 px-6 md:px-8 py-3 md:py-4 backdrop-blur-2xl rounded-full shadow-2xl z-30" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
 
           <button
             onClick={toggleSpeaker}
