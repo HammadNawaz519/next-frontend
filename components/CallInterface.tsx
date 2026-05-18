@@ -540,19 +540,55 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           </div>
         )}
 
-        {/* ── UNIFIED BOTTOM CAPTIONS & ASL STACK ── */}
-        <div className="absolute top-[65%] -translate-y-1/2 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl flex flex-col items-center justify-end gap-3 z-40 pointer-events-none">
+        {/* ASL Live Translation Captions (Video Only) */}
+        {type === 'video' && callStatus === 'active' && (
+          <div className="absolute bottom-36 md:bottom-44 left-1/2 -translate-x-1/2 w-[85%] max-w-xl px-5 py-3 rounded-2xl backdrop-blur-md bg-black/60 border border-white/10 shadow-2xl flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-500 text-white z-30 pointer-events-auto">
+            <div className="flex items-center justify-between w-full opacity-60">
+              <span className="text-[7.5px] font-mono tracking-[0.2em] text-zinc-300 uppercase">
+                ✦ LIVE ASL TRANSLATION CAPTIONS
+              </span>
+              {sentence && (
+                <button
+                  onClick={() => { setSentence(''); setLastAdded(null); }}
+                  className="text-[7.5px] font-mono tracking-widest text-red-400 hover:text-red-300 cursor-pointer uppercase transition-colors bg-transparent border-none p-0"
+                >
+                  [ Clear ]
+                </button>
+              )}
+            </div>
+            <p className="text-sm md:text-base font-bold tracking-wider text-center text-white" style={{ fontFamily: 'monospace', margin: 0 }}>
+              {sentence ? (
+                <>
+                  {sentence}
+                  <span className="inline-block w-1.5 h-3.5 ml-1 bg-white align-middle animate-[cursor-blink_1s_step-start_infinite]" style={{ animation: 'cursor-blink 1s step-start infinite' }} />
+                </>
+              ) : (
+                <span className="text-[11px] font-normal italic text-zinc-500">
+                  Begin signing in camera to display live translated captions…
+                </span>
+              )}
+            </p>
+            {currentLetter && currentLetter !== 'nothing' && (
+              <span className="text-[8px] font-mono mt-0.5 px-2 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }}>
+                CURRENT SIGN: {LABEL_DISPLAY[currentLetter] ?? currentLetter} ({(currentConf * 100).toFixed(0)}%)
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* ── BOTTOM STACK: CAPTIONS + ACTION BAR ── */}
+        <div className="absolute bottom-4 md:bottom-5 left-1/2 -translate-x-1/2 w-fit min-w-[290px] md:min-w-[340px] max-w-[90vw] flex flex-col items-stretch justify-end gap-3 z-40 pointer-events-none">
           
           {/* Speech Subtitles */}
           {isCaptionsOn && (myCaption || peerCaption) && callStatus === 'active' && (
-            <div className="w-full flex flex-col gap-3 pointer-events-auto">
+            <div className="w-full flex flex-col gap-2 pointer-events-auto">
               {/* Peer's Caption */}
               {peerCaption && (
-                <div className="self-start max-w-[85%] px-5 py-3 rounded-[1.5rem] backdrop-blur-xl bg-white border border-gray-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-zinc-500 uppercase mb-1.5 block">
+                <div className="w-full px-5 py-3 rounded-2xl md:rounded-[1.5rem] backdrop-blur-2xl bg-white border border-white/50 shadow-[0_10px_40px_rgba(0,0,0,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300 text-center">
+                  <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-indigo-500 uppercase mb-1.5 block">
                     {peer.name}
                   </span>
-                  <p className="text-sm md:text-base font-semibold text-black leading-relaxed">
+                  <p className="text-sm md:text-base font-bold text-black leading-relaxed">
                     {peerCaption}
                   </p>
                 </div>
@@ -560,11 +596,11 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
               
               {/* My Caption */}
               {myCaption && (
-                <div className="self-end max-w-[85%] px-5 py-3 rounded-[1.5rem] backdrop-blur-xl bg-black border border-zinc-800 shadow-[0_10px_40px_rgba(0,0,0,0.2)] animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-emerald-500 uppercase mb-1.5 block">
+                <div className="w-full px-5 py-3 rounded-2xl md:rounded-[1.5rem] backdrop-blur-2xl bg-white border border-white/50 shadow-[0_10px_40px_rgba(0,0,0,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300 text-center">
+                  <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-emerald-600 uppercase mb-1.5 block">
                     You
                   </span>
-                  <p className="text-sm md:text-base font-semibold text-white leading-relaxed">
+                  <p className="text-sm md:text-base font-bold text-black leading-relaxed">
                     {myCaption}
                   </p>
                 </div>
@@ -572,122 +608,83 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             </div>
           )}
 
-          {/* ASL Live Translation Captions (Video Only) */}
-          {type === 'video' && callStatus === 'active' && (
-            <div className="w-full px-5 py-3 rounded-2xl backdrop-blur-md bg-black/60 border border-white/10 shadow-2xl flex flex-col items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-500 text-white pointer-events-auto">
-              <div className="flex items-center justify-between w-full opacity-60">
-                <span className="text-[7.5px] font-mono tracking-[0.2em] text-zinc-300 uppercase">
-                  ✦ LIVE ASL TRANSLATION CAPTIONS
-                </span>
-                {sentence && (
-                  <button
-                    onClick={() => { setSentence(''); setLastAdded(null); }}
-                    className="text-[7.5px] font-mono tracking-widest text-red-400 hover:text-red-300 cursor-pointer uppercase transition-colors bg-transparent border-none p-0"
-                  >
-                    [ Clear ]
-                  </button>
-                )}
-              </div>
-              <p className="text-sm md:text-base font-bold tracking-wider text-center text-white" style={{ fontFamily: 'monospace', margin: 0 }}>
-                {sentence ? (
-                  <>
-                    {sentence}
-                    <span className="inline-block w-1.5 h-3.5 ml-1 bg-white align-middle animate-[cursor-blink_1s_step-start_infinite]" style={{ animation: 'cursor-blink 1s step-start infinite' }} />
-                  </>
-                ) : (
-                  <span className="text-[11px] font-normal italic text-zinc-500">
-                    Begin signing in camera to display live translated captions…
-                  </span>
-                )}
-              </p>
-              {currentLetter && currentLetter !== 'nothing' && (
-                <span className="text-[8px] font-mono mt-0.5 px-2 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }}>
-                  CURRENT SIGN: {LABEL_DISPLAY[currentLetter] ?? currentLetter} ({(currentConf * 100).toFixed(0)}%)
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Hidden capture canvas */}
-        <canvas ref={canvasRef} className="hidden" />
-
-        {/* Action Bar (The Vibe) */}
-        <div className="absolute bottom-4 md:bottom-5 flex items-center gap-4 md:gap-6 px-6 md:px-8 py-3 md:py-4 backdrop-blur-2xl rounded-full shadow-2xl z-30" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
-
-          {/* Captions Toggle Button */}
-          <button
-            onClick={() => setIsCaptionsOn(!isCaptionsOn)}
-            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${!isCaptionsOn ? 'text-zinc-500' : 'hover:scale-105'}`}
-            style={{ 
-              background: !isCaptionsOn ? 'var(--dm-bg-input)' : 'var(--dm-bg-active)', 
-              color: !isCaptionsOn ? 'var(--dm-text-muted)' : 'var(--dm-text-primary)',
-              border: '1px solid var(--dm-border)'
-            }}
-            title={isCaptionsOn ? "Turn Captions Off" : "Turn Captions On"}
-          >
-            {isCaptionsOn ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18M8 8h8m-8 4h4m-3 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h1M21 6v8a2 2 0 01-2 2h-3l-4 4z" />
-              </svg>
-            )}
-          </button>
-
-          <button
-            onClick={toggleSpeaker}
-            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105`}
-            style={{ 
-              background: isSpeakerOn ? 'var(--dm-bg-active)' : 'var(--dm-bg-input)', 
-              color: isSpeakerOn ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)',
-              border: '1px solid var(--dm-border)'
-            }}
-          >
-            {isSpeakerOn ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              </svg>
-            )}
-          </button>
-
-          <button
-            onClick={toggleMute}
-            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${isMuted ? 'text-red-500' : 'hover:scale-105'}`}
-            style={{ background: isMuted ? 'rgba(239,68,68,0.1)' : 'var(--dm-bg-input)', color: isMuted ? '#ef4444' : 'var(--dm-text-secondary)' }}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-          </button>
-
-          {type === 'video' && (
+          {/* Action Bar (The Vibe) */}
+          <div className="w-full flex items-center justify-between px-5 md:px-7 py-3 md:py-4 backdrop-blur-2xl rounded-[1.5rem] md:rounded-full shadow-2xl pointer-events-auto" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
+            
+            {/* Captions Toggle Button */}
             <button
-              onClick={toggleCamera}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${isCamOff ? 'text-red-500' : 'hover:scale-105'}`}
-              style={{ background: isCamOff ? 'rgba(239,68,68,0.1)' : 'var(--dm-bg-input)', color: isCamOff ? '#ef4444' : 'var(--dm-text-secondary)' }}
+              onClick={() => setIsCaptionsOn(!isCaptionsOn)}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${!isCaptionsOn ? 'text-zinc-500' : 'hover:scale-105'}`}
+              style={{ 
+                background: !isCaptionsOn ? 'var(--dm-bg-input)' : 'var(--dm-bg-active)', 
+                color: !isCaptionsOn ? 'var(--dm-text-muted)' : 'var(--dm-text-primary)',
+                border: '1px solid var(--dm-border)'
+              }}
+              title={isCaptionsOn ? "Turn Captions Off" : "Turn Captions On"}
+            >
+              {isCaptionsOn ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18M8 8h8m-8 4h4m-3 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h1M21 6v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+              )}
+            </button>
+
+            <button
+              onClick={toggleSpeaker}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105`}
+              style={{ 
+                background: isSpeakerOn ? 'var(--dm-bg-active)' : 'var(--dm-bg-input)', 
+                color: isSpeakerOn ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)',
+                border: '1px solid var(--dm-border)'
+              }}
+            >
+              {isSpeakerOn ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </svg>
+              )}
+            </button>
+
+            <button
+              onClick={toggleMute}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${isMuted ? 'text-red-500' : 'hover:scale-105'}`}
+              style={{ background: isMuted ? 'rgba(239,68,68,0.1)' : 'var(--dm-bg-input)', color: isMuted ? '#ef4444' : 'var(--dm-text-secondary)' }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
             </button>
-          )}
 
-          <button
-            onClick={handleEnd}
-            className="w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 transition-all shadow-xl active:scale-90"
-            style={{ background: '#ef4444', color: '#fff' }}
-          >
-            <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.71c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.66c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
-            </svg>
-          </button>
+            {type === 'video' && (
+              <button
+                onClick={toggleCamera}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${isCamOff ? 'text-red-500' : 'hover:scale-105'}`}
+                style={{ background: isCamOff ? 'rgba(239,68,68,0.1)' : 'var(--dm-bg-input)', color: isCamOff ? '#ef4444' : 'var(--dm-text-secondary)' }}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            )}
+
+            <button
+              onClick={handleEnd}
+              className="w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 transition-all shadow-xl active:scale-90"
+              style={{ background: '#ef4444', color: '#fff' }}
+            >
+              <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.71c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.66c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Footer info */}
