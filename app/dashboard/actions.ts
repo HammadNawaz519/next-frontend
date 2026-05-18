@@ -463,3 +463,45 @@ export async function updateName(newName: string) {
   });
   return { success: true, name: updated.name };
 }
+
+export async function saveTranslationHistory(text: string, language: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return null;
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  });
+
+  if (!user) return null;
+
+  const histModel = (prisma as any).translationHistory;
+  if (!histModel) return null;
+
+  return await histModel.create({
+    data: {
+      text,
+      language,
+      userId: user.id
+    }
+  });
+}
+
+export async function getTranslationHistory() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return [];
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  });
+
+  if (!user) return [];
+
+  const histModel = (prisma as any).translationHistory;
+  if (!histModel) return [];
+
+  return await histModel.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: 'desc' },
+    take: 50
+  });
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { askAI, saveTranslationHistory, getTranslationHistory } from '@/app/dashboard/actions';
 
 type PredictionResult = {
   prediction: string;
@@ -44,7 +45,13 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
   const [sentence, setSentence] = useState<string>('');
   const [lastAdded, setLastAdded] = useState<string | null>(null);
   const lastAddedAt = useRef<number>(0);
-
+  
+  // Translation state
+  const [targetLang, setTargetLang] = useState<string>('en');
+  const [translatedSentence, setTranslatedSentence] = useState<string>('');
+  const [isTranslating, setIsTranslating] = useState<boolean>(false);
+  const [showHistory, setShowHistory] = useState<boolean>(false);
+  const [history, setHistory] = useState<any[]>([]);
 
   // ── Check backend health on mount ─────────────────────────────────────────
   const checkBackend = useCallback(async () => {

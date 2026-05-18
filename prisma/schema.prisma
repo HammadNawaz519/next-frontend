@@ -19,6 +19,7 @@ model User {
   accounts Account[]
   sessions Session[]
   messages Message[]
+  translationHistory TranslationHistory[]
 
   sentSocialMessages     SocialMessage[] @relation("SentMessages")
   receivedSocialMessages SocialMessage[] @relation("ReceivedMessages")
@@ -28,8 +29,15 @@ model User {
   callsReceived SocialCall[] @relation("CallsReceived")
 }
 
+model TranslationHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  text      String   @db.Text
+  language  String   @default("en")
+  createdAt DateTime @default(now())
 
-
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 model SocialMessage {
   id         String   @id @default(cuid())
   content    String   @db.Text
