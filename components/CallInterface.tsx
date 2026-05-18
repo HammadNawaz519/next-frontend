@@ -43,6 +43,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   // ── Call Captioning (Voice-to-Text) ──
   const [myCaption, setMyCaption] = useState<string>('');
   const [peerCaption, setPeerCaption] = useState<string>('');
+  const [isCaptionsOn, setIsCaptionsOn] = useState<boolean>(true);
   const clearPeerCaptionRef = useRef<NodeJS.Timeout | null>(null);
   const clearMyCaptionRef = useRef<NodeJS.Timeout | null>(null);
   const speechRecognitionRef = useRef<any>(null);
@@ -125,7 +126,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
   // ── Speech Recognition for Live Captions ──
   useEffect(() => {
-    if (callStatus === 'active' && !isMuted) {
+    if (callStatus === 'active' && !isMuted && isCaptionsOn) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
@@ -185,7 +186,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         speechRecognitionRef.current.stop();
       }
     };
-  }, [callStatus, isMuted, peer.email, socket]);
+  }, [callStatus, isMuted, isCaptionsOn, peer.email, socket]);
 
   const handleEnd = () => {
     if (hasEnded.current) return;
@@ -540,10 +541,10 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         )}
 
         {/* ── UNIFIED BOTTOM CAPTIONS & ASL STACK ── */}
-        <div className="absolute bottom-24 md:bottom-28 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl flex flex-col items-center justify-end gap-3 z-40 pointer-events-none">
+        <div className="absolute top-[65%] -translate-y-1/2 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl flex flex-col items-center justify-end gap-3 z-40 pointer-events-none">
           
           {/* Speech Subtitles */}
-          {(myCaption || peerCaption) && callStatus === 'active' && (
+          {isCaptionsOn && (myCaption || peerCaption) && callStatus === 'active' && (
             <div className="w-full flex flex-col gap-3 pointer-events-auto">
               {/* Peer's Caption */}
               {peerCaption && (
@@ -613,6 +614,28 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         {/* Action Bar (The Vibe) */}
         <div className="absolute bottom-4 md:bottom-5 flex items-center gap-4 md:gap-6 px-6 md:px-8 py-3 md:py-4 backdrop-blur-2xl rounded-full shadow-2xl z-30" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
+
+          {/* Captions Toggle Button */}
+          <button
+            onClick={() => setIsCaptionsOn(!isCaptionsOn)}
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${!isCaptionsOn ? 'text-zinc-500' : 'hover:scale-105'}`}
+            style={{ 
+              background: !isCaptionsOn ? 'var(--dm-bg-input)' : 'var(--dm-bg-active)', 
+              color: !isCaptionsOn ? 'var(--dm-text-muted)' : 'var(--dm-text-primary)',
+              border: '1px solid var(--dm-border)'
+            }}
+            title={isCaptionsOn ? "Turn Captions Off" : "Turn Captions On"}
+          >
+            {isCaptionsOn ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18M8 8h8m-8 4h4m-3 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h1M21 6v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+            )}
+          </button>
 
           <button
             onClick={toggleSpeaker}
