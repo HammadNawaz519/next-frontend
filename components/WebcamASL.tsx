@@ -393,23 +393,23 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
 
             {/* Compiled Output Workspace Document */}
             <div 
-              className="h-36 flex-shrink-0 w-full rounded-[2rem] p-5 border flex flex-col justify-between"
+              className="h-[15.5rem] flex-shrink-0 w-full rounded-[2rem] p-5 border flex flex-col justify-between"
               style={{ background: 'var(--dm-bg-hover)', borderColor: 'var(--dm-border)' }}
             >
               {/* Header Info */}
-              <div className="flex items-center justify-between mb-1.5 flex-shrink-0">
+              <div className="flex items-center justify-between mb-2 flex-shrink-0">
                 <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--dm-text-secondary)' }}>
                   ✦ Compiled Output Terminal
                 </p>
                 {copied && (
                   <span className="text-[7px] font-mono font-bold text-emerald-500 uppercase tracking-widest animate-pulse">
-                    COPIED
+                    COPIED TO CLIPBOARD
                   </span>
                 )}
               </div>
               
               {/* Text Area */}
-              <div className="flex-grow overflow-y-auto pr-1 flex items-start justify-start min-h-0 my-1">
+              <div className="flex-grow overflow-y-auto pr-1 flex items-start justify-start min-h-0 my-2">
                 <p
                   className="text-[14px] font-bold tracking-wider leading-relaxed transition-all break-all select-text"
                   style={{ color: 'var(--dm-text-heading)', fontFamily: 'monospace' }}
@@ -430,19 +430,18 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                 </p>
               </div>
 
-              {/* Sleek Action Toolbar - Small & Beautiful */}
-              <div className="flex items-center justify-between mt-2 pt-2 border-t flex-shrink-0" style={{ borderColor: 'var(--dm-border)' }}>
+              {/* Sleek Action Toolbar - Small & Beautiful (No Emojis) */}
+              <div className="flex items-center justify-between mt-3 pt-2.5 border-t flex-shrink-0" style={{ borderColor: 'var(--dm-border)' }}>
                 <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-wider">
                   Optic Buffer: {sentence.length} chars
                 </span>
                 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   {/* Backspace Button */}
                   <button
                     onClick={() => setSentence(s => s.slice(0, -1))}
                     disabled={!sentence}
-                    title="Backspace"
-                    className="py-1 px-2.5 rounded-md text-[8px] font-mono uppercase tracking-wider font-bold transition-all active:scale-95 disabled:opacity-30 flex items-center gap-1 cursor-pointer border bg-[var(--dm-bg-input)]"
+                    className="py-1.5 px-3 rounded-full text-[9px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-30 flex items-center gap-1.5 cursor-pointer border bg-[var(--dm-bg-input)]"
                     style={{ 
                       color: 'var(--dm-text-secondary)', 
                       borderColor: 'var(--dm-border)',
@@ -450,15 +449,14 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                     onMouseEnter={e => { if (sentence) { e.currentTarget.style.borderColor = 'var(--dm-thumb)'; e.currentTarget.style.color = 'var(--dm-text-primary)'; } }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
                   >
-                    ⌫ Back
+                    Backspace
                   </button>
 
                   {/* Clear Button */}
                   <button
                     onClick={() => { setSentence(''); setLastAdded(null); }}
                     disabled={!sentence}
-                    title="Clear Buffer"
-                    className="py-1 px-2.5 rounded-md text-[8px] font-mono uppercase tracking-wider font-bold transition-all active:scale-95 disabled:opacity-30 flex items-center gap-1 cursor-pointer border bg-[var(--dm-bg-input)]"
+                    className="py-1.5 px-3 rounded-full text-[9px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-30 flex items-center gap-1.5 cursor-pointer border bg-[var(--dm-bg-input)]"
                     style={{ 
                       color: 'var(--dm-text-secondary)', 
                       borderColor: 'var(--dm-border)',
@@ -466,15 +464,14 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                     onMouseEnter={e => { if (sentence) { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ef4444'; } }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
                   >
-                    🗑️ Clear
+                    Clear
                   </button>
 
                   {/* Copy Button */}
                   <button
                     onClick={copySentence}
                     disabled={!sentence}
-                    title="Copy Text"
-                    className="py-1 px-2.5 rounded-md text-[8px] font-mono uppercase tracking-wider font-bold transition-all active:scale-95 disabled:opacity-30 flex items-center gap-1 cursor-pointer border bg-[var(--dm-bg-input)]"
+                    className="py-1.5 px-3 rounded-full text-[9px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-30 flex items-center gap-1.5 cursor-pointer border bg-[var(--dm-bg-input)]"
                     style={{ 
                       color: 'var(--dm-text-secondary)', 
                       borderColor: 'var(--dm-border)',
@@ -482,15 +479,14 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                     onMouseEnter={e => { if (sentence) { e.currentTarget.style.borderColor = 'var(--dm-thumb)'; e.currentTarget.style.color = 'var(--dm-text-primary)'; } }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
                   >
-                    📋 Copy
+                    Copy
                   </button>
 
                   {/* Speak Button */}
                   <button
                     onClick={speakSentence}
                     disabled={!sentence}
-                    title="Speak Out"
-                    className="py-1 px-2.5 rounded-md text-[8px] font-mono uppercase tracking-wider font-bold transition-all active:scale-95 disabled:opacity-30 flex items-center gap-1 cursor-pointer border bg-[var(--dm-bg-input)]"
+                    className="py-1.5 px-3 rounded-full text-[9px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-30 flex items-center gap-1.5 cursor-pointer border bg-[var(--dm-bg-input)]"
                     style={{ 
                       color: 'var(--dm-text-secondary)', 
                       borderColor: 'var(--dm-border)',
@@ -498,7 +494,7 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                     onMouseEnter={e => { if (sentence) { e.currentTarget.style.borderColor = 'var(--dm-thumb)'; e.currentTarget.style.color = 'var(--dm-text-primary)'; } }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
                   >
-                    🔊 Speak
+                    Speak
                   </button>
                 </div>
               </div>
