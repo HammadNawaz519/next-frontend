@@ -52,6 +52,14 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [showHistory, setShowHistory] = useState<boolean>(false);
   const [history, setHistory] = useState<any[]>([]);
+  // Advanced Interactive Scanning System States
+  const [cropRatio, setCropRatio] = useState<number>(0.55);
+  const [filterMode, setFilterMode] = useState<'normal' | 'boost' | 'high_contrast'>('normal');
+  const [scannerTelemetry, setScannerTelemetry] = useState<{
+    brightness: number;
+    latencyMs: number;
+    quality: 'optimal' | 'low_light' | 'overexposed';
+  }>({ brightness: 120, latencyMs: 0, quality: 'optimal' });
 
 
   // ── Check backend health on mount ─────────────────────────────────────────
@@ -147,23 +155,66 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
+    const startTime = performance.now();
     isPredicting.current = true;
 
-    // Region of Interest (ROI) Cropping:
-    // Crop a square region from the center of the video frame.
-    // This perfectly centers the hand, matching the dataset used to train the ASL CNN model.
+    // Dynamic Region of Interest (ROI) Cropping with Zoom Support:
     const vWidth = video.videoWidth;
     const vHeight = video.videoHeight;
-    const cropSize = Math.min(vWidth, vHeight) * 0.55;
+    // Uses the custom cropRatio set by the user (ranging from 0.35 to 0.75)
+    const cropSize = Math.min(vWidth, vHeight) * cropRatio;
     const sx = (vWidth - cropSize) / 2;
     const sy = (vHeight - cropSize) / 2;
 
-    // Set canvas dimensions to 224x224 (efficientnetv2s_asl exact input dimensions)
     canvas.width = 224;
     canvas.height = 224;
 
+    // Clear canvas
+    ctx.clearRect(0, 0, 224, 224);
+
+    // Apply Real-Time Hardware-Accelerated Canvas Preprocessing Filters
+    if (filterMode === 'boost') {
+      // High details extraction filter (ideal for sharp hand outlines & crease lines)
+      ctx.filter = 'contrast(1.22) saturate(1.15) brightness(1.04) contrast(1.1)';
+    } else if (filterMode === 'high_contrast') {
+      // High contrast under low-lighting conditions
+      ctx.filter = 'contrast(1.4) brightness(1.08) saturate(1.05)';
+    } else {
+      // Normal mode filter
+      ctx.filter = 'none';
+    }
+
     // Draw the cropped center square onto the canvas
     ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, 224, 224);
+
+    // Reset filter for any future canvas drawings
+    ctx.filter = 'none';
+
+    // ── Pre-Processing & Telemetry Extraction ──
+    // Extract pixel buffer to calculate real-time lighting telemetry
+    let avgBrightness = 120;
+    try {
+      const imgData = ctx.getImageData(0, 0, 224, 224);
+      const data = imgData.data;
+      let totalBrightness = 0;
+      // Sample pixels to calculate average luma (ITU-R BT.601 formula)
+      for (let i = 0; i < data.length; i += 40) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+        totalBrightness += luma;
+      }
+      avgBrightness = Math.round(totalBrightness / (data.length / 40));
+    } catch (e) {
+      // Ignore security/origin exceptions on canvas
+    }
+
+    const latencyMs = parseFloat((performance.now() - startTime).toFixed(1));
+    const quality = avgBrightness < 65 ? 'low_light' : avgBrightness > 220 ? 'overexposed' : 'optimal';
+    
+    // Update telemetry state
+    setScannerTelemetry({ brightness: avgBrightness, latencyMs, quality });
 
     canvas.toBlob(async (blob) => {
       if (!blob) { isPredicting.current = false; return; }
@@ -191,7 +242,7 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
         isPredicting.current = false;
       }
     }, 'image/jpeg', 0.92);
-  }, []);
+  }, [cropRatio, filterMode]);
 
 
   // ── Prediction loop ───────────────────────────────────────────────────────
@@ -380,10 +431,34 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
               {/* Clean Camera HUD Overlay */}
               {isCameraActive && (
                 <>
-                  {/* Minimalist Camera status pill */}
-                  <div className="absolute top-4 left-4 z-20 px-3 py-1 rounded-full backdrop-blur-md bg-black/40 text-[9px] font-mono tracking-widest text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5 font-bold">
-                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                    CAMERA LINK ACTIVE
+                  {/* Minimalist Camera status pill + Telemetry */}
+                  <div className="absolute top-4 left-4 z-20 flex flex-col gap-1.5 pointer-events-none select-none">
+                    <div className="px-3 py-1 rounded-full backdrop-blur-md bg-black/50 text-[8px] font-mono tracking-widest text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5 font-bold shadow-md">
+                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                      SYSTEM FEED: ACTIVE
+                    </div>
+
+                    <div className="px-2.5 py-1 rounded-md backdrop-blur-md bg-zinc-950/70 border border-zinc-800 text-[8px] font-mono text-zinc-400 flex flex-col gap-0.5 shadow-md max-w-[135px]">
+                      <div className="flex items-center justify-between gap-3">
+                        <span>LUMA:</span>
+                        <span className="font-bold text-zinc-200">{scannerTelemetry.brightness} Lm</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>JIT LATENCY:</span>
+                        <span className="font-bold text-zinc-200">{scannerTelemetry.latencyMs} ms</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>LIGHTING:</span>
+                        <span 
+                          className="font-bold uppercase"
+                          style={{
+                            color: scannerTelemetry.quality === 'optimal' ? '#10b981' : '#f59e0b'
+                          }}
+                        >
+                          {scannerTelemetry.quality.replace('_', ' ')}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Terminate camera */}
@@ -396,7 +471,16 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
 
                   {/* High-Tech Crop Zone Indicator (Region of Interest) */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 select-none animate-in fade-in zoom-in-95 duration-500">
-                    <div className="w-[180px] h-[180px] md:w-[220px] md:h-[220px] relative border-2 border-dashed border-indigo-500/40 rounded-[2.5rem] bg-indigo-500/5 shadow-[0_0_40px_rgba(99,102,241,0.12)] flex flex-col items-center justify-center backdrop-blur-[1px] transition-all duration-300">
+                    <div 
+                      className="relative border-2 border-dashed border-indigo-500/40 rounded-[2.5rem] bg-indigo-500/5 shadow-[0_0_40px_rgba(99,102,241,0.12)] flex flex-col items-center justify-center backdrop-blur-[1px] transition-all duration-300"
+                      style={{
+                        width: `${cropRatio * 100}%`,
+                        height: `${cropRatio * 100}%`,
+                        maxWidth: 'min(320px, 90%)',
+                        maxHeight: 'min(320px, 90%)',
+                        aspectRatio: '1',
+                      }}
+                    >
                       {/* Corner Brackets */}
                       <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-indigo-400 rounded-tl-2xl -mt-1 -ml-1" />
                       <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-indigo-400 rounded-tr-2xl -mt-1 -mr-1" />
@@ -473,6 +557,89 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                 </div>
               )}
             </div>
+
+            {/* Advanced Scanner Control Deck Card */}
+            {isCameraActive && (
+              <div 
+                className="rounded-[1.8rem] p-4 border flex flex-col gap-3.5 animate-in slide-in-from-bottom-3 duration-500 shadow-sm"
+                style={{ 
+                  background: 'var(--dm-bg-sidebar)',
+                  borderColor: 'var(--dm-border)',
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                      </svg>
+                    </span>
+                    <div>
+                      <h4 className="text-[10px] font-mono tracking-widest text-indigo-300 uppercase font-extrabold">Fidelity Scan Adjuster</h4>
+                      <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-wider mt-0.5">Adjust scan zone zoom and hardware filters</p>
+                    </div>
+                  </div>
+                  
+                  {/* Dynamic illumination tag */}
+                  <span 
+                    className="text-[8px] font-mono font-bold px-2 py-0.5 rounded-full border flex items-center gap-1"
+                    style={{
+                      background: scannerTelemetry.quality === 'optimal' ? 'rgba(16,185,129,0.06)' : 'rgba(245,158,11,0.06)',
+                      borderColor: scannerTelemetry.quality === 'optimal' ? 'rgba(16,185,129,0.18)' : 'rgba(245,158,11,0.18)',
+                      color: scannerTelemetry.quality === 'optimal' ? '#10b981' : '#f59e0b',
+                    }}
+                  >
+                    <span className={`w-1 h-1 rounded-full ${scannerTelemetry.quality === 'optimal' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                    {scannerTelemetry.quality.replace('_', ' ').toUpperCase()} FEED
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Zoom Slider */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-[9px] font-mono text-zinc-400">
+                      <span>SCAN BOX HEIGHT / ZOOM</span>
+                      <span className="font-bold text-indigo-400">{(cropRatio * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[9px] font-mono text-zinc-600">35%</span>
+                      <input 
+                        type="range"
+                        min="0.35"
+                        max="0.75"
+                        step="0.05"
+                        value={cropRatio}
+                        onChange={(e) => setCropRatio(parseFloat(e.target.value))}
+                        className="flex-1 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                        style={{ background: 'var(--dm-bg-input)' }}
+                      />
+                      <span className="text-[9px] font-mono text-zinc-600">75%</span>
+                    </div>
+                  </div>
+
+                  {/* Preprocessing Toggles */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[9px] font-mono text-zinc-400 uppercase">JIT Hardware Processing</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {(['normal', 'boost', 'high_contrast'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          onClick={() => setFilterMode(mode)}
+                          className="py-1 px-2 rounded-lg text-[8px] font-mono uppercase font-bold transition-all active:scale-95 cursor-pointer border"
+                          style={{
+                            background: filterMode === mode ? 'rgba(99,102,241,0.15)' : 'var(--dm-bg-input)',
+                            borderColor: filterMode === mode ? 'rgba(99,102,241,0.4)' : 'var(--dm-border)',
+                            color: filterMode === mode ? '#818cf8' : 'var(--dm-text-secondary)',
+                          }}
+                        >
+                          {mode.replace('_', ' ')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Compiled Output Workspace Document */}
             <div 
