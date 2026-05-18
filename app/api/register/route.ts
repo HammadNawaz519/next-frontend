@@ -45,6 +45,7 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = generateOTP();
+    console.log(`[DEV_OTP] Generated OTP for ${email}: ${otp}`);
     const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
     // Save/overwrite in PendingUser — not in User

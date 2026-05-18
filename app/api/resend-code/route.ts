@@ -42,6 +42,7 @@ export async function POST(req: Request) {
     }
 
     const otp = generateOTP();
+    console.log(`[DEV_OTP] Resent OTP for ${email}: ${otp}`);
     const expiry = new Date(Date.now() + 15 * 60 * 1000);
 
     await prisma.pendingUser.update({

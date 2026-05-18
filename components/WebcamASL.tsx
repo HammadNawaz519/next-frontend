@@ -147,9 +147,22 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
     if (!ctx) return;
 
     isPredicting.current = true;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
+
+    // Region of Interest (ROI) Cropping:
+    // Crop a square region from the center of the video frame.
+    // This perfectly centers the hand, matching the dataset used to train the ASL CNN model.
+    const vWidth = video.videoWidth;
+    const vHeight = video.videoHeight;
+    const cropSize = Math.min(vWidth, vHeight) * 0.55;
+    const sx = (vWidth - cropSize) / 2;
+    const sy = (vHeight - cropSize) / 2;
+
+    // Set canvas dimensions to 224x224 (efficientnetv2s_asl exact input dimensions)
+    canvas.width = 224;
+    canvas.height = 224;
+
+    // Draw the cropped center square onto the canvas
+    ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, 224, 224);
 
     canvas.toBlob(async (blob) => {
       if (!blob) { isPredicting.current = false; return; }
@@ -301,6 +314,10 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
           0%, 100% { opacity: 1; }
           50% { opacity: 0; }
         }
+        @keyframes scan {
+          0%, 100% { top: 10%; opacity: 0.2; }
+          50% { top: 90%; opacity: 0.8; }
+        }
       `}} />
 
       {/* ── Offline Exception Overlay ── */}
@@ -374,6 +391,25 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                   >
                     Turn Off
                   </button>
+
+                  {/* High-Tech Crop Zone Indicator (Region of Interest) */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 select-none animate-in fade-in zoom-in-95 duration-500">
+                    <div className="w-[180px] h-[180px] md:w-[220px] md:h-[220px] relative border-2 border-dashed border-indigo-500/40 rounded-[2.5rem] bg-indigo-500/5 shadow-[0_0_40px_rgba(99,102,241,0.12)] flex flex-col items-center justify-center backdrop-blur-[1px] transition-all duration-300">
+                      {/* Corner Brackets */}
+                      <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-indigo-400 rounded-tl-2xl -mt-1 -ml-1" />
+                      <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-indigo-400 rounded-tr-2xl -mt-1 -mr-1" />
+                      <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-indigo-400 rounded-bl-2xl -mb-1 -ml-1" />
+                      <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-indigo-400 rounded-br-2xl -mb-1 -mr-1" />
+                      
+                      {/* Live scanning line effect */}
+                      <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-indigo-400/60 to-transparent top-1/2 animate-[scan_2.5s_ease-in-out_infinite]" />
+                      
+                      {/* Sub-label */}
+                      <span className="text-[9px] font-mono tracking-widest text-indigo-200 font-extrabold bg-zinc-950/85 px-3.5 py-1.5 rounded-full border border-indigo-500/35 shadow-lg select-none">
+                        PLACE HAND HERE
+                      </span>
+                    </div>
+                  </div>
 
                   {/* Clean watermark bottom-right */}
                   <div className="absolute bottom-4 right-4 z-20 text-[8px] font-mono tracking-[0.2em] text-zinc-400 opacity-60 pointer-events-none uppercase">
