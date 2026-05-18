@@ -45,7 +45,7 @@ export default function DashboardPage() {
     }, 450); // match animation duration slightly less to prevent blink
   };
   const [fullUser, setFullUser] = useState<any>(null);
-  const [activeView, setActiveView] = useState<'home' | 'assistant' | 'chat'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'assistant' | 'chat' | 'practice'>('home');
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const chatComponentRef = useRef<{ closeChat: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -273,7 +273,8 @@ export default function DashboardPage() {
             {[
               { id: 'home', name: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
               { id: 'chat', name: 'Chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-              { id: 'assistant', name: 'Assistant', icon: 'M13 10V3L4 14h7v7l9-11h-7z' }
+              { id: 'assistant', name: 'Assistant', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+              { id: 'practice', name: 'Practice', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' }
             ].map((item) => (
               <div 
                 key={item.name} 
@@ -498,6 +499,99 @@ export default function DashboardPage() {
           </>
         )}
 
+        {/* Practice View */}
+        {activeView === 'practice' && (
+          <>
+            {/* Practice Header */}
+            <div className="flex items-center justify-center p-4 border-b relative z-50" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '64px' }}>
+              <button 
+                onClick={(e) => handleNavClick('home', e, true)}
+                style={{ position: 'absolute', left: '16px', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', zIndex: 10 }}
+              >
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
+                <div style={{ width: '8px', height: '8px', background: '#f59e0b', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
+                <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3em', color: 'var(--dm-text-secondary)', margin: 0 }}>Sign Practice</h2>
+              </div>
+              <div style={{ position: 'absolute', inset: 0, opacity: 0.06, background: 'linear-gradient(45deg, #f59e0b, #ef4444, #8b5cf6)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+            </div>
+
+            {/* Practice Content */}
+            <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 relative">
+              
+              {/* Hero Section */}
+              <div className="text-center space-y-4 animate-in fade-in duration-700">
+                <div className="w-20 h-20 mx-auto rounded-[2rem] flex items-center justify-center shadow-inner" style={{ background: 'var(--dm-bg-active)' }}>
+                  <span className="text-3xl">🤟</span>
+                </div>
+                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>ASL Practice Studio</h1>
+                <p className="text-sm max-w-md mx-auto" style={{ color: 'var(--dm-text-muted)' }}>Master American Sign Language with our interactive alphabet reference and live webcam practice.</p>
+              </div>
+
+              {/* ASL Alphabet Reference Grid */}
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b' }}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold" style={{ color: 'var(--dm-text-heading)' }}>ASL Alphabet Reference</h3>
+                    <p className="text-[11px]" style={{ color: 'var(--dm-text-muted)' }}>Study each letter before practicing with webcam</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-6 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-13 gap-2">
+                  {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
+                    <div key={letter} className="aspect-square rounded-2xl flex flex-col items-center justify-center gap-1 cursor-default hover:scale-105 transition-transform shadow-sm" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
+                      <span className="text-xl md:text-2xl font-black" style={{ color: 'var(--dm-text-primary)' }}>{letter}</span>
+                      <span className="text-[8px] font-mono uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>ASL</span>
+                    </div>
+                  ))}
+                  {/* Special signs */}
+                  {[{ label: 'SPC', desc: 'Space' }, { label: 'DEL', desc: 'Delete' }].map(s => (
+                    <div key={s.label} className="aspect-square rounded-2xl flex flex-col items-center justify-center gap-1 cursor-default hover:scale-105 transition-transform shadow-sm" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
+                      <span className="text-sm font-black" style={{ color: '#6366f1' }}>{s.label}</span>
+                      <span className="text-[7px] font-mono uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>{s.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tips Section */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '200ms' }}>
+                {[
+                  { emoji: '✋', title: 'Hand Position', desc: 'Keep your dominant hand in frame at chest level for best recognition accuracy.' },
+                  { emoji: '💡', title: 'Good Lighting', desc: 'Ensure bright, even lighting on your hands. Avoid backlighting from windows.' },
+                  { emoji: '🎯', title: 'Steady Signs', desc: 'Hold each sign steady for 1-2 seconds. The AI needs a stable frame to predict accurately.' }
+                ].map(tip => (
+                  <div key={tip.title} className="p-5 rounded-2xl shadow-sm" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
+                    <span className="text-2xl mb-3 block">{tip.emoji}</span>
+                    <h4 className="text-sm font-bold mb-1" style={{ color: 'var(--dm-text-heading)' }}>{tip.title}</h4>
+                    <p className="text-[12px] leading-relaxed" style={{ color: 'var(--dm-text-muted)' }}>{tip.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Live Practice with Webcam */}
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ animationDelay: '400ms' }}>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold" style={{ color: 'var(--dm-text-heading)' }}>Live Webcam Practice</h3>
+                    <p className="text-[11px]" style={{ color: 'var(--dm-text-muted)' }}>Practice signing in real-time with AI recognition below</p>
+                  </div>
+                </div>
+                <div className="rounded-3xl overflow-hidden shadow-lg" style={{ border: '1px solid var(--dm-border)', minHeight: '400px' }}>
+                  <WebcamASL isCallActive={isCallActive} />
+                </div>
+              </div>
+
+            </div>
+          </>
+        )}
+
         {/* SocialChat Component */}
         <SocialChat 
           isActive={activeView === 'chat'} 
@@ -621,12 +715,13 @@ export default function DashboardPage() {
 
       {/* Mobile Bottom Navigation - always visible on mobile */}
       {/* Mobile Bottom Navigation - visible on home and chat list */}
-      {(activeView === 'home' || (activeView === 'chat' && !selectedChatUser)) && (
+      {(activeView === 'home' || activeView === 'practice' || (activeView === 'chat' && !selectedChatUser)) && (
         <nav className="mobile-nav">
           {[
             { id: 'home', label: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
             { id: 'chat', label: 'Chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-            { id: 'assistant', label: 'AI', icon: 'M13 10V3L4 14h7v7l9-11h-7z' }
+            { id: 'assistant', label: 'AI', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+            { id: 'practice', label: 'Practice', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' }
           ].map((item) => (
             <button
               key={item.id}

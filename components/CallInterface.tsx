@@ -87,10 +87,11 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
           const now = Date.now();
           const { prediction, stability, confidence } = data;
-          const cooldown = prediction === lastAdded ? 2000 : 1500;
+          // More responsive: lower thresholds & shorter cooldowns for faster word building
+          const cooldown = prediction === lastAdded ? 1200 : 800;
           if (
-            stability >= 0.7 &&
-            confidence >= 0.65 &&
+            stability >= 0.55 &&
+            confidence >= 0.50 &&
             prediction !== 'nothing' &&
             now - lastAddedAt.current > cooldown
           ) {
@@ -356,18 +357,52 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         const pc = new RTCPeerConnection({
           iceServers: [
+            // STUN servers
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
             { urls: 'stun:global.stun.twilio.com:3478' },
-            { urls: 'stun:stun.services.mozilla.com' },
-            { urls: 'stun:stun.cloudflare.com:3478' },
-            { urls: 'stun:stun.miwifi.com:3478' }
+            // TURN relay servers (critical for cross-network calls)
+            {
+              urls: 'turn:a.relay.metered.ca:80',
+              username: '83eebabf8b4cce9d5dbcb4a2',
+              credential: '2D7JvfkOQtBdYW3R'
+            },
+            {
+              urls: 'turn:a.relay.metered.ca:80?transport=tcp',
+              username: '83eebabf8b4cce9d5dbcb4a2',
+              credential: '2D7JvfkOQtBdYW3R'
+            },
+            {
+              urls: 'turn:a.relay.metered.ca:443',
+              username: '83eebabf8b4cce9d5dbcb4a2',
+              credential: '2D7JvfkOQtBdYW3R'
+            },
+            {
+              urls: 'turns:a.relay.metered.ca:443?transport=tcp',
+              username: '83eebabf8b4cce9d5dbcb4a2',
+              credential: '2D7JvfkOQtBdYW3R'
+            }
           ]
         });
         pcRef.current = pc;
 
         stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+        // Monitor ICE connection state for debugging
+        pc.oniceconnectionstatechange = () => {
+          console.log("ICE connection state:", pc.iceConnectionState);
+          if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+            setCallStatus('active');
+          }
+          if (pc.iceConnectionState === 'failed') {
+            console.error("ICE connection FAILED — networks may be incompatible without a working TURN server.");
+            // Try ICE restart
+            pc.restartIce();
+          }
+        };
 
         pc.ontrack = (event) => {
           console.log("Remote track received:", event.track.kind);
@@ -377,7 +412,6 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             remoteVideoRef.current.play().catch(e => console.error("Remote video play error:", e));
           } else if (remoteAudioRef.current && type === 'audio') {
             remoteAudioRef.current.srcObject = remoteStream;
-            // Force play if needed
             remoteAudioRef.current.play().catch(e => console.error("Audio play error:", e));
           }
           setCallStatus('active');
@@ -395,10 +429,24 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           handleSignal(initialOffer);
         }
 
-        // Start handshake: Receiver sends offer to Caller (if no initial offer)
+        // CALLER creates the offer (standard WebRTC pattern)
+        if (isCaller) {
+          // Small delay to ensure receiver's PC is ready
+          setTimeout(async () => {
+            try {
+              const offer = await pc.createOffer();
+              await pc.setLocalDescription(offer);
+              console.log("Caller created offer, sending to:", target);
+              socket.emit('webrtc_signal', { to: target, signal: { sdp: offer } });
+            } catch (e) { console.error("Offer creation error:", e); }
+          }, 1000);
+        }
+
+        // RECEIVER creates offer as fallback if no initial offer received
         if (!isCaller && !initialOffer) {
           const offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
+          console.log("Receiver created fallback offer, sending to:", target);
           socket.emit('webrtc_signal', { to: target, signal: { sdp: offer } });
         }
       } catch (err) {
@@ -572,19 +620,22 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           </div>
         )}
 
+        {/* Hidden capture canvas */}
+        <canvas ref={canvasRef} className="hidden" />
+
         {/* ── BOTTOM STACK: CAPTIONS + ACTION BAR ── */}
         <div className="absolute bottom-4 md:bottom-5 left-1/2 -translate-x-1/2 w-fit min-w-[290px] md:min-w-[340px] max-w-[90vw] flex flex-col items-stretch justify-end gap-3 z-40 pointer-events-none">
           
-          {/* Speech Subtitles */}
+          {/* Speech Subtitles (works for BOTH audio & video calls) */}
           {areCaptionsVisible && (
             <div className="w-full flex flex-col gap-2 pointer-events-auto">
               {/* Peer's Caption */}
               {peerCaption && (
-                <div className="w-full px-5 py-2 md:py-2.5 rounded-2xl md:rounded-3xl backdrop-blur-2xl bg-white border border-white/50 shadow-[0_10px_40px_rgba(0,0,0,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300 text-center">
-                  <span className="text-[8.5px] font-mono font-bold tracking-[0.2em] text-indigo-500 uppercase mb-0.5 block">
+                <div className="w-full px-5 py-2 md:py-2.5 rounded-2xl md:rounded-3xl backdrop-blur-2xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300 text-center" style={{ background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(255,255,255,0.5)' }}>
+                  <span className="text-[8.5px] font-mono font-bold tracking-[0.2em] uppercase mb-0.5 block" style={{ color: '#6366f1' }}>
                     {peer.name}
                   </span>
-                  <p className="text-sm md:text-[15px] font-bold text-black leading-snug">
+                  <p className="text-sm md:text-[15px] font-bold leading-snug" style={{ color: '#111' }}>
                     {peerCaption}
                   </p>
                 </div>
@@ -592,11 +643,11 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
               
               {/* My Caption */}
               {myCaption && (
-                <div className="w-full px-5 py-2 md:py-2.5 rounded-2xl md:rounded-3xl backdrop-blur-2xl bg-white border border-white/50 shadow-[0_10px_40px_rgba(0,0,0,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300 text-center">
-                  <span className="text-[8.5px] font-mono font-bold tracking-[0.2em] text-emerald-600 uppercase mb-0.5 block">
+                <div className="w-full px-5 py-2 md:py-2.5 rounded-2xl md:rounded-3xl backdrop-blur-2xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300 text-center" style={{ background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(255,255,255,0.5)' }}>
+                  <span className="text-[8.5px] font-mono font-bold tracking-[0.2em] uppercase mb-0.5 block" style={{ color: '#059669' }}>
                     You
                   </span>
-                  <p className="text-sm md:text-[15px] font-bold text-black leading-snug">
+                  <p className="text-sm md:text-[15px] font-bold leading-snug" style={{ color: '#111' }}>
                     {myCaption}
                   </p>
                 </div>
@@ -604,17 +655,17 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             </div>
           )}
 
-          {/* Action Bar (The Vibe) */}
-          <div className="w-full flex items-center justify-between px-5 md:px-7 py-3 md:py-4 backdrop-blur-2xl rounded-[1.5rem] md:rounded-full shadow-2xl pointer-events-auto" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
+          {/* Action Bar — explicit dark background for both themes */}
+          <div className="w-full flex items-center justify-between px-5 md:px-7 py-3 md:py-4 backdrop-blur-2xl rounded-[1.5rem] md:rounded-full shadow-2xl pointer-events-auto" style={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.08)' }}>
             
             {/* Captions Toggle Button */}
             <button
               onClick={() => setIsCaptionsOn(!isCaptionsOn)}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${!isCaptionsOn ? 'text-zinc-500' : 'hover:scale-105'}`}
+              className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
               style={{ 
-                background: !isCaptionsOn ? 'var(--dm-bg-input)' : 'var(--dm-bg-active)', 
-                color: !isCaptionsOn ? 'var(--dm-text-muted)' : 'var(--dm-text-primary)',
-                border: '1px solid var(--dm-border)'
+                background: isCaptionsOn ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.08)', 
+                color: isCaptionsOn ? '#a5b4fc' : 'rgba(255,255,255,0.5)',
+                border: '1px solid rgba(255,255,255,0.1)'
               }}
               title={isCaptionsOn ? "Turn Captions Off" : "Turn Captions On"}
             >
@@ -631,11 +682,11 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
             <button
               onClick={toggleSpeaker}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105`}
+              className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
               style={{ 
-                background: isSpeakerOn ? 'var(--dm-bg-active)' : 'var(--dm-bg-input)', 
-                color: isSpeakerOn ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)',
-                border: '1px solid var(--dm-border)'
+                background: isSpeakerOn ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)', 
+                color: isSpeakerOn ? '#86efac' : 'rgba(255,255,255,0.5)',
+                border: '1px solid rgba(255,255,255,0.1)'
               }}
             >
               {isSpeakerOn ? (
@@ -651,8 +702,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
             <button
               onClick={toggleMute}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${isMuted ? 'text-red-500' : 'hover:scale-105'}`}
-              style={{ background: isMuted ? 'rgba(239,68,68,0.1)' : 'var(--dm-bg-input)', color: isMuted ? '#ef4444' : 'var(--dm-text-secondary)' }}
+              className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
+              style={{ background: isMuted ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.08)', color: isMuted ? '#fca5a5' : 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -662,8 +713,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             {type === 'video' && (
               <button
                 onClick={toggleCamera}
-                className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${isCamOff ? 'text-red-500' : 'hover:scale-105'}`}
-                style={{ background: isCamOff ? 'rgba(239,68,68,0.1)' : 'var(--dm-bg-input)', color: isCamOff ? '#ef4444' : 'var(--dm-text-secondary)' }}
+                className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                style={{ background: isCamOff ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.08)', color: isCamOff ? '#fca5a5' : 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />

@@ -291,6 +291,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [showVoiceMenu, setShowVoiceMenu] = useState(false);
+  const [isVoiceToText, setIsVoiceToText] = useState(false);
+  const voiceToTextRef = useRef<any>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -847,6 +850,59 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   };
 
+  const startVoiceToText = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in this browser.');
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    let finalText = '';
+
+    recognition.onresult = (event: any) => {
+      let interim = '';
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalText += event.results[i][0].transcript + ' ';
+        } else {
+          interim += event.results[i][0].transcript;
+        }
+      }
+      setInputValue((finalText + interim).trim());
+    };
+
+    recognition.onerror = (e: any) => {
+      console.error('Voice-to-text error:', e.error);
+      if (e.error !== 'no-speech') {
+        stopVoiceToText();
+      }
+    };
+
+    recognition.onend = () => {
+      // Auto-restart if still in voice-to-text mode
+      if (isVoiceToText) {
+        try { recognition.start(); } catch(e) {}
+      }
+    };
+
+    voiceToTextRef.current = recognition;
+    setIsVoiceToText(true);
+    try { recognition.start(); } catch(e) { console.error(e); }
+  };
+
+  const stopVoiceToText = () => {
+    if (voiceToTextRef.current) {
+      voiceToTextRef.current.onend = null;
+      try { voiceToTextRef.current.stop(); } catch(e) {}
+      voiceToTextRef.current = null;
+    }
+    setIsVoiceToText(false);
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedUser || !socket || !session?.user) return;
@@ -1051,7 +1107,32 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </div>
 
               <footer className="footer">
-                {!isRecording ? (
+                {isVoiceToText ? (
+                  <div className="type-box" style={{ position: 'relative' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, padding: '8px 14px', borderRadius: '24px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', animation: 'pulse 2s infinite' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dm-text-primary)', flex: 1 }}>
+                        {inputValue || 'Listening... speak now'}
+                      </span>
+                    </div>
+                    <button 
+                      className="send-btn"
+                      onClick={() => {
+                        stopVoiceToText();
+                        if (inputValue.trim()) {
+                          handleSendMessage();
+                        }
+                      }}
+                      style={{ background: inputValue.trim() ? '#6366f1' : '#ef4444' }}
+                    >
+                      {inputValue.trim() ? (
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                      )}
+                    </button>
+                  </div>
+                ) : !isRecording ? (
                   <div className="type-box">
                     <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Send Media">
                       <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
@@ -1141,21 +1222,71 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   </div>
                 )}
                 
+                {/* Voice Mode Popup */}
+                {showVoiceMenu && !isRecording && !isVoiceToText && (
+                  <div style={{
+                    position: 'absolute', bottom: '70px', right: '16px',
+                    background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)',
+                    borderRadius: '20px', padding: '8px', zIndex: 999,
+                    boxShadow: '0 -8px 30px rgba(0,0,0,0.2)',
+                    animation: 'emojiBarIn 0.2s cubic-bezier(0.2,0.8,0.2,1) forwards',
+                    display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px'
+                  }}>
+                    <button 
+                      onClick={() => { setShowVoiceMenu(false); startRecording(); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '14px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--dm-text-primary)', fontSize: '14px', fontWeight: 500, width: '100%', textAlign: 'left', transition: 'background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--dm-bg-hover)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="#ef4444">
+                          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>Voice Note</div>
+                        <div style={{ fontSize: '11px', color: 'var(--dm-text-muted)', marginTop: '2px' }}>Send an audio message</div>
+                      </div>
+                    </button>
+                    <div style={{ height: '1px', background: 'var(--dm-border)', margin: '0 12px' }} />
+                    <button 
+                      onClick={() => { setShowVoiceMenu(false); startVoiceToText(); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '14px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--dm-text-primary)', fontSize: '14px', fontWeight: 500, width: '100%', textAlign: 'left', transition: 'background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--dm-bg-hover)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="#6366f1">
+                          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+                          <path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>Voice to Text</div>
+                        <div style={{ fontSize: '11px', color: 'var(--dm-text-muted)', marginTop: '2px' }}>Speak and send as text</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+
                 <button 
                   className="send-btn" 
                   onClick={(e) => {
                     e.preventDefault();
                     if (inputValue.trim()) {
                       handleSendMessage();
-                    } else if (!isRecording) {
-                      startRecording();
-                    } else {
+                    } else if (isRecording) {
                       stopRecording();
+                    } else if (isVoiceToText) {
+                      stopVoiceToText();
+                    } else {
+                      setShowVoiceMenu(!showVoiceMenu);
                     }
                   }}
                   onTouchStart={(e) => {
                     if (inputValue.trim()) {
-                      e.preventDefault(); // Prevents input from losing focus
+                      e.preventDefault();
                       handleSendMessage();
                     }
                   }}
@@ -1163,6 +1294,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   {inputValue.trim() ? (
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                   ) : isRecording ? (
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                  ) : isVoiceToText ? (
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                   ) : (
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
