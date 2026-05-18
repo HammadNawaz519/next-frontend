@@ -508,7 +508,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         {/* Center Content (Audio Call or Ringing) */}
         {(type === 'audio' || callStatus !== 'active') && (
-          <div className={`flex flex-col items-center gap-6 text-center animate-in zoom-in duration-700 transition-transform ${areCaptionsVisible ? 'md:-translate-y-24' : ''}`}>
+          <div className={`flex flex-col items-center gap-6 text-center animate-in zoom-in duration-700 transition-transform ${areCaptionsVisible ? '-translate-y-28 md:-translate-y-24' : ''}`}>
             <div className="relative">
               {callStatus === 'ringing' && (
                 <>

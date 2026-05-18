@@ -376,16 +376,6 @@ export default function DashboardPage() {
               {/* Controls */}
               <div className="flex items-center gap-4 z-10">
                 <ThemeToggle />
-                {/* Profile button - desktop only */}
-                <button 
-                  onClick={() => setIsProfileOpen(true)}
-                  className="hidden md:flex w-10 h-10 rounded-full items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-transform"
-                  style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}
-                >
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, background: 'var(--dm-bg-active)', color: 'var(--dm-text-primary)' }}>
-                    {session.user?.name?.charAt(0) || 'U'}
-                  </div>
-                </button>
               </div>
 
               {/* Background HUD accent glow */}
@@ -427,16 +417,6 @@ export default function DashboardPage() {
                 <div style={{ width: '8px', height: '8px', background: '#6366f1', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
                 <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3em', color: 'var(--dm-text-secondary)', margin: 0 }}>Intelligence Core</h2>
               </div>
-              {/* Profile button - desktop only */}
-              <button 
-                onClick={() => setIsProfileOpen(true)}
-                className="hidden md:flex"
-                style={{ position: 'absolute', right: '16px', width: '40px', height: '40px', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer', zIndex: 10 }}
-              >
-                <div style={{ width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, background: 'var(--dm-bg-active)' }}>
-                  {session.user?.name?.charAt(0) || 'U'}
-                </div>
-              </button>
               <div style={{ position: 'absolute', inset: 0, opacity: 0.08, background: 'linear-gradient(45deg, #FF7A00, #007AFF, #7ED9D9)', filter: 'blur(20px)', pointerEvents: 'none' }} />
             </div>
 
