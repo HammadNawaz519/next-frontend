@@ -40,6 +40,13 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const [currentLetter, setCurrentLetter] = useState<string>('');
   const [currentConf, setCurrentConf] = useState<number>(0);
 
+  // ── Call Captioning (Voice-to-Text) ──
+  const [myCaption, setMyCaption] = useState<string>('');
+  const [peerCaption, setPeerCaption] = useState<string>('');
+  const clearPeerCaptionRef = useRef<NodeJS.Timeout | null>(null);
+  const clearMyCaptionRef = useRef<NodeJS.Timeout | null>(null);
+  const speechRecognitionRef = useRef<any>(null);
+
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
   const LABEL_DISPLAY: Record<string, string> = {
     nothing: '—',
@@ -116,6 +123,70 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     };
   }, [callStatus, type, captureAndPredict]);
 
+  // ── Speech Recognition for Live Captions ──
+  useEffect(() => {
+    if (callStatus === 'active' && !isMuted) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onresult = (event: any) => {
+          let interimTranscript = '';
+          let finalTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
+          }
+          
+          const transcript = finalTranscript || interimTranscript;
+          if (transcript.trim()) {
+            setMyCaption(transcript.trim());
+            
+            // Clear local caption after 4 seconds of silence
+            if (clearMyCaptionRef.current) clearTimeout(clearMyCaptionRef.current);
+            clearMyCaptionRef.current = setTimeout(() => setMyCaption(''), 4000);
+
+            // Send to peer via signaling channel
+            const target = peer.email?.toLowerCase().trim();
+            if (target) {
+              socket.emit('webrtc_signal', { to: target, signal: { caption: transcript.trim() } });
+            }
+          }
+        };
+
+        recognition.onerror = (e: any) => console.error("Speech recognition error:", e.error);
+        
+        recognition.onend = () => {
+           if (callStatus === 'active' && !isMuted) {
+             try { recognition.start(); } catch(e) {}
+           }
+        };
+
+        speechRecognitionRef.current = recognition;
+        try { recognition.start(); } catch(e) {}
+      }
+    } else {
+      if (speechRecognitionRef.current) {
+        speechRecognitionRef.current.stop();
+        speechRecognitionRef.current = null;
+      }
+    }
+
+    return () => {
+      if (speechRecognitionRef.current) {
+        speechRecognitionRef.current.onend = null;
+        speechRecognitionRef.current.stop();
+      }
+    };
+  }, [callStatus, isMuted, peer.email, socket]);
+
   const handleEnd = () => {
     if (hasEnded.current) return;
     hasEnded.current = true;
@@ -188,6 +259,13 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
   // 1. Unified Signal Handler
   const handleSignal = async (signal: any) => {
+    if (signal.caption !== undefined) {
+      setPeerCaption(signal.caption);
+      if (clearPeerCaptionRef.current) clearTimeout(clearPeerCaptionRef.current);
+      clearPeerCaptionRef.current = setTimeout(() => setPeerCaption(''), 4000);
+      return;
+    }
+
     if (!pcRef.current) {
       console.log("Signal received but PC not ready, retrying in 100ms...");
       setTimeout(() => handleSignal(signal), 100);
@@ -458,6 +536,35 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         {type === 'video' && (
           <div className="absolute top-4 right-4 md:top-6 md:right-6 w-24 h-32 md:w-32 md:h-44 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl z-20 group hover:scale-105 transition-transform duration-300" style={{ border: '2px solid var(--dm-border)', background: 'var(--dm-bg-input)' }}>
             <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
+          </div>
+        )}
+
+        {/* ── Speech Subtitles (Audio & Video Calls) ── */}
+        {(myCaption || peerCaption) && callStatus === 'active' && (
+          <div className={`absolute ${type === 'video' ? 'top-20 md:top-24' : 'bottom-32'} left-1/2 -translate-x-1/2 w-[90%] max-w-2xl flex flex-col gap-3 z-40`}>
+            {/* Peer's Caption */}
+            {peerCaption && (
+              <div className="self-start max-w-[85%] px-5 py-3 rounded-[1.5rem] backdrop-blur-xl bg-white border border-gray-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-zinc-500 uppercase mb-1.5 block">
+                  {peer.name}
+                </span>
+                <p className="text-sm md:text-base font-semibold text-black leading-relaxed">
+                  {peerCaption}
+                </p>
+              </div>
+            )}
+            
+            {/* My Caption */}
+            {myCaption && (
+              <div className="self-end max-w-[85%] px-5 py-3 rounded-[1.5rem] backdrop-blur-xl bg-black border border-zinc-800 shadow-[0_10px_40px_rgba(0,0,0,0.2)] animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-emerald-500 uppercase mb-1.5 block">
+                  You
+                </span>
+                <p className="text-sm md:text-base font-semibold text-white leading-relaxed">
+                  {myCaption}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
