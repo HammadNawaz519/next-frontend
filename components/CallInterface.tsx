@@ -38,7 +38,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const [currentLetter, setCurrentLetter] = useState<string>('');
   const [currentConf, setCurrentConf] = useState<number>(0);
 
-  const BACKEND_URL = 'http://localhost:5000';
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
   const LABEL_DISPLAY: Record<string, string> = {
     nothing: '—',
     space: 'Space',

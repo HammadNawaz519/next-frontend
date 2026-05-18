@@ -11,7 +11,7 @@ type PredictionResult = {
   top3: { label: string; confidence: number }[];
 };
 
-const BACKEND_URL = 'http://localhost:5000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 
 // Map prediction labels to display-friendly names
 const LABEL_DISPLAY: Record<string, string> = {
@@ -26,7 +26,11 @@ const getColor = (conf: number) => {
   return '#ef4444'; // Rose Red
 };
 
-export default function WebcamASL() {
+interface WebcamASLProps {
+  isCallActive?: boolean;
+}
+
+export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isPredicting = useRef(false);
@@ -56,7 +60,7 @@ export default function WebcamASL() {
       }
     } catch {
       setBackendOnline(false);
-      setBackendError('Cannot reach Flask backend on port 5000. Run: python server.py');
+      setBackendError(`Cannot reach Flask backend at ${BACKEND_URL}. Check if your Python server is running.`);
     }
   }, []);
 
@@ -116,6 +120,13 @@ export default function WebcamASL() {
     setResult(null);
     isPredicting.current = false;
   }, []);
+
+  // Automatically release camera lock if a video call starts
+  useEffect(() => {
+    if (isCallActive && isCameraActive) {
+      stopCamera();
+    }
+  }, [isCallActive, isCameraActive, stopCamera]);
 
   // ── Capture + predict ─────────────────────────────────────────────────────
   const captureAndPredict = useCallback(async () => {

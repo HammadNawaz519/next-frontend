@@ -408,7 +408,7 @@ export default function DashboardPage() {
  
             {/* Full bleed ASL Webcam Integration workspace */}
             <div className="flex-1 min-h-0 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <WebcamASL />
+              <WebcamASL isCallActive={isCallActive} />
             </div>
           </div>
         )}
@@ -524,6 +524,7 @@ export default function DashboardPage() {
           onStatusChange={setIsConnected} 
           onChatChange={setSelectedChatUser}
           onBack={() => setActiveView('home')}
+          onCallStateChange={setIsCallActive}
           ref={chatComponentRef as any}
         />
 
