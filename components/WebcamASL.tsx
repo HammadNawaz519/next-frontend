@@ -298,7 +298,7 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
             
             {/* Camera Frame */}
             <div
-              className="flex-grow flex-1 min-h-[240px] w-full relative bg-zinc-950 rounded-[2rem] overflow-hidden transition-all duration-500 shadow-sm flex flex-col items-center justify-center border animate-in fade-in duration-500"
+              className="flex-[2.8] min-h-[240px] w-full relative bg-zinc-950 rounded-[2rem] overflow-hidden transition-all duration-500 shadow-sm flex flex-col items-center justify-center border animate-in fade-in duration-500"
               style={{ 
                 borderColor: 'var(--dm-border)',
                 background: 'var(--dm-bg-sidebar)',
@@ -400,7 +400,7 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
 
             {/* Compiled Output Workspace Document */}
             <div 
-              className="h-[15.5rem] flex-shrink-0 w-full rounded-[2rem] p-5 border flex flex-col justify-between"
+              className="flex-1 min-h-[160px] w-full rounded-[2rem] p-5 border flex flex-col justify-between"
               style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}
             >
               {/* Header Info */}
@@ -586,7 +586,7 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
             </div>
 
             {/* Clean Top Output Matrices Data List */}
-            <div className="rounded-[2rem] p-4.5 border flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
+            <div className="flex-1 min-h-[160px] rounded-[2rem] p-5 border flex flex-col justify-center" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
               <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em] mb-3" style={{ color: 'var(--dm-text-secondary)' }}>
                 Top Predicted Outputs
               </p>
