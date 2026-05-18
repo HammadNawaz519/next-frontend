@@ -281,17 +281,17 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
       )}
 
       {/* ── Centered Workspace aligned with Chat Area sizing ── */}
-      <div className="flex-grow flex-1 min-h-0 w-full max-w-5xl mx-auto p-4 md:p-6 lg:p-8 flex flex-col justify-between">
+      <div className="flex-grow flex-1 min-h-0 w-full max-w-5xl mx-auto p-4 md:p-5 flex flex-col justify-between">
         
         {/* The 2-Column Side-by-Side HUD */}
-        <div className="flex-grow flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+        <div className="flex-grow flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5">
           
           {/* Left Column (3/5ths): Camera & Output Document */}
-          <div className="lg:col-span-3 flex flex-col gap-6 min-h-0 h-full">
+          <div className="lg:col-span-3 flex flex-col gap-5 min-h-0 h-full">
             
             {/* Camera Frame */}
             <div
-              className="flex-grow flex-1 min-h-[260px] w-full relative bg-zinc-950 rounded-[2rem] overflow-hidden transition-all duration-500 shadow-sm flex flex-col items-center justify-center border animate-in fade-in duration-500"
+              className="flex-grow flex-1 min-h-[240px] w-full relative bg-zinc-950 rounded-[2rem] overflow-hidden transition-all duration-500 shadow-sm flex flex-col items-center justify-center border animate-in fade-in duration-500"
               style={{ 
                 borderColor: 'var(--dm-border)',
                 background: 'var(--dm-bg-sidebar)',
@@ -394,7 +394,7 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
             {/* Compiled Output Workspace Document */}
             <div 
               className="h-[15.5rem] flex-shrink-0 w-full rounded-[2rem] p-5 border flex flex-col justify-between"
-              style={{ background: 'var(--dm-bg-hover)', borderColor: 'var(--dm-border)' }}
+              style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}
             >
               {/* Header Info */}
               <div className="flex items-center justify-between mb-2 flex-shrink-0">
@@ -502,13 +502,13 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
           </div>
 
           {/* Right Column (2/5ths): AI Telemetry & Predictions */}
-          <div className="lg:col-span-2 flex flex-col gap-6 min-h-0 h-full">
+          <div className="lg:col-span-2 flex flex-col gap-5 min-h-0 h-full">
             
             {/* AI Diagnostics HUD - Height Increased significantly, pushing others down */}
             <div
-              className="flex-[3.8] min-h-[360px] rounded-[2rem] p-5 flex flex-col items-center justify-center gap-4 border relative overflow-hidden"
+              className="flex-[2.8] min-h-[240px] rounded-[2rem] p-5 flex flex-col items-center justify-center gap-4 border relative overflow-hidden"
               style={{ 
-                background: 'var(--dm-bg-hover)', 
+                background: 'var(--dm-bg-sidebar)', 
                 borderColor: 'var(--dm-border)',
               }}
             >
@@ -579,7 +579,7 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
             </div>
 
             {/* Clean Consensus Stability progress bar */}
-            <div className="rounded-[2rem] p-4.5 border flex-shrink-0" style={{ background: 'var(--dm-bg-hover)', borderColor: 'var(--dm-border)' }}>
+            <div className="rounded-[2rem] p-4.5 border flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[8px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--dm-text-secondary)' }}>
                   Stability Consensus
@@ -600,7 +600,7 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
             </div>
 
             {/* Clean Top Output Matrices Data List */}
-            <div className="rounded-[2rem] p-4.5 border flex-shrink-0" style={{ background: 'var(--dm-bg-hover)', borderColor: 'var(--dm-border)' }}>
+            <div className="rounded-[2rem] p-4.5 border flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
               <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em] mb-3" style={{ color: 'var(--dm-text-secondary)' }}>
                 Top Predicted Outputs
               </p>
