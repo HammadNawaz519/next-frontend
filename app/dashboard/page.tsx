@@ -263,12 +263,17 @@ export default function DashboardPage() {
       <div className="main-sidebar w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden border-r md:border md:rounded-[40px] shadow-sm" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border-main)' }}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-            <div className="mb-8 flex items-center justify-start gap-0 group-hover:gap-4 px-1 h-12 transition-[gap] duration-500 ease-[var(--ease-premium)]">
+            <div className="mb-8 flex items-center justify-start gap-0 group-hover:gap-3 px-1 h-12 transition-[gap] duration-500 ease-[var(--ease-premium)]">
               <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
-                <div className="w-9 h-9 rounded-full shadow-sm flex items-center justify-center font-bold text-[10px]" style={{ background: 'var(--dm-thumb)', color: isDark ? '#0f0f1a' : '#fff' }}>P</div>
+                <img 
+                  src="/logo.svg" 
+                  alt="ASL Lens Logo" 
+                  className="w-10 h-10 transition-transform duration-300 hover:scale-105 drop-shadow-sm" 
+                  style={{ filter: isDark ? 'invert(1) drop-shadow(0 0 8px rgba(255,255,255,0.2))' : 'none' }} 
+                />
               </div>
-              <span className="font-normal text-base tracking-tight opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden">
-                Platform
+              <span className="font-extrabold text-base tracking-tight opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden" style={{ color: 'var(--dm-text-primary)' }}>
+                ASL Lens
               </span>
             </div>
           

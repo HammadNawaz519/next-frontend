@@ -1,0 +1,8 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Top Arc -->
+  <path d="M 64 220 C 64 60, 448 60, 448 220 C 390 100, 122 100, 64 220 Z" fill="currentColor"/>
+  <!-- Bottom Arc -->
+  <path d="M 64 292 C 64 452, 448 452, 448 292 C 390 412, 122 412, 64 292 Z" fill="currentColor"/>
+  <!-- ASL Text -->
+  <text x="256" y="325" font-family="Arial, sans-serif" font-weight="900" font-size="150" text-anchor="middle" fill="currentColor" letter-spacing="-4">ASL</text>
+</svg>
