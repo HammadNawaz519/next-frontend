@@ -226,8 +226,46 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
   // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => () => stopCamera(), [stopCamera]);
 
-  // ── Speech Synthesis & Copy Utilities ─────────────────────────────────────
+  // ── Speech Synthesis, Recognition & Copy Utilities ────────────────────────
   const [copied, setCopied] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  const startListening = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert("Your browser doesn't support Speech Recognition. Please try Google Chrome.");
+      return;
+    }
+    
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    
+    recognition.onstart = () => setIsListening(true);
+    
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setSentence(prev => prev ? prev + ' ' + transcript : transcript);
+    };
+    
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      setIsListening(false);
+    };
+    
+    recognition.onend = () => setIsListening(false);
+    
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
 
   const speakSentence = () => {
     if (!sentence) return;
@@ -502,6 +540,20 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
                   >
                     Speak
+                  </button>
+
+                  {/* Listen Button */}
+                  <button
+                    onClick={startListening}
+                    className={`py-1.5 px-3 rounded-full text-[9px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer border ${isListening ? 'animate-pulse' : ''} bg-[var(--dm-bg-input)]`}
+                    style={{ 
+                      color: isListening ? '#10b981' : 'var(--dm-text-secondary)', 
+                      borderColor: isListening ? '#10b981' : 'var(--dm-border)',
+                    }}
+                    onMouseEnter={e => { if (!isListening) { e.currentTarget.style.borderColor = 'var(--dm-thumb)'; e.currentTarget.style.color = 'var(--dm-text-primary)'; } }}
+                    onMouseLeave={e => { if (!isListening) { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; } }}
+                  >
+                    {isListening ? 'Listening...' : 'Listen'}
                   </button>
                 </div>
               </div>
