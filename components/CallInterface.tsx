@@ -127,10 +127,130 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   }, [callStatus, type, captureAndPredict]);
 
   // ── Speech Recognition for Live Captions ──
+  // Desktop: Web Speech API (fast, free, real-time)
+  // Mobile: Groq Whisper API (reuses existing WebRTC mic stream, no dual-mic conflict)
+  const mobileRecorderRef = useRef<MediaRecorder | null>(null);
+  const mobileRecordingActive = useRef(false);
+
   useEffect(() => {
     let recognition: any = null;
+    const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
-    if (callStatus === 'active' && !isMuted && isCaptionsOn) {
+    if (callStatus !== 'active' || isMuted || !isCaptionsOn) {
+      // Cleanup everything when not active
+      if (mobileRecorderRef.current) {
+        mobileRecordingActive.current = false;
+        try { mobileRecorderRef.current.stop(); } catch(e) {}
+        mobileRecorderRef.current = null;
+      }
+      return;
+    }
+
+    if (isMobile) {
+      // ── MOBILE: Groq Whisper transcription from existing WebRTC audio stream ──
+      const startMobileTranscription = () => {
+        const stream = localStreamRef.current;
+        if (!stream) {
+          // Retry until stream is available
+          setTimeout(startMobileTranscription, 500);
+          return;
+        }
+        
+        const audioTracks = stream.getAudioTracks();
+        if (audioTracks.length === 0) return;
+
+        // Create a new stream with only audio for the recorder
+        const audioStream = new MediaStream(audioTracks);
+        
+        const recordChunk = () => {
+          if (!mobileRecordingActive.current) return;
+          
+          try {
+            const recorder = new MediaRecorder(audioStream, { mimeType: 'audio/webm;codecs=opus' });
+            const chunks: Blob[] = [];
+            
+            recorder.ondataavailable = (e) => {
+              if (e.data.size > 0) chunks.push(e.data);
+            };
+
+            recorder.onstop = async () => {
+              if (chunks.length === 0 || !mobileRecordingActive.current) return;
+              
+              const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+              
+              // Skip very small audio (likely silence)
+              if (audioBlob.size < 5000) {
+                if (mobileRecordingActive.current) recordChunk();
+                return;
+              }
+
+              const groqKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+              if (!groqKey) {
+                console.error('Missing NEXT_PUBLIC_GROQ_API_KEY for mobile transcription');
+                return;
+              }
+
+              try {
+                const formData = new FormData();
+                formData.append('file', audioBlob, 'audio.webm');
+                formData.append('model', 'whisper-large-v3');
+                formData.append('language', 'en');
+                formData.append('response_format', 'json');
+
+                const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${groqKey}` },
+                  body: formData,
+                  signal: AbortSignal.timeout(5000),
+                });
+
+                if (res.ok) {
+                  const data = await res.json();
+                  const text = data.text?.trim();
+                  if (text && text.length > 1) {
+                    setMyCaption(text);
+                    
+                    if (clearMyCaptionRef.current) clearTimeout(clearMyCaptionRef.current);
+                    clearMyCaptionRef.current = setTimeout(() => setMyCaption(''), 4000);
+
+                    const target = peer.email?.toLowerCase().trim();
+                    if (target) {
+                      socket.emit('webrtc_signal', { to: target, signal: { caption: text } });
+                    }
+                  }
+                }
+              } catch (err) {
+                // Transcription failed, just continue recording
+              }
+
+              // Start next recording cycle
+              if (mobileRecordingActive.current) recordChunk();
+            };
+
+            mobileRecorderRef.current = recorder;
+            recorder.start();
+            
+            // Record for 3 seconds then process
+            setTimeout(() => {
+              if (recorder.state === 'recording') {
+                try { recorder.stop(); } catch(e) {}
+              }
+            }, 3000);
+          } catch (e) {
+            console.error('MediaRecorder error:', e);
+            if (mobileRecordingActive.current) setTimeout(recordChunk, 1000);
+          }
+        };
+
+        mobileRecordingActive.current = true;
+        // Delay first recording to let WebRTC stabilize
+        setTimeout(recordChunk, 1500);
+      };
+
+      startMobileTranscription();
+
+    } else {
+      // ── DESKTOP: Web Speech API (works perfectly alongside WebRTC) ──
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         recognition = new SpeechRecognition();
