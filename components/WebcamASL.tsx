@@ -11,7 +11,7 @@ type PredictionResult = {
   top3: { label: string; confidence: number }[];
 };
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
 // Map prediction labels to display-friendly names
 const LABEL_DISPLAY: Record<string, string> = {
