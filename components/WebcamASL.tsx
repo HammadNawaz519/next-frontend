@@ -54,13 +54,35 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
   const [history, setHistory] = useState<any[]>([]);
   // Advanced Interactive Scanning System States
   const [cropRatio, setCropRatio] = useState<number>(1.0);
-  const [filterMode, setFilterMode] = useState<'normal' | 'boost' | 'high_contrast'>('boost');
+  const [filterMode, setFilterMode] = useState<'normal' | 'boost' | 'high_contrast' | 'ai_studio'>('ai_studio');
   const [scannerTelemetry, setScannerTelemetry] = useState<{
     brightness: number;
     latencyMs: number;
     quality: 'optimal' | 'low_light' | 'overexposed';
   }>({ brightness: 120, latencyMs: 0, quality: 'optimal' });
   const [aiPredictions, setAiPredictions] = useState<string[]>([]);
+  const segmenterRef = useRef<any>(null);
+
+  // Load AI Segmentation Model
+  useEffect(() => {
+    let isMounted = true;
+    const loadModel = async () => {
+      try {
+        await import('@tensorflow/tfjs-backend-webgl');
+        const tf = await import('@tensorflow/tfjs-core');
+        await tf.ready();
+        const bodySeg = await import('@tensorflow-models/body-segmentation');
+        const model = bodySeg.SupportedModels.MediaPipeSelfieSegmentation;
+        const segmenterConfig: any = { runtime: 'tfjs', modelType: 'general' };
+        const segmenter = await bodySeg.createSegmenter(model, segmenterConfig);
+        if (isMounted) segmenterRef.current = segmenter;
+      } catch (err) {
+        console.error("Failed to load AI Segmenter", err);
+      }
+    };
+    loadModel();
+    return () => { isMounted = false; };
+  }, []);
 
 
   // ── Check backend health on mount ─────────────────────────────────────────
@@ -175,18 +197,62 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
 
     // Apply Real-Time Hardware-Accelerated Canvas Preprocessing Filters
     if (filterMode === 'boost') {
-      // High details extraction filter (ideal for sharp hand outlines & crease lines)
       ctx.filter = 'contrast(1.22) saturate(1.15) brightness(1.04) contrast(1.1)';
     } else if (filterMode === 'high_contrast') {
-      // High contrast under low-lighting conditions
       ctx.filter = 'contrast(1.4) brightness(1.08) saturate(1.05)';
     } else {
-      // Normal mode filter
       ctx.filter = 'none';
     }
 
-    // Draw the cropped center square onto the canvas
-    ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, 224, 224);
+    if (filterMode === 'ai_studio' && segmenterRef.current) {
+      // Create offscreen canvas for processing
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = 224;
+      tempCanvas.height = 224;
+      const tCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+      if (tCtx) {
+        tCtx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, 224, 224);
+        try {
+          const segmentation = await segmenterRef.current.segmentPeople(tempCanvas);
+          const bodySeg = await import('@tensorflow-models/body-segmentation');
+          // Dark Studio Background
+          ctx.fillStyle = '#09090b'; // zinc-950
+          ctx.fillRect(0, 0, 224, 224);
+          
+          const coloredPartImage = await bodySeg.toBinaryMask(segmentation, {r: 255, g: 255, b: 255, a: 255}, {r: 0, g: 0, b: 0, a: 0});
+          
+          const maskCanvas = document.createElement('canvas');
+          maskCanvas.width = 224;
+          maskCanvas.height = 224;
+          const maskCtx = maskCanvas.getContext('2d');
+          if (maskCtx) {
+            maskCtx.putImageData(coloredPartImage, 0, 0);
+            
+            // Isolate the person
+            const isolatedCanvas = document.createElement('canvas');
+            isolatedCanvas.width = 224;
+            isolatedCanvas.height = 224;
+            const isolatedCtx = isolatedCanvas.getContext('2d');
+            if (isolatedCtx) {
+              isolatedCtx.drawImage(maskCanvas, 0, 0);
+              isolatedCtx.globalCompositeOperation = 'source-in';
+              isolatedCtx.drawImage(tempCanvas, 0, 0);
+              
+              // Draw to main context
+              ctx.globalCompositeOperation = 'source-over';
+              ctx.fillStyle = '#09090b'; // Dark studio background
+              ctx.fillRect(0, 0, 224, 224);
+              ctx.drawImage(isolatedCanvas, 0, 0);
+            }
+          }
+        } catch (e) {
+          ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, 224, 224);
+        }
+      }
+    } else {
+      // Draw the cropped center square onto the canvas normally
+      ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, 224, 224);
+    }
 
     // Reset filter for any future canvas drawings
     ctx.filter = 'none';
@@ -463,6 +529,15 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
               {/* Clean Camera HUD Overlay */}
               {isCameraActive && (
                 <>
+                  {/* Toggle AI Studio */}
+                  <button
+                    onClick={() => setFilterMode(prev => prev === 'ai_studio' ? 'boost' : 'ai_studio')}
+                    className={`absolute z-30 px-3.5 py-1.5 rounded-full text-[9px] font-mono uppercase tracking-widest backdrop-blur-md transition-all active:scale-95 shadow-lg shadow-black/20 cursor-pointer animate-in fade-in duration-300 ${filterMode === 'ai_studio' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'bg-black/60 text-zinc-400 border border-white/10 hover:bg-white/10'}`}
+                    style={{ top: '4%', left: '4%' }}
+                  >
+                    {filterMode === 'ai_studio' ? '✦ AI STUDIO ON' : 'AI STUDIO OFF'}
+                  </button>
+
                   {/* Terminate camera */}
                   <button
                     onClick={stopCamera}
