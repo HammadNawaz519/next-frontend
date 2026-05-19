@@ -388,6 +388,20 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
     setSentence(predictionText);
   };
 
+  const speakText = () => {
+    const textToSpeak = aiResponse ? aiResponse.replace('The user is saying: ', '') : sentence;
+    if (!textToSpeak) return;
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // Cancel any ongoing speech
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.rate = 0.9; // Slightly slower for clarity
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    } else {
+      alert("Text-to-speech is not supported in your browser.");
+    }
+  };
+
   // ── Ask AI: Interpret compiled ASL sentence ──────────────────────────────
   const askGroqAI = async () => {
     if (!sentence.trim()) return;
@@ -799,6 +813,22 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
                   >
                     Copy
+                  </button>
+
+                  {/* Speak Button */}
+                  <button
+                    onClick={speakText}
+                    disabled={!sentence && !aiResponse}
+                    className="py-1.5 px-3 rounded-full text-[9px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-30 flex items-center gap-1.5 cursor-pointer border bg-[var(--dm-bg-input)]"
+                    style={{ 
+                      color: 'var(--dm-text-secondary)', 
+                      borderColor: 'var(--dm-border)',
+                    }}
+                    onMouseEnter={e => { if (sentence || aiResponse) { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.color = '#3b82f6'; } }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--dm-border)'; e.currentTarget.style.color = 'var(--dm-text-secondary)'; }}
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.898a9 9 0 010 12.728M5 10v4a2 2 0 002 2h3l4 4V4L10 8H7a2 2 0 00-2 2z" /></svg>
+                    Speak
                   </button>
 
                 </div>
