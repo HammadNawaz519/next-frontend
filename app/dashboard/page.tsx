@@ -4,11 +4,25 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { flushSync } from 'react-dom';
+import dynamic from 'next/dynamic';
 import { askAI, getChatHistory, saveChatMessage, getUserDetails, updateUsername, updateName } from './actions';
 import SocialChat from '@/components/SocialChat';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/app/components/ThemeProvider';
-import WebcamASL from '@/components/WebcamASL';
+
+// Dynamic import with ssr:false — prevents Turbopack from analyzing the
+// @mediapipe/selfie_segmentation import chain during production build.
+const WebcamASL = dynamic(() => import('@/components/WebcamASL'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full w-full flex items-center justify-center" style={{ background: 'var(--dm-bg-main)' }}>
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: 'var(--dm-border)', borderTopColor: '#10b981' }} />
+        <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>Loading Webcam Module...</p>
+      </div>
+    </div>
+  ),
+});
 
 interface Message {
   id: string;
