@@ -753,15 +753,7 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
                 </p>
               </div>
 
-              {/* AI Advisor Response */}
-              {(isAiThinking || aiResponse) && (
-                <div className="mb-3 p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 animate-in fade-in zoom-in duration-300">
-                  <p className="text-[10px] font-mono font-bold text-indigo-400 uppercase tracking-widest mb-1">✦ Advisor AI</p>
-                  <p className="text-sm font-medium text-zinc-300">
-                    {isAiThinking ? 'Interpreting...' : aiResponse}
-                  </p>
-                </div>
-              )}
+
 
               {/* Sleek Action Toolbar - Small & Beautiful (No Emojis) */}
               <div className="flex items-center justify-between mt-3 pt-2.5 border-t flex-shrink-0" style={{ borderColor: 'var(--dm-border)' }}>
