@@ -204,6 +204,59 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     };
   }, [callStatus, type, captureAndPredict]);
 
+  // ── AI ASL Sentence Auto-Interpretation ──
+  useEffect(() => {
+    if (!sentence || sentence.trim().length === 0) return;
+    const timeout = setTimeout(async () => {
+      const groqKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+      if (!groqKey) return;
+      try {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${groqKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'llama3-8b-8192',
+            messages: [
+              {
+                role: 'system',
+                content: `You are a deaf people advisor. The user is deaf or hard of hearing and spells out messages letter by letter or word by word using ASL gestures. Your job is to interpret their disjointed words or letters into a proper, coherent sentence.
+Output ONLY the final interpreted sentence starting with 'The user is saying: '. Do not add any other commentary.`,
+              },
+              { role: 'user', content: sentence.trim() },
+            ],
+            temperature: 0.6,
+            max_tokens: 120,
+          }),
+          signal: AbortSignal.timeout(10000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const reply = data.choices?.[0]?.message?.content?.trim();
+          if (reply) {
+            setMyCaption(reply);
+            if (clearMyCaptionRef.current) clearTimeout(clearMyCaptionRef.current);
+            clearMyCaptionRef.current = setTimeout(() => setMyCaption(''), 4000);
+            
+            setSentence(''); // Reset after interpreting
+            setLastAdded(null);
+
+            const target = peer.email?.toLowerCase().trim();
+            if (target) {
+              socket.emit('webrtc_signal', { to: target, signal: { caption: reply } });
+            }
+          }
+        }
+      } catch (err) {
+        console.error("AI Interpretation Error:", err);
+      }
+    }, 2000); // Wait 2 seconds for the user to finish signing
+
+    return () => clearTimeout(timeout);
+  }, [sentence, peer.email, socket]);
+
   // ── Speech Recognition for Live Captions ──
   // Desktop: Web Speech API (fast, free, real-time)
   // Mobile: Groq Whisper API (reuses existing WebRTC mic stream, no dual-mic conflict)

@@ -411,15 +411,8 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
           messages: [
             {
               role: 'system',
-              content: `You are a compassionate, intelligent assistant specifically designed to help people who communicate using American Sign Language (ASL). 
-The user is deaf or hard of hearing and spells out messages letter by letter or word by word using ASL gestures captured by a webcam. 
-The input you receive may have missing spaces, typos, or be incomplete — interpret it charitably and intelligently.
-Your job is to:
-1. Understand what the person is trying to communicate
-2. Respond naturally and helpfully as if in a real conversation
-3. Keep your response concise (1-3 sentences max)
-4. If the intent is unclear, make a friendly best-guess interpretation
-Do NOT repeat the input back. Just respond naturally.`,
+              content: `You are a deaf people advisor. The user is deaf or hard of hearing and spells out messages letter by letter or word by word using ASL gestures. Your job is to interpret their disjointed words or letters into a proper, coherent sentence.
+Output ONLY the final interpreted sentence starting with 'The user is saying: '. Do not add any other commentary.`,
             },
             {
               role: 'user',
@@ -436,15 +429,29 @@ Do NOT repeat the input back. Just respond naturally.`,
         const reply = data.choices?.[0]?.message?.content?.trim();
         setAiResponse(reply || 'No response received.');
       } else {
-        setAiResponse('AI service error. Please try again.');
+        const errorText = await res.text();
+        console.error("Groq AI Error:", res.status, errorText);
+        setAiResponse(`AI error (${res.status}): ${errorText.substring(0, 50)}...`);
       }
-    } catch (err) {
-      setAiResponse('Connection to AI failed. Check your internet connection.');
+    } catch (err: any) {
+      console.error("Groq AI Exception:", err);
+      setAiResponse(`Connection failed: ${err.message}`);
     } finally {
       setIsAiThinking(false);
     }
   };
 
+  // Auto-trigger AI Interpretation after 2 seconds of no typing
+  useEffect(() => {
+    if (!sentence || sentence.trim().length === 0) {
+      setAiResponse('');
+      return;
+    }
+    const timeout = setTimeout(() => {
+      askGroqAI();
+    }, 2000);
+    return () => clearTimeout(timeout);
+  }, [sentence]);
 
   // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => () => stopCamera(), [stopCamera]);
@@ -732,6 +739,16 @@ Do NOT repeat the input back. Just respond naturally.`,
                 </p>
               </div>
 
+              {/* AI Advisor Response */}
+              {(isAiThinking || aiResponse) && (
+                <div className="mb-3 p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 animate-in fade-in zoom-in duration-300">
+                  <p className="text-[10px] font-mono font-bold text-indigo-400 uppercase tracking-widest mb-1">✦ Advisor AI</p>
+                  <p className="text-sm font-medium text-zinc-300">
+                    {isAiThinking ? 'Interpreting...' : aiResponse}
+                  </p>
+                </div>
+              )}
+
               {/* Sleek Action Toolbar - Small & Beautiful (No Emojis) */}
               <div className="flex items-center justify-between mt-3 pt-2.5 border-t flex-shrink-0" style={{ borderColor: 'var(--dm-border)' }}>
                 <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-wider">
@@ -739,21 +756,6 @@ Do NOT repeat the input back. Just respond naturally.`,
                 </span>
                 
                 <div className="flex items-center gap-2">
-                  {/* Ask AI Button */}
-                  <button
-                    onClick={askGroqAI}
-                    disabled={!sentence || isAiThinking}
-                    className="py-1.5 px-3 rounded-full text-[9px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-30 flex items-center gap-1.5 cursor-pointer border"
-                    style={{ 
-                      background: sentence && !isAiThinking ? 'rgba(99,102,241,0.12)' : 'var(--dm-bg-input)',
-                      color: sentence && !isAiThinking ? '#818cf8' : 'var(--dm-text-secondary)',
-                      borderColor: sentence && !isAiThinking ? 'rgba(99,102,241,0.3)' : 'var(--dm-border)',
-                    }}
-                    title="Send compiled ASL text to AI for interpretation"
-                  >
-                    {isAiThinking ? '⟳ Thinking...' : '✦ Ask AI'}
-                  </button>
-
                   {/* Backspace Button */}
                   <button
                     onClick={() => setSentence(s => s.slice(0, -1))}
