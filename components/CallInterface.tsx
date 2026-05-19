@@ -3,6 +3,13 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
 
+// Map prediction labels to display-friendly names
+const LABEL_DISPLAY: Record<string, string> = {
+  nothing: '—',
+  space: 'Space',
+  del: 'Delete',
+};
+
 interface CallInterfaceProps {
   socket: Socket;
   peer: any;
@@ -26,6 +33,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const processedStreamRef = useRef<MediaStream | null>(null);
+  const segmenterRef = useRef<any>(null);
   const hasEnded = useRef(false);
   const remoteDescriptionSetRef = useRef(false);
   const candidateQueueRef = useRef<any[]>([]);
@@ -49,12 +58,31 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const clearMyCaptionRef = useRef<NodeJS.Timeout | null>(null);
   const speechRecognitionRef = useRef<any>(null);
 
+  const speechRecognitionRef = useRef<any>(null);
+
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-  const LABEL_DISPLAY: Record<string, string> = {
-    nothing: '—',
-    space: 'Space',
-    del: 'Delete',
-  };
+
+  // ── Load AI Segmentation Model ──
+  useEffect(() => {
+    let isMounted = true;
+    const loadModel = async () => {
+      if (type !== 'video') return;
+      try {
+        await import('@tensorflow/tfjs-backend-webgl');
+        const tf = await import('@tensorflow/tfjs-core');
+        await tf.ready();
+        const bodySeg = await import('@tensorflow-models/body-segmentation');
+        const model = bodySeg.SupportedModels.MediaPipeSelfieSegmentation;
+        const segmenterConfig: any = { runtime: 'tfjs', modelType: 'general' };
+        const segmenter = await bodySeg.createSegmenter(model, segmenterConfig);
+        if (isMounted) segmenterRef.current = segmenter;
+      } catch (err) {
+        console.error("Failed to load AI Segmenter for call:", err);
+      }
+    };
+    loadModel();
+    return () => { isMounted = false; };
+  }, [type]);
 
   const captureAndPredict = useCallback(async () => {
     const video = localVideoRef.current;
@@ -66,9 +94,57 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     if (!ctx) return;
 
     isPredicting.current = true;
+    
+    // Create an offscreen canvas for processing to avoid rendering the background
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
+    const tCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+    
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
+    
+    if (tCtx) {
+      tCtx.drawImage(video, 0, 0);
+      
+      if (segmenterRef.current) {
+        try {
+          const segmentation = await segmenterRef.current.segmentPeople(tempCanvas);
+          const bodySeg = await import('@tensorflow-models/body-segmentation');
+          
+          ctx.fillStyle = '#09090b'; // Dark studio background
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          const coloredPartImage = await bodySeg.toBinaryMask(segmentation, {r: 255, g: 255, b: 255, a: 255}, {r: 0, g: 0, b: 0, a: 0});
+          
+          const maskCanvas = document.createElement('canvas');
+          maskCanvas.width = canvas.width;
+          maskCanvas.height = canvas.height;
+          const maskCtx = maskCanvas.getContext('2d');
+          if (maskCtx) {
+            maskCtx.putImageData(coloredPartImage, 0, 0);
+            
+            const isolatedCanvas = document.createElement('canvas');
+            isolatedCanvas.width = canvas.width;
+            isolatedCanvas.height = canvas.height;
+            const isolatedCtx = isolatedCanvas.getContext('2d');
+            if (isolatedCtx) {
+              isolatedCtx.drawImage(maskCanvas, 0, 0);
+              isolatedCtx.globalCompositeOperation = 'source-in';
+              isolatedCtx.drawImage(tempCanvas, 0, 0);
+              
+              ctx.globalCompositeOperation = 'source-over';
+              ctx.drawImage(isolatedCanvas, 0, 0);
+            }
+          }
+        } catch (e) {
+          // Fallback to normal draw if segmentation fails
+          ctx.drawImage(video, 0, 0);
+        }
+      } else {
+        ctx.drawImage(video, 0, 0);
+      }
+    }
 
     canvas.toBlob(async (blob) => {
       if (!blob) { isPredicting.current = false; return; }
@@ -608,6 +684,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
   const cleanup = () => {
     localStreamRef.current?.getTracks().forEach(t => t.stop());
+    processedStreamRef.current?.getTracks().forEach(t => t.stop());
     pcRef.current?.close();
     // Do NOT call socket.off('webrtc_signal') without a specific handler, 
     // as it removes ALL listeners including the parent's! The useEffect cleanup handles its own.
@@ -723,8 +800,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             
             {/* Elegant overlay showing live ASL sign prediction directly on the local video source */}
             {currentLetter && currentLetter !== 'nothing' && (
-              <div className="absolute bottom-2 inset-x-2 backdrop-blur-md bg-black/70 rounded-xl py-1 md:py-1.5 flex flex-col items-center justify-center border border-white/10 z-30 animate-in fade-in zoom-in duration-300">
-                <span className="text-[12px] md:text-[14px] font-black tracking-wider text-amber-400 font-mono leading-none">
+              <div className="absolute bottom-2 inset-x-2 backdrop-blur-md bg-black/70 rounded-xl py-1 md:py-1.5 flex flex-col items-center justify-center border border-white/10 z-30 animate-in fade-in zoom-in duration-300 shadow-lg">
+                <span className="text-[12px] md:text-[14px] font-black tracking-wider font-mono leading-none" style={{ color: currentConf >= 0.85 ? '#10b981' : currentConf >= 0.65 ? '#f59e0b' : '#ef4444' }}>
                   {LABEL_DISPLAY[currentLetter] ?? currentLetter}
                 </span>
                 <span className="text-[6.5px] md:text-[7.5px] text-zinc-300 font-mono tracking-widest uppercase mt-0.5 scale-90">
