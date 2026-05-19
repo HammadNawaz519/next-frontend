@@ -614,10 +614,22 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
 
     const initCall = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: type === 'video'
-        });
+        let stream: MediaStream | null = null;
+        let retries = 4;
+        while (retries > 0) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              audio: true,
+              video: type === 'video'
+            });
+            break;
+          } catch (e) {
+            retries--;
+            if (retries === 0) throw e;
+            await new Promise(r => setTimeout(r, 600)); // Wait 600ms before retrying
+          }
+        }
+        if (!stream) throw new Error("Stream could not be acquired.");
         if (!isMounted) return;
         localStreamRef.current = stream;
         setLocalStream(stream);
