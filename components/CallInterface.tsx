@@ -29,8 +29,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const durationRef = useRef(0);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const processedStreamRef = useRef<MediaStream | null>(null);
@@ -38,6 +38,10 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const hasEnded = useRef(false);
   const remoteDescriptionSetRef = useRef(false);
   const candidateQueueRef = useRef<any[]>([]);
+
+  // ── Reactive stream state so srcObject is always set via useEffect ──
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
   // ── Unified ASL Real-time Call Translation ──
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -563,10 +567,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         });
         if (!isMounted) return;
         localStreamRef.current = stream;
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-          localVideoRef.current.play().catch(e => console.error("Local video play error:", e));
-        }
+        setLocalStream(stream);
 
         const pc = new RTCPeerConnection({
           iceServers: [
@@ -618,15 +619,10 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         };
 
         pc.ontrack = (event) => {
-          console.log("Remote track received:", event.track.kind);
-          const remoteStream = event.streams[0];
-          if (remoteVideoRef.current && type === 'video') {
-            remoteVideoRef.current.srcObject = remoteStream;
-            remoteVideoRef.current.play().catch(e => console.error("Remote video play error:", e));
-          } else if (remoteAudioRef.current && type === 'audio') {
-            remoteAudioRef.current.srcObject = remoteStream;
-            remoteAudioRef.current.play().catch(e => console.error("Audio play error:", e));
-          }
+          console.log("Remote track received:", event.track.kind, event.streams.length);
+          // Use the first stream if available, otherwise build one from the track
+          const incomingStream = event.streams[0] ?? new MediaStream([event.track]);
+          setRemoteStream(incomingStream);
           setCallStatus('active');
         };
 
@@ -679,6 +675,32 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
       cleanup(); 
     };
   }, [isCaller]);
+
+  // ── Reactively wire local stream → local video element ──
+  useEffect(() => {
+    const video = localVideoRef.current;
+    if (!video || !localStream) return;
+    if (video.srcObject !== localStream) {
+      video.srcObject = localStream;
+      video.play().catch(e => console.warn('Local video play:', e));
+    }
+  }, [localStream]);
+
+  // ── Reactively wire remote stream → remote video/audio element ──
+  useEffect(() => {
+    if (!remoteStream) return;
+    if (type === 'video' && remoteVideoRef.current) {
+      if (remoteVideoRef.current.srcObject !== remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(e => console.warn('Remote video play:', e));
+      }
+    } else if (type === 'audio' && remoteAudioRef.current) {
+      if (remoteAudioRef.current.srcObject !== remoteStream) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.play().catch(e => console.warn('Remote audio play:', e));
+      }
+    }
+  }, [remoteStream, type]);
 
   const cleanup = () => {
     localStreamRef.current?.getTracks().forEach(t => t.stop());
@@ -740,17 +762,14 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
   return (
     <div className="fixed inset-0 z-[1500] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: 'rgba(0,0,0,0.3)' }}>
-      {/* Remote Audio/Video Elements */}
-      {type === 'video' ? (
-        <video
-          ref={remoteVideoRef}
-          autoPlay
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-      ) : (
-        <audio ref={remoteAudioRef} autoPlay />
-      )}
+      {/* Remote Audio/Video Elements — always rendered so ref is stable when stream arrives */}
+      <video
+        ref={remoteVideoRef}
+        autoPlay
+        playsInline
+        className={`absolute inset-0 w-full h-full object-cover ${type !== 'video' ? 'hidden' : ''}`}
+      />
+      <audio ref={remoteAudioRef} autoPlay className="hidden" />
 
       {/* Main UI Layer */}
       <div className="relative z-10 w-full h-full flex flex-col items-center justify-center" style={{ background: type === 'video' ? 'rgba(0,0,0,0.5)' : 'transparent' }}>
