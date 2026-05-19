@@ -61,6 +61,8 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
     quality: 'optimal' | 'low_light' | 'overexposed';
   }>({ brightness: 120, latencyMs: 0, quality: 'optimal' });
   const [aiPredictions, setAiPredictions] = useState<string[]>([]);
+  const [aiResponse, setAiResponse] = useState<string>('');
+  const [isAiThinking, setIsAiThinking] = useState<boolean>(false);
   const segmenterRef = useRef<any>(null);
 
   // Load AI Segmentation Model
@@ -386,6 +388,63 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
     setSentence(predictionText);
   };
 
+  // ── Ask AI: Interpret compiled ASL sentence ──────────────────────────────
+  const askGroqAI = async () => {
+    if (!sentence.trim()) return;
+    setIsAiThinking(true);
+    setAiResponse('');
+    const groqKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+    if (!groqKey) {
+      setAiResponse('⚠ Missing NEXT_PUBLIC_GROQ_API_KEY in your .env.local file.');
+      setIsAiThinking(false);
+      return;
+    }
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${groqKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama3-8b-8192',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a compassionate, intelligent assistant specifically designed to help people who communicate using American Sign Language (ASL). 
+The user is deaf or hard of hearing and spells out messages letter by letter or word by word using ASL gestures captured by a webcam. 
+The input you receive may have missing spaces, typos, or be incomplete — interpret it charitably and intelligently.
+Your job is to:
+1. Understand what the person is trying to communicate
+2. Respond naturally and helpfully as if in a real conversation
+3. Keep your response concise (1-3 sentences max)
+4. If the intent is unclear, make a friendly best-guess interpretation
+Do NOT repeat the input back. Just respond naturally.`,
+            },
+            {
+              role: 'user',
+              content: sentence.trim(),
+            },
+          ],
+          temperature: 0.6,
+          max_tokens: 120,
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const reply = data.choices?.[0]?.message?.content?.trim();
+        setAiResponse(reply || 'No response received.');
+      } else {
+        setAiResponse('AI service error. Please try again.');
+      }
+    } catch (err) {
+      setAiResponse('Connection to AI failed. Check your internet connection.');
+    } finally {
+      setIsAiThinking(false);
+    }
+  };
+
 
   // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => () => stopCamera(), [stopCamera]);
@@ -680,6 +739,21 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                 </span>
                 
                 <div className="flex items-center gap-2">
+                  {/* Ask AI Button */}
+                  <button
+                    onClick={askGroqAI}
+                    disabled={!sentence || isAiThinking}
+                    className="py-1.5 px-3 rounded-full text-[9px] font-mono uppercase tracking-wider font-semibold transition-all active:scale-95 disabled:opacity-30 flex items-center gap-1.5 cursor-pointer border"
+                    style={{ 
+                      background: sentence && !isAiThinking ? 'rgba(99,102,241,0.12)' : 'var(--dm-bg-input)',
+                      color: sentence && !isAiThinking ? '#818cf8' : 'var(--dm-text-secondary)',
+                      borderColor: sentence && !isAiThinking ? 'rgba(99,102,241,0.3)' : 'var(--dm-border)',
+                    }}
+                    title="Send compiled ASL text to AI for interpretation"
+                  >
+                    {isAiThinking ? '⟳ Thinking...' : '✦ Ask AI'}
+                  </button>
+
                   {/* Backspace Button */}
                   <button
                     onClick={() => setSentence(s => s.slice(0, -1))}
@@ -852,10 +926,10 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
 
           </div>
 
-          {/* Right Column (4/12ths ~ 33.3% width): Smart AI Predictive Suggestions */}
+          {/* Right Column (4/12ths ~ 33.3% width): Smart AI Panel */}
           <div className="lg:col-span-4 flex flex-col gap-5 min-h-0 h-full">
             <div 
-              className="flex-grow flex-1 rounded-[2rem] p-5 border flex flex-col justify-between"
+              className="flex-grow flex-1 rounded-[2rem] p-5 border flex flex-col"
               style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}
             >
               <div className="flex flex-col gap-3.5 min-h-0 h-full">
@@ -866,16 +940,42 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                     </svg>
                   </span>
                   <div>
-                    <h4 className="text-[10px] font-mono tracking-widest text-indigo-300 uppercase font-extrabold">ASL AI Suggest</h4>
-                    <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-wider mt-0.5">Real-time autocomplete & text predictions</p>
+                    <h4 className="text-[10px] font-mono tracking-widest text-indigo-300 uppercase font-extrabold">ASL AI Interpreter</h4>
+                    <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-wider mt-0.5">AI understands what you are trying to say</p>
                   </div>
                 </div>
 
+                {/* AI Response Panel */}
+                {(aiResponse || isAiThinking) && (
+                  <div
+                    className="rounded-2xl p-4 border animate-in fade-in slide-in-from-bottom-2 duration-500"
+                    style={{ background: 'rgba(99,102,241,0.06)', borderColor: 'rgba(99,102,241,0.2)' }}
+                  >
+                    <p className="text-[8px] font-mono uppercase tracking-[0.2em] text-indigo-400 mb-2">✦ AI Response</p>
+                    {isAiThinking ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <span className="text-[9px] font-mono text-indigo-300 ml-1">Interpreting your signs...</span>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] font-sans leading-relaxed" style={{ color: 'var(--dm-text-primary)' }}>
+                        {aiResponse}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Divider */}
+                {aiPredictions.length > 0 && (
+                  <p className="text-[8px] font-mono uppercase tracking-[0.2em] text-zinc-500">Predicted Phrases</p>
+                )}
+
                 {/* Suggestions List */}
-                <div className="flex-1 overflow-y-auto mt-2 space-y-2 pr-1">
+                <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                   {aiPredictions.length > 0 ? (
                     <div className="space-y-2">
-                      <p className="text-[8px] font-mono uppercase tracking-[0.2em] text-zinc-500 mb-2">Predicted Phrases</p>
                       {aiPredictions.map((pred, i) => (
                         <button
                           key={i}
@@ -896,17 +996,19 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
                       ))}
                     </div>
                   ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-3 mt-10">
-                      <div className="w-10 h-10 rounded-full bg-zinc-900/60 border border-zinc-800 flex items-center justify-center mb-2.5">
-                        <svg className="w-5 h-5 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
+                    !aiResponse && !isAiThinking && (
+                      <div className="h-full flex flex-col items-center justify-center text-center p-3 mt-6">
+                        <div className="w-10 h-10 rounded-full bg-zinc-900/60 border border-zinc-800 flex items-center justify-center mb-2.5">
+                          <svg className="w-5 h-5 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                        </div>
+                        <p className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 font-bold">Awaiting Input...</p>
+                        <p className="text-[8px] font-mono text-zinc-600 mt-1 uppercase max-w-[160px] leading-relaxed">
+                          Sign letters to compile text, then click <span className="text-indigo-400">✦ Ask AI</span> for interpretation
+                        </p>
                       </div>
-                      <p className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 font-bold">Awaiting Input...</p>
-                      <p className="text-[8px] font-mono text-zinc-600 mt-1 uppercase max-w-[130px] leading-relaxed">
-                        AI autocomplete suggestions will generate here as you spell letters
-                      </p>
-                    </div>
+                    )
                   )}
                 </div>
               </div>
