@@ -12,14 +12,6 @@ const nextConfig: NextConfig = {
     "@tensorflow-models/body-segmentation",
   ],
 
-  // Turbopack alias for Next 15+
-  turbo: {
-    resolveAlias: {
-      // Stub this out so Turbopack doesn't crash looking for its ESM exports
-      "@mediapipe/selfie_segmentation": "./lib/mediapipe-stub.js",
-    },
-  },
-  
   // Webpack alias (if fallback is used)
   webpack(config) {
     config.resolve.alias = {
