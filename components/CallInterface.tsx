@@ -58,8 +58,6 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const clearMyCaptionRef = useRef<NodeJS.Timeout | null>(null);
   const speechRecognitionRef = useRef<any>(null);
 
-  const speechRecognitionRef = useRef<any>(null);
-
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
   // ── Load AI Segmentation Model ──
@@ -851,14 +849,17 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           
           {/* Speech Subtitles (works for BOTH audio & video calls) */}
           {areCaptionsVisible && (
-            <div className="w-full flex flex-col gap-2 pointer-events-auto">
+            <div className="w-full flex flex-col gap-2 pointer-events-auto mb-2">
               {/* Peer's Caption */}
               {peerCaption && (
-                <div className="w-full px-5 py-2 md:py-2.5 rounded-2xl md:rounded-3xl backdrop-blur-2xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300 text-center" style={{ background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(255,255,255,0.5)' }}>
-                  <span className="text-[8.5px] font-mono font-bold tracking-[0.2em] uppercase mb-0.5 block" style={{ color: '#6366f1' }}>
-                    {peer.name}
-                  </span>
-                  <p className="text-sm md:text-[15px] font-bold leading-snug" style={{ color: '#111' }}>
+                <div className="w-full px-5 py-3 rounded-2xl backdrop-blur-md bg-black/60 border border-white/10 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-2 opacity-80">
+                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
+                    <span className="text-[8.5px] font-mono font-bold tracking-[0.2em] text-indigo-400 uppercase">
+                      {peer.name}
+                    </span>
+                  </div>
+                  <p className="text-sm md:text-base font-bold tracking-wider text-white text-center" style={{ fontFamily: 'monospace' }}>
                     {peerCaption}
                   </p>
                 </div>
@@ -866,11 +867,14 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
               
               {/* My Caption */}
               {myCaption && (
-                <div className="w-full px-5 py-2 md:py-2.5 rounded-2xl md:rounded-3xl backdrop-blur-2xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300 text-center" style={{ background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(255,255,255,0.5)' }}>
-                  <span className="text-[8.5px] font-mono font-bold tracking-[0.2em] uppercase mb-0.5 block" style={{ color: '#059669' }}>
-                    You
-                  </span>
-                  <p className="text-sm md:text-[15px] font-bold leading-snug" style={{ color: '#111' }}>
+                <div className="w-full px-5 py-3 rounded-2xl backdrop-blur-md bg-black/60 border border-white/10 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-2 opacity-80">
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                    <span className="text-[8.5px] font-mono font-bold tracking-[0.2em] text-emerald-400 uppercase">
+                      You (Voice)
+                    </span>
+                  </div>
+                  <p className="text-sm md:text-base font-bold tracking-wider text-white text-center" style={{ fontFamily: 'monospace' }}>
                     {myCaption}
                   </p>
                 </div>
