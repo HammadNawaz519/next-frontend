@@ -367,8 +367,10 @@ export default function DashboardPage() {
               onMouseLeave={e => { if (!isProfileOpen) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
               <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
-                <div className="w-9 h-9 rounded-full flex items-center justify-center font-normal text-xs shadow-sm transition-transform duration-300 group-hover/profile:scale-105" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: isProfileOpen ? 'var(--dm-bg-main)' : 'var(--dm-text-secondary)' }}>
-                  {session.user?.name?.slice(0, 1).toUpperCase() || 'U'}
+                <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center font-normal text-xs shadow-sm transition-transform duration-300 group-hover/profile:scale-105" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: isProfileOpen ? 'var(--dm-bg-main)' : 'var(--dm-text-secondary)' }}>
+                  {session.user?.image
+                    ? <img src={session.user.image} alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    : session.user?.name?.slice(0, 1).toUpperCase() || 'U'}
                 </div>
               </div>
               <div className="flex-1 min-w-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden">
@@ -574,7 +576,9 @@ export default function DashboardPage() {
         {/* Profile Side Panel */}
         {isProfileOpen && (
           <div
-            className={`absolute inset-y-0 right-0 w-full md:w-[400px] z-50 flex flex-col transition-transform duration-300 ease-out ${isProfileOpen ? "translate-x-0" : "-translate-x-full"}`}
+            className={`absolute inset-y-0 right-0 w-full md:w-[400px] z-50 flex flex-col ${
+              isClosingProfile ? 'animate-profile-out' : 'animate-profile-in'
+            }`}
             style={{
               backdropFilter: 'blur(32px)',
               WebkitBackdropFilter: 'blur(32px)',
@@ -681,22 +685,7 @@ export default function DashboardPage() {
                 {usernameError && <p style={{ color: '#ef4444', fontSize: '10px', marginTop: '6px', marginLeft: '38px' }}>{usernameError}</p>}
               </div>
 
-              {/* Mail Channel Row */}
-              <div style={{ padding: '14px 18px', borderRadius: '16px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.02)' }}>
-                <div className="flex flex-col gap-2">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, color: 'var(--dm-text-muted)' }}>Registered Email</span>
-                  </div>
-                  <div style={{ paddingLeft: '38px' }}>
-                    <span className="text-[14px] font-medium truncate block max-w-[280px]" style={{ color: 'var(--dm-text-primary)' }}>{fullUser?.email}</span>
-                  </div>
-                </div>
-              </div>
+              {/* Email row removed per design spec */}
 
               {/* Download Mobile App Button */}
               <button
@@ -781,8 +770,10 @@ export default function DashboardPage() {
               color: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
             }}
           >
-            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-active)', color: isProfileOpen ? 'var(--dm-bg-main)' : 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}>
-              {session.user?.name?.charAt(0) || 'U'}
+            <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-active)', color: isProfileOpen ? 'var(--dm-bg-main)' : 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}>
+              {session.user?.image
+                ? <img src={session.user.image} alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                : session.user?.name?.charAt(0) || 'U'}
             </div>
             <span className="text-[9px] font-semibold uppercase tracking-widest">Profile</span>
           </button>

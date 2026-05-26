@@ -64,18 +64,38 @@ export default function LoginPage() {
     );
   }
 
-  // OTP input handler
-  const handleOtpChange = (i: number, val: string) => {
-    if (!/^\d*$/.test(val)) return;
+  // OTP handlers — mobile-safe
+  const handleOtpChange = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    if (!raw) {
+      // Backspace/clear on mobile
+      const next = [...otp];
+      next[i] = '';
+      setOtp(next);
+      if (i > 0) requestAnimationFrame(() => otpRefs.current[i - 1]?.focus());
+      return;
+    }
+
+    if (raw.length > 1) {
+      // Handles SMS autofill / paste delivering multiple digits at once
+      const digits = raw.slice(0, 6 - i).split('');
+      const next = [...otp];
+      digits.forEach((d, offset) => { if (i + offset < 6) next[i + offset] = d; });
+      setOtp(next);
+      const nextIdx = Math.min(i + digits.length, 5);
+      requestAnimationFrame(() => otpRefs.current[nextIdx]?.focus());
+      return;
+    }
+
     const next = [...otp];
-    next[i] = val.slice(-1);
+    next[i] = raw;
     setOtp(next);
-    if (val && i < 5) otpRefs.current[i + 1]?.focus();
+    if (i < 5) requestAnimationFrame(() => otpRefs.current[i + 1]?.focus());
   };
 
   const handleOtpKeyDown = (i: number, e: React.KeyboardEvent) => {
     if (e.key === 'Backspace' && !otp[i] && i > 0) {
-      otpRefs.current[i - 1]?.focus();
+      requestAnimationFrame(() => otpRefs.current[i - 1]?.focus());
     }
   };
 
@@ -294,10 +314,14 @@ export default function LoginPage() {
                   {otp.map((digit, i) => (
                     <input
                       key={i} ref={(el) => { otpRefs.current[i] = el; }}
-                      type="text" inputMode="numeric" maxLength={1} value={digit}
-                      onChange={(e) => handleOtpChange(i, e.target.value)}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                      maxLength={6}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(i, e)}
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                      className="w-full h-[54px] text-center text-xl font-medium border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-900"
+                      className="w-full h-[54px] text-center text-xl font-medium border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-900 caret-transparent"
                     />
                   ))}
                 </div>

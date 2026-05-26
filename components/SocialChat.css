@@ -1424,3 +1424,180 @@
     pointer-events: none;
   }
 }
+
+/* =========================================
+   SELECTION MODE — Monochrome, Mobile-First
+   ========================================= */
+
+/* --- Checkbox bubble --- */
+.social-chat-container .sel-check {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.75px solid #d1d5db;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 10px;
+  transition: border-color 0.15s, background 0.15s, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: scale(0.85);
+  animation: selCheckIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes selCheckIn {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(0.85); opacity: 1; }
+}
+
+.social-chat-container .sel-check--on {
+  background: #111827;
+  border-color: #111827;
+  transform: scale(1);
+  animation: selCheckPop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes selCheckPop {
+  0%   { transform: scale(0.85); }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* --- Selected message highlight --- */
+/* sent bubble: slightly lighter (dark→charcoal instead of black) */
+.social-chat-container .msg.sent.msg--sel-sent {
+  background: linear-gradient(135deg, #2d2d33 0%, #1a1a1f 100%) !important;
+  box-shadow: 0 0 0 1.5px rgba(255,255,255,0.12), 0 8px 20px rgba(0,0,0,0.18) !important;
+}
+
+/* received bubble: a light gray wash */
+.social-chat-container .msg.received.msg--sel-recv,
+.social-chat-container .msg.ai.msg--sel-recv {
+  background: #f3f4f6 !important;
+  border-color: #d1d5db !important;
+  box-shadow: 0 0 0 1.5px #d1d5db !important;
+}
+
+/* Dim the messages-area background so selected bubbles pop */
+.social-chat-container .messages.has-selection {
+  background: #fafafa;
+}
+
+/* --- Selection action bar (footer replacement) --- */
+.social-chat-container .sel-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  gap: 12px;
+  animation: selBarUp 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  z-index: 100;
+  width: 100%;
+}
+
+@keyframes selBarUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.social-chat-container .sel-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.social-chat-container .sel-bar__cancel {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.social-chat-container .sel-bar__cancel:active {
+  transform: scale(0.92);
+  background: #f3f4f6;
+}
+
+.social-chat-container .sel-bar__count {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.social-chat-container .sel-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.social-chat-container .sel-bar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  border: none;
+}
+
+.social-chat-container .sel-bar__btn:active {
+  transform: scale(0.94);
+}
+
+/* ghost = "delete for me" */
+.social-chat-container .sel-bar__btn--ghost {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.social-chat-container .sel-bar__btn--ghost:hover {
+  background: #e5e7eb;
+}
+
+/* danger = "delete for all" */
+.social-chat-container .sel-bar__btn--danger {
+  background: #111827;
+  color: #ffffff;
+}
+
+.social-chat-container .sel-bar__btn--danger:hover {
+  background: #374151;
+}
+
+/* Mobile: stack label tighter, slightly smaller buttons */
+@media (max-width: 400px) {
+  .social-chat-container .sel-bar {
+    padding: 12px 14px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .social-chat-container .sel-bar__btn {
+    height: 36px;
+    padding: 0 12px;
+    font-size: 0.75rem;
+  }
+  .social-chat-container .sel-bar__count {
+    font-size: 0.82rem;
+  }
+}
+

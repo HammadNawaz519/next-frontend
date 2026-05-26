@@ -135,39 +135,27 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
     >
       {isInSelectionMode && (
         <div
-          className={`selection-indicator ${isSelected ? 'selected' : ''}`}
-          style={{
-            width: '18px', height: '18px', borderRadius: '50%',
-            border: '2px solid var(--dm-border)',
-            background: isSelected ? '#6366f1' : 'transparent',
-            borderColor: isSelected ? '#6366f1' : 'var(--dm-border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginRight: isSent ? '0' : '10px',
-            marginLeft: isSent ? '10px' : '0',
-            order: isSent ? 2 : -1,
-            flexShrink: 0,
-            transition: 'all 0.2s ease',
-            color: '#fff',
-            fontSize: '10px',
-            fontWeight: 'bold'
-          }}
+          className={`sel-check ${isSelected ? 'sel-check--on' : ''}`}
+          style={{ order: isSent ? 2 : -1 }}
         >
-          {isSelected && '✓'}
+          {isSelected && (
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+              <path d="M1.5 5.5L4.5 8.5L9.5 2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
         </div>
       )}
 
       <div
-        className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''}`}
+        className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''}`}
         style={{
           order: 1,
           width: 'fit-content',
           maxWidth: '75%',
           marginLeft: isSent ? 'auto' : '0',
           marginRight: isSent ? '0' : 'auto',
-          transform: isSelected ? 'scale(0.98)' : 'none',
-          transition: 'all 0.2s ease',
-          boxShadow: isSelected ? '0 0 0 2px rgba(99, 102, 241, 0.4)' : undefined,
-          background: isSelected ? 'rgba(99, 102, 241, 0.12)' : undefined,
+          transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s',
+          transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
         }}
       >
         {isAI && <div className="system-sender">AI Assistant</div>}
@@ -549,6 +537,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const sessionRef = useRef<any>(session);
   const usersRef = useRef<User[]>(users);
   const requestsRef = useRef<User[]>(requests);
+  // Stable copy of full contact/request list so client-side search can filter without re-fetching
+  const allContactsRef = useRef<User[]>([]);
+  const allRequestsRef = useRef<User[]>([]);
 
   useEffect(() => {
     selectedUserRef.current = selectedUser;
@@ -943,35 +934,51 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   // Search or Load Recent
   useEffect(() => {
-    if (searchQuery.length >= 2) {
+    const q = searchQuery.trim().toLowerCase();
+
+    if (q.length >= 2) {
+      // 1. Instant client-side filter from cached list
+      const filtered = allContactsRef.current.filter(
+        u => u.name?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)
+      );
+      setUsers(filtered);
+
+      // 2. Background server search (finds people not in recent list)
       const delayDebounce = setTimeout(async () => {
         const results = await searchUsers(searchQuery);
         setUsers(results as any);
-      }, 300);
+      }, 350);
       return () => clearTimeout(delayDebounce);
-    } else {
-      getRecentChats().then(results => {
-        const contacts: User[] = [];
-        const reqs: User[] = [];
 
-        results.forEach((u: any) => {
-          if (u.isRequest) reqs.push(u);
-          else contacts.push(u);
+    } else if (q.length === 0) {
+      // Restore full list from ref (no network call needed)
+      if (allContactsRef.current.length > 0) {
+        setUsers(allContactsRef.current);
+        setRequests(allRequestsRef.current);
+      } else {
+        // First load — fetch from server
+        getRecentChats().then(results => {
+          const contacts: User[] = [];
+          const reqs: User[] = [];
+          results.forEach((u: any) => {
+            if (u.isRequest) reqs.push(u);
+            else contacts.push(u);
+          });
+          allContactsRef.current = contacts;
+          allRequestsRef.current = reqs.filter(r => !contacts.some(c => c.id === r.id));
+          setUsers(allContactsRef.current);
+          setRequests(allRequestsRef.current);
+
+          // Eager prefetch messages
+          contacts.forEach(u => {
+            if (!messagesCache[u.id]) {
+              getSocialMessages(u.id).then(history => {
+                setMessagesCache(prev => ({ ...prev, [u.id]: history as any }));
+              }).catch(() => {});
+            }
+          });
         });
-
-        setUsers(contacts);
-        setRequests(reqs.filter(r => !contacts.some(c => c.id === r.id)));
-
-        // --- EAGER PREFETCH --- 
-        // Instantly background load messages for all contacts to make clicking "flash" fast
-        contacts.forEach(u => {
-          if (!messagesCache[u.id]) {
-            getSocialMessages(u.id).then(history => {
-              setMessagesCache(prev => ({ ...prev, [u.id]: history as any }));
-            }).catch(() => { });
-          }
-        });
-      });
+      }
     }
   }, [searchQuery]);
 
@@ -1595,31 +1602,25 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </button>
                   </footer>
                 ) : (
-                  <footer className="footer selection-bar animate-in slide-in-from-bottom duration-300" style={{ background: 'var(--dm-bg-sidebar)', borderTop: '1px solid var(--dm-border)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 100, width: '100%' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <button
-                        onClick={() => setSelectedMessageIds(new Set())}
-                        style={{ background: 'none', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
-                      >
-                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                  <footer className="sel-bar">
+                    {/* Left — cancel + count */}
+                    <div className="sel-bar__left">
+                      <button className="sel-bar__cancel" onClick={() => setSelectedMessageIds(new Set())} aria-label="Cancel selection">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
                       </button>
-                      <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--dm-text-primary)' }}>{selectedMessageIds.size} Selected</span>
+                      <span className="sel-bar__count">
+                        {selectedMessageIds.size} {selectedMessageIds.size === 1 ? 'message' : 'messages'}
+                      </span>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button
-                        onClick={() => handleBulkDelete('me')}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold"
-                        style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer' }}
-                      >
-                        Delete for Me
+                    {/* Right — actions */}
+                    <div className="sel-bar__actions">
+                      <button className="sel-bar__btn sel-bar__btn--ghost" onClick={() => handleBulkDelete('me')}>
+                        Delete for me
                       </button>
-                      <button
-                        onClick={() => handleBulkDelete('everyone')}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold text-white bg-red-500 hover:bg-red-600 shadow-md"
-                        style={{ cursor: 'pointer', border: 'none' }}
-                      >
-                        Delete for Everyone
+                      <button className="sel-bar__btn sel-bar__btn--danger" onClick={() => handleBulkDelete('everyone')}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>
+                        Delete for all
                       </button>
                     </div>
                   </footer>

@@ -392,3 +392,22 @@ body {
 
 /* Keep the .home-blob classes but make them invisible — they're still in JSX */
 .home-blob { display: none; }
+
+/* =========================================
+   PROFILE PANEL — slide-in / slide-out
+   ========================================= */
+@keyframes profileSlideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes profileSlideOut {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(100%); opacity: 0; }
+}
+.animate-profile-in {
+  animation: profileSlideIn 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.animate-profile-out {
+  animation: profileSlideOut 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
