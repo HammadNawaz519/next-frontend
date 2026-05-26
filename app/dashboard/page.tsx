@@ -464,8 +464,8 @@ export default function DashboardPage() {
         {activeView === 'assistant' && (
           <div className="w-full h-full flex flex-col min-h-0" style={{ background: 'var(--dm-bg-main)' }}>
 
-            {/* Clean header */}
-            <div className="flex items-center px-4 flex-shrink-0 relative" style={{ minHeight: '60px', borderBottom: '1px solid var(--dm-border)', background: 'var(--dm-bg-sidebar)' }}>
+            {/* Floating rounded header */}
+            <div className="mx-4 mt-4 flex items-center px-4 flex-shrink-0 relative rounded-full" style={{ minHeight: '56px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-sidebar)', boxShadow: 'var(--shadow-sm)' }}>
               <button
                 onClick={(e) => handleNavClick('home', e, true)}
                 className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90 z-10"
@@ -486,7 +486,7 @@ export default function DashboardPage() {
               {messages.length === 0 && (
                 <div className="h-full flex flex-col items-center justify-center text-center gap-5 pb-12 animate-in fade-in duration-700">
                   <div
-                    className="w-20 h-20 rounded-3xl flex items-center justify-center"
+                    className="w-20 h-20 rounded-full flex items-center justify-center"
                     style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)', border: '1px solid var(--dm-border)' }}
                   >
                     <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-primary)' }}>
@@ -528,23 +528,23 @@ export default function DashboardPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <div className="relative z-10 flex-shrink-0 px-4 md:px-8 py-3" style={{ borderTop: '1px solid var(--dm-border)', background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.60)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
+            {/* Input — Transparent/Floating pill styling */}
+            <div className="relative z-10 flex-shrink-0 px-4 md:px-8 pb-6 pt-2 bg-transparent">
               <form onSubmit={handleSendMessage} className="relative">
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder="Ask me anything..."
-                  className="w-full h-12 pl-5 pr-14 rounded-full focus:outline-none text-sm"
-                  style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.90)', border: '1px solid var(--dm-border)', color: isDark ? '#fff' : '#1e1b4b', backdropFilter: 'blur(12px)' }}
+                  className="w-full h-14 pl-6 pr-16 rounded-full focus:outline-none text-sm shadow-md"
+                  style={{ background: isDark ? 'rgba(24,24,28,0.95)' : 'rgba(255,255,255,0.95)', border: '1px solid var(--dm-border)', color: isDark ? '#fff' : '#1e1b4b', backdropFilter: 'blur(12px)' }}
                   disabled={isAiTyping}
                 />
                 <button
                   type="submit"
                   disabled={!inputValue.trim() || isAiTyping}
                   onTouchStart={(e) => { if (inputValue.trim() && !isAiTyping) { e.preventDefault(); handleSendMessage(e); } }}
-                  className="absolute right-1.5 top-1.5 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 disabled:opacity-30"
+                  className="absolute right-2.5 top-2.5 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 disabled:opacity-30"
                   style={{ background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)', boxShadow: 'none' }}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14M12 5l7 7-7 7" /></svg>
@@ -590,7 +590,7 @@ export default function DashboardPage() {
             >
               <button
                 onClick={handleCloseProfile}
-                className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center z-10 transition-all hover:scale-105 active:scale-95"
+                className="absolute top-5 left-5 w-9 h-9 rounded-full flex items-center justify-center z-10 transition-all hover:scale-105 active:scale-95"
                 style={{
                   background: 'var(--dm-bg-input)',
                   border: '1px solid var(--dm-border)',
@@ -635,12 +635,12 @@ export default function DashboardPage() {
 
             {/* Content — luxurious glass info cards */}
             <div className="flex-1 p-5 space-y-3 overflow-y-auto" style={{ background: isDark ? 'rgba(12,12,18,0.1)' : 'rgba(255,255,255,0.1)' }}>
-              {/* Name Edit Row */}
-              <div style={{ padding: '14px 18px', borderRadius: '16px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.02)' }}>
+              {/* Name Edit Row — rounded card */}
+              <div style={{ padding: '14px 18px', borderRadius: '32px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.02)' }}>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '30px', height: '30px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justify-content: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                         </svg>
@@ -648,7 +648,7 @@ export default function DashboardPage() {
                       <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, color: 'var(--dm-text-muted)' }}>Display Name</span>
                     </div>
                     {!editingUsername && (
-                      <button onClick={() => { setUsernameInput(fullUser?.name || ''); setEditingUsername(true); setUsernameError(''); }} style={{ fontSize: '10px', padding: '4px 10px', borderRadius: '14px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)', cursor: 'pointer', fontWeight: 500 }}>Change</button>
+                      <button onClick={() => { setUsernameInput(fullUser?.name || ''); setEditingUsername(true); setUsernameError(''); }} style={{ fontSize: '10px', padding: '4px 12px', borderRadius: '100px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)', cursor: 'pointer', fontWeight: 500 }}>Change</button>
                     )}
                   </div>
                   {!editingUsername ? (
@@ -664,11 +664,11 @@ export default function DashboardPage() {
                         value={usernameInput}
                         onChange={e => { setUsernameInput(e.target.value); setUsernameError(''); }}
                         onKeyDown={async e => { if (e.key === 'Enter') { e.preventDefault(); await handleSaveName(); } if (e.key === 'Escape') setEditingUsername(false); }}
-                        style={{ flex: 1, width: '100%', padding: '6px 12px', borderRadius: '10px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', fontSize: '12px', outline: 'none', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)' }}
+                        style={{ flex: 1, width: '100%', padding: '6px 14px', borderRadius: '100px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', fontSize: '12px', outline: 'none', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)' }}
                         placeholder="Display Name"
                       />
-                      <button onClick={handleSaveName} disabled={usernameSaving} style={{ fontSize: '10px', padding: '6px 12px', borderRadius: '10px', background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1, fontWeight: 600 }}>{usernameSaving ? '...' : 'Save'}</button>
-                      <button onClick={() => setEditingUsername(false)} style={{ fontSize: '10px', padding: '6px 10px', borderRadius: '10px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer' }}>✕</button>
+                      <button onClick={handleSaveName} disabled={usernameSaving} style={{ fontSize: '10px', padding: '6px 14px', borderRadius: '100px', background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1, fontWeight: 600 }}>{usernameSaving ? '...' : 'Save'}</button>
+                      <button onClick={() => setEditingUsername(false)} style={{ fontSize: '10px', padding: '6px 10px', borderRadius: '100px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer' }}>✕</button>
                     </div>
                   )}
                 </div>
@@ -677,10 +677,10 @@ export default function DashboardPage() {
 
               {/* Email row removed per design spec */}
 
-              {/* Download Mobile App Button */}
+              {/* Download Mobile App Button — round pill card */}
               <button
                 onClick={handleInstallApp}
-                className="w-full flex items-center justify-between px-4.5 py-3 rounded-[16px] transition-all hover:scale-[1.01] active:scale-99 cursor-pointer mt-3"
+                className="w-full flex items-center justify-between px-6 py-3 rounded-full transition-all hover:scale-[1.01] active:scale-99 cursor-pointer mt-3"
                 style={{ 
                   border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', 
                   background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', 
@@ -688,7 +688,7 @@ export default function DashboardPage() {
                 }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-xs" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shadow-xs" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                     </svg>
@@ -700,17 +700,17 @@ export default function DashboardPage() {
                 </svg>
               </button>
 
-              {/* Sign Out Button */}
+              {/* Sign Out Button — round pill card */}
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}
-                className="w-full flex items-center justify-between px-4.5 py-3 rounded-[16px] transition-all hover:scale-[1.01] active:scale-99 cursor-pointer mt-3"
+                className="w-full flex items-center justify-between px-6 py-3 rounded-full transition-all hover:scale-[1.01] active:scale-99 cursor-pointer mt-3"
                 style={{ 
                   border: isDark ? '1px solid rgba(239, 68, 68, 0.15)' : '1px solid rgba(239, 68, 68, 0.25)', 
                   background: 'rgba(239, 68, 68, 0.03)' 
                 }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-red-500 shadow-xs" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 shadow-xs" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
                     </svg>
