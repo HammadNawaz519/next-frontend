@@ -1541,63 +1541,76 @@
 .social-chat-container .sel-bar__actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
-.social-chat-container .sel-bar__btn {
-  display: inline-flex;
+/* Icon-only circular delete button */
+.social-chat-container .sel-bar__icon-btn {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  height: 38px;
-  padding: 0 16px;
-  border-radius: 50px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
+  justify-content: center;
+  gap: 3px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
   border: none;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+  flex-shrink: 0;
 }
 
-.social-chat-container .sel-bar__btn:active {
-  transform: scale(0.94);
+.social-chat-container .sel-bar__icon-btn:active {
+  transform: scale(0.88);
+}
+
+.social-chat-container .sel-bar__icon-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* ghost = "delete for me" */
-.social-chat-container .sel-bar__btn--ghost {
+.social-chat-container .sel-bar__icon-btn--ghost {
   background: #f3f4f6;
-  color: #374151;
+  color: #6b7280;
   border: 1px solid #e5e7eb;
 }
 
-.social-chat-container .sel-bar__btn--ghost:hover {
-  background: #e5e7eb;
+.social-chat-container .sel-bar__icon-btn--ghost:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  border-color: #fca5a5;
 }
 
-/* danger = "delete for all" */
-.social-chat-container .sel-bar__btn--danger {
-  background: #111827;
+/* danger = "delete for everyone" */
+.social-chat-container .sel-bar__icon-btn--danger {
+  background: #fee2e2;
+  color: #ef4444;
+  border: 1px solid #fca5a5;
+}
+
+.social-chat-container .sel-bar__icon-btn--danger:hover {
+  background: #ef4444;
   color: #ffffff;
+  border-color: #ef4444;
 }
 
-.social-chat-container .sel-bar__btn--danger:hover {
-  background: #374151;
-}
-
-/* Mobile: stack label tighter, slightly smaller buttons */
+/* Mobile: slightly smaller */
 @media (max-width: 400px) {
   .social-chat-container .sel-bar {
     padding: 12px 14px;
     padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
-  .social-chat-container .sel-bar__btn {
-    height: 36px;
-    padding: 0 12px;
-    font-size: 0.75rem;
+  .social-chat-container .sel-bar__icon-btn {
+    width: 46px;
+    height: 46px;
   }
   .social-chat-container .sel-bar__count {
     font-size: 0.82rem;
   }
 }
+
 

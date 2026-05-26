@@ -1613,14 +1613,25 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       </span>
                     </div>
 
-                    {/* Right — actions */}
+                    {/* Right — icon-only delete buttons matching msg-action-btn style */}
                     <div className="sel-bar__actions">
-                      <button className="sel-bar__btn sel-bar__btn--ghost" onClick={() => handleBulkDelete('me')}>
-                        Delete for me
+                      <button
+                        className="sel-bar__icon-btn sel-bar__icon-btn--ghost"
+                        onClick={() => handleBulkDelete('me')}
+                        title="Delete for me"
+                        aria-label="Delete for me"
+                      >
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>
+                        <span className="sel-bar__icon-label">Me</span>
                       </button>
-                      <button className="sel-bar__btn sel-bar__btn--danger" onClick={() => handleBulkDelete('everyone')}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>
-                        Delete for all
+                      <button
+                        className="sel-bar__icon-btn sel-bar__icon-btn--danger"
+                        onClick={() => handleBulkDelete('everyone')}
+                        title="Delete for everyone"
+                        aria-label="Delete for everyone"
+                      >
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>
+                        <span className="sel-bar__icon-label">All</span>
                       </button>
                     </div>
                   </footer>
