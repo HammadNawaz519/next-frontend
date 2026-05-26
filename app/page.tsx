@@ -16,39 +16,25 @@ interface SuccessUser {
 export default function LoginPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  // Cast status to string for safe comparisons
+  const sessStatus = status as string;
 
-  // Show a premium dark transition loader during session checking/redirects to prevent login screen flashing
-  if (status === 'loading' || status === 'authenticated') {
-    return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#09090b] z-[9999]">
-        <div className="relative flex items-center justify-center">
-          <div className="w-16 h-16 rounded-full border border-zinc-800" />
-          <div className="absolute w-16 h-16 rounded-full border-t-2 border-zinc-200 animate-spin [animation-duration:0.8s]" />
-          <div className="absolute text-[9px] font-extrabold tracking-[0.25em] text-zinc-400 uppercase select-none animate-pulse">
-            CONNECT
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const [view, setView] = useState<AuthView>('login');
-
-  // Immediate redirect if user is already authenticated – prevents login page flash
-  if (status === 'authenticated') {
-    // Replace route without rendering login UI
-    router.replace('/dashboard');
-    return null;
-  }
-
-  // Show a subtle dark loader while the session status is being resolved
-  if (status === 'loading') {
+  // Show loader while authentication status is being resolved
+  if (sessStatus === 'loading') {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-[#09090b] z-[9999]">
         <div className="w-12 h-12 border-4 border-zinc-800 rounded-full animate-spin" />
       </div>
     );
   }
+
+  // Immediate redirect if user is already authenticated – prevents login page flash
+  if (sessStatus === 'authenticated') {
+    router.replace('/dashboard');
+    return null;
+  }
+
+  const [view, setView] = useState<AuthView>('login');
 
   // Form fields
   const [email, setEmail] = useState('');

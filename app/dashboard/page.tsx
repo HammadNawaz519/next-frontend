@@ -574,20 +574,15 @@ export default function DashboardPage() {
         {/* Profile Side Panel */}
         {isProfileOpen && (
           <div
-            className="absolute right-0 top-0 bottom-0 w-full md:w-[400px] z-50 flex flex-col md:m-3 md:h-[calc(100%-24px)] md:rounded-[40px] md:overflow-hidden"
+            className={`absolute inset-y-0 right-0 w-full md:w-[400px] z-50 flex flex-col transition-transform duration-300 ease-out ${isProfileOpen ? "translate-x-0" : "-translate-x-full"}`}
             style={{
               backdropFilter: 'blur(32px)',
               WebkitBackdropFilter: 'blur(32px)',
-              background: isDark
-                ? 'rgba(12, 12, 18, 0.72)'
-                : 'rgba(255, 255, 255, 0.62)',
+              background: isDark ? 'rgba(12,12,18,0.72)' : 'rgba(255,255,255,0.62)',
               borderLeft: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.75)',
               boxShadow: isDark
                 ? '-20px 0 60px rgba(0,0,0,0.70), inset 1px 0 0 rgba(255,255,255,0.06)'
                 : '-20px 0 60px rgba(0,0,0,0.10), inset 1px 0 0 rgba(255,255,255,0.90)',
-              animation: isClosingProfile
-                ? 'slideToLeft 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
-                : 'slideFromLeft 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
             }}
           >
             {/* Header / Avatar Section — clean theme frosted glass */}
@@ -628,11 +623,14 @@ export default function DashboardPage() {
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center', 
-                    fontSize: '34px', 
-                    color: 'var(--dm-text-primary)' 
                   }}
                 >
-                  {fullUser?.name?.slice(0, 1).toUpperCase() || 'U'}
+                  {/* Avatar image or initials */}
+                  {fullUser?.image ? (
+                    <img src={fullUser.image} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <span className="text-xl font-bold text-white">{fullUser?.name?.charAt(0).toUpperCase() ?? 'U'}</span>
+                  )}
                 </div>
                 <div style={{ position: 'absolute', bottom: 3, right: 3, width: '20px', height: '20px', borderRadius: '50%', background: '#10b981', border: '3.5px solid var(--dm-bg-sidebar)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} />
               </div>
