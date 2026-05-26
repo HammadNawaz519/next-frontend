@@ -408,7 +408,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   };
 
   return (
-    <div className="fixed inset-0 z-[1500] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: 'rgba(0,0,0,0.3)' }}>
+    <div className="fixed inset-0 z-[1500] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
       {/* Remote video/audio */}
       <video
         ref={remoteVideoRef}
@@ -421,11 +421,11 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
       <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
 
       {/* Main UI Layer */}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center" style={{ background: type === 'video' ? 'rgba(0,0,0,0.5)' : 'transparent' }}>
+      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center" style={{ background: type === 'video' ? 'rgba(0,0,0,0.3)' : 'transparent' }}>
 
         {/* Timer (video only) */}
         {type === 'video' && callStatus === 'active' && (
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 px-4 py-2 backdrop-blur-xl rounded-full shadow-lg flex items-center gap-3" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)' }}>
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 px-4 py-2 backdrop-blur-xl rounded-full shadow-lg flex items-center gap-3" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
             <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
             <span className="text-xs font-semibold tracking-wider" style={{ color: 'var(--dm-text-primary)' }}>{formatDuration(duration)}</span>
           </div>
@@ -437,16 +437,16 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             <div className="relative">
               {callStatus === 'ringing' && (
                 <>
-                  <div className="absolute inset-0 rounded-full animate-ping [animation-duration:2s]" style={{ background: 'var(--dm-bg-input)' }} />
-                  <div className="absolute -inset-6 rounded-full animate-pulse [animation-duration:3s]" style={{ background: 'var(--dm-bg-active)', opacity: 0.5 }} />
+                  <div className="absolute inset-0 rounded-full animate-ping [animation-duration:2s]" style={{ background: 'var(--dm-bg-active)' }} />
+                  <div className="absolute -inset-6 rounded-full animate-pulse [animation-duration:3s]" style={{ background: 'var(--dm-bg-input)', opacity: 0.5 }} />
                 </>
               )}
-              <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 shadow-2xl flex items-center justify-center text-4xl font-bold" style={{ borderColor: 'var(--dm-bg-main)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)' }}>
+              <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 shadow-2xl flex items-center justify-center text-4xl font-bold" style={{ borderColor: 'var(--dm-border)', background: 'var(--dm-bg-sidebar)', color: 'var(--dm-text-primary)' }}>
                 {peer.image ? <img src={peer.image} className="w-full h-full object-cover" /> : peer.name?.charAt(0)}
               </div>
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-extrabold tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>{peer.name}</h2>
+              <h2 className="text-2xl font-extrabold tracking-tight" style={{ color: 'var(--dm-text-primary)' }}>{peer.name}</h2>
               <div className="flex items-center justify-center gap-2">
                 <span className="px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest" style={{ background: 'var(--dm-bg-active)', color: 'var(--dm-text-secondary)' }}>
                   {type} Call
@@ -461,22 +461,22 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         {/* Local Video (PiP) */}
         {type === 'video' && (
-          <div className="absolute top-4 right-4 md:top-6 md:right-6 w-24 h-32 md:w-32 md:h-44 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl z-20 group hover:scale-105 transition-transform duration-300" style={{ border: '2px solid var(--dm-border)', background: 'var(--dm-bg-input)' }}>
+          <div className="absolute top-4 right-4 md:top-6 md:right-6 w-24 h-32 md:w-32 md:h-44 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl z-20 group hover:scale-105 transition-transform duration-300" style={{ border: '2px solid var(--dm-border)', background: 'var(--dm-bg-sidebar)' }}>
             <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
           </div>
         )}
 
         {/* Action Bar */}
         <div className="absolute bottom-4 md:bottom-5 left-1/2 -translate-x-1/2 w-fit min-w-[290px] md:min-w-[340px] max-w-[90vw] z-40">
-          <div className="w-full flex items-center justify-between px-5 md:px-7 py-3 md:py-4 backdrop-blur-2xl rounded-[1.5rem] md:rounded-full shadow-2xl" style={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="w-full flex items-center justify-between px-5 md:px-7 py-3 md:py-4 backdrop-blur-2xl rounded-[1.5rem] md:rounded-full shadow-2xl" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
 
             <button
               onClick={toggleSpeaker}
               className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
               style={{
-                background: isSpeakerOn ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)',
-                color: isSpeakerOn ? '#86efac' : 'rgba(255,255,255,0.5)',
-                border: '1px solid rgba(255,255,255,0.1)'
+                background: isSpeakerOn ? 'rgba(34,197,94,0.12)' : 'var(--dm-bg-input)',
+                color: isSpeakerOn ? '#10b981' : 'var(--dm-text-secondary)',
+                border: '1px solid var(--dm-border)'
               }}
             >
               {isSpeakerOn ? (
@@ -493,7 +493,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             <button
               onClick={toggleMute}
               className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
-              style={{ background: isMuted ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.08)', color: isMuted ? '#fca5a5' : 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}
+              style={{ background: isMuted ? 'rgba(239,68,68,0.12)' : 'var(--dm-bg-input)', color: isMuted ? '#ef4444' : 'var(--dm-text-secondary)', border: '1px solid var(--dm-border)' }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -504,7 +504,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
               <button
                 onClick={toggleCamera}
                 className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
-                style={{ background: isCamOff ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.08)', color: isCamOff ? '#fca5a5' : 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}
+                style={{ background: isCamOff ? 'rgba(239,68,68,0.12)' : 'var(--dm-bg-input)', color: isCamOff ? '#ef4444' : 'var(--dm-text-secondary)', border: '1px solid var(--dm-border)' }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
