@@ -209,7 +209,7 @@ export default function LoginPage() {
         <div className="relative overflow-hidden hidden lg:flex flex-col items-end justify-end h-full" style={{ background: 'linear-gradient(145deg, hsl(25,95%,55%), hsl(38,100%,65%), hsl(15,90%,45%))' }}>
           <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.75\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.08\'/%3E%3C/svg%3E")', backgroundSize: 'cover', opacity: 0.5 }} />
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
-            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '50%', width: 72, height: 72, display: 'flex', alignItems: 'center', justify: 'center', backdropFilter: 'blur(8px)', border: '1.5px solid rgba(255,255,255,0.3)' }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '50%', width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', border: '1.5px solid rgba(255,255,255,0.3)' }}>
               <span style={{ fontSize: 28, color: 'white', fontWeight: 700 }}>✓</span>
             </div>
             <p className="text-white font-semibold text-2xl tracking-tight">You&apos;re verified!</p>
@@ -219,7 +219,7 @@ export default function LoginPage() {
             {successUser.image ? (
               <img src={successUser.image} alt="Profile" style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.4)', objectFit: 'cover' }} />
             ) : (
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', border: '2px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justify: 'center', flexShrink: 0 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', border: '2px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <span style={{ color: 'white', fontWeight: 700, fontSize: 18 }}>{getInitials(successUser)}</span>
               </div>
             )}
@@ -306,7 +306,7 @@ export default function LoginPage() {
 
     if (view === 'success' && successUser) {
       return (
-        <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full overflow-y-auto">
+        <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full overflow-y-auto no-scrollbar">
           <div className="w-full max-w-[420px] space-y-6 py-6">
             <div className="text-left space-y-2">
               <h1 className="text-[32px] font-normal tracking-tight text-gray-900">You&apos;re in!</h1>
@@ -331,7 +331,7 @@ export default function LoginPage() {
 
     const isLogin = view === 'login';
     return (
-      <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full overflow-y-auto">
+      <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full overflow-y-auto no-scrollbar">
         <div className="w-full max-w-[420px] space-y-4 md:space-y-6 py-4">
           <div className="text-left w-full space-y-2">
             <h1 className="text-[28px] md:text-[32px] font-normal tracking-tight text-gray-900">{isLogin ? 'Welcome back' : 'Create your account'}</h1>
@@ -409,7 +409,7 @@ export default function LoginPage() {
       </div>
 
       {/* Laptop/Desktop viewport layout (lg: and above) - Floating Original Card */}
-      <div className="hidden lg:flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#F4F4F4] p-6 md:px-12 md:py-8 select-none">
+      <div className="hidden lg:flex h-screen w-full items-center justify-center overflow-hidden bg-[#F4F4F4] p-6 md:px-12 md:py-8 select-none">
         <div 
           className="w-full max-w-[960px] aspect-[16/9] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_-10px_rgba(0,0,0,0.4)] bg-white bg-opacity-20 bg-clip-padding backdrop-filter backdrop-blur-2xl border border-gray-100 flex flex-col lg:grid lg:grid-cols-2" 
           style={{ 
@@ -418,7 +418,7 @@ export default function LoginPage() {
           }}
         >
           {renderLeft()}
-          <div className="flex-1 overflow-y-auto bg-white">
+          <div className="flex-1 overflow-hidden bg-white">
             {renderRight()}
           </div>
         </div>
