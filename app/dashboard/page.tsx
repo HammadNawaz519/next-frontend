@@ -372,136 +372,164 @@ export default function DashboardPage() {
         {/* Content Views */}
         {/* Content Views */}
         {activeView === 'home' && (
-          <div className="relative w-full h-full flex flex-col min-h-0 z-10 overflow-hidden">
-            {/* Unified Premium Home Header */}
-            <div className="flex items-center justify-between px-4 md:px-6 border-b relative z-50 flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '56px' }}>
-              {/* Left: connection status */}
-              <div className="flex items-center gap-2 z-10 flex-shrink-0">
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest cursor-default" 
-                     style={{ 
-                        background: isConnected ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', 
-                        color: isConnected ? '#22c55e' : '#ef4444', 
-                        border: `1px solid ${isConnected ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}` 
-                     }}>
-                  <span className={`inline-flex rounded-full h-1.5 w-1.5 flex-shrink-0 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <span className="hidden sm:inline">{isConnected ? 'Live' : 'Connecting'}</span>
+          <div className="relative w-full h-full flex flex-col min-h-0 z-10 overflow-y-auto">
+            {/* Minimal top bar with theme toggle */}
+            <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-400'}`} />
+                <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>
+                  {isConnected ? 'Online' : 'Connecting...'}
+                </span>
+              </div>
+              <ThemeToggle />
+            </div>
+
+            {/* Welcome content */}
+            <div className="flex-1 flex flex-col items-center justify-center px-6 pb-32 gap-8 animate-in fade-in duration-700">
+              {/* Avatar */}
+              <div className="flex flex-col items-center gap-4">
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold shadow-lg"
+                  style={{ background: 'var(--dm-bg-active)', border: '2px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
+                >
+                  {session.user?.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>
+                    Welcome back, {session.user?.name?.split(' ')[0] || 'there'} 👋
+                  </h1>
+                  <p className="text-sm mt-1 font-light" style={{ color: 'var(--dm-text-muted)' }}>
+                    What would you like to do today?
+                  </p>
                 </div>
               </div>
 
-              {/* Title core — hidden on xs to prevent overlap */}
-              <div className="hidden sm:flex absolute inset-x-0 mx-auto w-fit items-center gap-2 z-0 pointer-events-none">
-                <div style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-                <h2 style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.25em', color: 'var(--dm-text-secondary)', margin: 0 }}>Translation Workspace</h2>
-              </div>
-              {/* Fallback title for xs */}
-              <span className="sm:hidden text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--dm-text-secondary)' }}>ASL Workspace</span>
+              {/* Quick action cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-sm">
+                <button
+                  onClick={(e) => handleNavClick('chat', e)}
+                  className="flex items-center gap-3 p-4 rounded-2xl text-left transition-all active:scale-95 hover:scale-[1.02]"
+                  style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(99,102,241,0.1)' }}>
+                    <svg className="w-5 h-5" fill="none" stroke="#6366f1" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--dm-text-primary)' }}>Chat</p>
+                    <p className="text-[10px]" style={{ color: 'var(--dm-text-muted)' }}>Message friends</p>
+                  </div>
+                </button>
 
-              {/* Controls — always on right, never overlaps */}
-              <div className="flex items-center gap-2 z-10 flex-shrink-0">
-                <ThemeToggle />
-              </div>
-            </div>
+                <button
+                  onClick={(e) => handleNavClick('assistant', e)}
+                  className="flex items-center gap-3 p-4 rounded-2xl text-left transition-all active:scale-95 hover:scale-[1.02]"
+                  style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(16,185,129,0.1)' }}>
+                    <svg className="w-5 h-5" fill="none" stroke="#10b981" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--dm-text-primary)' }}>AI Assistant</p>
+                    <p className="text-[10px]" style={{ color: 'var(--dm-text-muted)' }}>Ask me anything</p>
+                  </div>
+                </button>
 
-            {/* Full bleed ASL Webcam Integration workspace */}
-            <div className="flex-1 min-h-0 w-full overflow-hidden animate-in fade-in duration-700">
-              <WebcamASL isCallActive={isCallActive} />
+                <button
+                  onClick={(e) => handleNavClick('practice', e)}
+                  className="flex items-center gap-3 p-4 rounded-2xl text-left transition-all active:scale-95 hover:scale-[1.02] sm:col-span-2"
+                  style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(245,158,11,0.1)' }}>
+                    <svg className="w-5 h-5" fill="none" stroke="#f59e0b" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--dm-text-primary)' }}>Practice ASL</p>
+                    <p className="text-[10px]" style={{ color: 'var(--dm-text-muted)' }}>Learn hand signs</p>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {activeView === 'assistant' && (
-          <>
-            {/* Assistant Header - all screens */}
-            <div className="flex items-center justify-center p-4 border-b relative z-50" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '64px' }}>
-              <button 
-                onClick={(e) => handleNavClick('home', e, true)}
-                style={{ position: 'absolute', left: '16px', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', zIndex: 10 }}
-              >
-                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-              </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
-                <div style={{ width: '8px', height: '8px', background: '#6366f1', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-                <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3em', color: 'var(--dm-text-secondary)', margin: 0 }}>Intelligence Core</h2>
+          <div className="w-full h-full flex flex-col min-h-0">
+            {/* Simple header */}
+            <div className="flex items-center justify-center px-4 border-b flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '56px' }}>
+              <div className="flex items-center gap-2">
+                <div style={{ width: '7px', height: '7px', background: '#6366f1', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
+                <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.25em', color: 'var(--dm-text-secondary)', margin: 0 }}>AI Assistant</h2>
               </div>
-              <div style={{ position: 'absolute', inset: 0, opacity: 0.08, background: 'linear-gradient(45deg, #FF7A00, #007AFF, #7ED9D9)', filter: 'blur(20px)', pointerEvents: 'none' }} />
             </div>
 
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-12 space-y-10 relative">
+            {/* Messages — scrollable */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-10 py-6 space-y-4">
               {messages.length === 0 && (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-8 animate-in fade-in duration-700">
-                  <div className="w-24 h-24 rounded-[2.5rem] flex items-center justify-center shadow-inner" style={{ background: 'var(--dm-bg-active)' }}>
-                    <svg className="w-10 h-10" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--dm-border)' }}>
-                      <path d="M12 2L9.09 8.26 2 9.27l5 4.87L5.82 21 12 17.77 18.18 21l-1.18-6.86L22 9.27l-7.09-1.01L12 2z"/>
+                <div className="h-full flex flex-col items-center justify-center text-center gap-4 animate-in fade-in duration-500 pb-8">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'var(--dm-bg-active)' }}>
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   </div>
-                  <p className="text-xl font-extralight tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>How can I assist you today?</p>
+                  <div>
+                    <p className="text-lg font-semibold" style={{ color: 'var(--dm-text-heading)' }}>How can I help?</p>
+                    <p className="text-sm font-light mt-1" style={{ color: 'var(--dm-text-muted)' }}>Ask me anything — I'm here for you.</p>
+                  </div>
                 </div>
               )}
 
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                  <div className={`max-w-[75%] rounded-[1.5rem] px-5 py-3 shadow-sm transition-[transform,opacity,box-shadow] duration-300 ${
-                    msg.role === 'user' ? 'rounded-tr-none shadow-md' : 'rounded-tl-none backdrop-blur-sm shadow-sm'
-                  }`} style={msg.role === 'user'
-                    ? { background: 'var(--dm-chat-sent-bg)', color: 'var(--dm-chat-sent-text)' }
-                    : { background: 'var(--dm-chat-recv-bg)', color: 'var(--dm-chat-recv-text)', border: '1px solid var(--dm-input-border)' }
-                  }>
-                    {/* Removed 'AI Assistant' label from bubble as requested */}
-                    <p className="text-[0.9rem] leading-relaxed whitespace-pre-wrap font-light tracking-tight">{msg.content}</p>
+                  <div
+                    className={`max-w-[80%] px-4 py-3 text-[0.9rem] leading-relaxed font-light ${
+                      msg.role === 'user' ? 'rounded-[1.2rem] rounded-tr-sm' : 'rounded-[1.2rem] rounded-tl-sm'
+                    }`}
+                    style={msg.role === 'user'
+                      ? { background: 'var(--dm-chat-sent-bg)', color: 'var(--dm-chat-sent-text)' }
+                      : { background: 'var(--dm-bg-sidebar)', color: 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }
+                    }
+                  >
+                    {msg.content}
                   </div>
                 </div>
               ))}
 
-
-
               {isAiTyping && (
                 <div className="flex justify-start">
-                  <div className="rounded-full rounded-tl-none px-6 py-4 flex gap-2 items-center shadow-sm" style={{ background: 'var(--dm-typing-bg)', border: '1px solid var(--dm-border)' }}>
-                    <div className="w-2 h-2 bg-indigo-100 rounded-full animate-pulse" />
-                    <div className="w-2 h-2 bg-indigo-100 rounded-full animate-pulse [animation-delay:0.2s]" />
-                    <div className="w-2 h-2 bg-indigo-100 rounded-full animate-pulse [animation-delay:0.4s]" />
+                  <div className="px-5 py-3 rounded-[1.2rem] rounded-tl-sm flex gap-1.5 items-center" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
+                    <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--dm-text-muted)', animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--dm-text-muted)', animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--dm-text-muted)', animationDelay: '300ms' }} />
                   </div>
                 </div>
               )}
-
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
-            <div className="p-4 md:p-12 pb-8 md:pb-12 pt-0 bg-transparent relative z-10">
-              <div className="max-w-4xl mx-auto w-full">
-                <form onSubmit={handleSendMessage} className="relative group">
-                  <input
-                    type="text"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    placeholder="Start a new discussion..."
-                    className="w-full h-14 md:h-18 px-8 md:px-10 rounded-full focus:outline-none transition-all text-sm font-light shadow-lg"
-                    style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
-                    disabled={isAiTyping}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!inputValue.trim() || isAiTyping}
-                    onTouchStart={(e) => {
-                      if (inputValue.trim() && !isAiTyping) {
-                        e.preventDefault();
-                        handleSendMessage(e);
-                      }
-                    }}
-                    className="absolute right-2 md:right-4 top-2 md:top-4 w-10 md:h-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-5 shadow-xl"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </button>
-                </form>
-              </div>
+            {/* Input — sticky to bottom of view, no floating nav conflict since nav is hidden on assistant */}
+            <div className="flex-shrink-0 px-4 md:px-10 py-4" style={{ borderTop: '1px solid var(--dm-border)', background: 'var(--dm-bg-sidebar)' }}>
+              <form onSubmit={handleSendMessage} className="relative">
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Ask me anything..."
+                  className="w-full h-12 pl-5 pr-14 rounded-full focus:outline-none text-sm font-light"
+                  style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
+                  disabled={isAiTyping}
+                />
+                <button
+                  type="submit"
+                  disabled={!inputValue.trim() || isAiTyping}
+                  onTouchStart={(e) => { if (inputValue.trim() && !isAiTyping) { e.preventDefault(); handleSendMessage(e); } }}
+                  className="absolute right-1.5 top-1.5 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 disabled:opacity-20"
+                  style={{ background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)' }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14M12 5l7 7-7 7" /></svg>
+                </button>
+              </form>
             </div>
-
-          </>
+          </div>
         )}
 
         {/* Practice View */}
