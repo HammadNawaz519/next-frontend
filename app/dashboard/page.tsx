@@ -470,7 +470,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Input Area */}
-            <div className="p-6 md:p-12 pt-0 bg-transparent relative z-10">
+            <div className="p-4 md:p-12 pb-8 md:pb-12 pt-0 bg-transparent relative z-10">
               <div className="max-w-4xl mx-auto w-full">
                 <form onSubmit={handleSendMessage} className="relative group">
                   <input
@@ -789,8 +789,8 @@ export default function DashboardPage() {
 
       {/* Mobile Bottom Navigation - always visible on mobile */}
       {/* Mobile Bottom Navigation - visible on home and chat list */}
-      {/* Mobile Bottom Navigation */}
-      {(activeView === 'home' || activeView === 'assistant' || (activeView === 'chat' && !selectedChatUser)) && (
+      {/* Mobile Bottom Navigation — home and chat-list only */}
+      {(activeView === 'home' || (activeView === 'chat' && !selectedChatUser)) && (
         <nav className="mobile-nav">
           {[
             { id: 'home', label: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },

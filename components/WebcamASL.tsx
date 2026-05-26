@@ -697,17 +697,7 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
                       
                       {/* Live scanning line effect */}
                       <div className="absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-indigo-400/60 to-transparent top-1/2 animate-[scan_2.5s_ease-in-out_infinite]" />
-                      
-                      {/* Sub-label */}
-                      <span className="text-[9px] font-mono tracking-widest text-indigo-300 font-extrabold bg-zinc-950/85 px-4 py-2 rounded-full border border-indigo-500/35 shadow-lg select-none">
-                        ASL REAL-TIME OPTICAL FEED
-                      </span>
                     </div>
-                  </div>
-
-                  {/* Clean watermark bottom-right */}
-                  <div className="absolute bottom-4 right-4 z-20 text-[8px] font-mono tracking-[0.2em] text-zinc-400 opacity-60 pointer-events-none uppercase">
-                    ASL PREDICTOR CORE
                   </div>
                 </>
               )}
@@ -755,11 +745,8 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
                         disabled={isBackendChecking}
                         className="px-6 py-3 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-white text-black hover:bg-zinc-200 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2 shadow-lg cursor-pointer"
                       >
-                        {isBackendChecking ? 'INITIALIZING TERMINAL...' : '▶ Start Translation Feed'}
+                        {isBackendChecking ? 'Starting...' : '▶ Start Camera'}
                       </button>
-                      <p className="text-zinc-600 text-[9px] font-mono uppercase tracking-widest mt-1">
-                        Camera translation standby
-                      </p>
                     </>
                   )}
                 </div>
@@ -774,12 +761,9 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
             >
               {/* Header Info */}
               <div className="flex items-center justify-between mb-2 flex-shrink-0">
-                <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--dm-text-secondary)' }}>
-                  ✦ Compiled Output Terminal
-                </p>
                 {copied && (
                   <span className="text-[7px] font-mono font-bold text-emerald-500 uppercase tracking-widest animate-pulse">
-                    COPIED TO CLIPBOARD
+                    COPIED
                   </span>
                 )}
               </div>
@@ -799,8 +783,8 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
                       />
                     </>
                   ) : (
-                    <span className="text-[10px] font-normal font-sans italic" style={{ color: 'var(--dm-text-muted)' }}>
-                      Optical buffer empty. Perform signs in camera view to compile characters…
+                    <span className="text-[13px] font-light font-sans italic" style={{ color: 'var(--dm-text-muted)' }}>
+                      Show your hand sign in the camera…
                     </span>
                   )}
                 </p>
@@ -811,7 +795,7 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
               {/* Sleek Action Toolbar - Small & Beautiful (No Emojis) */}
               <div className="flex items-center justify-between mt-3 pt-2.5 border-t flex-shrink-0" style={{ borderColor: 'var(--dm-border)' }}>
                 <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-wider">
-                  Optic Buffer: {sentence.length} chars
+                  {sentence.length} chars
                 </span>
                 
                 <div className="flex items-center gap-2">
@@ -892,9 +876,6 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
                 borderColor: 'var(--dm-border)',
               }}
             >
-              <div className="text-[8px] font-mono tracking-[0.25em] text-zinc-400 opacity-60 uppercase absolute top-5 left-6 pointer-events-none">
-                Capture Matrix
-              </div>
 
               {/* Clean AI Telemetry Display */}
               <div className="flex flex-col items-center gap-1.5 mt-2">
@@ -932,14 +913,10 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
                 )}
 
                 {!result && isCameraActive && (
-                  <p className="text-[9px] font-mono uppercase tracking-widest animate-pulse mt-2.5" style={{ color: 'var(--dm-text-muted)' }}>
-                    Awaiting sign...
-                  </p>
+                  <p className="text-[9px] font-mono uppercase tracking-widest animate-pulse mt-2.5" style={{ color: 'var(--dm-text-muted)' }}>Waiting...</p>
                 )}
                 {!isCameraActive && (
-                  <p className="text-[9px] font-mono uppercase tracking-widest mt-2.5" style={{ color: 'var(--dm-text-muted)' }}>
-                    Feed Standby
-                  </p>
+                  <p className="text-[9px] font-mono uppercase tracking-widest mt-2.5" style={{ color: 'var(--dm-text-muted)' }}>—</p>
                 )}
               </div>
             </div>
