@@ -374,30 +374,31 @@ export default function DashboardPage() {
         {activeView === 'home' && (
           <div className="relative w-full h-full flex flex-col min-h-0 z-10 overflow-hidden">
             {/* Unified Premium Home Header */}
-            <div className="flex items-center justify-between px-6 border-b relative z-50 flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '64px' }}>
-              <div className="flex items-center gap-3 z-10">
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest w-fit shadow-xs transition-all hover:scale-105 cursor-default" 
+            <div className="flex items-center justify-between px-4 md:px-6 border-b relative z-50 flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '56px' }}>
+              <div className="flex items-center gap-2 z-10">
+                <div className="flex items-center gap-2 px-2.5 py-1 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-widest w-fit shadow-xs transition-all cursor-default" 
                      style={{ 
                         background: isConnected ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', 
                         color: isConnected ? '#22c55e' : '#ef4444', 
                         border: `1px solid ${isConnected ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}` 
                      }}>
-                  <span className="relative flex h-2 w-2">
+                  <span className="relative flex h-1.5 w-1.5">
                     {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
-                    <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                    <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
                   </span>
-                  {isConnected ? 'Connected' : 'Connecting...'}
+                  <span className="hidden sm:inline">{isConnected ? 'Connected' : 'Connecting...'}</span>
+                  <span className="sm:hidden">{isConnected ? '●' : '○'}</span>
                 </div>
               </div>
 
               {/* Title core */}
               <div className="absolute inset-x-0 mx-auto w-fit flex items-center gap-2 z-10 pointer-events-none">
-                <div style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-                <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3em', color: 'var(--dm-text-secondary)', margin: 0 }}>Translation Workspace</h2>
+                <div style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
+                <h2 style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.25em', color: 'var(--dm-text-secondary)', margin: 0 }}>Translation Workspace</h2>
               </div>
 
               {/* Controls */}
-              <div className="flex items-center gap-4 z-10">
+              <div className="flex items-center gap-3 z-10">
                 <ThemeToggle />
               </div>
 
@@ -405,22 +406,8 @@ export default function DashboardPage() {
               <div style={{ position: 'absolute', inset: 0, opacity: 0.04, background: 'linear-gradient(45deg, #10b981, #6366f1, #06b6d4)', filter: 'blur(15px)', pointerEvents: 'none' }} />
             </div>
 
-            {/* Mobile Profile Card */}
-            <div className="md:hidden mt-4 mx-4 p-5 rounded-[2rem] flex items-center gap-4 shadow-sm active:scale-95 transition-transform flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }} onClick={() => setIsProfileOpen(true)}>
-                <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-inner" style={{ background: 'var(--dm-bg-active)', color: 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}>
-                    {session.user?.name?.charAt(0) || 'U'}
-                </div>
-                <div className="flex-1">
-                    <h3 className="font-bold text-base tracking-tight">{session.user?.name}</h3>
-                    <p className="text-[10px] uppercase tracking-widest opacity-40 font-bold">Personal Account</p>
-                </div>
-                <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)' }}>
-                    <svg className="w-4 h-4 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                </div>
-            </div>
- 
             {/* Full bleed ASL Webcam Integration workspace */}
-            <div className="flex-1 min-h-0 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex-1 min-h-0 w-full overflow-hidden animate-in fade-in duration-700">
               <WebcamASL isCallActive={isCallActive} />
             </div>
           </div>

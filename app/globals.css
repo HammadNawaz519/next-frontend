@@ -230,37 +230,42 @@ body {
 
   .main-layout {
     flex-direction: column !important;
-    padding: 0 !important; /* Full screen - no padding */
+    padding: 0 !important;
     margin: 0 !important;
     gap: 0 !important;
-    height: 100vh !important;
+    height: 100dvh !important;
     width: 100vw !important;
     overflow: hidden !important;
   }
 
   .main-container {
-    border-radius: 0 !important; /* Full bleed on mobile */
+    border-radius: 0 !important;
     flex: 1 !important;
+    min-height: 0 !important;
     height: 100% !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
+    /* Leave room for the floating bottom nav (70px height + 20px bottom + 10px breathing) */
+    padding-bottom: 100px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
   }
 
   /* Show horizontal bottom bar */
   .mobile-nav {
     display: flex !important;
     position: fixed !important;
-    bottom: 20px !important;
-    left: 20px !important;
-    right: 20px !important;
+    bottom: 16px !important;
+    left: 16px !important;
+    right: 16px !important;
     z-index: 1000 !important;
-    background: rgba(var(--dm-bg-sidebar-rgb), 0.8) !important;
-    backdrop-filter: blur(20px) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
     border: 1px solid var(--dm-border) !important;
     border-radius: 2rem !important;
     padding: 8px !important;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.18) !important;
   }
 }
 
@@ -272,16 +277,18 @@ body {
   .main-container {
     border-radius: 0 !important;
     border: none !important;
+    /* slightly less padding on tiny screens */
+    padding-bottom: 96px !important;
   }
 }
 
 .mobile-nav {
   display: none;
   position: fixed;
-  bottom: 20px;
-  left: 20px;
-  right: 20px;
-  height: 70px;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  height: 68px;
   background: var(--dm-bg-sidebar);
   border: 1px solid var(--dm-border-main);
   border-radius: 50px;

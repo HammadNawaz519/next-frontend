@@ -627,17 +627,17 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
       )}
 
       {/* ── Centered Workspace aligned with Chat Area sizing ── */}
-      <div className="flex-grow flex-1 min-h-0 w-full max-w-[1440px] mx-auto px-6 lg:px-10 py-4 md:py-5 flex flex-col justify-between">
+      <div className="flex-grow flex-1 min-h-0 w-full max-w-[1440px] mx-auto px-3 md:px-6 lg:px-10 py-3 md:py-5 flex flex-col justify-between overflow-y-auto">
         
         {/* The 3-Column Side-by-Side HUD */}
-        <div className="flex-grow flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-5 mb-5">
+        <div className="flex-grow flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-5 mb-3 md:mb-5">
           
           {/* Left Column (5/12ths ~ 40% width): Camera & Output Document */}
-          <div className="lg:col-span-5 flex flex-col gap-5 min-h-0 h-full">
+          <div className="lg:col-span-5 flex flex-col gap-3 md:gap-5 min-h-0 h-full">
             
             {/* Camera Frame */}
             <div
-              className="flex-[2.8] min-h-[240px] w-full relative bg-zinc-950 rounded-[2rem] overflow-hidden transition-all duration-500 shadow-sm flex flex-col items-center justify-center border animate-in fade-in duration-500"
+              className="flex-[2.8] min-h-[200px] md:min-h-[240px] w-full relative bg-zinc-950 rounded-[1.5rem] md:rounded-[2rem] overflow-hidden transition-all duration-500 shadow-sm flex flex-col items-center justify-center border animate-in fade-in duration-500"
               style={{ 
                 borderColor: 'var(--dm-border)',
                 background: 'var(--dm-bg-sidebar)',
