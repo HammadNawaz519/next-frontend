@@ -296,13 +296,19 @@ export async function getRecentChats() {
 
   if (!currentUser) return [];
 
-  // This is a simplified version of getting recent chats.
-  // In a real app, you'd want to aggregate messages to find unique conversation partners.
+  // 1. Get all receiverIds this user has EVER sent a message to.
+  // Anyone in this list is an active contact (isRequest = false).
+  const sentMessages = await prisma.socialMessage.findMany({
+    where: { senderId: currentUser.id },
+    select: { receiverId: true },
+    distinct: ['receiverId']
+  });
+  const contactIdsSet = new Set(sentMessages.map(m => m.receiverId));
+
   const sent = await prisma.socialMessage.findMany({
     where: { senderId: currentUser.id },
     distinct: ['receiverId'],
     orderBy: { createdAt: 'desc' },
-    take: 10,
     include: { receiver: { select: { id: true, name: true, username: true, email: true, image: true } } }
   });
 
@@ -310,7 +316,6 @@ export async function getRecentChats() {
     where: { receiverId: currentUser.id },
     distinct: ['senderId'],
     orderBy: { createdAt: 'desc' },
-    take: 10,
     include: { sender: { select: { id: true, name: true, username: true, email: true, image: true } } }
   });
 
@@ -322,7 +327,6 @@ export async function getRecentChats() {
     if (m.type === 'deleted') return 'Message deleted';
     return m.content.length > 30 ? m.content.substring(0, 30) + '...' : m.content;
   };
-
 
   // Merge and sort
   const partners = new Map();
@@ -338,12 +342,21 @@ export async function getRecentChats() {
   });
   const unseenMap = new Map(unseenMessages.map(m => [m.senderId, m._count]));
 
-  sent.forEach(m => partners.set(m.receiverId, { ...m.receiver, lastMessage: formatLastMessage(m), lastTime: m.createdAt, isRequest: false, unseenCount: 0 }));
+  sent.forEach(m => {
+    partners.set(m.receiverId, { 
+      ...m.receiver, 
+      lastMessage: formatLastMessage(m), 
+      lastTime: m.createdAt, 
+      isRequest: false, 
+      unseenCount: 0 
+    });
+  });
+
   received.forEach(m => {
     const existing = partners.get(m.senderId);
-    // If we have sent them a message, they are a contact (isRequest = false)
-    // If we have only received, they are a request (isRequest = true)
-    const isRequest = !partners.has(m.senderId);
+    // If the sender has ever received a message from us, they are a contact (isRequest = false)
+    // If we have only received messages from them and never sent any, they are a request (isRequest = true)
+    const isRequest = !contactIdsSet.has(m.senderId);
     
     if (!existing || m.createdAt > existing.lastTime) {
       partners.set(m.senderId, { 
