@@ -4,7 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { flushSync } from 'react-dom';
-import { askAI, getChatHistory, saveChatMessage, getUserDetails, updateUsername, updateName } from './actions';
+import { askAI, getChatHistory, saveChatMessage, getUserDetails, updateName } from './actions';
 import SocialChat from '@/components/SocialChat';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/app/components/ThemeProvider';
@@ -86,19 +86,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleSaveUsername = async () => {
-    setUsernameSaving(true);
-    setUsernameError('');
-    const result = await updateUsername(usernameInput);
-    setUsernameSaving(false);
-    if ((result as any)?.error) {
-      setUsernameError((result as any).error);
-    } else {
-      setEditingUsername(false);
-      // Refresh user details
-      getUserDetails().then(setFullUser);
-    }
-  };
+  // (handleSaveUsername removed — handleSaveName is the canonical save handler)
 
   const handleMobileBack = () => {
     if (activeView === 'chat' && selectedChatUser) {
@@ -146,12 +134,14 @@ export default function DashboardPage() {
     loadHistory();
   }, [status]);
 
-  // Eager load User Details for Profile Panel
+  // Eager load User Details for Profile Panel — only once on mount
+  const hasLoadedUser = useRef(false);
   useEffect(() => {
-    if (status === 'authenticated' && !fullUser) {
+    if (status === 'authenticated' && !hasLoadedUser.current) {
+      hasLoadedUser.current = true;
       getUserDetails().then(setFullUser);
     }
-  }, [status, fullUser]);
+  }, [status]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
