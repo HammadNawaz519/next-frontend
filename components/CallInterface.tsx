@@ -468,15 +468,16 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         {/* Action Bar */}
         <div className="absolute bottom-4 md:bottom-5 left-1/2 -translate-x-1/2 w-fit min-w-[290px] md:min-w-[340px] max-w-[90vw] z-40">
-          <div className="w-full flex items-center justify-between px-5 md:px-7 py-3 md:py-4 backdrop-blur-2xl rounded-[1.5rem] md:rounded-full shadow-2xl" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
+          <div className="w-full flex items-center justify-between px-5 md:px-7 py-3 md:py-4 rounded-[2rem] md:rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.5)] border border-[rgba(255,255,255,0.12)]" style={{ background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(30px) saturate(200%)', WebkitBackdropFilter: 'blur(30px) saturate(200%)' }}>
 
             <button
               onClick={toggleSpeaker}
               className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
               style={{
-                background: isSpeakerOn ? 'rgba(34,197,94,0.12)' : 'var(--dm-bg-input)',
-                color: isSpeakerOn ? '#10b981' : 'var(--dm-text-secondary)',
-                border: '1px solid var(--dm-border)'
+                background: isSpeakerOn ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)',
+                color: isSpeakerOn ? '#10b981' : 'rgba(255,255,255,0.7)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                cursor: 'pointer'
               }}
             >
               {isSpeakerOn ? (
@@ -493,7 +494,12 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             <button
               onClick={toggleMute}
               className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
-              style={{ background: isMuted ? 'rgba(239,68,68,0.12)' : 'var(--dm-bg-input)', color: isMuted ? '#ef4444' : 'var(--dm-text-secondary)', border: '1px solid var(--dm-border)' }}
+              style={{
+                background: isMuted ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.06)',
+                color: isMuted ? '#ef4444' : 'rgba(255,255,255,0.7)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                cursor: 'pointer'
+              }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -504,7 +510,12 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
               <button
                 onClick={toggleCamera}
                 className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
-                style={{ background: isCamOff ? 'rgba(239,68,68,0.12)' : 'var(--dm-bg-input)', color: isCamOff ? '#ef4444' : 'var(--dm-text-secondary)', border: '1px solid var(--dm-border)' }}
+                style={{
+                  background: isCamOff ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.06)',
+                  color: isCamOff ? '#ef4444' : 'rgba(255,255,255,0.7)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  cursor: 'pointer'
+                }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -514,8 +525,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
             <button
               onClick={handleEnd}
-              className="w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 transition-all shadow-xl active:scale-90"
-              style={{ background: '#ef4444', color: '#fff' }}
+              className="w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 transition-all shadow-[0_4px_20px_rgba(239,68,68,0.4)] active:scale-90"
+              style={{ background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer' }}
             >
               <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.71c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.66c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />

@@ -742,7 +742,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         if (!isSentByMe && (isAppBackgrounded || isChattingWithSomeoneElse)) {
           const sender = usersRef.current.find(u => u.id === msg.senderId) || requestsRef.current.find(u => u.id === msg.senderId);
-          const senderName = sender?.name || msg.senderEmail.split('@')[0] || 'Someone';
+          const senderName = sender?.name || (msg as any).senderEmail?.split('@')[0] || 'Someone';
 
           let contentPreview = msg.content;
           if (msg.type === 'voice') contentPreview = 'Voice Message';
