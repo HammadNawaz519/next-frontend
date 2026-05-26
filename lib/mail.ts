@@ -29,7 +29,7 @@ export async function sendVerificationEmail(to: string, code: string, username?:
                 <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
                   <!-- Header gradient bar -->
                   <tr>
-                    <td style="background:linear-gradient(135deg,hsl(25,95%,55%),hsl(38,100%,65%));height:6px;"></td>
+                    <td style="background:linear-gradient(135deg,hsla(30, 100%, 0%, 1.00),hsl(38,100%,65%));height:6px;"></td>
                   </tr>
                   <!-- Body -->
                   <tr>
