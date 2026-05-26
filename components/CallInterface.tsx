@@ -634,16 +634,21 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
         localStreamRef.current = stream;
         setLocalStream(stream);
 
-        const pc = new RTCPeerConnection({
+        // ── ICE/STUN Configuration ──
+        // Google's free public STUN servers handle most network setups (same WiFi, different WiFi, WiFi↔mobile).
+        // STUN discovers the public IP/port; for symmetric NAT we keep TURN as fallback.
+        const rtcConfig: RTCConfiguration = {
           iceServers: [
-            // STUN servers
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478' },
-            // TURN relay servers (critical for cross-network calls)
+            {
+              urls: [
+                'stun:stun.l.google.com:19302',
+                'stun:stun1.l.google.com:19302',
+                'stun:stun2.l.google.com:19302',
+                'stun:stun3.l.google.com:19302',
+                'stun:stun4.l.google.com:19302'
+              ]
+            },
+            // TURN relay servers (fallback for strict symmetric NAT / corporate firewalls)
             {
               urls: 'turn:a.relay.metered.ca:80',
               username: '83eebabf8b4cce9d5dbcb4a2',
@@ -664,11 +669,17 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
               username: '83eebabf8b4cce9d5dbcb4a2',
               credential: '2D7JvfkOQtBdYW3R'
             }
-          ]
-        });
+          ],
+          iceCandidatePoolSize: 10
+        };
+        const pc = new RTCPeerConnection(rtcConfig);
         pcRef.current = pc;
 
-        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+        // Add all local tracks to the peer connection
+        stream.getTracks().forEach(track => {
+          pc.addTrack(track, stream);
+          console.log('Added local track:', track.kind, track.label);
+        });
 
         // Monitor ICE connection state for debugging
         pc.oniceconnectionstatechange = () => {
@@ -677,14 +688,36 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
             setCallStatus('active');
           }
           if (pc.iceConnectionState === 'failed') {
-            console.error("ICE connection FAILED — networks may be incompatible without a working TURN server.");
-            // Try ICE restart
+            console.error("ICE connection FAILED — attempting ICE restart...");
+            pc.restartIce();
+          }
+          if (pc.iceConnectionState === 'disconnected') {
+            console.warn("ICE disconnected — may reconnect automatically...");
+          }
+        };
+
+        // Also monitor overall connection state (more reliable for call status)
+        pc.onconnectionstatechange = () => {
+          console.log("PeerConnection state:", pc.connectionState);
+          if (pc.connectionState === 'connected') {
+            setCallStatus('active');
+          }
+          if (pc.connectionState === 'failed') {
+            console.error("PeerConnection FAILED.");
             pc.restartIce();
           }
         };
 
+        // Log ICE gathering state
+        pc.onicegatheringstatechange = () => {
+          console.log("ICE gathering state:", pc.iceGatheringState);
+        };
+
         pc.ontrack = (event) => {
-          console.log("Remote track received:", event.track.kind, event.streams.length);
+          console.log("Remote track received:", event.track.kind, "streams:", event.streams.length);
+          event.track.onunmute = () => {
+            console.log("Remote track unmuted:", event.track.kind);
+          };
           // Use the first stream if available, otherwise build one from the track
           const incomingStream = event.streams[0] ?? new MediaStream([event.track]);
           setRemoteStream(incomingStream);
@@ -693,7 +726,10 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
 
         pc.onicecandidate = (event) => {
           if (event.candidate) {
+            console.log("Sending ICE candidate:", event.candidate.type, event.candidate.protocol);
             if (target) socket.emit('webrtc_signal', { to: target, signal: { candidate: event.candidate } });
+          } else {
+            console.log("ICE gathering complete (null candidate).");
           }
         };
 
@@ -755,14 +791,30 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
   useEffect(() => {
     if (!remoteStream) return;
     if (type === 'video' && remoteVideoRef.current) {
-      if (remoteVideoRef.current.srcObject !== remoteStream) {
-        remoteVideoRef.current.srcObject = remoteStream;
-        remoteVideoRef.current.play().catch(e => console.warn('Remote video play:', e));
+      const videoEl = remoteVideoRef.current;
+      if (videoEl.srcObject !== remoteStream) {
+        videoEl.srcObject = remoteStream;
+        // Ensure video plays: some browsers block autoplay without user gesture
+        const playPromise = videoEl.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(err => {
+            console.warn('Remote video autoplay blocked, retrying on user interaction:', err);
+            // Retry play on any user interaction
+            const retryPlay = () => {
+              videoEl.play().catch(e => console.warn('Remote video retry play:', e));
+              document.removeEventListener('click', retryPlay);
+              document.removeEventListener('touchstart', retryPlay);
+            };
+            document.addEventListener('click', retryPlay, { once: true });
+            document.addEventListener('touchstart', retryPlay, { once: true });
+          });
+        }
       }
     } else if (type === 'audio' && remoteAudioRef.current) {
-      if (remoteAudioRef.current.srcObject !== remoteStream) {
-        remoteAudioRef.current.srcObject = remoteStream;
-        remoteAudioRef.current.play().catch(e => console.warn('Remote audio play:', e));
+      const audioEl = remoteAudioRef.current;
+      if (audioEl.srcObject !== remoteStream) {
+        audioEl.srcObject = remoteStream;
+        audioEl.play().catch(e => console.warn('Remote audio play:', e));
       }
     }
   }, [remoteStream, type]);
@@ -832,9 +884,12 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
         ref={remoteVideoRef}
         autoPlay
         playsInline
+        controls={false}
         className={`absolute inset-0 w-full h-full object-cover ${type !== 'video' ? 'hidden' : ''}`}
+        style={{ background: '#000' }}
       />
-      <audio ref={remoteAudioRef} autoPlay className="hidden" />
+      {/* Remote audio: NOT muted so the peer can be heard */}
+      <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
 
       {/* Main UI Layer */}
       <div className="relative z-10 w-full h-full flex flex-col items-center justify-center" style={{ background: type === 'video' ? 'rgba(0,0,0,0.5)' : 'transparent' }}>
