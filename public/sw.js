@@ -78,11 +78,11 @@ self.addEventListener('push', (event) => {
     },
     actions: type === 'call'
       ? [
-          { action: 'answer', title: '👍 Answer' },
-          { action: 'decline', title: '❌ Decline' }
+          { action: 'answer', title: 'Answer' },
+          { action: 'decline', title: 'Decline' }
         ]
       : [
-          { action: 'view', title: '👁️ View' }
+          { action: 'view', title: 'View' }
         ]
   };
 

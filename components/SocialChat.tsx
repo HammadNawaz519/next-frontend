@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSession } from 'next-auth/react';
-import { 
-  searchUsers, 
-  getSocialMessages, 
+import {
+  searchUsers,
+  getSocialMessages,
   getSocialUser,
-  saveSocialMessage, 
-  deleteSocialMessage, 
+  saveSocialMessage,
+  deleteSocialMessage,
   reactToSocialMessage,
   getRecentChats,
   markMessagesAsSeen,
@@ -120,10 +120,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
       reactionCounts[r.emoji] = (reactionCounts[r.emoji] || 0) + 1;
     });
   }
-  
+
   return (
-    <div 
-      className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${isSelected ? 'selected-item' : ''} animate-in slide-in-from-bottom-2 duration-300`} 
+    <div
+      className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${isSelected ? 'selected-item' : ''} animate-in slide-in-from-bottom-2 duration-300`}
       onClick={handleMessageClick}
       onMouseDown={handlePointerDown}
       onMouseUp={handlePointerUp}
@@ -134,8 +134,8 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
       style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', cursor: isInSelectionMode ? 'pointer' : 'default', width: '100%', maxWidth: '100%', userSelect: 'none', WebkitUserSelect: 'none' }}
     >
       {isInSelectionMode && (
-        <div 
-          className={`selection-indicator ${isSelected ? 'selected' : ''}`} 
+        <div
+          className={`selection-indicator ${isSelected ? 'selected' : ''}`}
           style={{
             width: '18px', height: '18px', borderRadius: '50%',
             border: '2px solid var(--dm-border)',
@@ -156,13 +156,13 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         </div>
       )}
 
-      <div 
+      <div
         className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''}`}
-        style={{ 
-          order: 1, 
-          width: 'fit-content', 
-          maxWidth: '75%', 
-          marginLeft: isSent ? 'auto' : '0', 
+        style={{
+          order: 1,
+          width: 'fit-content',
+          maxWidth: '75%',
+          marginLeft: isSent ? 'auto' : '0',
           marginRight: isSent ? '0' : 'auto',
           transform: isSelected ? 'scale(0.98)' : 'none',
           transition: 'all 0.2s ease',
@@ -178,9 +178,9 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           <div className="call-log-msg">
             <div className={`call-icon ${msg.content.includes('Missed') ? 'missed' : msg.content.includes('rejected') ? 'rejected' : 'completed'}`}>
               {msg.content.includes('video') ? (
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>
               ) : (
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
               )}
               {(msg.content.includes('Missed') || msg.content.includes('rejected')) && <div className="call-status-badge">!</div>}
             </div>
@@ -191,7 +191,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           </div>
         )}
         {msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' && <div>{msg.content}</div>}
-        
+
         <div className="time-row">
           <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
           {isSent && (
@@ -213,7 +213,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           </div>
         )}
       </div>
-      
+
       {msg.type !== 'deleted' && msg.type !== 'call' && !isInSelectionMode && (
         <div className={`msg-actions ${showActionsMobile ? 'show-mobile' : ''}`} style={{ order: 3 }}>
           <div className="msg-del-actions">
@@ -226,11 +226,11 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
             </div>
             <div className="del-btn-wrap">
               <span className="msg-action-btn" title="Delete for me" onClick={(e) => { e.stopPropagation(); handleDeleteClick('me'); }}>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg> Me
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z" /></svg> Me
               </span>
               {isSent && (
                 <span className="msg-action-btn" title="Delete for everyone" onClick={(e) => { e.stopPropagation(); handleDeleteClick('everyone'); }}>
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg> All
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z" /></svg> All
                 </span>
               )}
             </div>
@@ -253,7 +253,7 @@ const SidebarItem = memo(({ user, isActive, onClick }: { user: User, isActive: b
       </div>
       <div className="meta">
         <b>
-          {user.name} 
+          {user.name}
           <div className="side-meta">
             {user.unseenCount && user.unseenCount > 0 ? <span className="unseen-badge">{user.unseenCount}</span> : null}
           </div>
@@ -289,8 +289,8 @@ const triggerStunningNotification = (
     body,
     icon: iconUrl,
     badge: badgeUrl,
-    vibrate: type === 'call' 
-      ? [200, 100, 200, 100, 200, 100, 200, 100, 400] 
+    vibrate: type === 'call'
+      ? [200, 100, 200, 100, 200, 100, 200, 100, 400]
       : [100, 50, 100],
     tag: type === 'call' ? 'incoming-call' : `msg-${extraData?.partnerId || 'general'}`,
     renotify: true,
@@ -307,12 +307,12 @@ const triggerStunningNotification = (
         ...options,
         actions: type === 'call'
           ? [
-              { action: 'answer', title: '👍 Answer' },
-              { action: 'decline', title: '❌ Decline' }
-            ]
+            { action: 'answer', title: 'Answer' },
+            { action: 'decline', title: 'Decline' }
+          ]
           : [
-              { action: 'view', title: '👁️ View' }
-            ]
+            { action: 'view', title: 'View' }
+          ]
       };
       reg.showNotification(title, pwaOptions);
     }).catch(() => {
@@ -330,7 +330,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  
+
   const [isSlidingOut, setIsSlidingOut] = useState(false);
   const transitionInProgress = React.useRef(false);
 
@@ -386,7 +386,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   // Custom Delete Modal State
-  const [deleteConfirm, setDeleteConfirm] = useState<{msgId: string, type: 'me' | 'everyone'} | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ msgId: string, type: 'me' | 'everyone' } | null>(null);
 
   const handleRequestDelete = (msgId: string, type: 'me' | 'everyone') => {
     setDeleteConfirm({ msgId, type });
@@ -421,7 +421,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const handleBulkDelete = async (type: 'me' | 'everyone') => {
     const ids = Array.from(selectedMessageIds);
     setSelectedMessageIds(new Set()); // Exit selection mode
-    
+
     // Local optimistic delete
     if (type === 'everyone') {
       setMessages(prev => prev.map(m => {
@@ -461,7 +461,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const [view, setView] = useState<'recent' | 'requests'>('recent');
-  const [requests, setRequests] = useState<User[]>([]);
   const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>(() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('social_messages_cache');
@@ -498,6 +497,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }, []);
 
+  const [requests, setRequests] = useState<User[]>([]);
   // PWA Notification Deep-linking URL Parser: Automatically selects active chat conversation
   useEffect(() => {
     if (typeof window === 'undefined' || users.length === 0) return;
@@ -510,7 +510,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       if (targetUser) {
         // Optimistically select user
         setSelectedUser(targetUser);
-        
+
         // Reset browser URL query parameters without full page reload
         const newUrl = window.location.pathname;
         window.history.replaceState({}, '', newUrl);
@@ -525,17 +525,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
   const [isVoiceToText, setIsVoiceToText] = useState(false);
   const voiceToTextRef = useRef<any>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  
+
   // Call States
   const [incomingCall, setIncomingCall] = useState<{ from: any, type: 'audio' | 'video', offer?: any } | null>(null);
   const [activeCall, setActiveCall] = useState<{ peer: any, type: 'audio' | 'video', isCaller: boolean, initialOffer?: any } | null>(null);
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const selectedUserRef = useRef<User | null>(null);
 
@@ -548,7 +549,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const sessionRef = useRef<any>(session);
   const usersRef = useRef<User[]>(users);
   const requestsRef = useRef<User[]>(requests);
-  
+
   useEffect(() => {
     selectedUserRef.current = selectedUser;
     sessionRef.current = session;
@@ -607,10 +608,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   // 1. Stable Socket Instance
   useEffect(() => {
     if (typeof window === 'undefined' || !session?.user) return;
-    
+
     const initSocket = async () => {
       const SOCKET_URL = 'https://server-production-2856.up.railway.app';
-      const newSocket = io(SOCKET_URL, { 
+      const newSocket = io(SOCKET_URL, {
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000
@@ -640,7 +641,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       newSocket.on('receive_social_message', async (msg: Message) => {
         const partnerId = msg.senderId === (sessionRef.current?.user as any)?.id ? msg.receiverId : msg.senderId;
-        
+
         // 1. Update Message Stream
         setMessages((prev) => {
           if (selectedUserRef.current?.id !== partnerId) return prev; // Only append if we are looking at this user's chat!
@@ -660,8 +661,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         const updateSidebarList = async (prevList: User[]) => {
           const existingIndex = prevList.findIndex(u => u.id === partnerId);
           if (existingIndex > -1) {
-            const updatedUser = { 
-              ...prevList[existingIndex], 
+            const updatedUser = {
+              ...prevList[existingIndex],
               lastMessage: formatMsg(msg),
               unseenCount: (selectedUserRef.current?.id === partnerId) ? 0 : (prevList[existingIndex].unseenCount || 0) + 1
             };
@@ -669,16 +670,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             newList.splice(existingIndex, 1);
             return [updatedUser, ...newList];
           }
-          
+
           // If NOT in list, fetch user and add as request
           if (msg.senderId !== (sessionRef.current?.user as any)?.id) {
             const newUser = await getSocialUser(msg.senderId);
             if (newUser) {
-              return [{ 
-                ...(newUser as any), 
-                lastMessage: formatMsg(msg), 
-                isRequest: true, 
-                unseenCount: 1 
+              return [{
+                ...(newUser as any),
+                lastMessage: formatMsg(msg),
+                isRequest: true,
+                unseenCount: 1
               }, ...prevList];
             }
           }
@@ -706,7 +707,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             next.splice(index, 1);
             return [updated, ...next];
           }
-          
+
           // If it's a completely new person who messaged us
           if (msg.senderId !== (sessionRef.current?.user as any)?.id && !usersRef.current.some(u => u.id === msg.senderId)) {
             getSocialUser(msg.senderId).then(newUser => {
@@ -741,17 +742,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         if (!isSentByMe && (isAppBackgrounded || isChattingWithSomeoneElse)) {
           const sender = usersRef.current.find(u => u.id === msg.senderId) || requestsRef.current.find(u => u.id === msg.senderId);
-          const senderName = sender?.name || (msg as any).senderEmail?.split('@')[0] || 'Someone';
-          
+          const senderName = sender?.name || msg.senderEmail.split('@')[0] || 'Someone';
+
           let contentPreview = msg.content;
-          if (msg.type === 'voice') contentPreview = '🎤 Voice Message';
-          else if (msg.type === 'image') contentPreview = '📷 Image';
-          else if (msg.type === 'video') contentPreview = '🎥 Video';
-          else if (msg.type === 'file') contentPreview = '📁 Attachment';
+          if (msg.type === 'voice') contentPreview = 'Voice Message';
+          else if (msg.type === 'image') contentPreview = 'Image';
+          else if (msg.type === 'video') contentPreview = 'Video';
+          else if (msg.type === 'file') contentPreview = 'Attachment';
 
           triggerStunningNotification(
             'message',
-            `💬 Message from ${senderName}`,
+            `Message from ${senderName}`,
             contentPreview,
             { partnerId }
           );
@@ -763,12 +764,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           if (m.id === messageId) return { ...m, content: "This message was deleted", type: "deleted" };
           return m;
         }));
-        
+
         // Update cache as well
         setMessagesCache(prev => {
           const newCache = { ...prev };
           Object.keys(newCache).forEach(userId => {
-            newCache[userId] = newCache[userId].map(m => 
+            newCache[userId] = newCache[userId].map(m =>
               m.id === messageId ? { ...m, content: "This message was deleted", type: "deleted" } : m
             );
           });
@@ -778,7 +779,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       newSocket.on('messages_seen', () => {
         setMessages(prev => prev.map(m => ({ ...m, isSeen: true })));
-        
+
         // Update cache as well
         setMessagesCache(prev => {
           const newCache = { ...prev };
@@ -800,7 +801,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         if (isAppBackgrounded) {
           triggerStunningNotification(
             'call',
-            `📞 Incoming ${data.type.charAt(0).toUpperCase() + data.type.slice(1)} Call`,
+            `Incoming ${data.type.charAt(0).toUpperCase() + data.type.slice(1)} Call`,
             `${callerName} is calling you... tap to answer`,
             { partnerId: data.from?.id, callType: data.type, callerEmail: data.from?.email }
           );
@@ -893,26 +894,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     // 2. Set local active call state
     setActiveCall({ peer: selectedUser, type, isCaller: true });
-    
+
     // 3. Call is logged when it ends (onEnd) or is rejected (handleRejectCall)
   };
 
   const handleAcceptCall = () => {
     if (!incomingCall || !socket) return;
-    
+
     const target = incomingCall.from.email?.toLowerCase().trim();
     if (!target) return;
-    
+
     socket.emit('accept_call', {
       to: target,
       from: session?.user
     });
 
-    setActiveCall({ 
-      peer: incomingCall.from, 
-      type: incomingCall.type, 
+    setActiveCall({
+      peer: incomingCall.from,
+      type: incomingCall.type,
       isCaller: false,
-      initialOffer: incomingCall.offer 
+      initialOffer: incomingCall.offer
     });
     setIncomingCall(null);
   };
@@ -952,12 +953,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       getRecentChats().then(results => {
         const contacts: User[] = [];
         const reqs: User[] = [];
-        
+
         results.forEach((u: any) => {
           if (u.isRequest) reqs.push(u);
           else contacts.push(u);
         });
-        
+
         setUsers(contacts);
         setRequests(reqs.filter(r => !contacts.some(c => c.id === r.id)));
 
@@ -967,7 +968,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           if (!messagesCache[u.id]) {
             getSocialMessages(u.id).then(history => {
               setMessagesCache(prev => ({ ...prev, [u.id]: history as any }));
-            }).catch(() => {});
+            }).catch(() => { });
           }
         });
       });
@@ -979,7 +980,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     async function loadMessages() {
       if (!selectedUser) return;
       setSelectedMessageIds(new Set());
-      
+
       const cached = messagesCache[selectedUser.id];
       if (cached) {
         setMessages(cached);
@@ -988,19 +989,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         setIsLoadingMessages(true);
         setMessages([]); // Clear while loading if no cache
       }
-      
+
       setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, unseenCount: 0 } : u));
 
       try {
         const history = await getSocialMessages(selectedUser.id);
         const fresh = history as any[];
-        
+
         // Fast update check
-        if (!cached || fresh.length !== cached.length || (fresh.length > 0 && fresh[fresh.length-1].id !== cached[cached.length-1].id)) {
+        if (!cached || fresh.length !== cached.length || (fresh.length > 0 && fresh[fresh.length - 1].id !== cached[cached.length - 1].id)) {
           setMessages(fresh);
           setMessagesCache(prev => ({ ...prev, [selectedUser.id]: fresh }));
         }
-        
+
         await markMessagesAsSeen(selectedUser.id);
         socket?.emit('mark_as_seen', { senderEmail: selectedUser.email });
       } catch (err) {
@@ -1064,8 +1065,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         // Sync the ID if the backend assigned a different one (usually we'd want to keep the client ID if possible)
         setMessages(prev => prev.map(m => m.id === stableId ? { ...(savedMsg as any), id: (savedMsg as any).id || stableId } : m));
       }
-    } catch (err) { 
-      console.error("Failed to persist message:", err); 
+    } catch (err) {
+      console.error("Failed to persist message:", err);
       // Optionally show a "failed" icon next to the message instead of removing it
     }
   };
@@ -1089,7 +1090,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           if (selectedUser && socket && session?.user) {
             const senderId = (session.user as any).id;
             const tempId = 'temp-voice-' + Date.now();
-            
+
             // Immediate Update
             const stableId = 'voice-' + Date.now() + Math.random().toString(36).substring(7);
             const optimisticMsg: any = {
@@ -1168,19 +1169,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     recognition.onend = () => {
       // Auto-restart if still in voice-to-text mode
       if (isVoiceToText) {
-        try { recognition.start(); } catch(e) {}
+        try { recognition.start(); } catch (e) { }
       }
     };
 
     voiceToTextRef.current = recognition;
     setIsVoiceToText(true);
-    try { recognition.start(); } catch(e) { console.error(e); }
+    try { recognition.start(); } catch (e) { console.error(e); }
   };
 
   const stopVoiceToText = () => {
     if (voiceToTextRef.current) {
       voiceToTextRef.current.onend = null;
-      try { voiceToTextRef.current.stop(); } catch(e) {}
+      try { voiceToTextRef.current.stop(); } catch (e) { }
       voiceToTextRef.current = null;
     }
     setIsVoiceToText(false);
@@ -1273,377 +1274,377 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   return (
     <>
-    <div className="social-chat-container" style={{ display: isActive ? 'flex' : 'none', width: '100%', height: '100%' }}>
-      <div className="main-wrap">
-        <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'}`}>
-          <div className="search-wrap relative">
-            <div className="flex items-center gap-3 mb-3">
-              <button style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', flexShrink: 0 }} onClick={() => onBack && onBack()}>
-                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-              </button>
-              <h2 className="text-xl font-bold" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
-            </div>
-            <input 
-              type="text" 
-              placeholder="Search contacts..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <div className="view-toggle">
-              <button className={view === 'recent' ? 'active' : ''} onClick={() => setView('recent')}>
-                Chats
-              </button>
-              <button className={view === 'requests' ? 'active' : ''} onClick={() => setView('requests')}>
-                Requests {requests.length > 0 && <span className="count">{requests.length}</span>}
-              </button>
-            </div>
-          </div>
-          <div className="list">
-            {(view === 'recent' ? users : requests).map((user) => {
-              const isOnline = onlineUsers.has((user.email || '').toLowerCase().trim());
-              return (
-                <div
-                  key={user.id}
-                  className={`item ${selectedUser?.id === user.id ? 'active' : ''}`}
-                  onClick={(e: React.MouseEvent) => handleSelectUser(user, e)}
-                >
-                  {/* Avatar with online dot */}
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <div className="user-pfp">
-                      {user.image && user.image.length > 5
-                        ? <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
-                        : user.name?.charAt(0).toUpperCase()
-                      }
-                    </div>
-                    <span style={{
-                      position: 'absolute', bottom: 2, right: 2,
-                      width: '12px', height: '12px', borderRadius: '50%',
-                      background: isOnline ? '#22c55e' : '#9ca3af',
-                      border: '2px solid var(--dm-bg-sidebar)',
-                      display: 'block',
-                      transition: 'background 0.3s'
-                    }} />
-                  </div>
-
-                  {/* Meta */}
-                  <div className="meta">
-                    <b>
-                      {user.name}
-                      {(user as any).unseenCount > 0 && (
-                        <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 700, background: '#6366f1', color: '#fff', borderRadius: '20px', padding: '1px 6px' }}>
-                          {(user as any).unseenCount}
-                        </span>
-                      )}
-                    </b>
-                    <small style={{ color: isOnline ? '#22c55e' : undefined }}>
-                      {isOnline ? '● Online' : (user as any).lastMessage || 'Offline'}
-                    </small>
-                  </div>
-                </div>
-              );
-            })}
-            {(view === 'recent' ? users : requests).length === 0 && searchQuery.length < 2 && (
-              <div className="empty-state">
-                <p>{view === 'recent' ? 'No recent conversations' : 'No message requests'}</p>
+      <div className="social-chat-container" style={{ display: isActive ? 'flex' : 'none', width: '100%', height: '100%' }}>
+        <div className="main-wrap">
+          <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'}`}>
+            <div className="search-wrap relative">
+              <div className="flex items-center gap-3 mb-3">
+                <button style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', flexShrink: 0 }} onClick={() => onBack && onBack()}>
+                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                </button>
+                <h2 className="text-xl font-bold" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
               </div>
-            )}
-          </div>
-        </aside>
-
-        <section className={`chat-area ${selectedUser ? 'active' : ''} ${selectedUser ? 'show-on-mobile' : 'hide-on-mobile'}`}>
-          {selectedUser ? (
-            <>
-              <div className="chat-header">
-                <div className="to">
-                  <button 
-                    style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', marginRight: '10px', flexShrink: 0 }} 
-                    onClick={(e) => handleChatBack(e)}
+              <input
+                type="text"
+                placeholder="Search contacts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <div className="view-toggle">
+                <button className={view === 'recent' ? 'active' : ''} onClick={() => setView('recent')}>
+                  Chats
+                </button>
+                <button className={view === 'requests' ? 'active' : ''} onClick={() => setView('requests')}>
+                  Requests {requests.length > 0 && <span className="count">{requests.length}</span>}
+                </button>
+              </div>
+            </div>
+            <div className="list">
+              {(view === 'recent' ? users : requests).map((user) => {
+                const isOnline = onlineUsers.has((user.email || '').toLowerCase().trim());
+                return (
+                  <div
+                    key={user.id}
+                    className={`item ${selectedUser?.id === user.id ? 'active' : ''}`}
+                    onClick={(e: React.MouseEvent) => handleSelectUser(user, e)}
                   >
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                  </button>
-                  <div className="avatar">
-                    {selectedUser.image && selectedUser.image.length > 5 ? (
-                      <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
-                    ) : (
-                      <span>{selectedUser.name?.charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                  <div className="info">
-                    <div className="name">{selectedUser.name}</div>
-                    <div className="status-text">
-                      {typingUsers.has(selectedUser.email) ? (
-                        <span className="typing-indicator">typing...</span>
-                      ) : onlineUsers.has((selectedUser.email || '').toLowerCase().trim()) ? (
-                        <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                          Online
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>Offline</span>
-                      )}
+                    {/* Avatar with online dot */}
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <div className="user-pfp">
+                        {user.image && user.image.length > 5
+                          ? <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
+                          : user.name?.charAt(0).toUpperCase()
+                        }
+                      </div>
+                      <span style={{
+                        position: 'absolute', bottom: 2, right: 2,
+                        width: '12px', height: '12px', borderRadius: '50%',
+                        background: isOnline ? '#22c55e' : '#9ca3af',
+                        border: '2px solid var(--dm-bg-sidebar)',
+                        display: 'block',
+                        transition: 'background 0.3s'
+                      }} />
+                    </div>
+
+                    {/* Meta */}
+                    <div className="meta">
+                      <b>
+                        {user.name}
+                        {(user as any).unseenCount > 0 && (
+                          <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 700, background: '#6366f1', color: '#fff', borderRadius: '20px', padding: '1px 6px' }}>
+                            {(user as any).unseenCount}
+                          </span>
+                        )}
+                      </b>
+                      <small style={{ color: isOnline ? '#22c55e' : undefined }}>
+                        {isOnline ? '● Online' : (user as any).lastMessage || 'Offline'}
+                      </small>
                     </div>
                   </div>
+                );
+              })}
+              {(view === 'recent' ? users : requests).length === 0 && searchQuery.length < 2 && (
+                <div className="empty-state">
+                  <p>{view === 'recent' ? 'No recent conversations' : 'No message requests'}</p>
                 </div>
-                  <div className="chat-header-right">
-                  {requests.some(r => r.id === selectedUser.id) && (
-                    <button className="accept-req-btn" onClick={handleAcceptRequest}>
-                      Accept Request
+              )}
+            </div>
+          </aside>
+
+          <section className={`chat-area ${selectedUser ? 'active' : ''} ${selectedUser ? 'show-on-mobile' : 'hide-on-mobile'}`}>
+            {selectedUser ? (
+              <>
+                <div className="chat-header">
+                  <div className="to">
+                    <button
+                      style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', marginRight: '10px', flexShrink: 0 }}
+                      onClick={(e) => handleChatBack(e)}
+                    >
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                     </button>
-                  )}
-                  <button className="call-btn" onClick={() => handleCall('audio')} title="Audio Call">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
-                  </button>
-                  <button className="call-btn" onClick={() => handleCall('video')} title="Video Call">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>
-                  </button>
-                </div>
-
-              </div>
-
-              <div className="messages">
-                {messages.map((msg) => (
-                  <MessageItem 
-                    key={msg.id} 
-                    msg={msg} 
-                    currentUserId={(session?.user as any)?.id}
-                    selectedUser={selectedUser}
-                    onDelete={handleDelete}
-                    onReact={handleReact}
-                    onRequestDelete={handleRequestDelete}
-                    selectedMessageIds={selectedMessageIds}
-                    toggleMessageSelection={toggleMessageSelection}
-                    onLongPress={handleLongPress}
-                  />
-                ))}
-                {!isLoadingMessages && messages.length === 0 && (
-                  <div className="empty-chat-state">
-                    <div className="empty-chat-pfp">
+                    <div className="avatar">
                       {selectedUser.image && selectedUser.image.length > 5 ? (
                         <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
                       ) : (
-                        <div className="avatar-initials">{selectedUser.name?.charAt(0).toUpperCase()}</div>
+                        <span>{selectedUser.name?.charAt(0).toUpperCase()}</span>
                       )}
                     </div>
-                    <h3>Start a conversation</h3>
-                    <p>Send a message to start chatting with <b>{selectedUser.name}</b></p>
-                    <div className="empty-chat-hint">
-                      Messages are encrypted and secure
+                    <div className="info">
+                      <div className="name">{selectedUser.name}</div>
+                      <div className="status-text">
+                        {typingUsers.has(selectedUser.email) ? (
+                          <span className="typing-indicator">typing...</span>
+                        ) : onlineUsers.has((selectedUser.email || '').toLowerCase().trim()) ? (
+                          <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                            Online
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>Offline</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
+                  <div className="chat-header-right">
+                    {requests.some(r => r.id === selectedUser.id) && (
+                      <button className="accept-req-btn" onClick={handleAcceptRequest}>
+                        Accept Request
+                      </button>
+                    )}
+                    <button className="call-btn" onClick={() => handleCall('audio')} title="Audio Call">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
+                    </button>
+                    <button className="call-btn" onClick={() => handleCall('video')} title="Video Call">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>
+                    </button>
+                  </div>
 
-              {selectedMessageIds.size === 0 ? (
-                <footer className="footer">
-                  {isVoiceToText ? (
-                    <div className="type-box" style={{ position: 'relative' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, padding: '8px 14px', borderRadius: '24px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', animation: 'pulse 2s infinite' }}>
-                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dm-text-primary)', flex: 1 }}>
-                          {inputValue || 'Listening... speak now'}
-                        </span>
-                      </div>
-                      <button 
-                        className="send-btn"
-                        onClick={() => {
-                          stopVoiceToText();
-                          if (inputValue.trim()) {
-                            handleSendMessage();
-                          }
-                        }}
-                        style={{ background: inputValue.trim() ? '#6366f1' : '#ef4444' }}
-                      >
-                        {inputValue.trim() ? (
-                          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </div>
+
+                <div className="messages">
+                  {messages.map((msg) => (
+                    <MessageItem
+                      key={msg.id}
+                      msg={msg}
+                      currentUserId={(session?.user as any)?.id}
+                      selectedUser={selectedUser}
+                      onDelete={handleDelete}
+                      onReact={handleReact}
+                      onRequestDelete={handleRequestDelete}
+                      selectedMessageIds={selectedMessageIds}
+                      toggleMessageSelection={toggleMessageSelection}
+                      onLongPress={handleLongPress}
+                    />
+                  ))}
+                  {!isLoadingMessages && messages.length === 0 && (
+                    <div className="empty-chat-state">
+                      <div className="empty-chat-pfp">
+                        {selectedUser.image && selectedUser.image.length > 5 ? (
+                          <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
                         ) : (
-                          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                        )}
-                      </button>
-                    </div>
-                  ) : !isRecording ? (
-                    <div className="type-box">
-                      <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Send Media">
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
-                      </button>
-                      {/* Gap between image and emoji */}
-                      <div style={{ width: '6px', flexShrink: 0 }} />
-                      <div style={{ position: 'relative' }}>
-                        <button className="icon-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)} title="Emoji" style={{ color: showEmojiPicker ? 'var(--dm-text-primary)' : undefined }}>
-                          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3.5-9c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm7 0c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
-                        </button>
-                        {showEmojiPicker && (
-                          <div className="emoji-picker-bar" style={{
-                            position: 'absolute', bottom: '48px', left: '-8px',
-                            background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)',
-                            borderRadius: '16px', padding: '12px 8px', zIndex: 999,
-                            boxShadow: '0 -4px 30px rgba(0,0,0,0.15)',
-                            animation: 'emojiBarIn 0.25s cubic-bezier(0.2,0.8,0.2,1) forwards',
-                            display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '280px'
-                          }}>
-                            {[
-                              { label: 'Smileys', emojis: ['😀','😂','😍','🥰','😎','🤔','😅','😭','🥹','😇','🤩','😏','😒','🙄','😤','🤯','😴','🤢','🥶','😱'] },
-                              { label: 'Gestures', emojis: ['👍','👎','👋','🤝','🙏','👏','🤜','💪','✌️','🤞','👌','🤙','☝️','🖐️','🫶','🤲','🫱','🤟','🤘','👊'] },
-                              { label: 'Hearts', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💖','💗','💓','💞','💝','❤️‍🔥','💔','❣️','💟','♥️','🫀','💕'] },
-                              { label: 'Nature', emojis: ['🌟','⭐','🌙','☀️','🌈','🌊','🔥','❄️','⚡','🌸','🌺','🍀','🌿','🐶','🐱','🦋','🐝','🌴','🍁','🌻'] },
-                              { label: 'Food', emojis: ['🍕','🍔','🍜','🍣','🍰','🎂','🍩','🍪','☕','🧋','🍷','🎉','🎊','🎈','🎁','🏆','💯','✅','🔥','⚡'] },
-                            ].map(group => (
-                              <div key={group.label}>
-                                <div style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--dm-text-muted)', marginBottom: '6px', paddingLeft: '4px' }}>{group.label}</div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
-                                  {group.emojis.map(emoji => (
-                                    <button key={emoji} onClick={() => { setInputValue(prev => prev + emoji); setShowEmojiPicker(false); }} style={{ fontSize: '20px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '8px', lineHeight: 1, transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--dm-bg-active)')} onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-                                      {emoji}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                          <div className="avatar-initials">{selectedUser.name?.charAt(0).toUpperCase()}</div>
                         )}
                       </div>
-                      <input 
-                        type="text" 
-                        placeholder="Write a message..." 
-                        value={inputValue}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setInputValue(val);
-                          
-                          // Typing Indicator Logic
-                          if (socket && selectedUser) {
-                            if (!typingTimeoutRef.current) {
-                              socket.emit('typing', { receiverEmail: selectedUser.email });
-                            } else {
-                              clearTimeout(typingTimeoutRef.current);
-                            }
-                            typingTimeoutRef.current = setTimeout(() => {
-                              socket.emit('stop_typing', { receiverEmail: selectedUser.email });
-                              typingTimeoutRef.current = null;
-                            }, 2000);
-                          }
-
-                          // Show popup if the last character is @ or if we're typing an @ mention
-                          const lastWord = val.split(' ').pop() || '';
-                          if (lastWord.startsWith('@')) {
-                            setShowAIMention(true);
-                          } else {
-                            setShowAIMention(false);
-                          }
-                        }}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                      />
-                      {showAIMention && (
-                        <div className="mention-popup animate-in slide-in-from-bottom-2 duration-200">
-                          <div className="mention-item" onClick={() => { setInputValue(prev => prev + 'ai '); setShowAIMention(false); }}>
-                            <div className="mention-avatar">AI</div>
-                            <div className="mention-info">
-                              <b>AI Assistant</b>
-                              <span>Ask me anything</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="visualizer">
-                      {[...Array(13)].map((_, i) => <div key={i} className="bar" style={{ animationDelay: `${-0.1 * (i % 7)}s` }} />)}
+                      <h3>Start a conversation</h3>
+                      <p>Send a message to start chatting with <b>{selectedUser.name}</b></p>
+                      <div className="empty-chat-hint">
+                        Messages are encrypted and secure
+                      </div>
                     </div>
                   )}
-                  
+                  <div ref={messagesEndRef} />
+                </div>
 
-                  <button 
-                    className={`send-btn${isRecording ? ' recording-pulse' : ''}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (inputValue.trim()) {
-                        handleSendMessage();
-                      } else if (isRecording) {
-                        stopRecording();
-                      } else {
-                        // Directly start voice recording — no popup menu
-                        startRecording();
-                      }
-                    }}
-                    onTouchStart={(e) => {
-                      // Prevent ghost click on mobile
-                      e.preventDefault();
-                      if (inputValue.trim()) {
-                        handleSendMessage();
-                      } else if (isRecording) {
-                        stopRecording();
-                      } else {
-                        startRecording();
-                      }
-                    }}
-                    title={isRecording ? 'Tap to stop & send' : inputValue.trim() ? 'Send' : 'Voice message'}
-                    style={isRecording ? { background: '#ef4444' } : undefined}
-                  >
-                    {inputValue.trim() ? (
-                      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                    ) : isRecording ? (
-                      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                    ) : isVoiceToText ? (
-                      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                {selectedMessageIds.size === 0 ? (
+                  <footer className="footer">
+                    {isVoiceToText ? (
+                      <div className="type-box" style={{ position: 'relative' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, padding: '8px 14px', borderRadius: '24px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', animation: 'pulse 2s infinite' }}>
+                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dm-text-primary)', flex: 1 }}>
+                            {inputValue || 'Listening... speak now'}
+                          </span>
+                        </div>
+                        <button
+                          className="send-btn"
+                          onClick={() => {
+                            stopVoiceToText();
+                            if (inputValue.trim()) {
+                              handleSendMessage();
+                            }
+                          }}
+                          style={{ background: inputValue.trim() ? '#6366f1' : '#ef4444' }}
+                        >
+                          {inputValue.trim() ? (
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
+                          ) : (
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+                          )}
+                        </button>
+                      </div>
+                    ) : !isRecording ? (
+                      <div className="type-box">
+                        <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Send Media">
+                          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
+                        </button>
+                        {/* Gap between image and emoji */}
+                        <div style={{ width: '6px', flexShrink: 0 }} />
+                        <div style={{ position: 'relative' }}>
+                          <button className="icon-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)} title="Emoji" style={{ color: showEmojiPicker ? 'var(--dm-text-primary)' : undefined }}>
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3.5-9c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm7 0c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
+                          </button>
+                          {showEmojiPicker && (
+                            <div className="emoji-picker-bar" style={{
+                              position: 'absolute', bottom: '48px', left: '-8px',
+                              background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)',
+                              borderRadius: '16px', padding: '12px 8px', zIndex: 999,
+                              boxShadow: '0 -4px 30px rgba(0,0,0,0.15)',
+                              animation: 'emojiBarIn 0.25s cubic-bezier(0.2,0.8,0.2,1) forwards',
+                              display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '280px'
+                            }}>
+                              {[
+                                { label: 'Smileys', emojis: ['😀', '😂', '😍', '🥰', '😎', '🤔', '😅', '😭', '🥹', '😇', '🤩', '😏', '😒', '🙄', '😤', '🤯', '😴', '🤢', '🥶', '😱'] },
+                                { label: 'Gestures', emojis: ['👍', '👎', '👋', '🤝', '🙏', '👏', '🤜', '💪', '✌️', '🤞', '👌', '🤙', '☝️', '🖐️', '🫶', '🤲', '🫱', '🤟', '🤘', '👊'] },
+                                { label: 'Hearts', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💖', '💗', '💓', '💞', '💝', '❤️‍🔥', '💔', '❣️', '💟', '♥️', '🫀', '💕'] },
+                                { label: 'Nature', emojis: ['🌟', '⭐', '🌙', '☀️', '🌈', '🌊', '🔥', '❄️', '⚡', '🌸', '🌺', '🍀', '🌿', '🐶', '🐱', '🦋', '🐝', '🌴', '🍁', '🌻'] },
+                                { label: 'Food', emojis: ['🍕', '🍔', '🍜', '🍣', '🍰', '🎂', '🍩', '🍪', '☕', '🧋', '🍷', '🎉', '🎊', '🎈', '🎁', '🏆', '💯', '✅', '🔥', '⚡'] },
+                              ].map(group => (
+                                <div key={group.label}>
+                                  <div style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--dm-text-muted)', marginBottom: '6px', paddingLeft: '4px' }}>{group.label}</div>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
+                                    {group.emojis.map(emoji => (
+                                      <button key={emoji} onClick={() => { setInputValue(prev => prev + emoji); setShowEmojiPicker(false); }} style={{ fontSize: '20px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '8px', lineHeight: 1, transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--dm-bg-active)')} onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Write a message..."
+                          value={inputValue}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setInputValue(val);
+
+                            // Typing Indicator Logic
+                            if (socket && selectedUser) {
+                              if (!typingTimeoutRef.current) {
+                                socket.emit('typing', { receiverEmail: selectedUser.email });
+                              } else {
+                                clearTimeout(typingTimeoutRef.current);
+                              }
+                              typingTimeoutRef.current = setTimeout(() => {
+                                socket.emit('stop_typing', { receiverEmail: selectedUser.email });
+                                typingTimeoutRef.current = null;
+                              }, 2000);
+                            }
+
+                            // Show popup if the last character is @ or if we're typing an @ mention
+                            const lastWord = val.split(' ').pop() || '';
+                            if (lastWord.startsWith('@')) {
+                              setShowAIMention(true);
+                            } else {
+                              setShowAIMention(false);
+                            }
+                          }}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                        />
+                        {showAIMention && (
+                          <div className="mention-popup animate-in slide-in-from-bottom-2 duration-200">
+                            <div className="mention-item" onClick={() => { setInputValue(prev => prev + 'ai '); setShowAIMention(false); }}>
+                              <div className="mention-avatar">AI</div>
+                              <div className="mention-info">
+                                <b>AI Assistant</b>
+                                <span>Ask me anything</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     ) : (
-                      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-                        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-                      </svg>
+                      <div className="visualizer">
+                        {[...Array(13)].map((_, i) => <div key={i} className="bar" style={{ animationDelay: `${-0.1 * (i % 7)}s` }} />)}
+                      </div>
                     )}
-                  </button>
-                </footer>
-              ) : (
-                <footer className="footer selection-bar animate-in slide-in-from-bottom duration-300" style={{ background: 'var(--dm-bg-sidebar)', borderTop: '1px solid var(--dm-border)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 100, width: '100%' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <button 
-                      onClick={() => setSelectedMessageIds(new Set())}
-                      style={{ background: 'none', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+
+
+                    <button
+                      className={`send-btn${isRecording ? ' recording-pulse' : ''}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (inputValue.trim()) {
+                          handleSendMessage();
+                        } else if (isRecording) {
+                          stopRecording();
+                        } else {
+                          // Directly start voice recording — no popup menu
+                          startRecording();
+                        }
+                      }}
+                      onTouchStart={(e) => {
+                        // Prevent ghost click on mobile
+                        e.preventDefault();
+                        if (inputValue.trim()) {
+                          handleSendMessage();
+                        } else if (isRecording) {
+                          stopRecording();
+                        } else {
+                          startRecording();
+                        }
+                      }}
+                      title={isRecording ? 'Tap to stop & send' : inputValue.trim() ? 'Send' : 'Voice message'}
+                      style={isRecording ? { background: '#ef4444' } : undefined}
                     >
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                      {inputValue.trim() ? (
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
+                      ) : isRecording ? (
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+                      ) : isVoiceToText ? (
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                        </svg>
+                      )}
                     </button>
-                    <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--dm-text-primary)' }}>{selectedMessageIds.size} Selected</span>
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button 
-                      onClick={() => handleBulkDelete('me')}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold"
-                      style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer' }}
-                    >
-                      Delete for Me
-                    </button>
-                    <button 
-                      onClick={() => handleBulkDelete('everyone')}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold text-white bg-red-500 hover:bg-red-600 shadow-md"
-                      style={{ cursor: 'pointer', border: 'none' }}
-                    >
-                      Delete for Everyone
-                    </button>
-                  </div>
-                </footer>
-              )}
+                  </footer>
+                ) : (
+                  <footer className="footer selection-bar animate-in slide-in-from-bottom duration-300" style={{ background: 'var(--dm-bg-sidebar)', borderTop: '1px solid var(--dm-border)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 100, width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <button
+                        onClick={() => setSelectedMessageIds(new Set())}
+                        style={{ background: 'none', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+                      >
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                      <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--dm-text-primary)' }}>{selectedMessageIds.size} Selected</span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={() => handleBulkDelete('me')}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold"
+                        style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer' }}
+                      >
+                        Delete for Me
+                      </button>
+                      <button
+                        onClick={() => handleBulkDelete('everyone')}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold text-white bg-red-500 hover:bg-red-600 shadow-md"
+                        style={{ cursor: 'pointer', border: 'none' }}
+                      >
+                        Delete for Everyone
+                      </button>
+                    </div>
+                  </footer>
+                )}
 
 
 
-              <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="*" />
-            </>
-          ) : (
-            <div className="empty-state">
-              <h3>Select a Chat</h3>
-              <p>Choose a contact to start messaging or search for new people.</p>
-            </div>
-          )}
+                <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="*" />
+              </>
+            ) : (
+              <div className="empty-state">
+                <h3>Select a Chat</h3>
+                <p>Choose a contact to start messaging or search for new people.</p>
+              </div>
+            )}
 
-        </section>
+          </section>
+        </div>
       </div>
-    </div>
 
       {/* --- INCOMING CALL OVERLAY --- */}
       {incomingCall && (
         <div className="fixed inset-0 z-[1500] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: 'rgba(0,0,0,0.3)' }}>
           <div className="relative z-10 w-full h-full flex flex-col items-center justify-center" style={{ background: incomingCall.type === 'video' ? 'rgba(0,0,0,0.5)' : 'transparent' }}>
-            
+
             <div className="flex flex-col items-center gap-6 text-center animate-in zoom-in duration-700">
               <div className="relative">
                 <div className="absolute inset-0 rounded-full animate-ping [animation-duration:2s]" style={{ background: 'var(--dm-bg-input)' }} />
@@ -1667,7 +1668,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
             {/* Action Bar */}
             <div className="absolute bottom-10 flex items-center gap-6 px-8 py-4 backdrop-blur-2xl rounded-full shadow-2xl z-30" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
-              <button 
+              <button
                 onClick={handleRejectCall}
                 className="w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 active:scale-90 transition-all shadow-xl"
                 style={{ background: '#ef4444', color: '#fff' }}
@@ -1676,8 +1677,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.71c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.66c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
                 </svg>
               </button>
-              
-              <button 
+
+              <button
                 onClick={handleAcceptCall}
                 className="w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 active:scale-90 transition-all shadow-xl animate-bounce"
                 style={{ background: '#22c55e', color: '#fff' }}
@@ -1693,7 +1694,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
 
       {activeCall && socket && (
-        <CallInterface 
+        <CallInterface
           socket={socket}
           peer={activeCall.peer}
           type={activeCall.type}
@@ -1704,22 +1705,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             const callData = activeCall;
             setActiveCall(null);
             setIncomingCall(null);
-            
-             if (callData && callData.isCaller) {
-               (async () => {
-                 try {
-                   const status = wasConnected ? 'completed' : 'missed';
-                   const result = await saveCall(callData.peer.id, callData.type, status, duration);
-                   if (result?.message && socket) {
-                     socket.emit('send_social_message', { receiverEmail: callData.peer.email, ...result.message });
-                     setMessages(prev => {
-                       if (prev.some(m => m.id === (result.message as any).id)) return prev;
-                       return [...prev, result.message as any];
-                     });
-                   }
-                 } catch (e) { console.error("Call background save error:", e); }
-               })();
-             }
+
+            if (callData && callData.isCaller) {
+              (async () => {
+                try {
+                  const status = wasConnected ? 'completed' : 'missed';
+                  const result = await saveCall(callData.peer.id, callData.type, status, duration);
+                  if (result?.message && socket) {
+                    socket.emit('send_social_message', { receiverEmail: callData.peer.email, ...result.message });
+                    setMessages(prev => {
+                      if (prev.some(m => m.id === (result.message as any).id)) return prev;
+                      return [...prev, result.message as any];
+                    });
+                  }
+                } catch (e) { console.error("Call background save error:", e); }
+              })();
+            }
           }}
         />
       )}
@@ -1729,22 +1730,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         <div className="fixed inset-0 z-[600] flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-200" style={{ background: 'rgba(0,0,0,0.4)' }}>
           <div className="bg-white rounded-[2rem] p-6 max-w-sm w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200 border border-gray-100 flex flex-col items-center text-center">
             <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4 text-red-500">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z" /></svg>
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Message?</h3>
             <p className="text-sm text-gray-500 mb-6">
-              {deleteConfirm.type === 'everyone' 
+              {deleteConfirm.type === 'everyone'
                 ? "This will permanently delete the message for everyone in this chat. They will see that a message was deleted."
                 : "This message will be deleted for you, but others will still be able to see it."}
             </p>
             <div className="flex gap-3 w-full">
-              <button 
+              <button
                 onClick={() => setDeleteConfirm(null)}
                 className="flex-1 px-4 py-3 rounded-full font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={confirmDelete}
                 className="flex-1 px-4 py-3 rounded-full font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30"
               >
