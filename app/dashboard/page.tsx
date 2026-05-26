@@ -379,28 +379,51 @@ export default function DashboardPage() {
               <div className="home-blob home-blob-3" />
             </div>
 
-            {/* Top bar: status + theme toggle */}
-            <div className="relative z-10 flex items-center justify-between px-5 py-4 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-400'} animate-pulse`} />
-                <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>
-                  {isConnected ? 'Online' : 'Connecting...'}
-                </span>
-              </div>
-              <ThemeToggle />
-            </div>
+            {/* Glass status pill + welcome card */}
+            <div className="relative z-10 flex flex-col items-center px-5 pt-5 gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
 
-            {/* Welcome — immediately under status bar */}
-            <div className="relative z-10 flex flex-col items-center gap-3 pt-6 pb-4 px-6 animate-in fade-in slide-in-from-top-4 duration-700">
+              {/* Status bar — glass pill */}
               <div
-                className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold"
-                style={{ background: 'var(--dm-bg-active)', border: '2px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
+                className="self-stretch flex items-center justify-between px-4 py-2.5 rounded-full"
+                style={{
+                  background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.55)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(255,255,255,0.75)',
+                  boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
+                }}
               >
-                {session.user?.name?.charAt(0)?.toUpperCase() || '?'}
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-400'} animate-pulse`} />
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>
+                    {isConnected ? 'Online' : 'Connecting...'}
+                  </span>
+                </div>
+                <ThemeToggle />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-center" style={{ color: 'var(--dm-text-heading)' }}>
-                Welcome, {session.user?.name?.split(' ')[0] || 'there'} 👋
-              </h1>
+
+              {/* Avatar + greeting — glass card */}
+              <div
+                className="flex flex-col items-center gap-3 w-full py-8 rounded-[2rem]"
+                style={{
+                  background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.60)',
+                  backdropFilter: 'blur(24px)',
+                  WebkitBackdropFilter: 'blur(24px)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(255,255,255,0.80)',
+                  boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08)' : '0 8px 32px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.90)',
+                }}
+              >
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold"
+                  style={{ background: 'var(--dm-bg-active)', border: '2px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
+                >
+                  {session.user?.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight text-center" style={{ color: 'var(--dm-text-heading)' }}>
+                  Welcome, {session.user?.name?.split(' ')[0] || 'there'} 👋
+                </h1>
+              </div>
+
             </div>
           </div>
         )}
@@ -508,27 +531,47 @@ export default function DashboardPage() {
 
         {/* Profile Side Panel */}
         {isProfileOpen && (
-          <div 
-            className="absolute right-0 top-0 bottom-0 w-full md:w-[400px] z-50 backdrop-blur-xl flex flex-col border-l md:border md:rounded-[40px] md:overflow-hidden md:m-3 md:h-[calc(100%-24px)]"
-            style={{ 
-              background: 'var(--dm-bg-sidebar)', 
-              borderColor: 'var(--dm-border-main)', 
-              boxShadow: isDark ? '-20px 0 50px rgba(0,0,0,0.6)' : '-20px 0 50px rgba(0,0,0,0.08)',
-              animation: isClosingProfile 
+          <div
+            className="absolute right-0 top-0 bottom-0 w-full md:w-[400px] z-50 flex flex-col md:m-3 md:h-[calc(100%-24px)] md:rounded-[40px] md:overflow-hidden"
+            style={{
+              backdropFilter: 'blur(32px)',
+              WebkitBackdropFilter: 'blur(32px)',
+              background: isDark
+                ? 'rgba(12, 12, 18, 0.72)'
+                : 'rgba(255, 255, 255, 0.62)',
+              borderLeft: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.75)',
+              boxShadow: isDark
+                ? '-20px 0 60px rgba(0,0,0,0.70), inset 1px 0 0 rgba(255,255,255,0.06)'
+                : '-20px 0 60px rgba(0,0,0,0.10), inset 1px 0 0 rgba(255,255,255,0.90)',
+              animation: isClosingProfile
                 ? 'slideToLeft 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
                 : 'slideFromLeft 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
             }}
           >
-            {/* Header / Avatar Section - Premium Minimal Design */}
-            <div className="relative flex flex-col items-center justify-end pb-8 overflow-hidden" style={{ minHeight: '220px', background: 'var(--dm-bg-main)', borderBottom: '1px solid var(--dm-border)' }}>
-              {/* Decorative circles - subtle theme-based rings */}
-              <div style={{ position: 'absolute', width: '300px', height: '300px', borderRadius: '50%', border: '1px solid var(--dm-border)', top: '-100px', right: '-100px', opacity: 0.5 }} />
-              <div style={{ position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', border: '1px solid var(--dm-border)', top: '20px', left: '-80px', opacity: 0.3 }} />
+            {/* Header / Avatar Section — liquid glass hero */}
+            <div
+              className="relative flex flex-col items-center justify-end pb-8 overflow-hidden"
+              style={{
+                minHeight: '220px',
+                background: isDark
+                  ? 'linear-gradient(160deg, rgba(109,40,217,0.25) 0%, rgba(12,12,18,0.0) 70%)'
+                  : 'linear-gradient(160deg, rgba(165,180,252,0.45) 0%, rgba(255,255,255,0.0) 70%)',
+                borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.6)',
+              }}
+            >
+              {/* Decorative shimmer rings */}
+              <div style={{ position: 'absolute', width: '300px', height: '300px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.12)', top: '-100px', right: '-100px' }} />
+              <div style={{ position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.08)', top: '20px', left: '-80px' }} />
               
-              <button 
+              <button
                 onClick={handleCloseProfile}
                 className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center z-10 transition-transform active:scale-90"
-                style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}
+                style={{
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.55)',
+                  backdropFilter: 'blur(12px)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(255,255,255,0.75)',
+                  color: 'var(--dm-text-muted)'
+                }}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -537,7 +580,7 @@ export default function DashboardPage() {
               
               {/* Avatar */}
               <div className="relative z-10 mb-3">
-                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--dm-bg-input)', border: '2px solid var(--dm-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 300, color: 'var(--dm-text-primary)' }}>
+                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.70)', backdropFilter: 'blur(12px)', border: isDark ? '2px solid rgba(255,255,255,0.15)' : '2px solid rgba(255,255,255,0.90)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 300, color: 'var(--dm-text-primary)' }}>
                   {fullUser?.name?.slice(0, 1).toUpperCase() || 'U'}
                 </div>
                 <div style={{ position: 'absolute', bottom: 2, right: 2, width: '18px', height: '18px', borderRadius: '50%', background: '#10b981', border: '3px solid var(--dm-bg-main)' }} />
@@ -547,10 +590,10 @@ export default function DashboardPage() {
               <p style={{ color: 'var(--dm-text-secondary)', fontSize: '12px', margin: 0, zIndex: 10 }}>{fullUser?.email || session.user?.email || ''}</p>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 p-6 space-y-3 overflow-y-auto">
+            {/* Content — glass info rows */}
+            <div className="flex-1 p-5 space-y-3 overflow-y-auto">
               {/* Name Edit Row */}
-              <div style={{ padding: '16px', borderRadius: '16px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-hover)', marginBottom: '4px' }}>
+              <div style={{ padding: '16px', borderRadius: '16px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.70)', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.55)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}>
@@ -584,7 +627,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Mail Channel Row */}
-              <div className="py-4 px-5 flex items-center justify-between rounded-2xl transition-all" style={{ border: '1px solid var(--dm-border)', background: 'var(--dm-bg-hover)' }}>
+              <div className="py-4 px-5 flex items-center justify-between rounded-2xl" style={{ border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.70)', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.55)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-xs" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -617,10 +660,8 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Mobile Bottom Navigation - always visible on mobile */}
-      {/* Mobile Bottom Navigation - visible on home and chat list */}
-      {/* Mobile Bottom Navigation — home and chat-list only */}
-      {(activeView === 'home' || (activeView === 'chat' && !selectedChatUser)) && (
+      {/* Mobile Bottom Navigation — home + chat list only (not AI view, not inside conversation, not during call) */}
+      {(activeView === 'home' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive && (
         <nav className="mobile-nav">
           {[
             { id: 'home', label: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -654,6 +695,7 @@ export default function DashboardPage() {
           </button>
         </nav>
       )}
+
 
     </div>
   );
