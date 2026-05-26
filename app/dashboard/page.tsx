@@ -483,7 +483,7 @@ export default function DashboardPage() {
               </button>
               <div className="absolute inset-x-0 flex items-center justify-center pointer-events-none">
                 <div className="flex items-center gap-2">
-                  <div style={{ width: '7px', height: '7px', background: '#6366f1', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
+                  <div style={{ width: '7px', height: '7px', background: 'var(--dm-text-primary)', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
                   <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.25em', color: 'var(--dm-text-secondary)', margin: 0 }}>AI Assistant</h2>
                 </div>
               </div>
@@ -495,15 +495,15 @@ export default function DashboardPage() {
                 <div className="h-full flex flex-col items-center justify-center text-center gap-5 pb-12 animate-in fade-in duration-700">
                   <div
                     className="w-20 h-20 rounded-3xl flex items-center justify-center"
-                    style={{ background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.10)', border: isDark ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(99,102,241,0.20)', boxShadow: '0 0 30px rgba(99,102,241,0.2)' }}
+                    style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)', border: '1px solid var(--dm-border)' }}
                   >
-                    <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#6366f1' }}>
+                    <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-primary)' }}>
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   </div>
                   <div className="space-y-2">
                     <p className="text-xl font-bold" style={{ color: isDark ? '#fff' : '#1e1b4b' }}>How can I help?</p>
-                    <p className="text-sm" style={{ color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(99,102,241,0.7)' }}>Ask me anything — I'll do my best.</p>
+                    <p className="text-sm" style={{ color: 'var(--dm-text-muted)' }}>Ask me anything — I'll do my best.</p>
                   </div>
                 </div>
               )}
@@ -515,8 +515,8 @@ export default function DashboardPage() {
                       msg.role === 'user' ? 'rounded-[1.4rem] rounded-tr-md' : 'rounded-[1.4rem] rounded-tl-md'
                     }`}
                     style={msg.role === 'user'
-                      ? { background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', boxShadow: '0 4px 16px rgba(99,102,241,0.35)' }
-                      : { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.80)', color: isDark ? 'rgba(255,255,255,0.9)' : '#1e1b4b', border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(99,102,241,0.12)', backdropFilter: 'blur(12px)', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }
+                      ? { background: isDark ? 'linear-gradient(135deg, #27272a, #09090b)' : 'linear-gradient(135deg, #18181b, #27272a)', color: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }
+                      : { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.80)', color: isDark ? 'rgba(255,255,255,0.9)' : '#1e1b4b', border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid var(--dm-border)', backdropFilter: 'blur(12px)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }
                     }
                   >
                     {msg.content}
@@ -526,10 +526,10 @@ export default function DashboardPage() {
 
               {isAiTyping && (
                 <div className="flex justify-start">
-                  <div className="px-5 py-3.5 rounded-[1.4rem] rounded-tl-md flex gap-1.5 items-center" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.80)', border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(99,102,241,0.12)', backdropFilter: 'blur(12px)' }}>
-                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#6366f1', animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#8b5cf6', animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#a855f7', animationDelay: '300ms' }} />
+                  <div className="px-5 py-3.5 rounded-[1.4rem] rounded-tl-md flex gap-1.5 items-center" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.80)', border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid var(--dm-border)', backdropFilter: 'blur(12px)' }}>
+                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--dm-text-muted)', opacity: 0.8, animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--dm-text-muted)', opacity: 0.6, animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--dm-text-muted)', opacity: 0.4, animationDelay: '300ms' }} />
                   </div>
                 </div>
               )}
@@ -537,7 +537,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Input */}
-            <div className="relative z-10 flex-shrink-0 px-4 md:px-8 py-3" style={{ borderTop: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(99,102,241,0.10)', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.60)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
+            <div className="relative z-10 flex-shrink-0 px-4 md:px-8 py-3" style={{ borderTop: '1px solid var(--dm-border)', background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.60)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
               <form onSubmit={handleSendMessage} className="relative">
                 <input
                   type="text"
@@ -545,7 +545,7 @@ export default function DashboardPage() {
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder="Ask me anything..."
                   className="w-full h-12 pl-5 pr-14 rounded-full focus:outline-none text-sm"
-                  style={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.90)', border: isDark ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(99,102,241,0.25)', color: isDark ? '#fff' : '#1e1b4b', backdropFilter: 'blur(12px)' }}
+                  style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.90)', border: '1px solid var(--dm-border)', color: isDark ? '#fff' : '#1e1b4b', backdropFilter: 'blur(12px)' }}
                   disabled={isAiTyping}
                 />
                 <button
@@ -553,7 +553,7 @@ export default function DashboardPage() {
                   disabled={!inputValue.trim() || isAiTyping}
                   onTouchStart={(e) => { if (inputValue.trim() && !isAiTyping) { e.preventDefault(); handleSendMessage(e); } }}
                   className="absolute right-1.5 top-1.5 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 disabled:opacity-30"
-                  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', boxShadow: '0 4px 12px rgba(99,102,241,0.4)' }}
+                  style={{ background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)', boxShadow: 'none' }}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14M12 5l7 7-7 7" /></svg>
                 </button>
