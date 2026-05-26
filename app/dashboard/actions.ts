@@ -149,8 +149,8 @@ export async function getSocialMessages(otherUserId: string) {
   return await prisma.socialMessage.findMany({
     where: {
       OR: [
-        { senderId: currentUser.id, receiverId: otherUserId },
-        { senderId: otherUserId, receiverId: currentUser.id }
+        { senderId: currentUser.id, receiverId: otherUserId, deletedBySender: false },
+        { senderId: otherUserId, receiverId: currentUser.id, deletedByReceiver: false }
       ]
     },
     include: {
@@ -222,9 +222,11 @@ export async function deleteSocialMessage(messageId: string, deleteFor: 'me' | '
 
   if (!currentUser) return null;
 
+  const msg = await prisma.socialMessage.findUnique({ where: { id: messageId } });
+  if (!msg) return null;
+
   if (deleteFor === 'everyone') {
-    const msg = await prisma.socialMessage.findUnique({ where: { id: messageId } });
-    if (msg?.senderId !== currentUser.id) return null;
+    if (msg.senderId !== currentUser.id) return null;
 
     return await prisma.socialMessage.update({
       where: { id: messageId },
@@ -234,7 +236,18 @@ export async function deleteSocialMessage(messageId: string, deleteFor: 'me' | '
       }
     });
   } else {
-    return { success: true };
+    if (msg.senderId === currentUser.id) {
+      return await prisma.socialMessage.update({
+        where: { id: messageId },
+        data: { deletedBySender: true }
+      });
+    } else if (msg.receiverId === currentUser.id) {
+      return await prisma.socialMessage.update({
+        where: { id: messageId },
+        data: { deletedByReceiver: true }
+      });
+    }
+    return null;
   }
 }
 

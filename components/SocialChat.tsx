@@ -44,17 +44,63 @@ const EMOJI_CATEGORIES = {
   smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿']
 };
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onLongPress }: any) => {
   const isAI = msg.senderId === 'ai';
   // A message is "Sent" if the sender is the current user
   const isSent = !isAI && String(msg.senderId) === String(currentUserId);
   const [showActionsMobile, setShowActionsMobile] = useState(false);
 
+  const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
+  const isMoving = useRef(false);
+
+  const handlePointerDown = (e: any) => {
+    // If we are already in selection mode, ignore long press checks
+    if (selectedMessageIds && selectedMessageIds.size > 0) return;
+    isMoving.current = false;
+    longPressTimeout.current = setTimeout(() => {
+      if (!isMoving.current) {
+        if (navigator.vibrate) navigator.vibrate(40);
+        onLongPress(msg.id);
+      }
+    }, 500);
+  };
+
+  const handlePointerUp = () => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = null;
+    }
+  };
+
+  const handlePointerMove = () => {
+    isMoving.current = true;
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = null;
+    }
+  };
+
   const toggleActions = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.msg-actions') || target.closest('.msg-reactions') || target.closest('.quick-react-container')) {
+      return;
+    }
     if (window.innerWidth <= 768) {
       e.stopPropagation();
       setShowActionsMobile(!showActionsMobile);
     }
+  };
+
+  const isSelected = selectedMessageIds?.has(msg.id);
+  const isInSelectionMode = selectedMessageIds && selectedMessageIds.size > 0;
+
+  const handleMessageClick = (e: React.MouseEvent) => {
+    if (isInSelectionMode) {
+      e.stopPropagation();
+      toggleMessageSelection(msg.id);
+      return;
+    }
+    toggleActions(e);
   };
 
   const handleDeleteClick = (type: 'me' | 'everyone') => {
@@ -76,8 +122,54 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
   }
   
   return (
-    <div className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} animate-in slide-in-from-bottom-2 duration-300`} onClick={toggleActions}>
-      <div className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''}`}>
+    <div 
+      className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${isSelected ? 'selected-item' : ''} animate-in slide-in-from-bottom-2 duration-300`} 
+      onClick={handleMessageClick}
+      onMouseDown={handlePointerDown}
+      onMouseUp={handlePointerUp}
+      onMouseMove={handlePointerMove}
+      onTouchStart={handlePointerDown}
+      onTouchEnd={handlePointerUp}
+      onTouchMove={handlePointerMove}
+      style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', cursor: isInSelectionMode ? 'pointer' : 'default', width: '100%', maxWidth: '100%', userSelect: 'none', WebkitUserSelect: 'none' }}
+    >
+      {isInSelectionMode && (
+        <div 
+          className={`selection-indicator ${isSelected ? 'selected' : ''}`} 
+          style={{
+            width: '18px', height: '18px', borderRadius: '50%',
+            border: '2px solid var(--dm-border)',
+            background: isSelected ? '#6366f1' : 'transparent',
+            borderColor: isSelected ? '#6366f1' : 'var(--dm-border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginRight: isSent ? '0' : '10px',
+            marginLeft: isSent ? '10px' : '0',
+            order: isSent ? 2 : -1,
+            flexShrink: 0,
+            transition: 'all 0.2s ease',
+            color: '#fff',
+            fontSize: '10px',
+            fontWeight: 'bold'
+          }}
+        >
+          {isSelected && '✓'}
+        </div>
+      )}
+
+      <div 
+        className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''}`}
+        style={{ 
+          order: 1, 
+          width: 'fit-content', 
+          maxWidth: '75%', 
+          marginLeft: isSent ? 'auto' : '0', 
+          marginRight: isSent ? '0' : 'auto',
+          transform: isSelected ? 'scale(0.98)' : 'none',
+          transition: 'all 0.2s ease',
+          boxShadow: isSelected ? '0 0 0 2px rgba(99, 102, 241, 0.4)' : undefined,
+          background: isSelected ? 'rgba(99, 102, 241, 0.12)' : undefined,
+        }}
+      >
         {isAI && <div className="system-sender">AI Assistant</div>}
         {msg.type === 'image' && <img src={msg.content} alt="media" onClick={() => window.open(msg.content, '_blank')} />}
         {msg.type === 'video' && <video src={msg.content} controls />}
@@ -122,8 +214,8 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         )}
       </div>
       
-      {msg.type !== 'deleted' && msg.type !== 'call' && (
-        <div className={`msg-actions ${showActionsMobile ? 'show-mobile' : ''}`}>
+      {msg.type !== 'deleted' && msg.type !== 'call' && !isInSelectionMode && (
+        <div className={`msg-actions ${showActionsMobile ? 'show-mobile' : ''}`} style={{ order: 3 }}>
           <div className="msg-del-actions">
             <div className="quick-react-container">
               {QUICK_REACTIONS.map(emoji => (
@@ -253,6 +345,52 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (deleteConfirm) {
       await handleDelete(deleteConfirm.msgId, deleteConfirm.type);
       setDeleteConfirm(null);
+    }
+  };
+
+  // Bulk Message Selection State
+  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
+
+  const toggleMessageSelection = (msgId: string) => {
+    setSelectedMessageIds(prev => {
+      const next = new Set(prev);
+      if (next.has(msgId)) {
+        next.delete(msgId);
+      } else {
+        next.add(msgId);
+      }
+      return next;
+    });
+  };
+
+  const handleLongPress = (msgId: string) => {
+    setSelectedMessageIds(new Set([msgId]));
+  };
+
+  const handleBulkDelete = async (type: 'me' | 'everyone') => {
+    const ids = Array.from(selectedMessageIds);
+    setSelectedMessageIds(new Set()); // Exit selection mode
+    
+    // Local optimistic delete
+    if (type === 'everyone') {
+      setMessages(prev => prev.map(m => {
+        if (ids.includes(m.id)) return { ...m, content: "This message was deleted", type: "deleted" };
+        return m;
+      }));
+    } else {
+      setMessages(prev => prev.filter(m => !ids.includes(m.id)));
+    }
+
+    // Server-side delete
+    for (const msgId of ids) {
+      try {
+        await deleteSocialMessage(msgId, type);
+        if (type === 'everyone') {
+          socket?.emit('delete_social_message', { messageId: msgId, receiverEmail: selectedUser?.email });
+        }
+      } catch (err) {
+        console.error("Failed to delete message during bulk action:", err);
+      }
     }
   };
 
@@ -712,6 +850,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   useEffect(() => {
     async function loadMessages() {
       if (!selectedUser) return;
+      setSelectedMessageIds(new Set());
       
       const cached = messagesCache[selectedUser.id];
       if (cached) {
@@ -1143,6 +1282,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     onDelete={handleDelete}
                     onReact={handleReact}
                     onRequestDelete={handleRequestDelete}
+                    selectedMessageIds={selectedMessageIds}
+                    toggleMessageSelection={toggleMessageSelection}
+                    onLongPress={handleLongPress}
                   />
                 ))}
                 {!isLoadingMessages && messages.length === 0 && (
@@ -1164,164 +1306,195 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 <div ref={messagesEndRef} />
               </div>
 
-              <footer className="footer">
-                {isVoiceToText ? (
-                  <div className="type-box" style={{ position: 'relative' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, padding: '8px 14px', borderRadius: '24px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', animation: 'pulse 2s infinite' }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dm-text-primary)', flex: 1 }}>
-                        {inputValue || 'Listening... speak now'}
-                      </span>
-                    </div>
-                    <button 
-                      className="send-btn"
-                      onClick={() => {
-                        stopVoiceToText();
-                        if (inputValue.trim()) {
-                          handleSendMessage();
-                        }
-                      }}
-                      style={{ background: inputValue.trim() ? '#6366f1' : '#ef4444' }}
-                    >
-                      {inputValue.trim() ? (
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                      ) : (
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                      )}
-                    </button>
-                  </div>
-                ) : !isRecording ? (
-                  <div className="type-box">
-                    <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Send Media">
-                      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
-                    </button>
-                    {/* Gap between image and emoji */}
-                    <div style={{ width: '6px', flexShrink: 0 }} />
-                    <div style={{ position: 'relative' }}>
-                      <button className="icon-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)} title="Emoji" style={{ color: showEmojiPicker ? 'var(--dm-text-primary)' : undefined }}>
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3.5-9c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm7 0c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
-                      </button>
-                      {showEmojiPicker && (
-                        <div className="emoji-picker-bar" style={{
-                          position: 'absolute', bottom: '48px', left: '-8px',
-                          background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)',
-                          borderRadius: '16px', padding: '12px 8px', zIndex: 999,
-                          boxShadow: '0 -4px 30px rgba(0,0,0,0.15)',
-                          animation: 'emojiBarIn 0.25s cubic-bezier(0.2,0.8,0.2,1) forwards',
-                          display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '280px'
-                        }}>
-                          {[
-                            { label: 'Smileys', emojis: ['😀','😂','😍','🥰','😎','🤔','😅','😭','🥹','😇','🤩','😏','😒','🙄','😤','🤯','😴','🤢','🥶','😱'] },
-                            { label: 'Gestures', emojis: ['👍','👎','👋','🤝','🙏','👏','🤜','💪','✌️','🤞','👌','🤙','☝️','🖐️','🫶','🤲','🫱','🤟','🤘','👊'] },
-                            { label: 'Hearts', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💖','💗','💓','💞','💝','❤️‍🔥','💔','❣️','💟','♥️','🫀','💕'] },
-                            { label: 'Nature', emojis: ['🌟','⭐','🌙','☀️','🌈','🌊','🔥','❄️','⚡','🌸','🌺','🍀','🌿','🐶','🐱','🦋','🐝','🌴','🍁','🌻'] },
-                            { label: 'Food', emojis: ['🍕','🍔','🍜','🍣','🍰','🎂','🍩','🍪','☕','🧋','🍷','🎉','🎊','🎈','🎁','🏆','💯','✅','🔥','⚡'] },
-                          ].map(group => (
-                            <div key={group.label}>
-                              <div style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--dm-text-muted)', marginBottom: '6px', paddingLeft: '4px' }}>{group.label}</div>
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
-                                {group.emojis.map(emoji => (
-                                  <button key={emoji} onClick={() => { setInputValue(prev => prev + emoji); setShowEmojiPicker(false); }} style={{ fontSize: '20px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '8px', lineHeight: 1, transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--dm-bg-active)')} onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-                                    {emoji}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <input 
-                      type="text" 
-                      placeholder="Write a message..." 
-                      value={inputValue}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setInputValue(val);
-                        
-                        // Typing Indicator Logic
-                        if (socket && selectedUser) {
-                          if (!typingTimeoutRef.current) {
-                            socket.emit('typing', { receiverEmail: selectedUser.email });
-                          } else {
-                            clearTimeout(typingTimeoutRef.current);
+              {selectedMessageIds.size === 0 ? (
+                <footer className="footer">
+                  {isVoiceToText ? (
+                    <div className="type-box" style={{ position: 'relative' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, padding: '8px 14px', borderRadius: '24px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', animation: 'pulse 2s infinite' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dm-text-primary)', flex: 1 }}>
+                          {inputValue || 'Listening... speak now'}
+                        </span>
+                      </div>
+                      <button 
+                        className="send-btn"
+                        onClick={() => {
+                          stopVoiceToText();
+                          if (inputValue.trim()) {
+                            handleSendMessage();
                           }
-                          typingTimeoutRef.current = setTimeout(() => {
-                            socket.emit('stop_typing', { receiverEmail: selectedUser.email });
-                            typingTimeoutRef.current = null;
-                          }, 2000);
-                        }
+                        }}
+                        style={{ background: inputValue.trim() ? '#6366f1' : '#ef4444' }}
+                      >
+                        {inputValue.trim() ? (
+                          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        )}
+                      </button>
+                    </div>
+                  ) : !isRecording ? (
+                    <div className="type-box">
+                      <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Send Media">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
+                      </button>
+                      {/* Gap between image and emoji */}
+                      <div style={{ width: '6px', flexShrink: 0 }} />
+                      <div style={{ position: 'relative' }}>
+                        <button className="icon-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)} title="Emoji" style={{ color: showEmojiPicker ? 'var(--dm-text-primary)' : undefined }}>
+                          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3.5-9c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm7 0c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
+                        </button>
+                        {showEmojiPicker && (
+                          <div className="emoji-picker-bar" style={{
+                            position: 'absolute', bottom: '48px', left: '-8px',
+                            background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)',
+                            borderRadius: '16px', padding: '12px 8px', zIndex: 999,
+                            boxShadow: '0 -4px 30px rgba(0,0,0,0.15)',
+                            animation: 'emojiBarIn 0.25s cubic-bezier(0.2,0.8,0.2,1) forwards',
+                            display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '280px'
+                          }}>
+                            {[
+                              { label: 'Smileys', emojis: ['😀','😂','😍','🥰','😎','🤔','😅','😭','🥹','😇','🤩','😏','😒','🙄','😤','🤯','😴','🤢','🥶','😱'] },
+                              { label: 'Gestures', emojis: ['👍','👎','👋','🤝','🙏','👏','🤜','💪','✌️','🤞','👌','🤙','☝️','🖐️','🫶','🤲','🫱','🤟','🤘','👊'] },
+                              { label: 'Hearts', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💖','💗','💓','💞','💝','❤️‍🔥','💔','❣️','💟','♥️','🫀','💕'] },
+                              { label: 'Nature', emojis: ['🌟','⭐','🌙','☀️','🌈','🌊','🔥','❄️','⚡','🌸','🌺','🍀','🌿','🐶','🐱','🦋','🐝','🌴','🍁','🌻'] },
+                              { label: 'Food', emojis: ['🍕','🍔','🍜','🍣','🍰','🎂','🍩','🍪','☕','🧋','🍷','🎉','🎊','🎈','🎁','🏆','💯','✅','🔥','⚡'] },
+                            ].map(group => (
+                              <div key={group.label}>
+                                <div style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--dm-text-muted)', marginBottom: '6px', paddingLeft: '4px' }}>{group.label}</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
+                                  {group.emojis.map(emoji => (
+                                    <button key={emoji} onClick={() => { setInputValue(prev => prev + emoji); setShowEmojiPicker(false); }} style={{ fontSize: '20px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '8px', lineHeight: 1, transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--dm-bg-active)')} onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <input 
+                        type="text" 
+                        placeholder="Write a message..." 
+                        value={inputValue}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setInputValue(val);
+                          
+                          // Typing Indicator Logic
+                          if (socket && selectedUser) {
+                            if (!typingTimeoutRef.current) {
+                              socket.emit('typing', { receiverEmail: selectedUser.email });
+                            } else {
+                              clearTimeout(typingTimeoutRef.current);
+                            }
+                            typingTimeoutRef.current = setTimeout(() => {
+                              socket.emit('stop_typing', { receiverEmail: selectedUser.email });
+                              typingTimeoutRef.current = null;
+                            }, 2000);
+                          }
 
-                        // Show popup if the last character is @ or if we're typing an @ mention
-                        const lastWord = val.split(' ').pop() || '';
-                        if (lastWord.startsWith('@')) {
-                          setShowAIMention(true);
-                        } else {
-                          setShowAIMention(false);
-                        }
-                      }}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    />
-                    {showAIMention && (
-                      <div className="mention-popup animate-in slide-in-from-bottom-2 duration-200">
-                        <div className="mention-item" onClick={() => { setInputValue(prev => prev + 'ai '); setShowAIMention(false); }}>
-                          <div className="mention-avatar">AI</div>
-                          <div className="mention-info">
-                            <b>AI Assistant</b>
-                            <span>Ask me anything</span>
+                          // Show popup if the last character is @ or if we're typing an @ mention
+                          const lastWord = val.split(' ').pop() || '';
+                          if (lastWord.startsWith('@')) {
+                            setShowAIMention(true);
+                          } else {
+                            setShowAIMention(false);
+                          }
+                        }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                      />
+                      {showAIMention && (
+                        <div className="mention-popup animate-in slide-in-from-bottom-2 duration-200">
+                          <div className="mention-item" onClick={() => { setInputValue(prev => prev + 'ai '); setShowAIMention(false); }}>
+                            <div className="mention-avatar">AI</div>
+                            <div className="mention-info">
+                              <b>AI Assistant</b>
+                              <span>Ask me anything</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="visualizer">
-                    {[...Array(13)].map((_, i) => <div key={i} className="bar" style={{ animationDelay: `${-0.1 * (i % 7)}s` }} />)}
-                  </div>
-                )}
-                
-
-                <button 
-                  className={`send-btn${isRecording ? ' recording-pulse' : ''}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (inputValue.trim()) {
-                      handleSendMessage();
-                    } else if (isRecording) {
-                      stopRecording();
-                    } else {
-                      // Directly start voice recording — no popup menu
-                      startRecording();
-                    }
-                  }}
-                  onTouchStart={(e) => {
-                    // Prevent ghost click on mobile
-                    e.preventDefault();
-                    if (inputValue.trim()) {
-                      handleSendMessage();
-                    } else if (isRecording) {
-                      stopRecording();
-                    } else {
-                      startRecording();
-                    }
-                  }}
-                  title={isRecording ? 'Tap to stop & send' : inputValue.trim() ? 'Send' : 'Voice message'}
-                  style={isRecording ? { background: '#ef4444' } : undefined}
-                >
-                  {inputValue.trim() ? (
-                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                  ) : isRecording ? (
-                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                  ) : isVoiceToText ? (
-                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                      )}
+                    </div>
                   ) : (
-                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-                      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-                    </svg>
+                    <div className="visualizer">
+                      {[...Array(13)].map((_, i) => <div key={i} className="bar" style={{ animationDelay: `${-0.1 * (i % 7)}s` }} />)}
+                    </div>
                   )}
-                </button>
-              </footer>
+                  
+
+                  <button 
+                    className={`send-btn${isRecording ? ' recording-pulse' : ''}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (inputValue.trim()) {
+                        handleSendMessage();
+                      } else if (isRecording) {
+                        stopRecording();
+                      } else {
+                        // Directly start voice recording — no popup menu
+                        startRecording();
+                      }
+                    }}
+                    onTouchStart={(e) => {
+                      // Prevent ghost click on mobile
+                      e.preventDefault();
+                      if (inputValue.trim()) {
+                        handleSendMessage();
+                      } else if (isRecording) {
+                        stopRecording();
+                      } else {
+                        startRecording();
+                      }
+                    }}
+                    title={isRecording ? 'Tap to stop & send' : inputValue.trim() ? 'Send' : 'Voice message'}
+                    style={isRecording ? { background: '#ef4444' } : undefined}
+                  >
+                    {inputValue.trim() ? (
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    ) : isRecording ? (
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    ) : isVoiceToText ? (
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                      </svg>
+                    )}
+                  </button>
+                </footer>
+              ) : (
+                <footer className="footer selection-bar animate-in slide-in-from-bottom duration-300" style={{ background: 'var(--dm-bg-sidebar)', borderTop: '1px solid var(--dm-border)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 100, width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button 
+                      onClick={() => setSelectedMessageIds(new Set())}
+                      style={{ background: 'none', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+                    >
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                    <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--dm-text-primary)' }}>{selectedMessageIds.size} Selected</span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                      onClick={() => handleBulkDelete('me')}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold"
+                      style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer' }}
+                    >
+                      Delete for Me
+                    </button>
+                    <button 
+                      onClick={() => handleBulkDelete('everyone')}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold text-white bg-red-500 hover:bg-red-600 shadow-md"
+                      style={{ cursor: 'pointer', border: 'none' }}
+                    >
+                      Delete for Everyone
+                    </button>
+                  </div>
+                </footer>
+              )}
 
 
 
