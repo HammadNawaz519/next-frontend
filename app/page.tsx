@@ -376,16 +376,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-screen w-full flex bg-white overflow-hidden select-none">
-      <div 
-        className="w-full h-screen flex flex-col lg:grid lg:grid-cols-2 bg-white" 
-        style={{ 
-          position: 'relative', 
-          zIndex: 1,
-        }}
-      >
+    <>
+      {/* Mobile viewport layout (under lg: breakpoint) */}
+      <div className="lg:hidden h-screen w-full flex flex-col bg-white overflow-hidden select-none">
         {/* Mobile-only Header (positioned perfectly at the top, full width, no round corner) */}
-        <div className="lg:hidden w-full h-[20vh] relative overflow-hidden flex-shrink-0">
+        <div className="w-full h-[20vh] relative overflow-hidden flex-shrink-0">
           <GrainGradient
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
             colorBack="#F8F9FA"
@@ -407,13 +402,27 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {renderLeft()}
-        
-        {/* Form area: occupies exactly the remaining height on mobile without scrolling */}
-        <div className="flex-1 flex flex-col justify-center overflow-hidden bg-white h-[80vh] lg:h-screen">
+        {/* Mobile Form area: occupies exactly the remaining height on mobile without scrolling */}
+        <div className="flex-1 flex flex-col justify-center overflow-hidden bg-white h-[80vh]">
           {renderRight()}
         </div>
       </div>
-    </div>
+
+      {/* Laptop/Desktop viewport layout (lg: and above) - Floating Original Card */}
+      <div className="hidden lg:flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#F4F4F4] p-6 md:px-12 md:py-8 select-none">
+        <div 
+          className="w-full max-w-[960px] aspect-[16/9] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_-10px_rgba(0,0,0,0.4)] bg-white bg-opacity-20 bg-clip-padding backdrop-filter backdrop-blur-2xl border border-gray-100 flex flex-col lg:grid lg:grid-cols-2" 
+          style={{ 
+            position: 'relative', 
+            zIndex: 1,
+          }}
+        >
+          {renderLeft()}
+          <div className="flex-1 overflow-y-auto bg-white">
+            {renderRight()}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
