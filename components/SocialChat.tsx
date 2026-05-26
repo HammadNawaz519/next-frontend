@@ -461,6 +461,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const [view, setView] = useState<'recent' | 'requests'>('recent');
+  const [requests, setRequests] = useState<User[]>([]);
   const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>(() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('social_messages_cache');
@@ -535,7 +536,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [activeCall, setActiveCall] = useState<{ peer: any, type: 'audio' | 'video', isCaller: boolean, initialOffer?: any } | null>(null);
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
-  const [requests, setRequests] = useState<User[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const selectedUserRef = useRef<User | null>(null);
 
