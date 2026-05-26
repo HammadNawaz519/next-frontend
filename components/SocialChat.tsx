@@ -272,6 +272,57 @@ interface SocialChatProps {
   onCallStateChange?: (isCallActive: boolean) => void;
 }
 
+// ── Custom PWA / HTML5 Local Notification Dispatcher ──
+const triggerStunningNotification = (
+  type: 'call' | 'message',
+  title: string,
+  body: string,
+  extraData?: any
+) => {
+  if (typeof window === 'undefined' || !('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+
+  const iconUrl = '/connect-logo.png';
+  const badgeUrl = '/icon-192.png';
+
+  const options: NotificationOptions = {
+    body,
+    icon: iconUrl,
+    badge: badgeUrl,
+    vibrate: type === 'call' 
+      ? [200, 100, 200, 100, 200, 100, 200, 100, 400] 
+      : [100, 50, 100],
+    tag: type === 'call' ? 'incoming-call' : `msg-${extraData?.partnerId || 'general'}`,
+    renotify: true,
+    data: {
+      url: window.location.origin + '/dashboard',
+      ...extraData
+    },
+    requireInteraction: type === 'call',
+  };
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then((reg) => {
+      const pwaOptions = {
+        ...options,
+        actions: type === 'call'
+          ? [
+              { action: 'answer', title: '👍 Answer' },
+              { action: 'decline', title: '❌ Decline' }
+            ]
+          : [
+              { action: 'view', title: '👁️ View' }
+            ]
+      };
+      reg.showNotification(title, pwaOptions);
+    }).catch(() => {
+      new Notification(title, options);
+    });
+  } else {
+    new Notification(title, options);
+  }
+};
+
 const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange }: SocialChatProps, ref) => {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -424,6 +475,47 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       sessionStorage.setItem('social_messages_cache', JSON.stringify(messagesCache));
     }
   }, [messagesCache]);
+
+  // PWA Notification Permission & SW Message Listener
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then((permission) => {
+          console.log('Notification permission status:', permission);
+        });
+      }
+    }
+
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'NAVIGATE') {
+        window.location.href = event.data.url;
+      }
+    };
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleSWMessage);
+      return () => navigator.serviceWorker.removeEventListener('message', handleSWMessage);
+    }
+  }, []);
+
+  // PWA Notification Deep-linking URL Parser: Automatically selects active chat conversation
+  useEffect(() => {
+    if (typeof window === 'undefined' || users.length === 0) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const targetUserId = params.get('userId');
+
+    if (targetUserId) {
+      const targetUser = users.find(u => u.id === targetUserId) || requests.find(u => u.id === targetUserId);
+      if (targetUser) {
+        // Optimistically select user
+        setSelectedUser(targetUser);
+        
+        // Reset browser URL query parameters without full page reload
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [users, requests]);
   const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -641,6 +733,29 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           markMessagesAsSeen(partnerId);
           newSocket.emit('mark_as_seen', { senderEmail: selectedUserRef.current.email });
         }
+
+        // 5. Stunning Custom PWA / Local Notification Trigger
+        const isSentByMe = msg.senderId === (sessionRef.current?.user as any)?.id;
+        const isAppBackgrounded = typeof document !== 'undefined' && document.visibilityState === 'hidden';
+        const isChattingWithSomeoneElse = selectedUserRef.current?.id !== partnerId;
+
+        if (!isSentByMe && (isAppBackgrounded || isChattingWithSomeoneElse)) {
+          const sender = usersRef.current.find(u => u.id === msg.senderId) || requestsRef.current.find(u => u.id === msg.senderId);
+          const senderName = sender?.name || msg.senderEmail.split('@')[0] || 'Someone';
+          
+          let contentPreview = msg.content;
+          if (msg.type === 'voice') contentPreview = '🎤 Voice Message';
+          else if (msg.type === 'image') contentPreview = '📷 Image';
+          else if (msg.type === 'video') contentPreview = '🎥 Video';
+          else if (msg.type === 'file') contentPreview = '📁 Attachment';
+
+          triggerStunningNotification(
+            'message',
+            `💬 Message from ${senderName}`,
+            contentPreview,
+            { partnerId }
+          );
+        }
       });
 
       newSocket.on('receive_social_delete', ({ messageId }) => {
@@ -677,6 +792,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       newSocket.on('incoming_call', (data) => {
         console.log("Incoming call received:", data);
         setIncomingCall(data);
+
+        // Stunning Custom Call Notification Trigger (vibrates with custom cadence!)
+        const callerName = data.from?.name || data.from?.email?.split('@')[0] || 'Someone';
+        const isAppBackgrounded = typeof document !== 'undefined' && document.visibilityState === 'hidden';
+
+        if (isAppBackgrounded) {
+          triggerStunningNotification(
+            'call',
+            `📞 Incoming ${data.type.charAt(0).toUpperCase() + data.type.slice(1)} Call`,
+            `${callerName} is calling you... tap to answer`,
+            { partnerId: data.from?.id, callType: data.type, callerEmail: data.from?.email }
+          );
+        }
       });
 
       newSocket.on('call_accepted', (data) => {
