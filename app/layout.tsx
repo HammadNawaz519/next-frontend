@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NextAuthProvider } from "./components/NextAuthProvider";
@@ -15,8 +15,25 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ASL Lens",
-  description: "Real-time AI-powered American Sign Language translation.",
+  title: "Connect",
+  description: "Connect — Chat, call, and AI in one place.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Connect",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -29,10 +46,35 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* PWA manifest */}
+        <link rel="manifest" href="/manifest.json" />
+        {/* Apple PWA */}
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Connect" />
+        {/* Theme */}
+        <meta name="theme-color" content="#000000" />
+      </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
           <NextAuthProvider>{children}</NextAuthProvider>
         </ThemeProvider>
+        {/* Register service worker */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js')
+                    .then(function(reg) { console.log('SW registered'); })
+                    .catch(function(err) { console.log('SW error:', err); });
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
