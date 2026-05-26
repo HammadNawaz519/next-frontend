@@ -449,16 +449,23 @@ export default function DashboardPage() {
 
         {activeView === 'assistant' && (
           <div className="w-full h-full flex flex-col min-h-0">
-            {/* Header with back button */}
-            <div className="flex items-center px-4 border-b flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '56px' }}>
+            {/* Header with back button + centered title */}
+            <div className="flex items-center px-4 border-b flex-shrink-0 relative" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '56px' }}>
+              {/* Back button — left */}
               <button
                 onClick={(e) => handleNavClick('home', e, true)}
-                className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
-                style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', marginRight: '12px' }}
+                className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90 z-10"
+                style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}
               >
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
               </button>
-              <h2 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dm-text-primary)', margin: 0 }}>AI Assistant</h2>
+              {/* Title — truly centered */}
+              <div className="absolute inset-x-0 flex items-center justify-center pointer-events-none">
+                <div className="flex items-center gap-2">
+                  <div style={{ width: '7px', height: '7px', background: '#6366f1', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
+                  <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.25em', color: 'var(--dm-text-secondary)', margin: 0 }}>AI Assistant</h2>
+                </div>
+              </div>
             </div>
 
             {/* Messages — scrollable */}
