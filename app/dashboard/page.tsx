@@ -640,7 +640,7 @@ export default function DashboardPage() {
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justify-content: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                         </svg>
@@ -761,9 +761,9 @@ export default function DashboardPage() {
             }}
           >
             <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-active)', color: isProfileOpen ? 'var(--dm-bg-main)' : 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}>
-              {session.user?.image
+              {session?.user?.image
                 ? <img src={session.user.image} alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                : session.user?.name?.charAt(0) || 'U'}
+                : session?.user?.name?.charAt(0) || 'U'}
             </div>
             <span className="text-[9px] font-semibold uppercase tracking-widest">Profile</span>
           </button>
