@@ -362,7 +362,7 @@ export default function DashboardPage() {
         </div>
 
       {/* Main Container */}
-      <div className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[40px] shadow-sm md:border" style={{ background: 'var(--dm-bg-main)', borderColor: 'var(--dm-border-main)' }}>
+      <div className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[40px] shadow-sm md:border" style={{ background: activeView === 'home' ? 'transparent' : 'var(--dm-bg-main)', borderColor: 'var(--dm-border-main)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.02\'/%3E%3C/svg%3E")', opacity: 0.4, pointerEvents: 'none' }} />
 
 
@@ -370,98 +370,120 @@ export default function DashboardPage() {
         {/* Content Views */}
         {/* Content Views */}
         {activeView === 'home' && (
-          <div className="relative w-full h-full flex flex-col min-h-0 z-10 overflow-y-auto">
+          <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden">
 
-            {/* Animated blob background */}
+            {/* Full-page animated blob background */}
             <div className="home-blob-bg">
               <div className="home-blob home-blob-1" />
               <div className="home-blob home-blob-2" />
               <div className="home-blob home-blob-3" />
             </div>
 
-            {/* Glass status pill + welcome card */}
-            <div className="relative z-10 flex flex-col items-center px-5 pt-5 gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
-
-              {/* Status bar — glass pill */}
+            {/* Top glass pill — status + theme */}
+            <div className="relative z-10 px-5 pt-5">
               <div
-                className="self-stretch flex items-center justify-between px-4 py-2.5 rounded-full"
+                className="flex items-center justify-between px-4 py-2.5 rounded-full"
                 style={{
-                  background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.55)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(255,255,255,0.75)',
-                  boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.60)',
+                  backdropFilter: 'blur(24px)',
+                  WebkitBackdropFilter: 'blur(24px)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(255,255,255,0.85)',
+                  boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)' : '0 4px 20px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1)',
                 }}
               >
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-400'} animate-pulse`} />
-                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>
+                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'} animate-pulse`} />
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }}>
                     {isConnected ? 'Online' : 'Connecting...'}
                   </span>
                 </div>
                 <ThemeToggle />
               </div>
+            </div>
 
-              {/* Avatar + greeting — glass card */}
+            {/* Welcome glass card */}
+            <div className="relative z-10 px-5 pt-4 animate-in fade-in slide-in-from-top-4 duration-700">
               <div
-                className="flex flex-col items-center gap-3 w-full py-8 rounded-[2rem]"
+                className="flex flex-col items-center gap-4 w-full py-10 rounded-[2rem]"
                 style={{
-                  background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.60)',
-                  backdropFilter: 'blur(24px)',
-                  WebkitBackdropFilter: 'blur(24px)',
-                  border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(255,255,255,0.80)',
-                  boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08)' : '0 8px 32px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.90)',
+                  background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.55)',
+                  backdropFilter: 'blur(28px)',
+                  WebkitBackdropFilter: 'blur(28px)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(255,255,255,0.90)',
+                  boxShadow: isDark
+                    ? '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.10)'
+                    : '0 8px 40px rgba(99,102,241,0.15), inset 0 1px 0 rgba(255,255,255,1)',
                 }}
               >
+                {/* Initials avatar */}
                 <div
                   className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold"
-                  style={{ background: 'var(--dm-bg-active)', border: '2px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
+                  style={{
+                    background: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.80)',
+                    backdropFilter: 'blur(12px)',
+                    border: isDark ? '2px solid rgba(255,255,255,0.18)' : '2px solid rgba(255,255,255,1)',
+                    color: 'var(--dm-text-primary)',
+                    boxShadow: '0 4px 16px rgba(99,102,241,0.2)',
+                  }}
                 >
                   {session.user?.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
-                <h1 className="text-2xl font-bold tracking-tight text-center" style={{ color: 'var(--dm-text-heading)' }}>
-                  Welcome, {session.user?.name?.split(' ')[0] || 'there'} 👋
-                </h1>
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold tracking-tight" style={{ color: isDark ? '#fff' : '#1e1b4b' }}>
+                    Welcome back 👋
+                  </h1>
+                  <p className="text-base font-semibold mt-1" style={{ color: isDark ? 'rgba(255,255,255,0.65)' : 'rgba(99,102,241,0.9)' }}>
+                    {session.user?.name?.split(' ')[0] || 'there'}
+                  </p>
+                </div>
               </div>
-
             </div>
+
           </div>
         )}
 
 
         {activeView === 'assistant' && (
-          <div className="w-full h-full flex flex-col min-h-0">
-            {/* Header with back button + centered title */}
-            <div className="flex items-center px-4 border-b flex-shrink-0 relative" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '56px' }}>
-              {/* Back button — left */}
+          <div className="w-full h-full flex flex-col min-h-0 relative overflow-hidden">
+
+            {/* Subtle gradient bg for AI */}
+            <div style={{ position: 'absolute', inset: 0, background: isDark ? 'linear-gradient(160deg,#0f0c1a 0%,#0d1117 60%,#0a0f1e 100%)' : 'linear-gradient(160deg,#f5f3ff 0%,#eff6ff 60%,#fdf4ff 100%)', zIndex: 0 }} />
+            {/* Subtle glow orbs */}
+            <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '300px', height: '300px', borderRadius: '50%', background: isDark ? 'radial-gradient(circle,rgba(99,102,241,0.18),transparent 70%)' : 'radial-gradient(circle,rgba(99,102,241,0.12),transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
+            <div style={{ position: 'absolute', bottom: '10%', left: '-5%', width: '200px', height: '200px', borderRadius: '50%', background: isDark ? 'radial-gradient(circle,rgba(168,85,247,0.12),transparent 70%)' : 'radial-gradient(circle,rgba(168,85,247,0.08),transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
+
+            {/* Glass header */}
+            <div className="relative z-10 flex items-center px-4 flex-shrink-0" style={{ minHeight: '60px', borderBottom: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(99,102,241,0.12)', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.60)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
               <button
                 onClick={(e) => handleNavClick('home', e, true)}
                 className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90 z-10"
-                style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}
+                style={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.10)', border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(99,102,241,0.20)', color: isDark ? 'rgba(255,255,255,0.7)' : '#6366f1' }}
               >
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
               </button>
-              {/* Title — truly centered */}
               <div className="absolute inset-x-0 flex items-center justify-center pointer-events-none">
-                <div className="flex items-center gap-2">
-                  <div style={{ width: '7px', height: '7px', background: '#6366f1', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-                  <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.25em', color: 'var(--dm-text-secondary)', margin: 0 }}>AI Assistant</h2>
+                <div className="flex items-center gap-2.5">
+                  <div style={{ width: '8px', height: '8px', background: 'linear-gradient(135deg,#6366f1,#a855f7)', borderRadius: '50%', boxShadow: '0 0 8px rgba(99,102,241,0.8)', animation: 'pulse 2s infinite' }} />
+                  <h2 style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', background: isDark ? 'linear-gradient(90deg,#a5b4fc,#c084fc)' : 'linear-gradient(90deg,#6366f1,#a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>AI Assistant</h2>
                 </div>
               </div>
             </div>
 
-            {/* Messages — scrollable */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-10 py-6 space-y-4">
+            {/* Messages */}
+            <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6 space-y-4">
               {messages.length === 0 && (
-                <div className="h-full flex flex-col items-center justify-center text-center gap-4 animate-in fade-in duration-500 pb-8">
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'var(--dm-bg-active)' }}>
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}>
+                <div className="h-full flex flex-col items-center justify-center text-center gap-5 pb-12 animate-in fade-in duration-700">
+                  <div
+                    className="w-20 h-20 rounded-3xl flex items-center justify-center"
+                    style={{ background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.10)', border: isDark ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(99,102,241,0.20)', boxShadow: '0 0 30px rgba(99,102,241,0.2)' }}
+                  >
+                    <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#6366f1' }}>
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   </div>
-                  <div>
-                    <p className="text-lg font-semibold" style={{ color: 'var(--dm-text-heading)' }}>How can I help?</p>
-                    <p className="text-sm font-light mt-1" style={{ color: 'var(--dm-text-muted)' }}>Ask me anything — I'm here for you.</p>
+                  <div className="space-y-2">
+                    <p className="text-xl font-bold" style={{ color: isDark ? '#fff' : '#1e1b4b' }}>How can I help?</p>
+                    <p className="text-sm" style={{ color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(99,102,241,0.7)' }}>Ask me anything — I'll do my best.</p>
                   </div>
                 </div>
               )}
@@ -469,12 +491,12 @@ export default function DashboardPage() {
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                   <div
-                    className={`max-w-[80%] px-4 py-3 text-[0.9rem] leading-relaxed font-light ${
-                      msg.role === 'user' ? 'rounded-[1.2rem] rounded-tr-sm' : 'rounded-[1.2rem] rounded-tl-sm'
+                    className={`max-w-[82%] px-4 py-3 text-[0.88rem] leading-relaxed ${
+                      msg.role === 'user' ? 'rounded-[1.4rem] rounded-tr-md' : 'rounded-[1.4rem] rounded-tl-md'
                     }`}
                     style={msg.role === 'user'
-                      ? { background: 'var(--dm-chat-sent-bg)', color: 'var(--dm-chat-sent-text)' }
-                      : { background: 'var(--dm-bg-sidebar)', color: 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }
+                      ? { background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', boxShadow: '0 4px 16px rgba(99,102,241,0.35)' }
+                      : { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.80)', color: isDark ? 'rgba(255,255,255,0.9)' : '#1e1b4b', border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(99,102,241,0.12)', backdropFilter: 'blur(12px)', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }
                     }
                   >
                     {msg.content}
@@ -484,34 +506,34 @@ export default function DashboardPage() {
 
               {isAiTyping && (
                 <div className="flex justify-start">
-                  <div className="px-5 py-3 rounded-[1.2rem] rounded-tl-sm flex gap-1.5 items-center" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
-                    <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--dm-text-muted)', animationDelay: '0ms' }} />
-                    <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--dm-text-muted)', animationDelay: '150ms' }} />
-                    <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--dm-text-muted)', animationDelay: '300ms' }} />
+                  <div className="px-5 py-3.5 rounded-[1.4rem] rounded-tl-md flex gap-1.5 items-center" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.80)', border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(99,102,241,0.12)', backdropFilter: 'blur(12px)' }}>
+                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#6366f1', animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#8b5cf6', animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#a855f7', animationDelay: '300ms' }} />
                   </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input — pinned to bottom, fully rounded */}
-            <div className="flex-shrink-0 px-4 md:px-10 py-3" style={{ borderTop: '1px solid var(--dm-border)', background: 'var(--dm-bg-sidebar)' }}>
+            {/* Input */}
+            <div className="relative z-10 flex-shrink-0 px-4 md:px-8 py-3" style={{ borderTop: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(99,102,241,0.10)', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.60)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
               <form onSubmit={handleSendMessage} className="relative">
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder="Ask me anything..."
-                  className="w-full h-12 pl-5 pr-14 rounded-full focus:outline-none text-sm font-light"
-                  style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
+                  className="w-full h-12 pl-5 pr-14 rounded-full focus:outline-none text-sm"
+                  style={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.90)', border: isDark ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(99,102,241,0.25)', color: isDark ? '#fff' : '#1e1b4b', backdropFilter: 'blur(12px)' }}
                   disabled={isAiTyping}
                 />
                 <button
                   type="submit"
                   disabled={!inputValue.trim() || isAiTyping}
                   onTouchStart={(e) => { if (inputValue.trim() && !isAiTyping) { e.preventDefault(); handleSendMessage(e); } }}
-                  className="absolute right-1.5 top-1.5 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 disabled:opacity-20"
-                  style={{ background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)' }}
+                  className="absolute right-1.5 top-1.5 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 disabled:opacity-30"
+                  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', boxShadow: '0 4px 12px rgba(99,102,241,0.4)' }}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14M12 5l7 7-7 7" /></svg>
                 </button>
