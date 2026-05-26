@@ -13,7 +13,12 @@ function getPrismaClient(): PrismaClient {
     console.error("❌ CRITICAL ERROR: DATABASE_URL is missing!");
   }
   
-  const pool = new Pool({ connectionString });
+  const pool = new Pool({ 
+    connectionString,
+    ssl: {
+      rejectUnauthorized: false
+    }
+  });
   const adapter = new PrismaPg(pool);
   
   return new PrismaClient({
