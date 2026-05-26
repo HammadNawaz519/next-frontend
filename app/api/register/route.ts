@@ -67,9 +67,15 @@ export async function POST(req: Request) {
     });
 
     // Send OTP email
-    sendVerificationEmail(email, otp, username).catch((err) =>
-      console.error("[MAIL_ERROR]", err)
-    );
+    try {
+      await sendVerificationEmail(email, otp, username);
+    } catch (err) {
+      console.error("[MAIL_ERROR]", err);
+      return NextResponse.json(
+        { message: "Failed to send verification email. Please verify your email address is correct." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
       { message: "Verification code sent.", requiresVerification: true },

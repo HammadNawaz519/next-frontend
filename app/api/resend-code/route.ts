@@ -50,9 +50,15 @@ export async function POST(req: Request) {
       data: { verifyCode: otp, verifyExpiry: expiry },
     });
 
-    sendVerificationEmail(email, otp, pending.username).catch((err) =>
-      console.error("[RESEND_MAIL_ERROR]", err)
-    );
+    try {
+      await sendVerificationEmail(email, otp, pending.username);
+    } catch (err) {
+      console.error("[RESEND_MAIL_ERROR]", err);
+      return NextResponse.json(
+        { message: "Failed to send verification email. Please verify your email address is correct." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ message: "Verification code resent." }, { status: 200 });
   } catch (error) {
