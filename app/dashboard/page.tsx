@@ -404,7 +404,7 @@ export default function DashboardPage() {
             {/* Welcome glass card */}
             <div className="relative z-10 px-5 pt-4 animate-in fade-in slide-in-from-top-4 duration-700">
               <div
-                className="flex flex-col items-center gap-4 w-full py-10 rounded-[2rem]"
+                className="flex flex-col items-center gap-3 w-full py-10 rounded-[2rem]"
                 style={{
                   background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.55)',
                   backdropFilter: 'blur(28px)',
@@ -412,30 +412,15 @@ export default function DashboardPage() {
                   border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(255,255,255,0.90)',
                   boxShadow: isDark
                     ? '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.10)'
-                    : '0 8px 40px rgba(99,102,241,0.15), inset 0 1px 0 rgba(255,255,255,1)',
+                    : '0 8px 40px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1)',
                 }}
               >
-                {/* Initials avatar */}
-                <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold"
-                  style={{
-                    background: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.80)',
-                    backdropFilter: 'blur(12px)',
-                    border: isDark ? '2px solid rgba(255,255,255,0.18)' : '2px solid rgba(255,255,255,1)',
-                    color: 'var(--dm-text-primary)',
-                    boxShadow: '0 4px 16px rgba(99,102,241,0.2)',
-                  }}
-                >
-                  {session.user?.name?.charAt(0)?.toUpperCase() || '?'}
-                </div>
-                <div className="text-center">
-                  <h1 className="text-2xl font-bold tracking-tight" style={{ color: isDark ? '#fff' : '#1e1b4b' }}>
-                    Welcome back 👋
-                  </h1>
-                  <p className="text-base font-semibold mt-1" style={{ color: isDark ? 'rgba(255,255,255,0.65)' : 'rgba(99,102,241,0.9)' }}>
-                    {session.user?.name?.split(' ')[0] || 'there'}
-                  </p>
-                </div>
+                <h1 className="text-2xl font-bold tracking-tight text-center" style={{ color: isDark ? '#fff' : '#1e1b4b' }}>
+                  Welcome back 👋
+                </h1>
+                <p className="text-base mt-0.5" style={{ color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)' }}>
+                  {session.user?.name?.split(' ')[0] || 'there'}
+                </p>
               </div>
             </div>
 
@@ -444,33 +429,27 @@ export default function DashboardPage() {
 
 
         {activeView === 'assistant' && (
-          <div className="w-full h-full flex flex-col min-h-0 relative overflow-hidden">
+          <div className="w-full h-full flex flex-col min-h-0" style={{ background: 'var(--dm-bg-main)' }}>
 
-            {/* Subtle gradient bg for AI */}
-            <div style={{ position: 'absolute', inset: 0, background: isDark ? 'linear-gradient(160deg,#0f0c1a 0%,#0d1117 60%,#0a0f1e 100%)' : 'linear-gradient(160deg,#f5f3ff 0%,#eff6ff 60%,#fdf4ff 100%)', zIndex: 0 }} />
-            {/* Subtle glow orbs */}
-            <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '300px', height: '300px', borderRadius: '50%', background: isDark ? 'radial-gradient(circle,rgba(99,102,241,0.18),transparent 70%)' : 'radial-gradient(circle,rgba(99,102,241,0.12),transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
-            <div style={{ position: 'absolute', bottom: '10%', left: '-5%', width: '200px', height: '200px', borderRadius: '50%', background: isDark ? 'radial-gradient(circle,rgba(168,85,247,0.12),transparent 70%)' : 'radial-gradient(circle,rgba(168,85,247,0.08),transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
-
-            {/* Glass header */}
-            <div className="relative z-10 flex items-center px-4 flex-shrink-0" style={{ minHeight: '60px', borderBottom: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(99,102,241,0.12)', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.60)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
+            {/* Clean header */}
+            <div className="flex items-center px-4 flex-shrink-0 relative" style={{ minHeight: '60px', borderBottom: '1px solid var(--dm-border)', background: 'var(--dm-bg-sidebar)' }}>
               <button
                 onClick={(e) => handleNavClick('home', e, true)}
                 className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90 z-10"
-                style={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.10)', border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(99,102,241,0.20)', color: isDark ? 'rgba(255,255,255,0.7)' : '#6366f1' }}
+                style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}
               >
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
               </button>
               <div className="absolute inset-x-0 flex items-center justify-center pointer-events-none">
-                <div className="flex items-center gap-2.5">
-                  <div style={{ width: '8px', height: '8px', background: 'linear-gradient(135deg,#6366f1,#a855f7)', borderRadius: '50%', boxShadow: '0 0 8px rgba(99,102,241,0.8)', animation: 'pulse 2s infinite' }} />
-                  <h2 style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', background: isDark ? 'linear-gradient(90deg,#a5b4fc,#c084fc)' : 'linear-gradient(90deg,#6366f1,#a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>AI Assistant</h2>
+                <div className="flex items-center gap-2">
+                  <div style={{ width: '7px', height: '7px', background: '#6366f1', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
+                  <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.25em', color: 'var(--dm-text-secondary)', margin: 0 }}>AI Assistant</h2>
                 </div>
               </div>
             </div>
 
             {/* Messages */}
-            <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6 space-y-4">
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6 space-y-4">
               {messages.length === 0 && (
                 <div className="h-full flex flex-col items-center justify-center text-center gap-5 pb-12 animate-in fade-in duration-700">
                   <div
@@ -570,15 +549,13 @@ export default function DashboardPage() {
                 : 'slideFromLeft 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
             }}
           >
-            {/* Header / Avatar Section — liquid glass hero */}
+            {/* Header / Avatar Section — clean premium */}
             <div
               className="relative flex flex-col items-center justify-end pb-8 overflow-hidden"
               style={{
-                minHeight: '220px',
-                background: isDark
-                  ? 'linear-gradient(160deg, rgba(109,40,217,0.25) 0%, rgba(12,12,18,0.0) 70%)'
-                  : 'linear-gradient(160deg, rgba(165,180,252,0.45) 0%, rgba(255,255,255,0.0) 70%)',
-                borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.6)',
+                minHeight: '200px',
+                background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.40)',
+                borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
               }}
             >
               {/* Decorative shimmer rings */}

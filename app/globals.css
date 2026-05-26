@@ -353,27 +353,8 @@ body {
 }
 
 /* =========================================
-   HOME PAGE — ANIMATED BLOB BACKGROUND
+   HOME PAGE — PREMIUM DOT-GRID BACKGROUND
    ========================================= */
-
-@keyframes blob-drift-1 {
-  0%   { transform: translate(0%,   0%)   scale(1);    }
-  33%  { transform: translate(8%,  -12%)  scale(1.15); }
-  66%  { transform: translate(-6%,  8%)   scale(0.92); }
-  100% { transform: translate(0%,   0%)   scale(1);    }
-}
-@keyframes blob-drift-2 {
-  0%   { transform: translate(0%,   0%)   scale(1);    }
-  33%  { transform: translate(-10%, 10%)  scale(1.10); }
-  66%  { transform: translate(6%,  -6%)   scale(0.95); }
-  100% { transform: translate(0%,   0%)   scale(1);    }
-}
-@keyframes blob-drift-3 {
-  0%   { transform: translate(0%,   0%)   scale(1);    }
-  33%  { transform: translate(12%,  6%)   scale(0.90); }
-  66%  { transform: translate(-8%, -10%)  scale(1.12); }
-  100% { transform: translate(0%,   0%)   scale(1);    }
-}
 
 .home-blob-bg {
   position: absolute;
@@ -381,55 +362,22 @@ body {
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
+
+  /* Subtle dot-grid pattern — light mode */
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(99,102,241,0.10) 0%, transparent 55%),
+    radial-gradient(circle at 80% 80%, rgba(168,85,247,0.08) 0%, transparent 50%),
+    radial-gradient(circle, rgba(99,102,241,0.25) 1px, transparent 1px);
+  background-size: auto, auto, 28px 28px;
 }
 
-.home-blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(50px);
-  will-change: transform;
+[data-theme="dark"] .home-blob-bg {
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(99,102,241,0.15) 0%, transparent 55%),
+    radial-gradient(circle at 80% 80%, rgba(168,85,247,0.10) 0%, transparent 50%),
+    radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+  background-size: auto, auto, 28px 28px;
 }
 
-/* Blob 1 — top-left */
-.home-blob-1 {
-  width: 70vw; height: 70vw;
-  max-width: 460px; max-height: 460px;
-  background: radial-gradient(circle at 40% 40%, #a5b4fc, #818cf8, #6366f1);
-  opacity: 0.75;
-  top: -15%; left: -15%;
-  animation: blob-drift-1 16s ease-in-out infinite;
-}
-
-/* Blob 2 — bottom-right */
-.home-blob-2 {
-  width: 60vw; height: 60vw;
-  max-width: 400px; max-height: 400px;
-  background: radial-gradient(circle at 60% 60%, #f9a8d4, #e879f9, #d946ef);
-  opacity: 0.70;
-  bottom: 0%; right: -10%;
-  animation: blob-drift-2 20s ease-in-out infinite;
-}
-
-/* Blob 3 — center-bottom */
-.home-blob-3 {
-  width: 50vw; height: 50vw;
-  max-width: 340px; max-height: 340px;
-  background: radial-gradient(circle at 50% 50%, #67e8f9, #22d3ee, #06b6d4);
-  opacity: 0.65;
-  bottom: 18%; left: 18%;
-  animation: blob-drift-3 24s ease-in-out infinite;
-}
-
-/* ─── Dark mode overrides ─── */
-[data-theme="dark"] .home-blob-1 {
-  background: radial-gradient(circle at 40% 40%, #4338ca, #7c3aed, #8b5cf6);
-  opacity: 0.80;
-}
-[data-theme="dark"] .home-blob-2 {
-  background: radial-gradient(circle at 60% 60%, #6d28d9, #9333ea, #c026d3);
-  opacity: 0.75;
-}
-[data-theme="dark"] .home-blob-3 {
-  background: radial-gradient(circle at 50% 50%, #0e7490, #0284c7, #0891b2);
-  opacity: 0.70;
-}
+/* Keep the .home-blob classes but make them invisible — they're still in JSX */
+.home-blob { display: none; }
