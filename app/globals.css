@@ -386,50 +386,50 @@ body {
 .home-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(72px);
+  filter: blur(50px);
   will-change: transform;
 }
 
 /* Blob 1 — top-left */
 .home-blob-1 {
-  width: 65vw; height: 65vw;
-  max-width: 420px; max-height: 420px;
+  width: 70vw; height: 70vw;
+  max-width: 460px; max-height: 460px;
   background: radial-gradient(circle at 40% 40%, #a5b4fc, #818cf8, #6366f1);
-  opacity: 0.40;
+  opacity: 0.75;
   top: -15%; left: -15%;
   animation: blob-drift-1 16s ease-in-out infinite;
 }
 
 /* Blob 2 — bottom-right */
 .home-blob-2 {
-  width: 55vw; height: 55vw;
-  max-width: 360px; max-height: 360px;
+  width: 60vw; height: 60vw;
+  max-width: 400px; max-height: 400px;
   background: radial-gradient(circle at 60% 60%, #f9a8d4, #e879f9, #d946ef);
-  opacity: 0.38;
+  opacity: 0.70;
   bottom: 0%; right: -10%;
   animation: blob-drift-2 20s ease-in-out infinite;
 }
 
 /* Blob 3 — center-bottom */
 .home-blob-3 {
-  width: 45vw; height: 45vw;
-  max-width: 300px; max-height: 300px;
+  width: 50vw; height: 50vw;
+  max-width: 340px; max-height: 340px;
   background: radial-gradient(circle at 50% 50%, #67e8f9, #22d3ee, #06b6d4);
-  opacity: 0.32;
+  opacity: 0.65;
   bottom: 18%; left: 18%;
   animation: blob-drift-3 24s ease-in-out infinite;
 }
 
 /* ─── Dark mode overrides ─── */
 [data-theme="dark"] .home-blob-1 {
-  background: radial-gradient(circle at 40% 40%, #3730a3, #6d28d9, #7c3aed);
-  opacity: 0.55;
+  background: radial-gradient(circle at 40% 40%, #4338ca, #7c3aed, #8b5cf6);
+  opacity: 0.80;
 }
 [data-theme="dark"] .home-blob-2 {
-  background: radial-gradient(circle at 60% 60%, #4c1d95, #7c3aed, #9333ea);
-  opacity: 0.50;
+  background: radial-gradient(circle at 60% 60%, #6d28d9, #9333ea, #c026d3);
+  opacity: 0.75;
 }
 [data-theme="dark"] .home-blob-3 {
-  background: radial-gradient(circle at 50% 50%, #065f46, #0284c7, #0891b2);
-  opacity: 0.45;
+  background: radial-gradient(circle at 50% 50%, #0e7490, #0284c7, #0891b2);
+  opacity: 0.70;
 }
