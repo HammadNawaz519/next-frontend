@@ -54,6 +54,37 @@ export default function DashboardPage() {
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [usernameSaving, setUsernameSaving] = useState(false);
+  
+  // PWA Manual Installation Trigger
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) {
+      alert("To download/install:\n\n1. Open this app in your browser (Safari / Chrome).\n2. Tap the 'Share' or 'Menu' button (icon with an arrow pointing up, or three dots).\n3. Select 'Add to Home Screen' (📲) to install it directly!");
+      return;
+    }
+    try {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      }
+      setDeferredPrompt(null);
+    } catch (err) {
+      console.error('Error triggering PWA install prompt:', err);
+    }
+  };
 
   const handleSaveUsername = async () => {
     setUsernameSaving(true);
@@ -677,6 +708,27 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Download Mobile App Button */}
+              <button
+                onClick={handleInstallApp}
+                className="w-full flex items-center justify-between px-6 py-4 rounded-[20px] transition-all hover:scale-[1.02] active:scale-98 cursor-pointer mt-4"
+                style={{ 
+                  border: '1px solid rgba(99, 102, 241, 0.25)', 
+                  background: 'rgba(99, 102, 241, 0.06)', 
+                  boxShadow: '0 4px 16px rgba(99, 102, 241, 0.08)' 
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-indigo-500 shadow-xs" style={{ background: 'rgba(99, 102, 241, 0.12)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </div>
+                  <span className="text-[11px] uppercase tracking-widest font-extrabold text-indigo-600 dark:text-indigo-400">Download Mobile App</span>
+                </div>
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'rgba(99, 102, 241, 0.5)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+              </button>
 
               {/* Sign Out Button (Replaces Joined Date) */}
               <button
