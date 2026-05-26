@@ -434,15 +434,8 @@ export default function LoginPage() {
             speed={0.5}
             colors={['#FF7A00', '#007AFF', '#7ED9D9']}
           />
-          <div className="relative z-10 h-full flex flex-col items-center justify-center gap-3.5">
-            <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-md bg-white p-1.5 flex items-center justify-center animate-in fade-in zoom-in duration-500">
-              <img 
-                src="/black-logo.png" 
-                alt="Connect Logo" 
-                className="w-full h-full object-contain" 
-              />
-            </div>
-            <p className="text-gray-800 font-light tracking-[0.4em] uppercase text-[9px] text-center" style={{ letterSpacing: '0.4em', textIndent: '0.4em', opacity: 0.65 }}>
+          <div className="relative z-10 h-full flex items-center justify-center">
+            <p className="text-gray-800 font-light tracking-[0.5em] uppercase text-[10px]" style={{ opacity: 0.65 }}>
               Imagination is the limit
             </p>
           </div>
