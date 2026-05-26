@@ -28,11 +28,12 @@ export default function LoginPage() {
     );
   }
 
-  // Immediate redirect if user is already authenticated – prevents login page flash
-  if (sessStatus === 'authenticated') {
-    router.replace('/dashboard');
-    return null;
-  }
+  // Redirect authenticated users after session resolves
+  useEffect(() => {
+    if (sessStatus === 'authenticated') {
+      router.replace('/dashboard');
+    }
+  }, [sessStatus, router]);
 
   const [view, setView] = useState<AuthView>('login');
 
