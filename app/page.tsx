@@ -19,6 +19,13 @@ export default function LoginPage() {
   // Cast status to string for safe comparisons
   const sessStatus = status as string;
 
+  // Redirect authenticated users after session resolves (must be before any early return — Rules of Hooks)
+  useEffect(() => {
+    if (sessStatus === 'authenticated') {
+      router.replace('/dashboard');
+    }
+  }, [sessStatus, router]);
+
   // Show loader while authentication status is being resolved
   if (sessStatus === 'loading') {
     return (
@@ -27,13 +34,6 @@ export default function LoginPage() {
       </div>
     );
   }
-
-  // Redirect authenticated users after session resolves
-  useEffect(() => {
-    if (sessStatus === 'authenticated') {
-      router.replace('/dashboard');
-    }
-  }, [sessStatus, router]);
 
   const [view, setView] = useState<AuthView>('login');
 
