@@ -278,14 +278,14 @@ export default function DashboardPage() {
             <div className="mb-8 flex items-center justify-start gap-0 group-hover:gap-3 px-1 h-12 transition-[gap] duration-500 ease-[var(--ease-premium)]">
               <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
                 <img 
-                  src="/logo.svg" 
-                  alt="ASL Lens Logo" 
-                  className="w-10 h-10 transition-transform duration-300 hover:scale-105 drop-shadow-sm" 
+                  src="/connect-logo.png" 
+                  alt="Connect Logo" 
+                  className="w-10 h-10 rounded-xl object-contain transition-transform duration-300 hover:scale-105 drop-shadow-sm" 
                   style={{ filter: isDark ? 'invert(1) drop-shadow(0 0 8px rgba(255,255,255,0.2))' : 'none' }} 
                 />
               </div>
               <span className="font-extrabold text-base tracking-tight opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden" style={{ color: 'var(--dm-text-primary)' }}>
-                ASL Lens
+                Connect
               </span>
             </div>
           
