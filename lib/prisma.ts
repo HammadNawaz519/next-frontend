@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -6,10 +8,16 @@ declare global {
 }
 
 function getPrismaClient(): PrismaClient {
-  if (!process.env.DATABASE_URL) {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
     console.error("❌ CRITICAL ERROR: DATABASE_URL is missing!");
   }
+  
+  const pool = new Pool({ connectionString });
+  const adapter = new PrismaPg(pool);
+  
   return new PrismaClient({
+    adapter,
     log: ["warn", "error"],
   });
 }
