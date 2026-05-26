@@ -1,6 +1,6 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { GrainGradient } from '@paper-design/shaders-react';
@@ -15,7 +15,15 @@ interface SuccessUser {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [view, setView] = useState<AuthView>('login');
+
+  // Automatic redirect if authenticated
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/dashboard');
+    }
+  }, [status, router]);
 
   // Form fields
   const [email, setEmail] = useState('');
