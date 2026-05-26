@@ -201,7 +201,7 @@ export default function LoginPage() {
         <div className="relative overflow-hidden hidden lg:flex flex-col items-end justify-end h-full" style={{ background: 'linear-gradient(145deg, hsl(25,95%,55%), hsl(38,100%,65%), hsl(15,90%,45%))' }}>
           <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.75\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.08\'/%3E%3C/svg%3E")', backgroundSize: 'cover', opacity: 0.5 }} />
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
-            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '50%', width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', border: '1.5px solid rgba(255,255,255,0.3)' }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '50%', width: 72, height: 72, display: 'flex', alignItems: 'center', justify: 'center', backdropFilter: 'blur(8px)', border: '1.5px solid rgba(255,255,255,0.3)' }}>
               <span style={{ fontSize: 28, color: 'white', fontWeight: 700 }}>✓</span>
             </div>
             <p className="text-white font-semibold text-2xl tracking-tight">You&apos;re verified!</p>
@@ -211,7 +211,7 @@ export default function LoginPage() {
             {successUser.image ? (
               <img src={successUser.image} alt="Profile" style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.4)', objectFit: 'cover' }} />
             ) : (
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', border: '2px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', border: '2px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justify: 'center', flexShrink: 0 }}>
                 <span style={{ color: 'white', fontWeight: 700, fontSize: 18 }}>{getInitials(successUser)}</span>
               </div>
             )}
@@ -324,37 +324,13 @@ export default function LoginPage() {
     const isLogin = view === 'login';
     return (
       <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full overflow-y-auto">
-
-        {/* Mobile-only animated gradient header */}
-        <div className="lg:hidden w-full relative rounded-3xl overflow-hidden mb-8 flex-shrink-0" style={{ height: '180px' }}>
-          <GrainGradient
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-            colorBack="#F8F9FA"
-            softness={0.5}
-            intensity={0.8}
-            noise={0.06}
-            shape="corners"
-            offsetX={0}
-            offsetY={0}
-            scale={0.8}
-            rotation={0}
-            speed={0.5}
-            colors={['#FF7A00', '#007AFF', '#7ED9D9']}
-          />
-          <div className="relative z-10 h-full flex items-center justify-center">
-            <p className="text-gray-800 font-light tracking-[0.5em] uppercase text-[10px]" style={{ opacity: 0.65 }}>
-              Imagination is the limit
-            </p>
-          </div>
-        </div>
-
-        <div className="w-full max-w-[420px] space-y-6 py-4">
+        <div className="w-full max-w-[420px] space-y-4 md:space-y-6 py-4">
           <div className="text-left w-full space-y-2">
-            <h1 className="text-[32px] font-normal tracking-tight text-gray-900">{isLogin ? 'Welcome back' : 'Create your account'}</h1>
-            <p className="text-[14px] text-gray-500">{isLogin ? 'Let\'s sign you into your Connect account.' : 'Create an account to start chatting.'}</p>
+            <h1 className="text-[28px] md:text-[32px] font-normal tracking-tight text-gray-900">{isLogin ? 'Welcome back' : 'Create your account'}</h1>
+            <p className="text-[13px] md:text-[14px] text-gray-500">{isLogin ? 'Let\'s sign you into your Connect account.' : 'Create an account to start chatting.'}</p>
           </div>
           {error && <div className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">{error}</div>}
-          <div className="space-y-4 md:space-y-5">
+          <div className="space-y-3 md:space-y-4">
             <button type="button" disabled={googleLoading} onClick={async () => { setGoogleLoading(true); await signIn('google', { callbackUrl: '/dashboard' }); }} className="w-full h-[46px] flex items-center justify-center gap-3 bg-gray-50 hover:bg-gray-100 text-gray-800 border border-gray-200 rounded-2xl font-normal text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
               <svg className="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -365,7 +341,7 @@ export default function LoginPage() {
               {googleLoading ? 'Redirecting...' : isLogin ? 'Sign in with Google' : 'Sign up with Google'}
             </button>
             <div className="flex items-center gap-3 text-gray-400 text-sm"><div className="h-px flex-1 bg-gray-200" />or<div className="h-px flex-1 bg-gray-200" /></div>
-            <form onSubmit={isLogin ? handleLogin : handleSignup} className="space-y-4">
+            <form onSubmit={isLogin ? handleLogin : handleSignup} className="space-y-3">
               {!isLogin && (
                 <div className="space-y-1">
                   <label htmlFor="username" className="text-[13px] font-normal text-gray-700">Username</label>
@@ -392,17 +368,42 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-white overflow-hidden">
+    <div className="h-screen w-full flex bg-white overflow-hidden select-none">
       <div 
-        className="w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-white" 
+        className="w-full h-screen flex flex-col lg:grid lg:grid-cols-2 bg-white" 
         style={{ 
           position: 'relative', 
           zIndex: 1,
         }}
       >
+        {/* Mobile-only Header (positioned perfectly at the top, full width, no round corner) */}
+        <div className="lg:hidden w-full h-[20vh] relative overflow-hidden flex-shrink-0">
+          <GrainGradient
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+            colorBack="#F8F9FA"
+            softness={0.5}
+            intensity={0.8}
+            noise={0.06}
+            shape="corners"
+            offsetX={0}
+            offsetY={0}
+            scale={0.8}
+            rotation={0}
+            speed={0.5}
+            colors={['#FF7A00', '#007AFF', '#7ED9D9']}
+          />
+          <div className="relative z-10 h-full flex items-center justify-center">
+            <p className="text-gray-800 font-light tracking-[0.5em] uppercase text-[10px]" style={{ opacity: 0.65 }}>
+              Imagination is the limit
+            </p>
+          </div>
+        </div>
+
         {renderLeft()}
-        <div className="flex-1 flex flex-col justify-center overflow-y-auto bg-white min-h-screen">
-            {renderRight()}
+        
+        {/* Form area: occupies exactly the remaining height on mobile without scrolling */}
+        <div className="flex-1 flex flex-col justify-center overflow-hidden bg-white h-[80vh] lg:h-screen">
+          {renderRight()}
         </div>
       </div>
     </div>
