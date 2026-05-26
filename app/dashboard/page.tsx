@@ -4,25 +4,11 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { flushSync } from 'react-dom';
-import dynamic from 'next/dynamic';
 import { askAI, getChatHistory, saveChatMessage, getUserDetails, updateUsername, updateName } from './actions';
 import SocialChat from '@/components/SocialChat';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/app/components/ThemeProvider';
 
-// Dynamic import with ssr:false — prevents Turbopack from analyzing the
-// @mediapipe/selfie_segmentation import chain during production build.
-const WebcamASL = dynamic(() => import('@/components/WebcamASL'), {
-  ssr: false,
-  loading: () => (
-    <div className="h-full w-full flex items-center justify-center" style={{ background: 'var(--dm-bg-main)' }}>
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: 'var(--dm-border)', borderTopColor: '#10b981' }} />
-        <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>Loading Webcam Module...</p>
-      </div>
-    </div>
-  ),
-});
 
 interface Message {
   id: string;
@@ -59,10 +45,7 @@ export default function DashboardPage() {
     }, 450); // match animation duration slightly less to prevent blink
   };
   const [fullUser, setFullUser] = useState<any>(null);
-  const [activeView, setActiveView] = useState<'home' | 'assistant' | 'chat' | 'practice'>('home');
-  const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
-  const [practiceAiResponse, setPracticeAiResponse] = useState<string>('');
-  const [practiceLoading, setPracticeLoading] = useState(false);
+  const [activeView, setActiveView] = useState<'home' | 'assistant' | 'chat'>('home');
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const chatComponentRef = useRef<{ closeChat: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -414,7 +397,7 @@ export default function DashboardPage() {
                 </h1>
               </div>
 
-              {/* Icon-only quick action grid — no labels */}
+              {/* Icon-only quick action row */}
               <div className="flex items-center gap-4">
                 <button
                   onClick={(e) => handleNavClick('chat', e)}
@@ -432,15 +415,6 @@ export default function DashboardPage() {
                   title="AI Assistant"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-secondary)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                </button>
-
-                <button
-                  onClick={(e) => handleNavClick('practice', e)}
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 hover:scale-105"
-                  style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}
-                  title="Practice"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-secondary)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                 </button>
               </div>
             </div>
@@ -538,169 +512,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Practice View */}
-        {activeView === 'practice' && (
-          <>
-            {/* Practice Header */}
-            <div className="flex items-center justify-center p-4 border-b relative z-50" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '64px' }}>
-              <button 
-                onClick={(e) => { setSelectedLetter(null); setPracticeAiResponse(''); handleNavClick('home', e, true); }}
-                style={{ position: 'absolute', left: '16px', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', zIndex: 10 }}
-              >
-                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-              </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
-                <div style={{ width: '8px', height: '8px', background: '#f59e0b', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-                <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3em', color: 'var(--dm-text-secondary)', margin: 0 }}>ASL Practice Studio</h2>
-              </div>
-              <div style={{ position: 'absolute', inset: 0, opacity: 0.06, background: 'linear-gradient(45deg, #f59e0b, #ef4444, #8b5cf6)', filter: 'blur(20px)', pointerEvents: 'none' }} />
-            </div>
-
-            {/* Practice Content - perfectly non-scrollable, unified HUD */}
-            <div className="flex-grow flex-1 min-h-0 w-full max-w-5xl mx-auto p-4 md:p-6 flex flex-col justify-between select-none">
-              
-              {/* Compact HUD Sub-Header */}
-              <div className="flex items-center justify-between mb-2 flex-shrink-0">
-                <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--dm-text-secondary)' }}>
-                  ✦ Interactive Practice Core
-                </p>
-                <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-wider">
-                  29 Interactive Signs Active
-                </span>
-              </div>
-
-              {/* Central Output Console - Covers full width of the container */}
-              <div 
-                className="flex-1 min-h-[180px] w-full rounded-[2rem] p-5 border flex flex-col justify-between mb-5 transition-all duration-300 shadow-sm"
-                style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}
-              >
-                {/* Header of the output box */}
-                <div className="flex items-center justify-between flex-shrink-0 mb-2">
-                  <p className="text-[8px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--dm-text-secondary)' }}>
-                    {selectedLetter ? `✦ ASL Guide: ${selectedLetter === 'space' ? 'SPACE' : selectedLetter === 'del' ? 'DELETE' : selectedLetter === 'nothing' ? 'NOTHING (NEUTRAL)' : `Letter ${selectedLetter}`}` : '✦ Instruction Terminal'}
-                  </p>
-                  {selectedLetter && (
-                    <button 
-                      onClick={() => { setSelectedLetter(null); setPracticeAiResponse(''); }} 
-                      className="text-[9px] font-mono uppercase tracking-widest font-semibold py-1.5 px-3 rounded-full border bg-[var(--dm-bg-input)] cursor-pointer active:scale-95 transition-all"
-                      style={{ color: 'var(--dm-text-secondary)', borderColor: 'var(--dm-border)' }}
-                    >
-                      Clear Guide
-                    </button>
-                  )}
-                </div>
-
-                {/* Body Content of the output box */}
-                <div className="flex-grow flex items-center justify-start min-h-0 py-2">
-                  {practiceLoading ? (
-                    <div className="w-full flex flex-col items-center justify-center gap-3">
-                      <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--dm-border)', borderTopColor: '#f59e0b' }} />
-                      <p className="text-[9px] font-mono uppercase tracking-widest animate-pulse" style={{ color: 'var(--dm-text-muted)' }}>
-                        AI is compiling sign instructions...
-                      </p>
-                    </div>
-                  ) : selectedLetter && practiceAiResponse ? (
-                    <div className="w-full flex items-start gap-4 animate-in fade-in duration-300">
-                      {/* Left side: Large active letter badge */}
-                      <div 
-                        className="w-16 h-16 rounded-2xl border flex items-center justify-center font-black shadow-inner flex-shrink-0 text-3xl"
-                        style={{ 
-                          borderColor: '#f59e0b',
-                          color: '#f59e0b',
-                          background: 'var(--dm-bg-input)',
-                          fontFamily: 'monospace',
-                          boxShadow: 'inset 0 0 12px rgba(245,158,11,0.1), 0 4px 12px rgba(0,0,0,0.05)'
-                        }}
-                      >
-                        {selectedLetter === 'space' ? '␣' : selectedLetter === 'del' ? '⌫' : selectedLetter === 'nothing' ? '—' : selectedLetter}
-                      </div>
-
-                      {/* Right side: The 3-4 line response */}
-                      <div className="flex-1 min-w-0">
-                        <p 
-                          className="text-[13px] font-semibold tracking-wide leading-relaxed select-text"
-                          style={{ color: 'var(--dm-text-heading)', fontFamily: 'monospace' }}
-                        >
-                          {practiceAiResponse}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="w-full text-center py-4 animate-in fade-in duration-300">
-                      <span className="text-2xl mb-1.5 block animate-bounce">🤟</span>
-                      <p className="text-[11px] font-normal italic" style={{ color: 'var(--dm-text-muted)' }}>
-                        Terminal Standby. Click any letter or special key in the grid below to display signing instructions...
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer of the output box */}
-                <div className="flex items-center justify-between mt-3 pt-2.5 border-t flex-shrink-0" style={{ borderColor: 'var(--dm-border)' }}>
-                  <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-wider">
-                    {selectedLetter ? `State: Visualizing ${selectedLetter}` : 'State: Awaiting Input'}
-                  </span>
-                  <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-wider">
-                    Core V1.0.0
-                  </span>
-                </div>
-              </div>
-
-              {/* Alphabet Grid */}
-              <div className="flex-shrink-0 grid grid-cols-7 sm:grid-cols-10 md:grid-cols-15 gap-2">
-                {[
-                  ...('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')),
-                  'space',
-                  'del',
-                  'nothing'
-                ].map(letter => {
-                  const labelText = letter === 'space' ? '␣' : letter === 'del' ? '⌫' : letter === 'nothing' ? '—' : letter;
-                  return (
-                    <button
-                      key={letter}
-                      disabled={practiceLoading}
-                      onClick={async () => {
-                        if (selectedLetter === letter) { setSelectedLetter(null); setPracticeAiResponse(''); return; }
-                        setSelectedLetter(letter);
-                        setPracticeAiResponse('');
-                        setPracticeLoading(true);
-                        try {
-                          let promptText = '';
-                          if (letter === 'space') {
-                            promptText = 'You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly how to sign the "Space" gesture or pause in ASL. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.';
-                          } else if (letter === 'del') {
-                            promptText = 'You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly how to sign the "Delete" gesture (which erases the last letter) in ASL. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.';
-                          } else if (letter === 'nothing') {
-                            promptText = 'You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly what the "Nothing" or neutral standby posture is in ASL recognition. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.';
-                          } else {
-                            promptText = `You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly how to sign the letter "${letter}" in ASL. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.`;
-                          }
-                          const res = await askAI(promptText);
-                          setPracticeAiResponse(res);
-                        } catch { setPracticeAiResponse('Could not load instructions. Please try again.'); }
-                        setPracticeLoading(false);
-                      }}
-                      className="aspect-square rounded-2xl flex flex-col items-center justify-center gap-0.5 hover:scale-110 active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
-                      style={{ 
-                        background: selectedLetter === letter ? 'rgba(245,158,11,0.15)' : 'var(--dm-bg-sidebar)', 
-                        border: selectedLetter === letter ? '2px solid #f59e0b' : '1px solid var(--dm-border)',
-                        outline: 'none'
-                      }}
-                    >
-                      <span className="font-black text-lg md:text-xl" style={{ color: selectedLetter === letter ? '#f59e0b' : 'var(--dm-text-primary)' }}>
-                        {labelText}
-                      </span>
-                      <span className="text-[6px] md:text-[7px] font-mono uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>TAP</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-            </div>
-          </>
-        )}
-
-        {/* SocialChat Component */}
         <SocialChat 
           isActive={activeView === 'chat'} 
           onStatusChange={setIsConnected} 
