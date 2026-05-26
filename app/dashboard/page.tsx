@@ -89,10 +89,25 @@ export default function DashboardPage() {
   const handleMobileBack = () => {
     if (activeView === 'chat' && selectedChatUser) {
       chatComponentRef.current?.closeChat();
-    } else {
+    } else if (activeView !== 'home') {
       setActiveView('home');
     }
   };
+
+  // Intercept browser back swipe/button — navigate within app instead of going to login
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      e.preventDefault();
+      handleMobileBack();
+      // Push a new state so the next back press still fires this handler
+      window.history.pushState(null, '', window.location.href);
+    };
+    // Push an initial state so we can detect the first back press
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView, selectedChatUser]);
 
   // Load History
   useEffect(() => {
@@ -373,7 +388,7 @@ export default function DashboardPage() {
         {/* Content Views */}
         {activeView === 'home' && (
           <div className="relative w-full h-full flex flex-col min-h-0 z-10 overflow-y-auto">
-            {/* Minimal top bar with theme toggle */}
+            {/* Minimal top bar */}
             <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-400'}`} />
@@ -386,66 +401,46 @@ export default function DashboardPage() {
 
             {/* Welcome content */}
             <div className="flex-1 flex flex-col items-center justify-center px-6 pb-32 gap-8 animate-in fade-in duration-700">
-              {/* Avatar */}
-              <div className="flex flex-col items-center gap-4">
+              {/* Avatar + greeting */}
+              <div className="flex flex-col items-center gap-3">
                 <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold shadow-lg"
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold"
                   style={{ background: 'var(--dm-bg-active)', border: '2px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
                 >
                   {session.user?.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
-                <div className="text-center">
-                  <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>
-                    Welcome back, {session.user?.name?.split(' ')[0] || 'there'} 👋
-                  </h1>
-                  <p className="text-sm mt-1 font-light" style={{ color: 'var(--dm-text-muted)' }}>
-                    What would you like to do today?
-                  </p>
-                </div>
+                <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>
+                  Welcome, {session.user?.name?.split(' ')[0] || 'there'} 👋
+                </h1>
               </div>
 
-              {/* Quick action cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-sm">
+              {/* Icon-only quick action grid — no labels */}
+              <div className="flex items-center gap-4">
                 <button
                   onClick={(e) => handleNavClick('chat', e)}
-                  className="flex items-center gap-3 p-4 rounded-2xl text-left transition-all active:scale-95 hover:scale-[1.02]"
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 hover:scale-105"
                   style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}
+                  title="Chat"
                 >
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(99,102,241,0.1)' }}>
-                    <svg className="w-5 h-5" fill="none" stroke="#6366f1" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--dm-text-primary)' }}>Chat</p>
-                    <p className="text-[10px]" style={{ color: 'var(--dm-text-muted)' }}>Message friends</p>
-                  </div>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-secondary)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                 </button>
 
                 <button
                   onClick={(e) => handleNavClick('assistant', e)}
-                  className="flex items-center gap-3 p-4 rounded-2xl text-left transition-all active:scale-95 hover:scale-[1.02]"
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 hover:scale-105"
                   style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}
+                  title="AI Assistant"
                 >
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(16,185,129,0.1)' }}>
-                    <svg className="w-5 h-5" fill="none" stroke="#10b981" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--dm-text-primary)' }}>AI Assistant</p>
-                    <p className="text-[10px]" style={{ color: 'var(--dm-text-muted)' }}>Ask me anything</p>
-                  </div>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-secondary)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 </button>
 
                 <button
                   onClick={(e) => handleNavClick('practice', e)}
-                  className="flex items-center gap-3 p-4 rounded-2xl text-left transition-all active:scale-95 hover:scale-[1.02] sm:col-span-2"
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 hover:scale-105"
                   style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}
+                  title="Practice"
                 >
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(245,158,11,0.1)' }}>
-                    <svg className="w-5 h-5" fill="none" stroke="#f59e0b" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--dm-text-primary)' }}>Practice ASL</p>
-                    <p className="text-[10px]" style={{ color: 'var(--dm-text-muted)' }}>Learn hand signs</p>
-                  </div>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-secondary)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                 </button>
               </div>
             </div>
@@ -454,12 +449,16 @@ export default function DashboardPage() {
 
         {activeView === 'assistant' && (
           <div className="w-full h-full flex flex-col min-h-0">
-            {/* Simple header */}
-            <div className="flex items-center justify-center px-4 border-b flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '56px' }}>
-              <div className="flex items-center gap-2">
-                <div style={{ width: '7px', height: '7px', background: '#6366f1', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-                <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.25em', color: 'var(--dm-text-secondary)', margin: 0 }}>AI Assistant</h2>
-              </div>
+            {/* Header with back button */}
+            <div className="flex items-center px-4 border-b flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '56px' }}>
+              <button
+                onClick={(e) => handleNavClick('home', e, true)}
+                className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
+                style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', marginRight: '12px' }}
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              </button>
+              <h2 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dm-text-primary)', margin: 0 }}>AI Assistant</h2>
             </div>
 
             {/* Messages — scrollable */}
@@ -506,8 +505,8 @@ export default function DashboardPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input — sticky to bottom of view, no floating nav conflict since nav is hidden on assistant */}
-            <div className="flex-shrink-0 px-4 md:px-10 py-4" style={{ borderTop: '1px solid var(--dm-border)', background: 'var(--dm-bg-sidebar)' }}>
+            {/* Input — pinned to bottom, fully rounded */}
+            <div className="flex-shrink-0 px-4 md:px-10 py-3" style={{ borderTop: '1px solid var(--dm-border)', background: 'var(--dm-bg-sidebar)' }}>
               <form onSubmit={handleSendMessage} className="relative">
                 <input
                   type="text"
@@ -709,9 +708,9 @@ export default function DashboardPage() {
           <div 
             className="absolute right-0 top-0 bottom-0 w-full md:w-[400px] z-50 backdrop-blur-xl flex flex-col border-l md:border md:rounded-[40px] md:overflow-hidden md:m-3 md:h-[calc(100%-24px)]"
             style={{ 
-              background: isDark ? 'rgba(22,22,42,0.97)' : 'rgba(255,255,255,0.97)', 
+              background: 'var(--dm-bg-sidebar)', 
               borderColor: 'var(--dm-border-main)', 
-              boxShadow: isDark ? '-20px 0 50px rgba(0,0,0,0.4)' : '-20px 0 50px rgba(0,0,0,0.03)',
+              boxShadow: isDark ? '-20px 0 50px rgba(0,0,0,0.6)' : '-20px 0 50px rgba(0,0,0,0.08)',
               animation: isClosingProfile 
                 ? 'slideToLeft 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
                 : 'slideFromLeft 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
@@ -751,7 +750,7 @@ export default function DashboardPage() {
               <div style={{ padding: '16px', borderRadius: '16px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-hover)', marginBottom: '4px' }}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: '#6366f1' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     </div>
                     <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, color: 'var(--dm-text-muted)' }}>Name</span>
@@ -773,7 +772,7 @@ export default function DashboardPage() {
                         style={{ flex: 1, width: '100%', padding: '6px 10px', borderRadius: '20px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', fontSize: '13px', outline: 'none' }}
                         placeholder="Display Name"
                       />
-                      <button onClick={handleSaveName} disabled={usernameSaving} style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '20px', background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1, flexShrink: 0 }}>{usernameSaving ? '...' : 'Save'}</button>
+                      <button onClick={handleSaveName} disabled={usernameSaving} style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '20px', background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1, flexShrink: 0 }}>{usernameSaving ? '...' : 'Save'}</button>
                       <button onClick={() => setEditingUsername(false)} style={{ fontSize: '11px', padding: '6px 10px', borderRadius: '20px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer', flexShrink: 0 }}>✕</button>
                     </div>
                   )}
@@ -784,7 +783,7 @@ export default function DashboardPage() {
               {/* Mail Channel Row */}
               <div className="py-4 px-5 flex items-center justify-between rounded-2xl transition-all" style={{ border: '1px solid var(--dm-border)', background: 'var(--dm-bg-hover)' }}>
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-indigo-500 shadow-xs" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)' }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-xs" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
