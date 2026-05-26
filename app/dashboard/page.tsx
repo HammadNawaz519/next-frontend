@@ -371,8 +371,16 @@ export default function DashboardPage() {
         {/* Content Views */}
         {activeView === 'home' && (
           <div className="relative w-full h-full flex flex-col min-h-0 z-10 overflow-y-auto">
+
+            {/* Animated blob background */}
+            <div className="home-blob-bg">
+              <div className="home-blob home-blob-1" />
+              <div className="home-blob home-blob-2" />
+              <div className="home-blob home-blob-3" />
+            </div>
+
             {/* Top bar: status + theme toggle */}
-            <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
+            <div className="relative z-10 flex items-center justify-between px-5 py-4 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-400'} animate-pulse`} />
                 <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>
@@ -383,7 +391,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Welcome — immediately under status bar */}
-            <div className="flex flex-col items-center gap-3 pt-6 pb-4 px-6 animate-in fade-in slide-in-from-top-4 duration-700">
+            <div className="relative z-10 flex flex-col items-center gap-3 pt-6 pb-4 px-6 animate-in fade-in slide-in-from-top-4 duration-700">
               <div
                 className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold"
                 style={{ background: 'var(--dm-bg-active)', border: '2px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}

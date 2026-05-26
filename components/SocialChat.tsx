@@ -1037,55 +1037,40 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               return (
                 <div
                   key={user.id}
+                  className={`item ${selectedUser?.id === user.id ? 'active' : ''}`}
                   onClick={(e: React.MouseEvent) => handleSelectUser(user, e)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '10px 14px',
-                    borderRadius: '14px',
-                    cursor: 'pointer',
-                    background: selectedUser?.id === user.id ? 'var(--dm-bg-active)' : 'transparent',
-                    transition: 'background 0.2s',
-                  }}
                 >
                   {/* Avatar with online dot */}
                   <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', fontSize: '16px', fontWeight: 600, color: 'var(--dm-text-primary)' }}>
+                    <div className="user-pfp">
                       {user.image && user.image.length > 5
-                        ? <img src={user.image} alt={user.name} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ? <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
                         : user.name?.charAt(0).toUpperCase()
                       }
                     </div>
-                    {/* Online indicator dot */}
-                    <div style={{
-                      position: 'absolute', bottom: 1, right: 1,
-                      width: '11px', height: '11px', borderRadius: '50%',
-                      background: isOnline ? '#22c55e' : '#6b7280',
-                      border: '2px solid var(--dm-bg-main)',
+                    <span style={{
+                      position: 'absolute', bottom: 2, right: 2,
+                      width: '12px', height: '12px', borderRadius: '50%',
+                      background: isOnline ? '#22c55e' : '#9ca3af',
+                      border: '2px solid var(--dm-bg-sidebar)',
+                      display: 'block',
                       transition: 'background 0.3s'
                     }} />
                   </div>
 
-                  {/* Name + last message + status */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--dm-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>{user.name}</span>
+                  {/* Meta */}
+                  <div className="meta">
+                    <b>
+                      {user.name}
                       {(user as any).unseenCount > 0 && (
-                        <span style={{ fontSize: '10px', fontWeight: 700, background: '#6366f1', color: '#fff', borderRadius: '20px', padding: '1px 6px', flexShrink: 0 }}>{(user as any).unseenCount}</span>
+                        <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 700, background: '#6366f1', color: '#fff', borderRadius: '20px', padding: '1px 6px' }}>
+                          {(user as any).unseenCount}
+                        </span>
                       )}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                      <span style={{ fontSize: '11px', color: isOnline ? '#22c55e' : 'var(--dm-text-muted)', fontWeight: isOnline ? 500 : 400 }}>
-                        {isOnline ? 'Online' : 'Offline'}
-                      </span>
-                      {(user as any).lastMessage && (
-                        <>
-                          <span style={{ fontSize: '10px', color: 'var(--dm-text-muted)' }}>·</span>
-                          <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100px' }}>{(user as any).lastMessage}</span>
-                        </>
-                      )}
-                    </div>
+                    </b>
+                    <small style={{ color: isOnline ? '#22c55e' : undefined }}>
+                      {isOnline ? '● Online' : (user as any).lastMessage || 'Offline'}
+                    </small>
                   </div>
                 </div>
               );

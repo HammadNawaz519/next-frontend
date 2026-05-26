@@ -351,3 +351,85 @@ body {
   position: relative;
   z-index: 1;
 }
+
+/* =========================================
+   HOME PAGE — ANIMATED BLOB BACKGROUND
+   ========================================= */
+
+@keyframes blob-drift-1 {
+  0%   { transform: translate(0%,   0%)   scale(1);    }
+  33%  { transform: translate(8%,  -12%)  scale(1.15); }
+  66%  { transform: translate(-6%,  8%)   scale(0.92); }
+  100% { transform: translate(0%,   0%)   scale(1);    }
+}
+@keyframes blob-drift-2 {
+  0%   { transform: translate(0%,   0%)   scale(1);    }
+  33%  { transform: translate(-10%, 10%)  scale(1.10); }
+  66%  { transform: translate(6%,  -6%)   scale(0.95); }
+  100% { transform: translate(0%,   0%)   scale(1);    }
+}
+@keyframes blob-drift-3 {
+  0%   { transform: translate(0%,   0%)   scale(1);    }
+  33%  { transform: translate(12%,  6%)   scale(0.90); }
+  66%  { transform: translate(-8%, -10%)  scale(1.12); }
+  100% { transform: translate(0%,   0%)   scale(1);    }
+}
+
+.home-blob-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.home-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(72px);
+  will-change: transform;
+}
+
+/* Blob 1 — top-left */
+.home-blob-1 {
+  width: 65vw; height: 65vw;
+  max-width: 420px; max-height: 420px;
+  background: radial-gradient(circle at 40% 40%, #a5b4fc, #818cf8, #6366f1);
+  opacity: 0.40;
+  top: -15%; left: -15%;
+  animation: blob-drift-1 16s ease-in-out infinite;
+}
+
+/* Blob 2 — bottom-right */
+.home-blob-2 {
+  width: 55vw; height: 55vw;
+  max-width: 360px; max-height: 360px;
+  background: radial-gradient(circle at 60% 60%, #f9a8d4, #e879f9, #d946ef);
+  opacity: 0.38;
+  bottom: 0%; right: -10%;
+  animation: blob-drift-2 20s ease-in-out infinite;
+}
+
+/* Blob 3 — center-bottom */
+.home-blob-3 {
+  width: 45vw; height: 45vw;
+  max-width: 300px; max-height: 300px;
+  background: radial-gradient(circle at 50% 50%, #67e8f9, #22d3ee, #06b6d4);
+  opacity: 0.32;
+  bottom: 18%; left: 18%;
+  animation: blob-drift-3 24s ease-in-out infinite;
+}
+
+/* ─── Dark mode overrides ─── */
+[data-theme="dark"] .home-blob-1 {
+  background: radial-gradient(circle at 40% 40%, #3730a3, #6d28d9, #7c3aed);
+  opacity: 0.55;
+}
+[data-theme="dark"] .home-blob-2 {
+  background: radial-gradient(circle at 60% 60%, #4c1d95, #7c3aed, #9333ea);
+  opacity: 0.50;
+}
+[data-theme="dark"] .home-blob-3 {
+  background: radial-gradient(circle at 50% 50%, #065f46, #0284c7, #0891b2);
+  opacity: 0.45;
+}
