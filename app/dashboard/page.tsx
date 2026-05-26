@@ -580,30 +580,22 @@ export default function DashboardPage() {
                 : 'slideFromLeft 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
             }}
           >
-            {/* Header / Avatar Section — premium glowing mesh gradient */}
+            {/* Header / Avatar Section — clean theme frosted glass */}
             <div
-              className="relative flex flex-col items-center justify-end pb-8 pt-10 overflow-hidden"
+              className="relative flex flex-col items-center justify-end pb-8 pt-12 overflow-hidden"
               style={{
-                minHeight: '250px',
-                background: 'linear-gradient(135deg, hsl(245, 80%, 55%), hsl(285, 75%, 50%), hsl(205, 85%, 45%))',
-                borderBottom: '1px solid rgba(255,255,255,0.12)',
+                minHeight: '220px',
+                background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                borderBottom: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
               }}
             >
-              {/* Glass background noise / grain overlay */}
-              <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.75\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.08\'/%3E%3C/svg%3E")', backgroundSize: 'cover', opacity: 0.4 }} />
-              
-              {/* Decorative premium glass circles */}
-              <div style={{ position: 'absolute', width: '220px', height: '220px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)', top: '-60px', right: '-60px', border: '1px solid rgba(255,255,255,0.15)' }} />
-              <div style={{ position: 'absolute', width: '150px', height: '150px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(8px)', bottom: '-30px', left: '-50px', border: '1px solid rgba(255,255,255,0.1)' }} />
-              
               <button
                 onClick={handleCloseProfile}
                 className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center z-10 transition-all hover:scale-105 active:scale-95"
                 style={{
-                  background: 'rgba(255,255,255,0.15)',
-                  backdropFilter: 'blur(12px)',
-                  border: '1.5px solid rgba(255,255,255,0.3)',
-                  color: 'white'
+                  background: 'var(--dm-bg-input)',
+                  border: '1px solid var(--dm-border)',
+                  color: 'var(--dm-text-muted)'
                 }}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -614,58 +606,45 @@ export default function DashboardPage() {
               {/* Avatar */}
               <div className="relative z-10 mb-4">
                 <div 
-                  className="transition-transform duration-500 hover:scale-105"
+                  className="transition-transform duration-500 hover:scale-105 font-light"
                   style={{ 
                     width: '90px', 
                     height: '90px', 
                     borderRadius: '50%', 
-                    background: 'rgba(255,255,255,0.2)', 
+                    background: 'var(--dm-bg-active)', 
                     backdropFilter: 'blur(16px)', 
-                    border: '3px solid rgba(255,255,255,0.5)', 
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.2), 0 0 20px rgba(255,255,255,0.2)',
+                    border: '1px solid var(--dm-border)', 
+                    boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.04)',
                     display: 'flex', 
                     alignItems: 'center', 
-                    justifyContent: 'center', 
+                    justify: 'center', 
                     fontSize: '34px', 
-                    fontWeight: 200, 
-                    color: 'white' 
+                    color: 'var(--dm-text-primary)' 
                   }}
                 >
                   {fullUser?.name?.slice(0, 1).toUpperCase() || 'U'}
                 </div>
-                <div style={{ position: 'absolute', bottom: 3, right: 3, width: '20px', height: '20px', borderRadius: '50%', background: '#10b981', border: '3.5px solid rgba(255,255,255,0.8)', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }} />
+                <div style={{ position: 'absolute', bottom: 3, right: 3, width: '20px', height: '20px', borderRadius: '50%', background: '#10b981', border: '3.5px solid var(--dm-bg-sidebar)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} />
               </div>
               
-              <h3 style={{ color: 'white', fontSize: '22px', fontWeight: 600, margin: '0 0 4px', zIndex: 10, textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>{fullUser?.name || session.user?.name || 'User'}</h3>
-              <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '13px', margin: 0, zIndex: 10, fontWeight: 300 }}>{fullUser?.email || session.user?.email || ''}</p>
+              <h3 style={{ color: 'var(--dm-text-primary)', fontSize: '20px', fontWeight: 500, margin: '0 0 4px', zIndex: 10 }}>{fullUser?.name || session.user?.name || 'User'}</h3>
+              <p style={{ color: 'var(--dm-text-muted)', fontSize: '13px', margin: 0, zIndex: 10, fontWeight: 300 }}>{fullUser?.email || session.user?.email || ''}</p>
             </div>
 
             {/* Content — luxurious glass info cards */}
-            <div className="flex-1 p-6 space-y-4 overflow-y-auto" style={{ background: isDark ? 'rgba(12,12,18,0.25)' : 'rgba(255,255,255,0.25)' }}>
-              {/* Account Statistics Grid */}
-              <div className="grid grid-cols-2 gap-3 mb-2">
-                <div style={{ padding: '16px', borderRadius: '20px', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(255,255,255,0.8)', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.5)', backdropFilter: 'blur(8px)', textAlign: 'center' }}>
-                  <p style={{ margin: 0, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--dm-text-muted)', fontWeight: 600 }}>Account Status</p>
-                  <p style={{ margin: '6px 0 0', fontSize: '14px', fontWeight: 700, color: '#6366f1' }}>PRO USER</p>
-                </div>
-                <div style={{ padding: '16px', borderRadius: '20px', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(255,255,255,0.8)' , background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.5)', backdropFilter: 'blur(8px)', textAlign: 'center' }}>
-                  <p style={{ margin: 0, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--dm-text-muted)', fontWeight: 600 }}>Connection</p>
-                  <p style={{ margin: '6px 0 0', fontSize: '14px', fontWeight: 700, color: '#10b981' }}>SECURE</p>
-                </div>
-              </div>
-
+            <div className="flex-1 p-6 space-y-4 overflow-y-auto" style={{ background: isDark ? 'rgba(12,12,18,0.1)' : 'rgba(255,255,255,0.1)' }}>
               {/* Name Edit Row */}
               <div style={{ padding: '18px', borderRadius: '24px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.02)' }}>
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)', border: isDark ? '1px solid rgba(99,102,241,0.2)' : '1px solid rgba(99,102,241,0.12)', color: '#6366f1' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                       </div>
                       <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700, color: 'var(--dm-text-muted)' }}>Display Name</span>
                     </div>
                     {!editingUsername && (
-                      <button onClick={() => { setUsernameInput(fullUser?.name || ''); setEditingUsername(true); setUsernameError(''); }} style={{ fontSize: '11px', padding: '6px 14px', borderRadius: '20px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, boxShadow: '0 4px 12px rgba(99,102,241,0.25)' }}>Change</button>
+                      <button onClick={() => { setUsernameInput(fullUser?.name || ''); setEditingUsername(true); setUsernameError(''); }} style={{ fontSize: '11px', padding: '6px 14px', borderRadius: '20px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)', cursor: 'pointer', fontWeight: 500 }}>Change</button>
                     )}
                   </div>
                   {!editingUsername ? (
@@ -684,7 +663,7 @@ export default function DashboardPage() {
                         style={{ flex: 1, width: '100%', padding: '8px 14px', borderRadius: '14px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', fontSize: '13px', outline: 'none', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)' }}
                         placeholder="Display Name"
                       />
-                      <button onClick={handleSaveName} disabled={usernameSaving} style={{ fontSize: '11px', padding: '8px 16px', borderRadius: '14px', background: '#6366f1', color: 'white', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1, fontWeight: 600 }}>{usernameSaving ? '...' : 'Save'}</button>
+                      <button onClick={handleSaveName} disabled={usernameSaving} style={{ fontSize: '11px', padding: '8px 16px', borderRadius: '14px', background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1, fontWeight: 600 }}>{usernameSaving ? '...' : 'Save'}</button>
                       <button onClick={() => setEditingUsername(false)} style={{ fontSize: '11px', padding: '8px 12px', borderRadius: '14px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer' }}>✕</button>
                     </div>
                   )}
@@ -696,7 +675,7 @@ export default function DashboardPage() {
               <div style={{ padding: '18px', borderRadius: '24px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.02)' }}>
                 <div className="flex flex-col gap-3">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(244,63,94,0.15)' : 'rgba(244,63,94,0.08)', border: isDark ? '1px solid rgba(244,63,94,0.2)' : '1px solid rgba(244,63,94,0.12)', color: '#f43f5e' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justify: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
@@ -712,32 +691,31 @@ export default function DashboardPage() {
               {/* Download Mobile App Button */}
               <button
                 onClick={handleInstallApp}
-                className="w-full flex items-center justify-between px-6 py-4 rounded-[20px] transition-all hover:scale-[1.02] active:scale-98 cursor-pointer mt-4"
+                className="w-full flex items-center justify-between px-6 py-4.5 rounded-[24px] transition-all hover:scale-[1.02] active:scale-98 cursor-pointer mt-4"
                 style={{ 
-                  border: '1px solid rgba(99, 102, 241, 0.25)', 
-                  background: 'rgba(99, 102, 241, 0.06)', 
-                  boxShadow: '0 4px 16px rgba(99, 102, 241, 0.08)' 
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', 
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', 
+                  boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.02)'
                 }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-indigo-500 shadow-xs" style={{ background: 'rgba(99, 102, 241, 0.12)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
                     <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
                   </div>
-                  <span className="text-[11px] uppercase tracking-widest font-extrabold text-indigo-600 dark:text-indigo-400">Download Mobile App</span>
+                  <span className="text-[11px] uppercase tracking-widest font-bold" style={{ color: 'var(--dm-text-primary)' }}>Download Mobile App</span>
                 </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'rgba(99, 102, 241, 0.5)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
               </button>
 
-              {/* Sign Out Button (Replaces Joined Date) */}
+              {/* Sign Out Button */}
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}
-                className="w-full flex items-center justify-between px-6 py-4 rounded-[20px] transition-all hover:scale-[1.02] active:scale-98 cursor-pointer mt-4"
+                className="w-full flex items-center justify-between px-6 py-4.5 rounded-[24px] transition-all hover:scale-[1.02] active:scale-98 cursor-pointer mt-4"
                 style={{ 
-                  border: '1px solid rgba(239, 68, 68, 0.25)', 
-                  background: 'rgba(239, 68, 68, 0.06)', 
-                  boxShadow: '0 4px 16px rgba(239, 68, 68, 0.08)' 
+                  border: isDark ? '1px solid rgba(239, 68, 68, 0.15)' : '1px solid rgba(239, 68, 68, 0.25)', 
+                  background: 'rgba(239, 68, 68, 0.03)' 
                 }}
               >
                 <div className="flex items-center gap-3">
