@@ -632,24 +632,26 @@ export default function DashboardPage() {
             </div>
 
             {/* Content — luxurious glass info cards */}
-            <div className="flex-1 p-6 space-y-4 overflow-y-auto" style={{ background: isDark ? 'rgba(12,12,18,0.1)' : 'rgba(255,255,255,0.1)' }}>
+            <div className="flex-1 p-5 space-y-3 overflow-y-auto" style={{ background: isDark ? 'rgba(12,12,18,0.1)' : 'rgba(255,255,255,0.1)' }}>
               {/* Name Edit Row */}
-              <div style={{ padding: '18px', borderRadius: '24px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.02)' }}>
-                <div className="flex flex-col gap-4">
+              <div style={{ padding: '14px 18px', borderRadius: '16px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.02)' }}>
+                <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                        </svg>
                       </div>
-                      <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700, color: 'var(--dm-text-muted)' }}>Display Name</span>
+                      <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, color: 'var(--dm-text-muted)' }}>Display Name</span>
                     </div>
                     {!editingUsername && (
-                      <button onClick={() => { setUsernameInput(fullUser?.name || ''); setEditingUsername(true); setUsernameError(''); }} style={{ fontSize: '11px', padding: '6px 14px', borderRadius: '20px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)', cursor: 'pointer', fontWeight: 500 }}>Change</button>
+                      <button onClick={() => { setUsernameInput(fullUser?.name || ''); setEditingUsername(true); setUsernameError(''); }} style={{ fontSize: '10px', padding: '4px 10px', borderRadius: '14px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)', cursor: 'pointer', fontWeight: 500 }}>Change</button>
                     )}
                   </div>
                   {!editingUsername ? (
-                    <div style={{ paddingLeft: '46px' }}>
-                      <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--dm-text-primary)', letterSpacing: '-0.02em' }}>
+                    <div style={{ paddingLeft: '38px' }}>
+                      <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--dm-text-primary)', letterSpacing: '-0.02em' }}>
                         {fullUser?.name || session.user?.name || 'User'}
                       </span>
                     </div>
@@ -660,30 +662,30 @@ export default function DashboardPage() {
                         value={usernameInput}
                         onChange={e => { setUsernameInput(e.target.value); setUsernameError(''); }}
                         onKeyDown={async e => { if (e.key === 'Enter') { e.preventDefault(); await handleSaveName(); } if (e.key === 'Escape') setEditingUsername(false); }}
-                        style={{ flex: 1, width: '100%', padding: '8px 14px', borderRadius: '14px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', fontSize: '13px', outline: 'none', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)' }}
+                        style={{ flex: 1, width: '100%', padding: '6px 12px', borderRadius: '10px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', fontSize: '12px', outline: 'none', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)' }}
                         placeholder="Display Name"
                       />
-                      <button onClick={handleSaveName} disabled={usernameSaving} style={{ fontSize: '11px', padding: '8px 16px', borderRadius: '14px', background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1, fontWeight: 600 }}>{usernameSaving ? '...' : 'Save'}</button>
-                      <button onClick={() => setEditingUsername(false)} style={{ fontSize: '11px', padding: '8px 12px', borderRadius: '14px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer' }}>✕</button>
+                      <button onClick={handleSaveName} disabled={usernameSaving} style={{ fontSize: '10px', padding: '6px 12px', borderRadius: '10px', background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1, fontWeight: 600 }}>{usernameSaving ? '...' : 'Save'}</button>
+                      <button onClick={() => setEditingUsername(false)} style={{ fontSize: '10px', padding: '6px 10px', borderRadius: '10px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer' }}>✕</button>
                     </div>
                   )}
                 </div>
-                {usernameError && <p style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', marginLeft: '46px' }}>{usernameError}</p>}
+                {usernameError && <p style={{ color: '#ef4444', fontSize: '10px', marginTop: '6px', marginLeft: '38px' }}>{usernameError}</p>}
               </div>
 
               {/* Mail Channel Row */}
-              <div style={{ padding: '18px', borderRadius: '24px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.02)' }}>
-                <div className="flex flex-col gap-3">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justify: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              <div style={{ padding: '14px 18px', borderRadius: '16px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.02)' }}>
+                <div className="flex flex-col gap-2">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', display: 'flex', alignItems: 'center', justify: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
                       </svg>
                     </div>
-                    <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700, color: 'var(--dm-text-muted)' }}>Registered Email</span>
+                    <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, color: 'var(--dm-text-muted)' }}>Registered Email</span>
                   </div>
-                  <div style={{ paddingLeft: '46px' }}>
-                    <span className="text-[15px] font-medium truncate block max-w-[280px]" style={{ color: 'var(--dm-text-primary)' }}>{fullUser?.email}</span>
+                  <div style={{ paddingLeft: '38px' }}>
+                    <span className="text-[14px] font-medium truncate block max-w-[280px]" style={{ color: 'var(--dm-text-primary)' }}>{fullUser?.email}</span>
                   </div>
                 </div>
               </div>
@@ -691,7 +693,7 @@ export default function DashboardPage() {
               {/* Download Mobile App Button */}
               <button
                 onClick={handleInstallApp}
-                className="w-full flex items-center justify-between px-6 py-4.5 rounded-[24px] transition-all hover:scale-[1.02] active:scale-98 cursor-pointer mt-4"
+                className="w-full flex items-center justify-between px-4.5 py-3 rounded-[16px] transition-all hover:scale-[1.01] active:scale-99 cursor-pointer mt-3"
                 style={{ 
                   border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', 
                   background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', 
@@ -699,34 +701,38 @@ export default function DashboardPage() {
                 }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
-                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-xs" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                     </svg>
                   </div>
-                  <span className="text-[11px] uppercase tracking-widest font-bold" style={{ color: 'var(--dm-text-primary)' }}>Download Mobile App</span>
+                  <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--dm-text-primary)' }}>Download Mobile App</span>
                 </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: 'var(--dm-text-muted)' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
               </button>
 
               {/* Sign Out Button */}
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}
-                className="w-full flex items-center justify-between px-6 py-4.5 rounded-[24px] transition-all hover:scale-[1.02] active:scale-98 cursor-pointer mt-4"
+                className="w-full flex items-center justify-between px-4.5 py-3 rounded-[16px] transition-all hover:scale-[1.01] active:scale-99 cursor-pointer mt-3"
                 style={{ 
                   border: isDark ? '1px solid rgba(239, 68, 68, 0.15)' : '1px solid rgba(239, 68, 68, 0.25)', 
                   background: 'rgba(239, 68, 68, 0.03)' 
                 }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-red-500 shadow-xs" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-red-500 shadow-xs" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
                     </svg>
                   </div>
-                  <span className="text-[11px] uppercase tracking-widest font-extrabold text-red-500">Sign Out of Account</span>
+                  <span className="text-[10px] uppercase tracking-widest font-extrabold text-red-500">Sign Out of Account</span>
                 </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'rgba(239, 68, 68, 0.5)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: 'rgba(239, 68, 68, 0.5)' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
               </button>
             </div>
           </div>
