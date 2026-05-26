@@ -351,13 +351,16 @@ export default function DashboardPage() {
           </nav>
 
           {/* Profile Section */}
-          <div className="mt-auto pt-6 pb-8" style={{ borderTop: '1px solid var(--dm-border)' }}>
+          <div className="mt-auto pt-4 pb-4" style={{ borderTop: '1px solid var(--dm-border)' }}>
             <div 
               onClick={() => setIsProfileOpen(true)}
-              className="flex items-center justify-start gap-0 group-hover:gap-4 px-1 cursor-pointer group/profile active:scale-95 transition-[transform,gap] duration-500 ease-[var(--ease-premium)]"
+              className="flex items-center justify-start gap-0 group-hover:gap-4 px-1 py-1 rounded-full cursor-pointer group/profile active:scale-95 transition-[transform,gap] duration-500 ease-[var(--ease-premium)] overflow-hidden"
+              style={{ background: isProfileOpen ? 'var(--dm-bg-active)' : 'transparent' }}
+              onMouseEnter={e => { if (!isProfileOpen) (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
+              onMouseLeave={e => { if (!isProfileOpen) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
               <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
-                <div className="w-9 h-9 rounded-full flex items-center justify-center font-normal text-xs shadow-sm transition-transform duration-300 group-hover:scale-105" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
+                <div className="w-9 h-9 rounded-full flex items-center justify-center font-normal text-xs shadow-sm transition-transform duration-300 group-hover/profile:scale-105" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: isProfileOpen ? 'var(--dm-bg-main)' : 'var(--dm-text-secondary)' }}>
                   {session.user?.name?.slice(0, 1).toUpperCase() || 'U'}
                 </div>
               </div>
@@ -365,7 +368,7 @@ export default function DashboardPage() {
                 <p className="text-[13px] font-normal truncate transition-colors" style={{ color: 'var(--dm-text-primary)' }}>
                   {session.user?.name || session.user?.email?.split('@')[0] || 'User'}
                 </p>
-                <p className="text-[10px] truncate uppercase tracking-widest mt-0.5" style={{ color: 'var(--dm-text-muted)' }}>
+                <p className="text-[10px] truncate uppercase tracking-widest mt-0.5" style={{ color: isProfileOpen ? 'var(--dm-text-secondary)' : 'var(--dm-text-muted)' }}>
                   View Profile
                 </p>
               </div>
@@ -679,7 +682,7 @@ export default function DashboardPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ width: '30px', height: '30px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
                     </div>
                     <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, color: 'var(--dm-text-muted)' }}>Registered Email</span>
@@ -765,9 +768,12 @@ export default function DashboardPage() {
           <button
             onClick={() => setIsProfileOpen(true)}
             className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-full transition-all active:scale-90"
-            style={{ color: 'var(--dm-text-muted)' }}
+            style={{ 
+              background: isProfileOpen ? 'var(--dm-bg-active)' : 'transparent',
+              color: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
+            }}
           >
-            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)' }}>
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-active)', color: isProfileOpen ? 'var(--dm-bg-main)' : 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}>
               {session.user?.name?.charAt(0) || 'U'}
             </div>
             <span className="text-[9px] font-semibold uppercase tracking-widest">Profile</span>
