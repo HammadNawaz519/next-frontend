@@ -29,9 +29,10 @@ const getColor = (conf: number) => {
 
 interface WebcamASLProps {
   isCallActive?: boolean;
+  isPracticeMode?: boolean;
 }
 
-export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
+export default function WebcamASL({ isCallActive = false, isPracticeMode = false }: WebcamASLProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isPredicting = useRef(false);
@@ -58,8 +59,14 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
   const [scannerTelemetry, setScannerTelemetry] = useState<{
     brightness: number;
     latencyMs: number;
-    quality: 'optimal' | 'low_light' | 'overexposed';
-  }>({ brightness: 120, latencyMs: 0, quality: 'optimal' });
+    bandwidthKbps: number;
+    quality: 'low_light' | 'overexposed' | 'optimal';
+  }>({ brightness: 100, latencyMs: 0, bandwidthKbps: 0, quality: 'optimal' });
+
+  // ── Practice Mode states ──────────────────────────────────────────────────
+  const [practiceSelectedLetter, setPracticeSelectedLetter] = useState<string | null>(null);
+  const [practiceInstructions, setPracticeInstructions] = useState<string>('');
+  const [isFetchingPractice, setIsFetchingPractice] = useState(false);
   const [aiPredictions, setAiPredictions] = useState<string[]>([]);
   const [aiResponse, setAiResponse] = useState<string>('');
   const [isAiThinking, setIsAiThinking] = useState<boolean>(false);
@@ -283,7 +290,7 @@ export default function WebcamASL({ isCallActive = false }: WebcamASLProps) {
     const quality = avgBrightness < 65 ? 'low_light' : avgBrightness > 220 ? 'overexposed' : 'optimal';
     
     // Update telemetry state
-    setScannerTelemetry({ brightness: avgBrightness, latencyMs, quality });
+    setScannerTelemetry(prev => ({ ...prev, brightness: avgBrightness, latencyMs, quality }));
 
     canvas.toBlob(async (blob) => {
       if (!blob) { isPredicting.current = false; return; }
@@ -509,6 +516,52 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
     
     recognitionRef.current = recognition;
     recognition.start();
+  };
+
+  const fetchPracticeInstructions = async (letter: string) => {
+    if (practiceSelectedLetter === letter) {
+      setPracticeSelectedLetter(null);
+      setPracticeInstructions('');
+      return;
+    }
+    setPracticeSelectedLetter(letter);
+    setPracticeInstructions('');
+    setIsFetchingPractice(true);
+    try {
+      let promptText = '';
+      if (letter === 'space') {
+        promptText = 'You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly how to sign the "Space" gesture or pause in ASL. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.';
+      } else if (letter === 'del') {
+        promptText = 'You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly how to sign the "Delete" gesture (which erases the last letter) in ASL. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.';
+      } else if (letter === 'nothing') {
+        promptText = 'You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly what the "Nothing" or neutral standby posture is in ASL recognition. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.';
+      } else {
+        promptText = `You are an ASL (American Sign Language) expert. In exactly 3 or 4 short sentences (strictly no more than 4 lines), explain clearly how to sign the letter "${letter}" in ASL. Keep it extremely brief and easy to follow. Do not use markdown, bullets, or list formatting. Keep it plain text.`;
+      }
+      
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            { role: 'system', content: promptText },
+          ],
+          temperature: 0.2,
+          max_tokens: 150,
+        })
+      });
+
+      if (!response.ok) throw new Error('API Error');
+      const data = await response.json();
+      setPracticeInstructions(data.choices[0].message.content);
+    } catch (e) {
+      setPracticeInstructions('Could not load instructions. Please try again.');
+    }
+    setIsFetchingPractice(false);
   };
 
   const speakSentence = () => {
