@@ -375,35 +375,31 @@ export default function DashboardPage() {
           <div className="relative w-full h-full flex flex-col min-h-0 z-10 overflow-hidden">
             {/* Unified Premium Home Header */}
             <div className="flex items-center justify-between px-4 md:px-6 border-b relative z-50 flex-shrink-0" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', minHeight: '56px' }}>
-              <div className="flex items-center gap-2 z-10">
-                <div className="flex items-center gap-2 px-2.5 py-1 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-widest w-fit shadow-xs transition-all cursor-default" 
+              {/* Left: connection status */}
+              <div className="flex items-center gap-2 z-10 flex-shrink-0">
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest cursor-default" 
                      style={{ 
                         background: isConnected ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', 
                         color: isConnected ? '#22c55e' : '#ef4444', 
                         border: `1px solid ${isConnected ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}` 
                      }}>
-                  <span className="relative flex h-1.5 w-1.5">
-                    {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
-                    <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                  </span>
-                  <span className="hidden sm:inline">{isConnected ? 'Connected' : 'Connecting...'}</span>
-                  <span className="sm:hidden">{isConnected ? '●' : '○'}</span>
+                  <span className={`inline-flex rounded-full h-1.5 w-1.5 flex-shrink-0 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span className="hidden sm:inline">{isConnected ? 'Live' : 'Connecting'}</span>
                 </div>
               </div>
 
-              {/* Title core */}
-              <div className="absolute inset-x-0 mx-auto w-fit flex items-center gap-2 z-10 pointer-events-none">
+              {/* Title core — hidden on xs to prevent overlap */}
+              <div className="hidden sm:flex absolute inset-x-0 mx-auto w-fit items-center gap-2 z-0 pointer-events-none">
                 <div style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
                 <h2 style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.25em', color: 'var(--dm-text-secondary)', margin: 0 }}>Translation Workspace</h2>
               </div>
+              {/* Fallback title for xs */}
+              <span className="sm:hidden text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--dm-text-secondary)' }}>ASL Workspace</span>
 
-              {/* Controls */}
-              <div className="flex items-center gap-3 z-10">
+              {/* Controls — always on right, never overlaps */}
+              <div className="flex items-center gap-2 z-10 flex-shrink-0">
                 <ThemeToggle />
               </div>
-
-              {/* Background HUD accent glow */}
-              <div style={{ position: 'absolute', inset: 0, opacity: 0.04, background: 'linear-gradient(45deg, #10b981, #6366f1, #06b6d4)', filter: 'blur(15px)', pointerEvents: 'none' }} />
             </div>
 
             {/* Full bleed ASL Webcam Integration workspace */}
@@ -793,13 +789,13 @@ export default function DashboardPage() {
 
       {/* Mobile Bottom Navigation - always visible on mobile */}
       {/* Mobile Bottom Navigation - visible on home and chat list */}
-      {(activeView === 'home' || activeView === 'practice' || (activeView === 'chat' && !selectedChatUser)) && (
+      {/* Mobile Bottom Navigation */}
+      {(activeView === 'home' || activeView === 'assistant' || (activeView === 'chat' && !selectedChatUser)) && (
         <nav className="mobile-nav">
           {[
             { id: 'home', label: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
             { id: 'chat', label: 'Chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
             { id: 'assistant', label: 'AI', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
-            { id: 'practice', label: 'Practice', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' }
           ].map((item) => (
             <button
               key={item.id}

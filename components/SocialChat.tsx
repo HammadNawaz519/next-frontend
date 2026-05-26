@@ -1222,74 +1222,33 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   </div>
                 )}
                 
-                {/* Voice Mode Popup */}
-                {showVoiceMenu && !isRecording && !isVoiceToText && (
-                  <div style={{
-                    position: 'absolute', bottom: '70px', right: '16px',
-                    background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)',
-                    borderRadius: '20px', padding: '8px', zIndex: 999,
-                    boxShadow: '0 -8px 30px rgba(0,0,0,0.2)',
-                    animation: 'emojiBarIn 0.2s cubic-bezier(0.2,0.8,0.2,1) forwards',
-                    display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px'
-                  }}>
-                    <button 
-                      onClick={() => { setShowVoiceMenu(false); startRecording(); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '14px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--dm-text-primary)', fontSize: '14px', fontWeight: 500, width: '100%', textAlign: 'left', transition: 'background 0.15s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--dm-bg-hover)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="#ef4444">
-                          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-                          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 600 }}>Voice Note</div>
-                        <div style={{ fontSize: '11px', color: 'var(--dm-text-muted)', marginTop: '2px' }}>Send an audio message</div>
-                      </div>
-                    </button>
-                    <div style={{ height: '1px', background: 'var(--dm-border)', margin: '0 12px' }} />
-                    <button 
-                      onClick={() => { setShowVoiceMenu(false); startVoiceToText(); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '14px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--dm-text-primary)', fontSize: '14px', fontWeight: 500, width: '100%', textAlign: 'left', transition: 'background 0.15s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--dm-bg-hover)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="#6366f1">
-                          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
-                          <path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/>
-                        </svg>
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 600 }}>Voice to Text</div>
-                        <div style={{ fontSize: '11px', color: 'var(--dm-text-muted)', marginTop: '2px' }}>Speak and send as text</div>
-                      </div>
-                    </button>
-                  </div>
-                )}
 
                 <button 
-                  className="send-btn" 
+                  className={`send-btn${isRecording ? ' recording-pulse' : ''}`}
                   onClick={(e) => {
                     e.preventDefault();
                     if (inputValue.trim()) {
                       handleSendMessage();
                     } else if (isRecording) {
                       stopRecording();
-                    } else if (isVoiceToText) {
-                      stopVoiceToText();
                     } else {
-                      setShowVoiceMenu(!showVoiceMenu);
+                      // Directly start voice recording — no popup menu
+                      startRecording();
                     }
                   }}
                   onTouchStart={(e) => {
+                    // Prevent ghost click on mobile
+                    e.preventDefault();
                     if (inputValue.trim()) {
-                      e.preventDefault();
                       handleSendMessage();
+                    } else if (isRecording) {
+                      stopRecording();
+                    } else {
+                      startRecording();
                     }
                   }}
+                  title={isRecording ? 'Tap to stop & send' : inputValue.trim() ? 'Send' : 'Voice message'}
+                  style={isRecording ? { background: '#ef4444' } : undefined}
                 >
                   {inputValue.trim() ? (
                     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
