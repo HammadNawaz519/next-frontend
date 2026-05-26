@@ -264,8 +264,8 @@ export default function LoginPage() {
   const renderRight = () => {
     if (view === 'verify') {
       return (
-        <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full overflow-y-auto">
-          <div className="w-full max-w-[420px] space-y-6 py-6">
+        <div className="flex flex-col items-center justify-center p-6 md:py-8 md:px-12 lg:py-6 lg:px-16 h-full overflow-y-auto">
+          <div className="w-full max-w-[420px] space-y-4 lg:space-y-6 py-2">
             <div className="text-left space-y-2">
               <h1 className="text-[32px] font-normal tracking-tight text-gray-900">Check your inbox</h1>
               <p className="text-[14px] text-gray-500 mt-1">We sent a 6-digit code to <span className="font-medium text-gray-900">{email}</span></p>
@@ -306,8 +306,8 @@ export default function LoginPage() {
 
     if (view === 'success' && successUser) {
       return (
-        <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full overflow-y-auto no-scrollbar">
-          <div className="w-full max-w-[420px] space-y-6 py-6">
+        <div className="flex flex-col items-center justify-center p-6 md:py-8 md:px-12 lg:py-6 lg:px-16 h-full overflow-y-auto no-scrollbar">
+          <div className="w-full max-w-[420px] space-y-4 lg:space-y-6 py-2">
             <div className="text-left space-y-2">
               <h1 className="text-[32px] font-normal tracking-tight text-gray-900">You&apos;re in!</h1>
               <p className="text-[14px] text-gray-500 mt-1">Your email has been verified and your account is ready.</p>
@@ -331,8 +331,8 @@ export default function LoginPage() {
 
     const isLogin = view === 'login';
     return (
-      <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full overflow-y-auto no-scrollbar">
-        <div className="w-full max-w-[420px] space-y-4 md:space-y-6 py-4">
+      <div className="flex flex-col items-center justify-center p-6 md:py-8 md:px-12 lg:py-6 lg:px-16 h-full overflow-y-auto no-scrollbar">
+        <div className="w-full max-w-[420px] space-y-3 lg:space-y-4 py-2">
           <div className="text-left w-full space-y-2">
             <h1 className="text-[28px] md:text-[32px] font-normal tracking-tight text-gray-900">{isLogin ? 'Welcome back' : 'Create your account'}</h1>
             <p className="text-[13px] md:text-[14px] text-gray-500">{isLogin ? 'Let\'s sign you into your Connect account.' : 'Create an account to start chatting.'}</p>
