@@ -634,11 +634,14 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
         localStreamRef.current = stream;
         setLocalStream(stream);
 
-        // ── ICE/STUN Configuration ──
-        // Google's free public STUN servers handle most network setups (same WiFi, different WiFi, WiFi↔mobile).
-        // STUN discovers the public IP/port; for symmetric NAT we keep TURN as fallback.
+        // ── ICE/STUN + TURN Configuration ──
+        // STUN = discovers public IP (works for ~85% of connections).
+        // TURN = relays media when both peers are behind strict/symmetric NAT (mobile data, corporate).
+        // The previous metered.ca credentials were a demo set that expires — replaced with
+        // Open Relay Project (permanently free, no account needed) + freestun.net as backup.
         const rtcConfig: RTCConfiguration = {
           iceServers: [
+            // ── Google STUN (free, fast, covers most home/WiFi setups) ──
             {
               urls: [
                 'stun:stun.l.google.com:19302',
@@ -648,29 +651,51 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
                 'stun:stun4.l.google.com:19302'
               ]
             },
-            // TURN relay servers (fallback for strict symmetric NAT / corporate firewalls)
+            // ── Open Relay Project — permanently free TURN (no expiry) ──
+            // UDP port 80 (fastest, firewall-friendly)
             {
-              urls: 'turn:a.relay.metered.ca:80',
-              username: '83eebabf8b4cce9d5dbcb4a2',
-              credential: '2D7JvfkOQtBdYW3R'
+              urls: 'turn:openrelay.metered.ca:80',
+              username: 'openrelayproject',
+              credential: 'openrelayproject'
+            },
+            // TCP port 80 (fallback if UDP blocked)
+            {
+              urls: 'turn:openrelay.metered.ca:80?transport=tcp',
+              username: 'openrelayproject',
+              credential: 'openrelayproject'
+            },
+            // UDP port 443 (works through most corporate firewalls)
+            {
+              urls: 'turn:openrelay.metered.ca:443',
+              username: 'openrelayproject',
+              credential: 'openrelayproject'
+            },
+            // TLS port 443 (most restrictive firewall bypass)
+            {
+              urls: 'turns:openrelay.metered.ca:443?transport=tcp',
+              username: 'openrelayproject',
+              credential: 'openrelayproject'
+            },
+            // ── freestun.net — independent free TURN (second provider for redundancy) ──
+            {
+              urls: 'stun:freestun.net:3479'
             },
             {
-              urls: 'turn:a.relay.metered.ca:80?transport=tcp',
-              username: '83eebabf8b4cce9d5dbcb4a2',
-              credential: '2D7JvfkOQtBdYW3R'
+              urls: 'turn:freestun.net:3479',
+              username: 'free',
+              credential: 'free'
             },
             {
-              urls: 'turn:a.relay.metered.ca:443',
-              username: '83eebabf8b4cce9d5dbcb4a2',
-              credential: '2D7JvfkOQtBdYW3R'
-            },
-            {
-              urls: 'turns:a.relay.metered.ca:443?transport=tcp',
-              username: '83eebabf8b4cce9d5dbcb4a2',
-              credential: '2D7JvfkOQtBdYW3R'
+              urls: 'turns:freestun.net:5350',
+              username: 'free',
+              credential: 'free'
             }
           ],
-          iceCandidatePoolSize: 10
+          iceCandidatePoolSize: 10,
+          // Bundle all media (audio + video) onto a single port — much better NAT traversal
+          bundlePolicy: 'max-bundle',
+          // Require RTP/RTCP multiplexing — reduces ports needed by half
+          rtcpMuxPolicy: 'require'
         };
         const pc = new RTCPeerConnection(rtcConfig);
         pcRef.current = pc;
@@ -687,12 +712,21 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
           if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
             setCallStatus('active');
           }
-          if (pc.iceConnectionState === 'failed') {
-            console.error("ICE connection FAILED — attempting ICE restart...");
-            pc.restartIce();
-          }
-          if (pc.iceConnectionState === 'disconnected') {
-            console.warn("ICE disconnected — may reconnect automatically...");
+          if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+            console.warn(`ICE ${pc.iceConnectionState} — attempting ICE restart with re-offer...`);
+            // restartIce() alone isn't enough — the caller must send a new offer with iceRestart:true
+            if (isCaller && target) {
+              pc.restartIce();
+              pc.createOffer({ iceRestart: true, offerToReceiveAudio: true, offerToReceiveVideo: type === 'video' })
+                .then(offer => pc.setLocalDescription(offer))
+                .then(() => {
+                  socket.emit('webrtc_signal', { to: target, signal: { sdp: pc.localDescription } });
+                  console.log('ICE restart offer sent.');
+                })
+                .catch(e => console.error('ICE restart offer error:', e));
+            } else {
+              pc.restartIce();
+            }
           }
         };
 
@@ -744,7 +778,10 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
           // Small delay to ensure receiver's PC is ready
           setTimeout(async () => {
             try {
-              const offer = await pc.createOffer();
+              const offer = await pc.createOffer({
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: type === 'video'
+              });
               await pc.setLocalDescription(offer);
               console.log("Caller created offer, sending to:", target);
               socket.emit('webrtc_signal', { to: target, signal: { sdp: offer } });
@@ -754,7 +791,10 @@ Output ONLY the final interpreted sentence starting with 'The user is saying: '.
 
         // RECEIVER creates offer as fallback if no initial offer received
         if (!isCaller && !initialOffer) {
-          const offer = await pc.createOffer();
+          const offer = await pc.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: type === 'video'
+          });
           await pc.setLocalDescription(offer);
           console.log("Receiver created fallback offer, sending to:", target);
           socket.emit('webrtc_signal', { to: target, signal: { sdp: offer } });
