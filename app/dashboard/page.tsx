@@ -300,7 +300,7 @@ export default function DashboardPage() {
       <div className="main-sidebar w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden border-r md:border md:rounded-[40px] shadow-sm" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border-main)' }}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-            <div className="mb-8 flex items-center justify-start gap-0 group-hover:gap-3 px-1 h-12 transition-[gap] duration-500 ease-[var(--ease-premium)]">
+            <div className="mb-8 flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-3 px-1 h-12 transition-all duration-500 ease-[var(--ease-premium)]">
               <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
                 <img 
                   src="/connect-logo.png" 
@@ -326,7 +326,7 @@ export default function DashboardPage() {
                 <div 
                   key={item.name} 
                   onClick={(e) => handleNavClick(item.id, e)}
-                  className={`flex items-center justify-start gap-0 group-hover:gap-4 px-1 py-1 rounded-full cursor-pointer transition-[gap] duration-500 ease-[var(--ease-premium)] group/item overflow-hidden`}
+                  className={`flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-4 px-1 py-1 rounded-full cursor-pointer transition-all duration-500 ease-[var(--ease-premium)] group/item overflow-hidden`}
                   style={{ background: isItemActive ? 'var(--dm-bg-active)' : 'transparent' }}
                   onMouseEnter={e => { if (!isItemActive) (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
                   onMouseLeave={e => { if (!isItemActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
@@ -351,7 +351,7 @@ export default function DashboardPage() {
           <div className="mt-auto pt-4 pb-4" style={{ borderTop: '1px solid var(--dm-border)' }}>
             <div 
               onClick={() => setIsProfileOpen(true)}
-              className="flex items-center justify-start gap-0 group-hover:gap-4 px-1 py-1 rounded-full cursor-pointer group/profile active:scale-95 transition-[transform,gap] duration-500 ease-[var(--ease-premium)] overflow-hidden"
+              className="flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-4 px-1 py-1 rounded-full cursor-pointer group/profile active:scale-95 transition-all duration-500 ease-[var(--ease-premium)] overflow-hidden"
               style={{ background: isProfileOpen ? 'var(--dm-bg-active)' : 'transparent' }}
               onMouseEnter={e => { if (!isProfileOpen) (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
               onMouseLeave={e => { if (!isProfileOpen) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
