@@ -19,21 +19,7 @@ export default function LoginPage() {
   // Cast status to string for safe comparisons
   const sessStatus = status as string;
 
-  // Redirect authenticated users after session resolves (must be before any early return — Rules of Hooks)
-  useEffect(() => {
-    if (sessStatus === 'authenticated') {
-      router.replace('/dashboard');
-    }
-  }, [sessStatus, router]);
-
-  // Show loader while authentication status is being resolved
-  if (sessStatus === 'loading') {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-[#09090b] z-[9999]">
-        <div className="w-12 h-12 border-4 border-zinc-800 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  // ── All state/refs/effects must be declared before any early return ──────
 
   const [view, setView] = useState<AuthView>('login');
 
@@ -54,12 +40,28 @@ export default function LoginPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [successUser, setSuccessUser] = useState<SuccessUser | null>(null);
 
+  // Redirect authenticated users (must stay before any early return)
+  useEffect(() => {
+    if (sessStatus === 'authenticated') {
+      router.replace('/dashboard');
+    }
+  }, [sessStatus, router]);
+
   // Resend cooldown timer
   useEffect(() => {
     if (resendCooldown <= 0) return;
     const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [resendCooldown]);
+
+  // Show loader while authentication status is being resolved
+  if (sessStatus === 'loading') {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-[#09090b] z-[9999]">
+        <div className="w-12 h-12 border-4 border-zinc-800 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   // OTP input handler
   const handleOtpChange = (i: number, val: string) => {
