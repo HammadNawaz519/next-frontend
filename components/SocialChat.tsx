@@ -306,6 +306,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [requests, setRequests] = useState<User[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const selectedUserRef = useRef<User | null>(null);
 
   // Sync with parent for header updates
@@ -572,6 +573,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return next;
         });
       });
+
+      // Online / offline presence
+      newSocket.on('online_users', (emails: string[]) => {
+        setOnlineUsers(new Set(emails.map((e: string) => e.toLowerCase().trim())));
+      });
+
+      newSocket.on('user_status', ({ email, status }: { email: string; status: 'online' | 'offline' }) => {
+        setOnlineUsers(prev => {
+          const next = new Set(prev);
+          if (status === 'online') next.add(email.toLowerCase().trim());
+          else next.delete(email.toLowerCase().trim());
+          return next;
+        });
+      });
+
       return newSocket;
     };
 
@@ -1016,14 +1032,64 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             </div>
           </div>
           <div className="list">
-            {(view === 'recent' ? users : requests).map((user) => (
-              <SidebarItem 
-                key={user.id} 
-                user={user} 
-                isActive={selectedUser?.id === user.id} 
-                onClick={(e: React.MouseEvent) => handleSelectUser(user, e)} 
-              />
-            ))}
+            {(view === 'recent' ? users : requests).map((user) => {
+              const isOnline = onlineUsers.has((user.email || '').toLowerCase().trim());
+              return (
+                <div
+                  key={user.id}
+                  onClick={(e: React.MouseEvent) => handleSelectUser(user, e)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '10px 14px',
+                    borderRadius: '14px',
+                    cursor: 'pointer',
+                    background: selectedUser?.id === user.id ? 'var(--dm-bg-active)' : 'transparent',
+                    transition: 'background 0.2s',
+                  }}
+                >
+                  {/* Avatar with online dot */}
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', fontSize: '16px', fontWeight: 600, color: 'var(--dm-text-primary)' }}>
+                      {user.image && user.image.length > 5
+                        ? <img src={user.image} alt={user.name} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : user.name?.charAt(0).toUpperCase()
+                      }
+                    </div>
+                    {/* Online indicator dot */}
+                    <div style={{
+                      position: 'absolute', bottom: 1, right: 1,
+                      width: '11px', height: '11px', borderRadius: '50%',
+                      background: isOnline ? '#22c55e' : '#6b7280',
+                      border: '2px solid var(--dm-bg-main)',
+                      transition: 'background 0.3s'
+                    }} />
+                  </div>
+
+                  {/* Name + last message + status */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--dm-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>{user.name}</span>
+                      {(user as any).unseenCount > 0 && (
+                        <span style={{ fontSize: '10px', fontWeight: 700, background: '#6366f1', color: '#fff', borderRadius: '20px', padding: '1px 6px', flexShrink: 0 }}>{(user as any).unseenCount}</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                      <span style={{ fontSize: '11px', color: isOnline ? '#22c55e' : 'var(--dm-text-muted)', fontWeight: isOnline ? 500 : 400 }}>
+                        {isOnline ? 'Online' : 'Offline'}
+                      </span>
+                      {(user as any).lastMessage && (
+                        <>
+                          <span style={{ fontSize: '10px', color: 'var(--dm-text-muted)' }}>·</span>
+                          <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100px' }}>{(user as any).lastMessage}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
             {(view === 'recent' ? users : requests).length === 0 && searchQuery.length < 2 && (
               <div className="empty-state">
                 <p>{view === 'recent' ? 'No recent conversations' : 'No message requests'}</p>
@@ -1053,8 +1119,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   <div className="info">
                     <div className="name">{selectedUser.name}</div>
                     <div className="status-text">
-                      {typingUsers.has(selectedUser.email) && (
+                      {typingUsers.has(selectedUser.email) ? (
                         <span className="typing-indicator">typing...</span>
+                      ) : onlineUsers.has((selectedUser.email || '').toLowerCase().trim()) ? (
+                        <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                          Online
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>Offline</span>
                       )}
                     </div>
                   </div>

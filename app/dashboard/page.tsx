@@ -371,10 +371,10 @@ export default function DashboardPage() {
         {/* Content Views */}
         {activeView === 'home' && (
           <div className="relative w-full h-full flex flex-col min-h-0 z-10 overflow-y-auto">
-            {/* Minimal top bar */}
+            {/* Top bar: status + theme toggle */}
             <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-400'}`} />
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-400'} animate-pulse`} />
                 <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--dm-text-muted)' }}>
                   {isConnected ? 'Online' : 'Connecting...'}
                 </span>
@@ -382,44 +382,21 @@ export default function DashboardPage() {
               <ThemeToggle />
             </div>
 
-            {/* Welcome content */}
-            <div className="flex-1 flex flex-col items-center justify-center px-6 pb-32 gap-8 animate-in fade-in duration-700">
-              {/* Avatar + greeting */}
-              <div className="flex flex-col items-center gap-3">
-                <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold"
-                  style={{ background: 'var(--dm-bg-active)', border: '2px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
-                >
-                  {session.user?.name?.charAt(0)?.toUpperCase() || '?'}
-                </div>
-                <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--dm-text-heading)' }}>
-                  Welcome, {session.user?.name?.split(' ')[0] || 'there'} 👋
-                </h1>
+            {/* Welcome — immediately under status bar */}
+            <div className="flex flex-col items-center gap-3 pt-6 pb-4 px-6 animate-in fade-in slide-in-from-top-4 duration-700">
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold"
+                style={{ background: 'var(--dm-bg-active)', border: '2px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
+              >
+                {session.user?.name?.charAt(0)?.toUpperCase() || '?'}
               </div>
-
-              {/* Icon-only quick action row */}
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={(e) => handleNavClick('chat', e)}
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 hover:scale-105"
-                  style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}
-                  title="Chat"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-secondary)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                </button>
-
-                <button
-                  onClick={(e) => handleNavClick('assistant', e)}
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 hover:scale-105"
-                  style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}
-                  title="AI Assistant"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-secondary)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                </button>
-              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-center" style={{ color: 'var(--dm-text-heading)' }}>
+                Welcome, {session.user?.name?.split(' ')[0] || 'there'} 👋
+              </h1>
             </div>
           </div>
         )}
+
 
         {activeView === 'assistant' && (
           <div className="w-full h-full flex flex-col min-h-0">
