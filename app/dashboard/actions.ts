@@ -325,6 +325,7 @@ export async function getRecentChats() {
     if (m.type === 'video') return 'Video';
     if (m.type === 'file') return 'Attachment';
     if (m.type === 'deleted') return 'Message deleted';
+    if (m.type === 'accepted') return 'Request accepted';
     return m.content.length > 30 ? m.content.substring(0, 30) + '...' : m.content;
   };
 

@@ -646,8 +646,30 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           if (m.type === 'image') return 'Image';
           if (m.type === 'video') return 'Video';
           if (m.type === 'file') return 'Attachment';
+          if (m.type === 'accepted') return 'Request accepted';
           return m.content.length > 30 ? m.content.substring(0, 30) + '...' : m.content;
         };
+
+        // If an 'accepted' type comes in, move sender from requests → contacts
+        if (msg.type === 'accepted') {
+          const senderId = msg.senderId;
+          setRequests(prev => {
+            const req = prev.find(u => u.id === senderId);
+            if (req) {
+              const next = prev.filter(u => u.id !== senderId);
+              allRequestsRef.current = next;
+              setUsers(prevContacts => {
+                if (prevContacts.some(u => u.id === senderId)) return prevContacts;
+                const updated = [...prevContacts, { ...req, isRequest: false, unseenCount: 0 }];
+                allContactsRef.current = updated;
+                return updated;
+              });
+              return next;
+            }
+            return prev;
+          });
+          return; // Don't append to message stream
+        }
 
         const updateSidebarList = async (prevList: User[]) => {
           const existingIndex = prevList.findIndex(u => u.id === partnerId);
@@ -1266,11 +1288,38 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     await reactToSocialMessage(msgId, emoji);
   };
 
-  const handleAcceptRequest = () => {
-    if (!selectedUser) return;
-    setUsers(prev => [...prev, { ...selectedUser, unseenCount: 0 }]);
-    setRequests(prev => prev.filter(u => u.id !== selectedUser.id));
+  const handleAcceptRequest = async () => {
+    if (!selectedUser || !socket || !session?.user) return;
+
+    // 1. Move from requests → contacts immediately in local state
+    const acceptedUser = { ...selectedUser, unseenCount: 0, isRequest: false };
+    setUsers(prev => {
+      const next = [...prev, acceptedUser];
+      allContactsRef.current = next;
+      return next;
+    });
+    setRequests(prev => {
+      const next = prev.filter(u => u.id !== selectedUser.id);
+      allRequestsRef.current = next;
+      return next;
+    });
     setView('recent');
+
+    // 2. Persist to DB: save a silent handshake message so getRecentChats
+    //    will find this in contactIdsSet on next refresh and keep them in Chats.
+    try {
+      const saved = await saveSocialMessage(selectedUser.id, '👋', 'accepted');
+      if (saved && socket) {
+        // Optionally notify the other person
+        socket.emit('send_social_message', {
+          receiverEmail: selectedUser.email,
+          ...saved,
+          type: 'accepted'
+        });
+      }
+    } catch (err) {
+      console.error('Failed to persist request acceptance:', err);
+    }
   };
 
   const initiateCall = (type: 'audio' | 'video') => {
@@ -1394,8 +1443,31 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   </div>
                   <div className="chat-header-right">
                     {requests.some(r => r.id === selectedUser.id) && (
-                      <button className="accept-req-btn" onClick={handleAcceptRequest}>
-                        Accept Request
+                      <button
+                        title="Accept Request"
+                        onClick={handleAcceptRequest}
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'rgba(34,197,94,0.12)',
+                          border: '1px solid rgba(34,197,94,0.35)',
+                          color: '#16a34a',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(34,197,94,0.22)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(34,197,94,0.12)'; }}
+                      >
+                        {/* Check-circle SVG */}
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                          <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
                       </button>
                     )}
                     <button className="call-btn" onClick={() => handleCall('audio')} title="Audio Call">
@@ -1409,7 +1481,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
 
                 <div className="messages">
-                  {messages.map((msg) => (
+                  {messages.filter(msg => msg.type !== 'accepted').map((msg) => (
                     <MessageItem
                       key={msg.id}
                       msg={msg}
@@ -1423,7 +1495,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       onLongPress={handleLongPress}
                     />
                   ))}
-                  {!isLoadingMessages && messages.length === 0 && (
+                  {!isLoadingMessages && messages.filter(msg => msg.type !== 'accepted').length === 0 && (
                     <div className="empty-chat-state">
                       <div className="empty-chat-pfp">
                         {selectedUser.image && selectedUser.image.length > 5 ? (
