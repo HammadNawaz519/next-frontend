@@ -272,27 +272,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           handleSignal(initialOffer);
         }
 
-        if (isCaller) {
-          setTimeout(async () => {
-            try {
-              const offer = await pc.createOffer({
-                offerToReceiveAudio: true,
-                offerToReceiveVideo: type === 'video'
-              });
-              await pc.setLocalDescription(offer);
-              socket.emit('webrtc_signal', { to: target, signal: { sdp: offer } });
-            } catch (e) { console.error("Offer creation error:", e); }
-          }, 1000);
-        }
-
-        if (!isCaller && !initialOffer) {
-          const offer = await pc.createOffer({
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: type === 'video'
-          });
-          await pc.setLocalDescription(offer);
-          socket.emit('webrtc_signal', { to: target, signal: { sdp: offer } });
-        }
+        // We removed the premature offer creation here.
+        // The caller will create the offer in a separate useEffect once isAccepted becomes true.
       } catch (err) {
         console.error("Media error:", err);
         handleEnd();
@@ -307,6 +288,28 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
       cleanup();
     };
   }, [isCaller]);
+
+  // Create offer when call is accepted by the callee
+  useEffect(() => {
+    if (isCaller && isAccepted && pcRef.current && localStreamRef.current && socket) {
+      const target = peer.email?.toLowerCase().trim();
+      if (!target) return;
+      
+      const createOffer = async () => {
+        try {
+          const pc = pcRef.current!;
+          const offer = await pc.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: type === 'video'
+          });
+          await pc.setLocalDescription(offer);
+          socket.emit('webrtc_signal', { to: target, signal: { sdp: offer } });
+        } catch (e) { console.error("Offer creation error:", e); }
+      };
+      
+      createOffer();
+    }
+  }, [isAccepted, isCaller, peer.email, socket, type]);
 
   // Wire local stream → video element
   useEffect(() => {
@@ -536,9 +539,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         </div>
       </div>
 
-      <style jsx>{`
-        .mirror { transform: scaleX(-1); }
-      `}</style>
+      <style>{`.mirror { transform: scaleX(-1); }`}</style>
     </div>
   );
 }
