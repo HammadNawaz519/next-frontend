@@ -1636,18 +1636,23 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       className={`send-btn${isRecording ? ' recording-pulse' : ''}`}
                       onClick={(e) => {
                         e.preventDefault();
+                        // If touch already handled this action, skip (prevents ghost click starting recording)
+                        if ((e.currentTarget as any)._touchHandled) {
+                          (e.currentTarget as any)._touchHandled = false;
+                          return;
+                        }
                         if (inputValue.trim()) {
                           handleSendMessage();
                         } else if (isRecording) {
                           stopRecording();
                         } else {
-                          // Directly start voice recording — no popup menu
                           startRecording();
                         }
                       }}
-                      onTouchStart={(e) => {
-                        // Prevent ghost click on mobile
+                      onTouchEnd={(e) => {
                         e.preventDefault();
+                        // Mark that touch handled this so the ghost onClick is ignored
+                        (e.currentTarget as any)._touchHandled = true;
                         if (inputValue.trim()) {
                           handleSendMessage();
                         } else if (isRecording) {
