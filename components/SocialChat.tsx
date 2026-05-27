@@ -706,7 +706,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             const updated = { ...existing, lastMessage: formatMsg(msg), unseenCount: (selectedUserRef.current?.id === partnerId) ? 0 : (existing.unseenCount || 0) + 1 };
             const next = [...prev];
             next.splice(index, 1);
-            return [updated, ...next];
+            const finalList = [updated, ...next];
+            allContactsRef.current = finalList;
+            return finalList;
           }
           return prev;
         });
@@ -718,7 +720,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             const updated = { ...existing, lastMessage: formatMsg(msg), unseenCount: (selectedUserRef.current?.id === partnerId) ? 0 : (existing.unseenCount || 0) + 1 };
             const next = [...prev];
             next.splice(index, 1);
-            return [updated, ...next];
+            const finalList = [updated, ...next];
+            allRequestsRef.current = finalList;
+            return finalList;
           }
 
           // If it's a completely new person who messaged us
@@ -727,7 +731,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               if (newUser) {
                 setRequests(current => {
                   if (current.some(u => u.id === newUser.id)) return current;
-                  return [{ ...(newUser as any), lastMessage: formatMsg(msg), isRequest: true, unseenCount: 1 }, ...current];
+                  const finalList = [{ ...(newUser as any), lastMessage: formatMsg(msg), isRequest: true, unseenCount: 1 }, ...current];
+                  allRequestsRef.current = finalList;
+                  return finalList;
                 });
               }
             });
