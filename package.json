@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
     "@mediapipe/selfie_segmentation": "^0.1.1675465747",
     "@paper-design/shaders-react": "^0.0.76",
     "@prisma/adapter-pg": "^7.8.0",
@@ -48,6 +50,7 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.3.4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/offscreencanvas": "^2019.7.3",
