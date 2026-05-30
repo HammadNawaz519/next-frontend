@@ -8,6 +8,7 @@ import { askAI, getChatHistory, saveChatMessage, getUserDetails, updateName } fr
 import SocialChat from '@/components/SocialChat';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/app/components/ThemeProvider';
+import ProfilePanel from '@/components/ProfilePanel';
 
 
 interface Message {
@@ -563,167 +564,21 @@ export default function DashboardPage() {
           ref={chatComponentRef as any}
         />
 
-        {/* Profile Side Panel */}
-        {isProfileOpen && (
-          <div
-            className={`absolute inset-y-0 right-0 w-full md:w-[400px] z-50 flex flex-col ${
-              isClosingProfile ? 'animate-profile-out' : 'animate-profile-in'
-            }`}
-            style={{
-              backdropFilter: 'blur(32px)',
-              WebkitBackdropFilter: 'blur(32px)',
-              background: isDark ? 'rgba(12,12,18,0.72)' : 'rgba(255,255,255,0.62)',
-              borderLeft: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.75)',
-              boxShadow: isDark
-                ? '-20px 0 60px rgba(0,0,0,0.70), inset 1px 0 0 rgba(255,255,255,0.06)'
-                : '-20px 0 60px rgba(0,0,0,0.10), inset 1px 0 0 rgba(255,255,255,0.90)',
-            }}
-          >
-            {/* Header / Avatar Section — clean theme frosted glass */}
-            <div
-              className="relative flex flex-col items-center justify-end pb-8 pt-12 overflow-hidden"
-              style={{
-                minHeight: '220px',
-                background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-                borderBottom: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
-              }}
-            >
-              <button
-                onClick={handleCloseProfile}
-                className="absolute top-5 left-5 w-9 h-9 rounded-full flex items-center justify-center z-10 transition-all hover:scale-105 active:scale-95"
-                style={{
-                  background: 'var(--dm-bg-input)',
-                  border: '1px solid var(--dm-border)',
-                  color: 'var(--dm-text-muted)'
-                }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-              
-              {/* Avatar */}
-              <div className="relative z-10 mb-4">
-                <div 
-                  className="transition-transform duration-500 hover:scale-105 font-light"
-                  style={{ 
-                    width: '90px', 
-                    height: '90px', 
-                    borderRadius: '50%', 
-                    background: 'var(--dm-bg-active)', 
-                    backdropFilter: 'blur(16px)', 
-                    border: '1px solid var(--dm-border)', 
-                    boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.04)',
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                  }}
-                >
-                  {/* Avatar image or initials */}
-                  {fullUser?.image ? (
-                    <img src={fullUser.image} alt="Profile" className="w-full h-full rounded-full object-cover" />
-                  ) : (
-                    <span className="text-xl font-bold text-white">{fullUser?.name?.charAt(0).toUpperCase() ?? 'U'}</span>
-                  )}
-                </div>
-                <div style={{ position: 'absolute', bottom: 3, right: 3, width: '20px', height: '20px', borderRadius: '50%', background: '#10b981', border: '3.5px solid var(--dm-bg-sidebar)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} />
-              </div>
-              
-              <h3 style={{ color: 'var(--dm-text-primary)', fontSize: '20px', fontWeight: 500, margin: '0 0 4px', zIndex: 10 }}>{fullUser?.name || session.user?.name || 'User'}</h3>
-              <p style={{ color: 'var(--dm-text-muted)', fontSize: '13px', margin: 0, zIndex: 10, fontWeight: 300 }}>{fullUser?.email || session.user?.email || ''}</p>
-            </div>
-
-            {/* Content — luxurious glass info cards */}
-            <div className="flex-1 p-5 space-y-3 overflow-y-auto" style={{ background: isDark ? 'rgba(12,12,18,0.1)' : 'rgba(255,255,255,0.1)' }}>
-              {/* Name Edit Row — rounded card */}
-              <div style={{ padding: '14px 18px', borderRadius: '32px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.02)' }}>
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                        </svg>
-                      </div>
-                      <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, color: 'var(--dm-text-muted)' }}>Display Name</span>
-                    </div>
-                    {!editingUsername && (
-                      <button onClick={() => { setUsernameInput(fullUser?.name || ''); setEditingUsername(true); setUsernameError(''); }} style={{ fontSize: '10px', padding: '4px 12px', borderRadius: '100px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)', cursor: 'pointer', fontWeight: 500 }}>Change</button>
-                    )}
-                  </div>
-                  {!editingUsername ? (
-                    <div style={{ paddingLeft: '38px' }}>
-                      <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--dm-text-primary)', letterSpacing: '-0.02em' }}>
-                        {fullUser?.name || session.user?.name || 'User'}
-                      </span>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '0' }}>
-                      <input
-                        autoFocus
-                        value={usernameInput}
-                        onChange={e => { setUsernameInput(e.target.value); setUsernameError(''); }}
-                        onKeyDown={async e => { if (e.key === 'Enter') { e.preventDefault(); await handleSaveName(); } if (e.key === 'Escape') setEditingUsername(false); }}
-                        style={{ flex: 1, width: '100%', padding: '6px 14px', borderRadius: '100px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', fontSize: '12px', outline: 'none', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)' }}
-                        placeholder="Display Name"
-                      />
-                      <button onClick={handleSaveName} disabled={usernameSaving} style={{ fontSize: '10px', padding: '6px 14px', borderRadius: '100px', background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)', border: 'none', cursor: 'pointer', opacity: usernameSaving ? 0.6 : 1, fontWeight: 600 }}>{usernameSaving ? '...' : 'Save'}</button>
-                      <button onClick={() => setEditingUsername(false)} style={{ fontSize: '10px', padding: '6px 10px', borderRadius: '100px', background: 'var(--dm-bg-active)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)', cursor: 'pointer' }}>✕</button>
-                    </div>
-                  )}
-                </div>
-                {usernameError && <p style={{ color: '#ef4444', fontSize: '10px', marginTop: '6px', marginLeft: '38px' }}>{usernameError}</p>}
-              </div>
-
-              {/* Email row removed per design spec */}
-
-              {/* Download Mobile App Button — round pill card */}
-              <button
-                onClick={handleInstallApp}
-                className="w-full flex items-center justify-between px-6 py-3 rounded-full transition-all hover:scale-[1.01] active:scale-99 cursor-pointer mt-3"
-                style={{ 
-                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.85)', 
-                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.65)', 
-                  boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.02)'
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center shadow-xs" style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-secondary)' }}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
-                  </div>
-                  <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--dm-text-primary)' }}>Download Mobile App</span>
-                </div>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: 'var(--dm-text-muted)' }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                </svg>
-              </button>
-
-              {/* Sign Out Button — round pill card */}
-              <button
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="w-full flex items-center justify-between px-6 py-3 rounded-full transition-all hover:scale-[1.01] active:scale-99 cursor-pointer mt-3"
-                style={{ 
-                  border: isDark ? '1px solid rgba(239, 68, 68, 0.15)' : '1px solid rgba(239, 68, 68, 0.25)', 
-                  background: 'rgba(239, 68, 68, 0.03)' 
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 shadow-xs" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
-                    </svg>
-                  </div>
-                  <span className="text-[10px] uppercase tracking-widest font-extrabold text-red-500">Sign Out of Account</span>
-                </div>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: 'rgba(239, 68, 68, 0.5)' }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Instagram-style Profile Panel */}
+        <ProfilePanel
+          isOpen={isProfileOpen}
+          isClosing={isClosingProfile}
+          onClose={handleCloseProfile}
+          session={session}
+          fullUser={fullUser}
+          isDark={isDark}
+          onEditName={() => {
+            setUsernameInput(fullUser?.name || '');
+            setEditingUsername(true);
+            setUsernameError('');
+          }}
+          onInstall={handleInstallApp}
+        />
       </div>
 
       {/* Mobile Bottom Navigation — home + chat list only (not AI view, not inside conversation, not during call) */}

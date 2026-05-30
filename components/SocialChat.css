@@ -536,33 +536,49 @@
 
 /* FOOTER */
 .social-chat-container .footer {
-  padding: 16px 24px;
-  background: #ffffff;
-  border-top: 1px solid #f3f4f6;
+  padding: 12px 16px;
+  background: var(--dm-bg-main);
+  border-top: 1px solid var(--dm-border);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
 }
 
 .social-chat-container .type-box {
   flex: 1;
   display: flex;
-  align-items: center;
-  background: #f9fafb;
-  border-radius: 100px;
-  padding: 4px 8px 4px 16px;
-  border: 1px solid #f3f4f6;
-  position: relative; /* Added for mention-popup */
+  align-items: flex-end;
+  background: var(--dm-bg-hover);
+  border-radius: 20px;
+  padding: 6px 8px 6px 14px;
+  border: 1px solid var(--dm-border);
+  position: relative;
+  min-height: 48px;
+  max-height: 160px;
 }
 
-.social-chat-container .type-box input[type=text] {
+.social-chat-container .type-box textarea {
   flex: 1;
   border: none;
   background: transparent;
-  padding: 10px;
+  padding: 8px 4px;
   outline: none;
   font-size: .92rem;
-  color: #111827;
+  color: var(--dm-text-primary);
+  resize: none;
+  min-height: 28px;
+  max-height: 128px;
+  line-height: 1.5;
+  font-family: inherit;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.social-chat-container .type-box textarea::-webkit-scrollbar {
+  display: none;
 }
 
 .social-chat-container .icon-btn {

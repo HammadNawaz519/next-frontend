@@ -457,6 +457,38 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     return {};
   });
 
+  // Pinned chats: persisted in localStorage
+  const [pinnedChats, setPinnedChats] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('social_pinned_chats');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    }
+    return new Set<string>();
+  });
+
+  // Deleted message IDs: persisted in localStorage so they don't reappear after refresh
+  const [deletedMessageIds, setDeletedMessageIds] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('social_deleted_msg_ids');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    }
+    return new Set<string>();
+  });
+
+  // Sync pinned chats to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('social_pinned_chats', JSON.stringify(Array.from(pinnedChats)));
+    }
+  }, [pinnedChats]);
+
+  // Sync deleted message IDs to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('social_deleted_msg_ids', JSON.stringify(Array.from(deletedMessageIds)));
+    }
+  }, [deletedMessageIds]);
+
   // Sync cache to session storage
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -604,8 +636,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       const SOCKET_URL = 'https://server-production-2856.up.railway.app';
       const newSocket = io(SOCKET_URL, {
         reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 500,
+        reconnectionDelayMax: 5000,
+        timeout: 20000,
+        forceNew: false,
+        transports: ['websocket', 'polling']
       });
       setSocket(newSocket);
 
@@ -1029,7 +1065,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       try {
         const history = await getSocialMessages(selectedUser.id);
-        const fresh = history as any[];
+        // Filter out messages the user deleted locally (persisted in localStorage)
+        const deletedRef = deletedMessageIds;
+        const fresh = (history as any[]).filter(m => !deletedRef.has(m.id));
 
         // Fast update check
         if (!cached || fresh.length !== cached.length || (fresh.length > 0 && fresh[fresh.length - 1].id !== cached[cached.length - 1].id)) {
@@ -1266,9 +1304,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         if (m.id === msgId) return { ...m, content: "This message was deleted", type: "deleted" };
         return m;
       }));
+      // Persist to cache
+      if (selectedUser) {
+        setMessagesCache(prev => ({
+          ...prev,
+          [selectedUser.id]: (prev[selectedUser.id] || []).map(m =>
+            m.id === msgId ? { ...m, content: "This message was deleted", type: "deleted" } : m
+          )
+        }));
+      }
     } else {
-      // Local delete
+      // Local delete — persist the ID so it doesn't reappear on refresh
+      setDeletedMessageIds(prev => new Set(prev).add(msgId));
       setMessages(prev => prev.filter(m => m.id !== msgId));
+      // Remove from cache too
+      if (selectedUser) {
+        setMessagesCache(prev => ({
+          ...prev,
+          [selectedUser.id]: (prev[selectedUser.id] || []).filter(m => m.id !== msgId)
+        }));
+      }
     }
   };
 
@@ -1362,13 +1417,45 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </div>
             </div>
             <div className="list">
-              {(view === 'recent' ? users : requests).map((user) => {
+              {/* Sort: pinned first, then by recent */}
+              {(view === 'recent'
+                ? [...users].sort((a, b) => {
+                    const ap = pinnedChats.has(a.id) ? 0 : 1;
+                    const bp = pinnedChats.has(b.id) ? 0 : 1;
+                    return ap - bp;
+                  })
+                : requests
+              ).map((user) => {
                 const isOnline = onlineUsers.has((user.email || '').toLowerCase().trim());
+                const isPinned = pinnedChats.has(user.id);
+                let chatLongPressTimer: ReturnType<typeof setTimeout> | null = null;
+                const handleChatLongPress = () => {
+                  const action = isPinned
+                    ? window.confirm(`"${user.name}" is pinned.\nOK = UNPIN | Cancel = DELETE chat`)
+                    : window.confirm(`"${user.name}"\nOK = PIN to top | Cancel = DELETE chat`);
+                  if (action) {
+                    setPinnedChats(prev => {
+                      const next = new Set(prev);
+                      if (isPinned) next.delete(user.id); else next.add(user.id);
+                      return next;
+                    });
+                  } else {
+                    setUsers(prev => prev.filter(u => u.id !== user.id));
+                    allContactsRef.current = allContactsRef.current.filter(u => u.id !== user.id);
+                    setPinnedChats(prev => { const n = new Set(prev); n.delete(user.id); return n; });
+                    if (selectedUser?.id === user.id) setSelectedUser(null);
+                  }
+                };
                 return (
                   <div
                     key={user.id}
                     className={`item ${selectedUser?.id === user.id ? 'active' : ''}`}
                     onClick={(e: React.MouseEvent) => handleSelectUser(user, e)}
+                    onMouseDown={() => { chatLongPressTimer = setTimeout(() => { chatLongPressTimer = null; handleChatLongPress(); }, 600); }}
+                    onMouseUp={() => { if (chatLongPressTimer) { clearTimeout(chatLongPressTimer); chatLongPressTimer = null; } }}
+                    onMouseLeave={() => { if (chatLongPressTimer) { clearTimeout(chatLongPressTimer); chatLongPressTimer = null; } }}
+                    onTouchStart={() => { chatLongPressTimer = setTimeout(() => { chatLongPressTimer = null; handleChatLongPress(); }, 600); }}
+                    onTouchEnd={() => { if (chatLongPressTimer) { clearTimeout(chatLongPressTimer); chatLongPressTimer = null; } }}
                   >
                     {/* Avatar with online dot */}
                     <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -1391,6 +1478,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     {/* Meta */}
                     <div className="meta">
                       <b>
+                        {isPinned && <span style={{ marginRight: '4px', fontSize: '11px' }}>📌</span>}
                         {user.name}
                         {(user as any).unseenCount > 0 && (
                           <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 700, background: '#6366f1', color: '#fff', borderRadius: '20px', padding: '1px 6px' }}>
@@ -1588,13 +1676,23 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             </div>
                           )}
                         </div>
-                        <input
-                          type="text"
+                        <textarea
                           placeholder="Write a message..."
                           value={inputValue}
+                          rows={1}
+                          ref={(el) => {
+                            if (el) {
+                              el.style.height = 'auto';
+                              el.style.height = Math.min(el.scrollHeight, 128) + 'px';
+                            }
+                          }}
                           onChange={(e) => {
                             const val = e.target.value;
                             setInputValue(val);
+                            // Auto-resize
+                            const t = e.target as HTMLTextAreaElement;
+                            t.style.height = 'auto';
+                            t.style.height = Math.min(t.scrollHeight, 128) + 'px';
 
                             // Typing Indicator Logic
                             if (socket && selectedUser) {
@@ -1617,7 +1715,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               setShowAIMention(false);
                             }
                           }}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSendMessage();
+                            }
+                          }}
                         />
                         {showAIMention && (
                           <div className="mention-popup animate-in slide-in-from-bottom-2 duration-200">
