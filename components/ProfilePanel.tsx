@@ -286,7 +286,7 @@ export default function ProfilePanel({
         <div style={{padding:'4px 16px 12px', display:'flex', flexDirection:'column', gap:3}}>
           <span style={{fontWeight:700, fontSize:14, color:txt}}>{name}</span>
           {/* Render line breaks from bio string */}
-          {bio.split('\n').map((line, i) => (
+          {bio.split('\n').map((line: string, i: number) => (
             <span key={i} style={{fontSize:13, color:sub}}>{line}</span>
           ))}
           {/* Website link */}
