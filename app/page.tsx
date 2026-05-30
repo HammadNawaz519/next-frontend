@@ -3,9 +3,17 @@
 import { signIn, useSession } from 'next-auth/react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { GrainGradient } from '@paper-design/shaders-react';
 
-type SheetState = 'welcome' | 'signIn' | 'signUp' | 'verify' | 'success' | 'none';
+type SheetState = 
+  | 'welcome' 
+  | 'signIn' 
+  | 'signUp' 
+  | 'forgotPassword' 
+  | 'verifyReset' 
+  | 'resetPassword' 
+  | 'verify' 
+  | 'success' 
+  | 'none';
 
 interface SuccessUser {
   email: string;
@@ -25,6 +33,7 @@ export default function LoginPage() {
   // Form fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
 
   // OTP state
@@ -67,8 +76,8 @@ export default function LoginPage() {
   // Show loader while resolving session
   if (sessStatus === 'loading' || sessStatus === 'authenticated') {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-[#09090b] z-[9999]">
-        <div className="w-12 h-12 border-4 border-zinc-800 rounded-full animate-spin" />
+      <div className="fixed inset-0 flex items-center justify-center bg-white z-[9999]">
+        <div className="w-12 h-12 border-4 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
       </div>
     );
   }
@@ -205,6 +214,54 @@ export default function LoginPage() {
     }
   };
 
+  // ── Forgot Password OTP flows ─────────────────────────────────────────────
+  const handleSendResetCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setInfo('');
+    // Simulate sending 6-digit verification code with 1-min timer
+    setTimeout(() => {
+      setLoading(false);
+      setResendCooldown(60);
+      setOtp(['', '', '', '', '', '']);
+      setInfo('Reset code sent to ' + email);
+      triggerSheetTransition('verifyReset');
+      setTimeout(() => otpRefs.current[0]?.focus(), 150);
+    }, 1000);
+  };
+
+  const handleVerifyResetCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = otp.join('');
+    if (code.length < 6) { setError('Please enter the full 6-digit code.'); return; }
+    setLoading(true);
+    setError('');
+    setTimeout(() => {
+      setLoading(false);
+      setInfo('');
+      triggerSheetTransition('resetPassword');
+    }, 1000);
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    // Simulate database update
+    setTimeout(() => {
+      setLoading(false);
+      setInfo('Password reset successfully!');
+      setPassword('');
+      setConfirmPassword('');
+      triggerSheetTransition('signIn');
+    }, 1200);
+  };
+
   // ── Resend OTP ────────────────────────────────────────────────────────────
   const handleResend = async () => {
     if (resendCooldown > 0) return;
@@ -237,48 +294,35 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative h-screen w-full bg-[#09090b] flex flex-col justify-between overflow-hidden select-none font-sans">
-      {/* Background Animated Gradient */}
-      <div className="absolute inset-0 z-0">
-        <GrainGradient
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-          colorBack="#09090b"
-          softness={0.6}
-          intensity={0.4}
-          noise={0.03}
-          shape="corners"
-          offsetX={0}
-          offsetY={0}
-          scale={0.8}
-          rotation={0}
-          speed={0.3}
-          colors={['#1c1c1e', '#09090b', '#27272a']}
-        />
-        {/* Glow Spheres for modern UI depth */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-white/5 rounded-full blur-[100px]" />
-      </div>
-
-      {/* Top half background logo and title */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 pt-[10vh] pb-[35vh]">
-        {/* Arc Connected Logo */}
-        <div className="w-16 h-16 text-[#f4f4f5] opacity-90 mb-4 animate-pulse">
+    <div className="relative h-screen w-full bg-white flex flex-col justify-between overflow-hidden select-none font-sans">
+      
+      {/* Top half: simple white screen with logo and name that moves up with animation */}
+      <div 
+        className={`relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
+          activeSheet === 'welcome' 
+            ? 'pt-[16vh] pb-[20vh] translate-y-0 scale-100' 
+            : 'pt-[4vh] pb-[40vh] -translate-y-16 scale-75 opacity-90'
+        }`}
+      >
+        {/* Connect Arc Logo in elegant black/dark gray */}
+        <div className="w-20 h-20 text-[#121214] opacity-100 mb-4 transition-transform duration-500 hover:rotate-12">
           <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
             <path d="M 64 220 C 64 60, 448 60, 448 220 C 390 100, 122 100, 64 220 Z" fill="currentColor"/>
             <path d="M 64 292 C 64 452, 448 452, 448 292 C 390 412, 122 412, 64 292 Z" fill="currentColor"/>
             <text x="256" y="325" font-family="Arial, sans-serif" font-weight="900" font-size="140" text-anchor="middle" fill="currentColor" letter-spacing="-4">C</text>
           </svg>
         </div>
-        <h1 className="text-4xl font-extrabold tracking-widest text-[#f4f4f5] uppercase mb-1">
+        <h1 className="text-4xl font-extrabold tracking-widest text-[#121214] uppercase mb-1">
           Connect
         </h1>
-        <p className="text-xs tracking-wider text-zinc-500 uppercase">
+        <p className="text-xs tracking-wider text-zinc-400 uppercase">
           Secure Messaging & Low Latency Calling
         </p>
       </div>
 
       {/* ── SHEET 1: WELCOME SHEET ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 shadow-[0_-15px_40px_rgba(0,0,0,0.6)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'welcome' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
             : 'translate-y-full opacity-0 pointer-events-none'
@@ -310,7 +354,7 @@ export default function LoginPage() {
 
       {/* ── SHEET 2: SIGN IN SHEET ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 shadow-[0_-15px_40px_rgba(0,0,0,0.6)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'signIn' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
             : 'translate-y-full opacity-0 pointer-events-none'
@@ -328,7 +372,7 @@ export default function LoginPage() {
             </svg>
           </button>
           <div className="w-12 h-1 bg-[#27272a] rounded-full" />
-          <div className="w-10" /> {/* Spacer */}
+          <div className="w-10" />
         </div>
 
         <h2 className="text-2xl font-bold text-white mb-1">Sign In</h2>
@@ -337,6 +381,11 @@ export default function LoginPage() {
         {error && (
           <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
             {error}
+          </div>
+        )}
+        {info && !error && (
+          <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-4 py-3 mb-4">
+            {info}
           </div>
         )}
 
@@ -360,7 +409,10 @@ export default function LoginPage() {
           />
 
           <div className="text-right">
-            <span className="text-xs text-zinc-500 hover:text-white transition-colors cursor-pointer">
+            <span 
+              onClick={() => triggerSheetTransition('forgotPassword')}
+              className="text-xs text-zinc-500 hover:text-white transition-colors cursor-pointer"
+            >
               Forgot Password?
             </span>
           </div>
@@ -401,7 +453,7 @@ export default function LoginPage() {
 
       {/* ── SHEET 3: SIGN UP SHEET ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 shadow-[0_-15px_40px_rgba(0,0,0,0.6)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'signUp' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
             : 'translate-y-full opacity-0 pointer-events-none'
@@ -469,9 +521,189 @@ export default function LoginPage() {
         </form>
       </div>
 
-      {/* ── SHEET 4: VERIFY OTP SHEET ── */}
+      {/* ── SHEET 4: FORGOT PASSWORD ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 shadow-[0_-15px_40px_rgba(0,0,0,0.6)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+          activeSheet === 'forgotPassword' 
+            ? 'translate-y-0 opacity-100 pointer-events-auto' 
+            : 'translate-y-full opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => triggerSheetTransition('signIn')}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
+            title="Back"
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </button>
+          <div className="w-12 h-1 bg-[#27272a] rounded-full" />
+          <div className="w-10" />
+        </div>
+
+        <h2 className="text-2xl font-bold text-white mb-1">Forgot Password</h2>
+        <p className="text-xs text-zinc-500 mb-6">Enter your email to receive a 1-minute 6-digit verification code</p>
+
+        {error && (
+          <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSendResetCode} className="space-y-4">
+          <input
+            type="email"
+            placeholder="Email Address"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
+          />
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
+          >
+            {loading ? 'Sending Code...' : 'Send Reset Code'}
+          </button>
+        </form>
+      </div>
+
+      {/* ── SHEET 5: VERIFY RESET CODE (OTP) ── */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+          activeSheet === 'verifyReset' 
+            ? 'translate-y-0 opacity-100 pointer-events-auto' 
+            : 'translate-y-full opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => triggerSheetTransition('forgotPassword')}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
+            title="Back"
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </button>
+          <div className="w-12 h-1 bg-[#27272a] rounded-full" />
+          <div className="w-10" />
+        </div>
+
+        <h2 className="text-2xl font-bold text-white mb-1">Verify Reset Code</h2>
+        <p className="text-xs text-zinc-500 mb-6">
+          We sent a 6-digit reset code to <span className="font-semibold text-white">{email}</span>
+        </p>
+
+        {error && (
+          <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
+            {error}
+          </div>
+        )}
+        {info && !error && (
+          <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-4 py-3 mb-4">
+            {info}
+          </div>
+        )}
+
+        <form onSubmit={handleVerifyResetCode} className="space-y-6">
+          <div className="flex gap-3 justify-center" onPaste={handleOtpPaste}>
+            {otp.map((digit, i) => (
+              <input
+                key={i}
+                ref={(el) => { otpRefs.current[i] = el; }}
+                type="text"
+                inputMode="numeric"
+                autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                maxLength={6}
+                value={digit}
+                onChange={(e) => handleOtpChange(i, e)}
+                onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                className="w-12 h-12 text-center text-xl font-bold bg-[#1c1c1e] text-white border border-zinc-800 rounded-2xl focus:outline-none focus:border-zinc-500 transition-colors caret-transparent"
+              />
+            ))}
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || otp.join('').length < 6}
+            className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md"
+          >
+            {loading ? 'Verifying...' : 'Verify Code'}
+          </button>
+        </form>
+
+        <div className="text-center mt-6">
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resendCooldown > 0}
+            className="text-xs text-zinc-500 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {resendCooldown > 0 ? `Resend Code in ${resendCooldown}s` : 'Resend Code'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── SHEET 6: RESET PASSWORD ── */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+          activeSheet === 'resetPassword' 
+            ? 'translate-y-0 opacity-100 pointer-events-auto' 
+            : 'translate-y-full opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="w-10" />
+          <div className="w-12 h-1 bg-[#27272a] rounded-full mx-auto" />
+          <div className="w-10" />
+        </div>
+
+        <h2 className="text-2xl font-bold text-white mb-1">Set New Password</h2>
+        <p className="text-xs text-zinc-500 mb-6">Create a strong new password to secure your account</p>
+
+        {error && (
+          <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <input
+            type="password"
+            placeholder="New Password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
+          />
+
+          <input
+            type="password"
+            placeholder="Confirm New Password"
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
+          />
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
+          >
+            {loading ? 'Updating Password...' : 'Reset Password'}
+          </button>
+        </form>
+      </div>
+
+      {/* ── SHEET 7: SIGN UP EMAIL VERIFICATION (OTP) ── */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'verify' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
             : 'translate-y-full opacity-0 pointer-events-none'
@@ -546,9 +778,9 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ── SHEET 5: SUCCESS SHEET ── */}
+      {/* ── SHEET 8: SUCCESS SHEET ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 shadow-[0_-15px_40px_rgba(0,0,0,0.6)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'success' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
             : 'translate-y-full opacity-0 pointer-events-none'
@@ -582,11 +814,11 @@ export default function LoginPage() {
       {/* Safe interactive backdrop to dismiss open sheets */}
       <div 
         onClick={() => {
-          if (activeSheet === 'signIn' || activeSheet === 'signUp') {
+          if (activeSheet === 'signIn' || activeSheet === 'signUp' || activeSheet === 'forgotPassword') {
             triggerSheetTransition('welcome');
           }
         }}
-        className={`absolute inset-0 bg-black/40 z-30 transition-opacity duration-500 ${
+        className={`absolute inset-0 bg-black/25 z-30 transition-opacity duration-500 ${
           activeSheet !== 'welcome' && activeSheet !== 'none' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       />
