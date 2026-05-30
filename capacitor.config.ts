@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'public',
   server: {
     // Redirects the native app to stream your hosted production web application on Vercel
-    url: 'https://next-frontend-nu-liard.vercel.app',
+    url: 'https://the-dev-core.vercel.app',
     cleartext: true
   }
 };
