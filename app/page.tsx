@@ -370,10 +370,10 @@ export default function LoginPage() {
             : 'opacity-0 -translate-x-8 scale-95 pointer-events-none'
         }`}
       >
-        <h1 className="text-4xl font-extrabold tracking-tight text-[#121214]">
+        <h1 className="text-5xl font-extrabold tracking-tight text-[#121214] sm:text-[3.25rem]">
           {headerContent.title}
         </h1>
-        <p className="text-xs text-zinc-500 font-medium tracking-wide mt-1.5 leading-relaxed">
+        <p className="text-[0.95rem] text-zinc-500 font-medium tracking-wide mt-4 leading-relaxed max-w-sm">
           {headerContent.subtitle}
         </p>
       </div>
