@@ -1054,7 +1054,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       const cached = messagesCache[selectedUser.id];
       if (cached) {
-        setMessages(cached);
+        const filteredCached = cached.filter(m => !deletedMessageIds.has(m.id));
+        setMessages(filteredCached);
         setIsLoadingMessages(false);
       } else {
         setIsLoadingMessages(true);
@@ -1069,11 +1070,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         const deletedRef = deletedMessageIds;
         const fresh = (history as any[]).filter(m => !deletedRef.has(m.id));
 
-        // Fast update check
-        if (!cached || fresh.length !== cached.length || (fresh.length > 0 && fresh[fresh.length - 1].id !== cached[cached.length - 1].id)) {
-          setMessages(fresh);
-          setMessagesCache(prev => ({ ...prev, [selectedUser.id]: fresh }));
-        }
+        // Always apply fresh data to ensure edits, deletions, reactions are fully updated!
+        setMessages(fresh);
+        setMessagesCache(prev => ({ ...prev, [selectedUser.id]: fresh }));
 
         await markMessagesAsSeen(selectedUser.id);
         socket?.emit('mark_as_seen', { senderEmail: selectedUser.email });

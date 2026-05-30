@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
+import { useTheme } from '@/app/components/ThemeProvider';
 import { 
   updateProfileDetails, 
   updateProfileImageAction, 
@@ -23,13 +24,6 @@ export interface UserProfile {
   metrics: { posts: number; followers: number; following: number };
 }
 
-export interface Highlight {
-  id: string;
-  title: string;
-  coverImageUrl?: string;
-  emoji?: string;
-}
-
 export interface Post {
   id: string;
   thumbnailUrl?: string;
@@ -48,7 +42,6 @@ interface Props {
   onEditName: () => void;
   onInstall: () => void;
   hasUnreadNotifications?: boolean;
-  highlights?: Highlight[];
   posts?: Post[];
   reels?: Post[];
   tagged?: Post[];
@@ -57,14 +50,6 @@ interface Props {
 }
 
 /* ─── Default data ─── */
-const DEFAULT_HIGHLIGHTS: Highlight[] = [
-  { id: '1', title: 'Morning', emoji: '🌅' },
-  { id: '2', title: 'Travel',  emoji: '✈️' },
-  { id: '3', title: 'Food',    emoji: '🍕' },
-  { id: '4', title: 'Work',    emoji: '💼' },
-  { id: '5', title: 'Friends', emoji: '👥' },
-];
-
 const mkPost = (i: number, type: Post['postType']): Post => ({
   id: String(i), postType: type, hue: 220 + i * 18,
 });
@@ -85,38 +70,20 @@ const ReelIcon = () => (
   </svg>
 );
 
-/* ─── Story Viewer overlay ─── */
-function StoryViewer({ highlight, onClose, isDark }: { highlight: Highlight; onClose: () => void; isDark: boolean }) {
-  return (
-    <div style={{
-      position:'fixed', inset:0, zIndex:200, display:'flex', flexDirection:'column',
-      background:'#000', color:'#fff', alignItems:'center', justifyContent:'center',
-    }}>
-      <div style={{position:'absolute', top:16, right:16}}>
-        <button onClick={onClose} style={{background:'none',border:'none',color:'#fff',fontSize:28,cursor:'pointer'}}>✕</button>
-      </div>
-      <div style={{fontSize:64, textAlign: 'center', marginTop: 120}}>{highlight.emoji || '⭐'}</div>
-      <p style={{marginTop:16, fontSize:20, fontWeight:700, textAlign: 'center'}}>{highlight.title}</p>
-      <p style={{fontSize:13, opacity:0.5, marginTop:8, textAlign: 'center'}}>No stories yet</p>
-    </div>
-  );
-}
-
 /* ─── Main component ─── */
 export default function ProfilePanel({
   isOpen, isClosing, onClose, session, fullUser, targetUser, isDark,
   onEditName, onInstall,
   hasUnreadNotifications = false,
-  highlights = DEFAULT_HIGHLIGHTS,
   refreshProfile,
   onToggleFollow,
 }: Props) {
+  const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab]         = useState<'grid'|'reels'|'tagged'>('grid');
-  const [activeStory, setActiveStory]     = useState<Highlight | null>(null);
   const [copyToast, setCopyToast]         = useState(false);
 
   /* Multi-page Navigation States */
-  const [subView, setSubView]             = useState<'profile' | 'followers' | 'following' | 'edit_profile' | 'follow_requests' | 'settings'>('profile');
+  const [subView, setSubView]             = useState<'profile' | 'followers' | 'following' | 'edit_profile' | 'follow_requests' | 'settings' | 'notifications'>('profile');
   const [searchQuery, setSearchQuery]     = useState('');
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarInputUrl, setAvatarInputUrl] = useState('');
@@ -328,10 +295,7 @@ export default function ProfilePanel({
         borderLeft: `1px solid ${border}`,
       }}
     >
-      {/* ── Story Viewer Overlay ── */}
-      {activeStory && (
-        <StoryViewer highlight={activeStory} onClose={() => setActiveStory(null)} isDark={isDark} />
-      )}
+
 
       {/* ── Center Avatar Changing Modal ── */}
       {showAvatarModal && isOwnProfile && (
@@ -466,7 +430,7 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={onClose} style={{
-              width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
+              width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center',
               background: btnBg, color:txt,
             }}>
@@ -480,24 +444,59 @@ export default function ProfilePanel({
             <div style={{display:'flex', gap:8, alignItems:'center'}}>
               {/* Notification bell - only for own profile */}
               {isOwnProfile && (
-                <button onClick={() => {}} style={{position:'relative', background:'none', border:'none', cursor:'pointer', color:txt, padding:4}}>
-                  <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button 
+                  onClick={() => setSubView('notifications')} 
+                  style={{
+                    position:'relative', width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    background: btnBg, color:txt,
+                  }}
+                >
+                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                   </svg>
                   {hasUnreadNotifications && (
                     <span style={{
                       position:'absolute', top:2, right:2,
-                      width:8, height:8, borderRadius:'50%', background:'#ef4444',
-                      border:`2px solid ${isDark ? '#0e0e11':'#fff'}`,
+                      width:7, height:7, borderRadius:'50%', background:'#ef4444',
+                      border:`2.2px solid ${isDark ? '#0e0e11':'#fff'}`,
                     }}/>
                   )}
                 </button>
               )}
 
+              {/* Theme Toggle Button - Sleek rectangular web vibe */}
+              <button 
+                onClick={toggleTheme} 
+                style={{
+                  width: 36, height: 36, borderRadius: 4, border: `1px solid ${btnBdr}`,
+                  background: btnBg, color: txt, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0
+                }}
+                title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              >
+                {theme === 'dark' ? (
+                  <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                    <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                  </svg>
+                )}
+              </button>
+
               {/* Options/Settings trigger - only for own profile */}
               {isOwnProfile && (
-                <button onClick={() => setSubView('settings')} style={{background:'none', border:'none', cursor:'pointer', color:txt, padding:4}}>
-                  <svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24">
+                <button 
+                  onClick={() => setSubView('settings')} 
+                  style={{
+                    width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    background: btnBg, color:txt,
+                  }}
+                >
+                  <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
                     <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
                   </svg>
                 </button>
@@ -643,32 +642,7 @@ export default function ProfilePanel({
               </div>
             ) : (
               <>
-                {/* Highlights - only show if public */}
-                <div style={{display:'flex', gap:16, padding:'8px 16px 16px', overflowX:'auto', scrollbarWidth:'none'}}>
-                  {highlights.map((hl, i) => (
-                    <div
-                      key={hl.id}
-                      onClick={() => setActiveStory(hl)}
-                      style={{display:'flex', flexDirection:'column', alignItems:'center', gap:6, flexShrink:0, cursor:'pointer'}}
-                    >
-                      <div style={{
-                        width:64, height:64, borderRadius:'50%',
-                        border:`2px solid ${isDark?'rgba(255,255,255,0.2)':'#d1d5db'}`, padding:3,
-                      }}>
-                        <div style={{
-                          width:'100%', height:'100%', borderRadius:'50%',
-                          background: hl.coverImageUrl
-                            ? `url(${hl.coverImageUrl}) center/cover`
-                            : isDark ? `hsl(${i*60},50%,20%)` : `hsl(${i*60},60%,90%)`,
-                          display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden',
-                        }}>
-                          {!hl.coverImageUrl && <span style={{fontSize:20}}>{hl.emoji || '⭐'}</span>}
-                        </div>
-                      </div>
-                      <span style={{fontSize:11, color:sub}}>{hl.title}</span>
-                    </div>
-                  ))}
-                </div>
+
 
                 {/* Tab Navigation */}
                 <div style={{
@@ -765,7 +739,7 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => setSubView('profile')} style={{
-              width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
+              width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center',
               background: btnBg, color:txt,
             }}>
@@ -785,7 +759,7 @@ export default function ProfilePanel({
             {/* Account Privacy Card */}
             <div style={{
               background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
-              border: `1px solid ${border}`, borderRadius: 20, padding: 20, marginBottom: 20
+              border: `1px solid ${border}`, borderRadius: 4, padding: 20, marginBottom: 20
             }}>
               <h3 style={{fontSize: 14, fontWeight: 700, color: txt, marginBottom: 4}}>Account Privacy</h3>
               <p style={{fontSize: 12, color: sub, marginBottom: 16}}>Customize who can see your shared posts and reels.</p>
@@ -795,13 +769,13 @@ export default function ProfilePanel({
                 <button 
                   onClick={() => handleTogglePrivacy(!fullUser?.isPrivate)}
                   style={{
-                    width: 50, height: 26, borderRadius: 100, border: 'none',
+                    width: 50, height: 26, borderRadius: 4, border: 'none',
                     background: fullUser?.isPrivate ? '#6366f1' : (isDark ? '#3a3a3c' : '#d1d5db'),
                     position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s'
                   }}
                 >
                   <div style={{
-                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                    width: 20, height: 20, borderRadius: 2, background: '#fff',
                     position: 'absolute', top: 3, 
                     left: fullUser?.isPrivate ? 27 : 3,
                     transition: 'left 0.2s'
@@ -813,7 +787,7 @@ export default function ProfilePanel({
             {/* Profile editing card */}
             <div style={{
               background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
-              border: `1px solid ${border}`, borderRadius: 20, padding: 20, marginBottom: 20,
+              border: `1px solid ${border}`, borderRadius: 4, padding: 20, marginBottom: 20,
               display: 'flex', flexDirection: 'column', gap: 14
             }}>
               <div>
@@ -824,7 +798,7 @@ export default function ProfilePanel({
                 onClick={() => setSubView('edit_profile')}
                 style={{
                   width: '100%', padding: '12px', background: btnBg, border: `1px solid ${btnBdr}`,
-                  color: txt, borderRadius: 12, fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                  color: txt, borderRadius: 4, fontWeight: 600, fontSize: 13, cursor: 'pointer',
                   textAlign: 'center'
                 }}
               >
@@ -835,7 +809,7 @@ export default function ProfilePanel({
             {/* Preferences Toggles */}
             <div style={{
               background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
-              border: `1px solid ${border}`, borderRadius: 20, padding: 20, marginBottom: 20,
+              border: `1px solid ${border}`, borderRadius: 4, padding: 20, marginBottom: 20,
               display: 'flex', flexDirection: 'column', gap: 18
             }}>
               <div>
@@ -849,13 +823,13 @@ export default function ProfilePanel({
                 <button 
                   onClick={() => savePreference('pref_notifications', !prefNotifications, setPrefNotifications)}
                   style={{
-                    width: 50, height: 26, borderRadius: 100, border: 'none',
+                    width: 50, height: 26, borderRadius: 4, border: 'none',
                     background: prefNotifications ? '#6366f1' : (isDark ? '#3a3a3c' : '#d1d5db'),
                     position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s'
                   }}
                 >
                   <div style={{
-                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                    width: 20, height: 20, borderRadius: 2, background: '#fff',
                     position: 'absolute', top: 3, 
                     left: prefNotifications ? 27 : 3,
                     transition: 'left 0.2s'
@@ -869,13 +843,13 @@ export default function ProfilePanel({
                 <button 
                   onClick={() => savePreference('pref_read_receipts', !prefReadReceipts, setPrefReadReceipts)}
                   style={{
-                    width: 50, height: 26, borderRadius: 100, border: 'none',
+                    width: 50, height: 26, borderRadius: 4, border: 'none',
                     background: prefReadReceipts ? '#6366f1' : (isDark ? '#3a3a3c' : '#d1d5db'),
                     position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s'
                   }}
                 >
                   <div style={{
-                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                    width: 20, height: 20, borderRadius: 2, background: '#fff',
                     position: 'absolute', top: 3, 
                     left: prefReadReceipts ? 27 : 3,
                     transition: 'left 0.2s'
@@ -889,13 +863,13 @@ export default function ProfilePanel({
                 <button 
                   onClick={() => savePreference('pref_online_status', !prefOnlineStatus, setPrefOnlineStatus)}
                   style={{
-                    width: 50, height: 26, borderRadius: 100, border: 'none',
+                    width: 50, height: 26, borderRadius: 4, border: 'none',
                     background: prefOnlineStatus ? '#6366f1' : (isDark ? '#3a3a3c' : '#d1d5db'),
                     position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s'
                   }}
                 >
                   <div style={{
-                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                    width: 20, height: 20, borderRadius: 2, background: '#fff',
                     position: 'absolute', top: 3, 
                     left: prefOnlineStatus ? 27 : 3,
                     transition: 'left 0.2s'
@@ -907,7 +881,7 @@ export default function ProfilePanel({
             {/* Sign Out Card */}
             <div style={{
               background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
-              border: `1px solid ${border}`, borderRadius: 20, padding: 20, marginBottom: 40,
+              border: `1px solid ${border}`, borderRadius: 4, padding: 20, marginBottom: 40,
               display: 'flex', flexDirection: 'column', gap: 14
             }}>
               <div>
@@ -918,7 +892,7 @@ export default function ProfilePanel({
                 onClick={() => signOut({ callbackUrl: '/' })}
                 style={{
                   width: '100%', padding: '12px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.15)',
-                  color: '#ef4444', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                  color: '#ef4444', borderRadius: 4, fontWeight: 700, fontSize: 13, cursor: 'pointer',
                   textAlign: 'center'
                 }}
               >
@@ -941,7 +915,7 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => { setSubView(isOwnProfile ? 'profile' : 'settings'); setProfileError(''); }} style={{
-              width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
+              width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center',
               background: btnBg, color:txt,
             }}>
@@ -983,7 +957,7 @@ export default function ProfilePanel({
                   value={editName}
                   onChange={e => setEditName(e.target.value)}
                   style={{
-                    padding: '12px 14px', borderRadius: 12, border: `1px solid ${border}`,
+                    padding: '12px 14px', borderRadius: 4, border: `1px solid ${border}`,
                     background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none'
                   }}
                 />
@@ -997,7 +971,7 @@ export default function ProfilePanel({
                   value={editUsername}
                   onChange={e => setEditUsername(e.target.value)}
                   style={{
-                    padding: '12px 14px', borderRadius: 12, border: `1px solid ${border}`,
+                    padding: '12px 14px', borderRadius: 4, border: `1px solid ${border}`,
                     background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none'
                   }}
                 />
@@ -1012,7 +986,7 @@ export default function ProfilePanel({
                   placeholder="https://yourwebsite.com"
                   onChange={e => setEditWebsite(e.target.value)}
                   style={{
-                    padding: '12px 14px', borderRadius: 12, border: `1px solid ${border}`,
+                    padding: '12px 14px', borderRadius: 4, border: `1px solid ${border}`,
                     background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none'
                   }}
                 />
@@ -1027,14 +1001,13 @@ export default function ProfilePanel({
                   rows={4}
                   placeholder="Tell us about yourself..."
                   style={{
-                    padding: '12px 14px', borderRadius: 12, border: `1px solid ${border}`,
+                    padding: '12px 14px', borderRadius: 4, border: `1px solid ${border}`,
                     background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none',
                     resize: 'none', lineHeight: '1.4'
                   }}
                 />
               </div>
             </div>
-            
             <div style={{height:60}}/>
           </div>
         </>
@@ -1051,7 +1024,7 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => { setSubView('profile'); setSearchQuery(''); }} style={{
-              width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
+              width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center',
               background: btnBg, color:txt,
             }}>
@@ -1074,7 +1047,7 @@ export default function ProfilePanel({
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 style={{
-                  width: '100%', padding: '10px 14px 10px 38px', borderRadius: 12, border: `1px solid ${border}`,
+                  width: '100%', padding: '10px 14px 10px 38px', borderRadius: 4, border: `1px solid ${border}`,
                   background: isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6', color: txt, fontSize: 14, outline: 'none'
                 }}
               />
@@ -1091,7 +1064,7 @@ export default function ProfilePanel({
                 onClick={() => setSubView('follow_requests')}
                 style={{
                   width: '100%', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', borderRadius: 14,
+                  background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', borderRadius: 4,
                   border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14
                 }}
               >
@@ -1099,7 +1072,7 @@ export default function ProfilePanel({
                   <span>Follow Requests</span>
                 </div>
                 <div style={{
-                  background: '#6366f1', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 10
+                  background: '#6366f1', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 4
                 }}>
                   {followRequestsList.length}
                 </div>
@@ -1118,7 +1091,7 @@ export default function ProfilePanel({
                 <div key={f.id} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${border}`}}>
                   <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                     <div style={{
-                      width: 44, height: 44, borderRadius: '50%', background: isDark ? '#26262d' : '#e5e7eb',
+                      width: 44, height: 44, borderRadius: 4, background: isDark ? '#26262d' : '#e5e7eb',
                       overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }}>
                       {f.image 
@@ -1134,7 +1107,7 @@ export default function ProfilePanel({
                   {isOwnProfile && (
                     <button style={{
                       padding: '6px 12px', background: btnBg, border: `1px solid ${btnBdr}`,
-                      color: txt, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                      color: txt, borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: 'pointer'
                     }}>
                       Remove
                     </button>
@@ -1162,7 +1135,7 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => { setSubView('profile'); setSearchQuery(''); }} style={{
-              width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
+              width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center',
               background: btnBg, color:txt,
             }}>
@@ -1185,7 +1158,7 @@ export default function ProfilePanel({
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 style={{
-                  width: '100%', padding: '10px 14px 10px 38px', borderRadius: 12, border: `1px solid ${border}`,
+                  width: '100%', padding: '10px 14px 10px 38px', borderRadius: 4, border: `1px solid ${border}`,
                   background: isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6', color: txt, fontSize: 14, outline: 'none'
                 }}
               />
@@ -1206,7 +1179,7 @@ export default function ProfilePanel({
                 <div key={f.id} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${border}`}}>
                   <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                     <div style={{
-                      width: 44, height: 44, borderRadius: '50%', background: isDark ? '#26262d' : '#e5e7eb',
+                      width: 44, height: 44, borderRadius: 4, background: isDark ? '#26262d' : '#e5e7eb',
                       overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }}>
                       {f.image 
@@ -1222,7 +1195,7 @@ export default function ProfilePanel({
                   {isOwnProfile && (
                     <button style={{
                       padding: '6px 12px', background: btnBg, border: `1px solid ${btnBdr}`,
-                      color: txt, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                      color: txt, borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: 'pointer'
                     }}>
                       Following
                     </button>
@@ -1250,7 +1223,7 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => setSubView('followers')} style={{
-              width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
+              width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center',
               background: btnBg, color:txt,
             }}>
@@ -1270,7 +1243,7 @@ export default function ProfilePanel({
               <div key={req.id} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${border}`}}>
                 <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                   <div style={{
-                    width: 44, height: 44, borderRadius: '50%', background: isDark ? '#26262d' : '#e5e7eb',
+                    width: 44, height: 44, borderRadius: 4, background: isDark ? '#26262d' : '#e5e7eb',
                     overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
                     {req.sender.image 
@@ -1290,7 +1263,7 @@ export default function ProfilePanel({
                     onClick={() => handleRespondRequest(req.id, 'accept')}
                     style={{
                       padding: '6px 14px', background: '#6366f1', color: '#fff',
-                      border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                      border: 'none', borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: 'pointer'
                     }}
                   >
                     Accept
@@ -1299,7 +1272,7 @@ export default function ProfilePanel({
                     onClick={() => handleRespondRequest(req.id, 'decline')}
                     style={{
                       padding: '6px 14px', background: btnBg, border: `1px solid ${btnBdr}`,
-                      color: txt, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                      color: txt, borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: 'pointer'
                     }}
                   >
                     Decline
@@ -1313,6 +1286,139 @@ export default function ProfilePanel({
                 No pending requests.
               </div>
             )}
+          </div>
+        </>
+      )}
+
+      {/* ========================================================
+          VIEW: NOTIFICATIONS & SYSTEM ALERTS
+          ======================================================== */}
+      {subView === 'notifications' && (
+        <>
+          {/* Top Navigation Bar */}
+          <div style={{
+            display:'flex', alignItems:'center', justifyContent:'space-between',
+            padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
+          }}>
+            <button onClick={() => setSubView('profile')} style={{
+              width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              background: btnBg, color:txt,
+            }}>
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+              </svg>
+            </button>
+
+            <span style={{fontWeight:700, fontSize:16, color:txt}}>Activity & Alerts</span>
+
+            <div style={{width: 36}} />
+          </div>
+
+          {/* Activity Logs scrollable list */}
+          <div style={{flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 18}}>
+            
+            {/* Follow Requests inside notifications alert */}
+            {followRequestsList.length > 0 && (
+              <div style={{
+                background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
+                border: `1px solid ${border}`, borderRadius: 4, padding: 16
+              }}>
+                <h3 style={{fontSize: 12, fontWeight: 700, color: txt, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em'}}>
+                  Follow Requests ({followRequestsList.length})
+                </h3>
+                <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
+                  {followRequestsList.map((req: any) => (
+                    <div key={req.id} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, borderBottom: `1px solid ${border}`}}>
+                      <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
+                        <div style={{
+                          width: 38, height: 38, borderRadius: 4, background: isDark ? '#26262d' : '#e5e7eb',
+                          overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          {req.sender.image 
+                            ? <img src={req.sender.image} alt={req.sender.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                            : <span style={{fontWeight: 700}}>{(req.sender.name || 'U').charAt(0).toUpperCase()}</span>
+                          }
+                        </div>
+                        <div style={{display: 'flex', flexDirection: 'column'}}>
+                          <span style={{fontSize: 13, fontWeight: 700, color: txt}}>{req.sender.name}</span>
+                          <span style={{fontSize: 11, color: sub}}>@{req.sender.username || 'user'}</span>
+                        </div>
+                      </div>
+                      <div style={{display: 'flex', gap: 6}}>
+                        <button 
+                          onClick={() => handleRespondRequest(req.id, 'accept')}
+                          style={{
+                            padding: '6px 12px', background: '#6366f1', color: '#fff',
+                            border: 'none', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer'
+                          }}
+                        >
+                          Accept
+                        </button>
+                        <button 
+                          onClick={() => handleRespondRequest(req.id, 'decline')}
+                          style={{
+                            padding: '6px 12px', background: btnBg, border: `1px solid ${btnBdr}`,
+                            color: txt, borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer'
+                          }}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* General Activity */}
+            <div style={{
+              background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
+              border: `1px solid ${border}`, borderRadius: 4, padding: 16
+            }}>
+              <h3 style={{fontSize: 12, fontWeight: 700, color: txt, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em'}}>
+                Recent Activity
+              </h3>
+
+              <div style={{display: 'flex', flexDirection: 'column', gap: 16}}>
+                <div style={{display: 'flex', gap: 12, fontSize: 13, color: txt}}>
+                  <span style={{fontSize: 18}}>🛡️</span>
+                  <div>
+                    <span style={{fontWeight: 600}}>System Guard</span>
+                    <p style={{fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4'}}>Your account privacy mode is fully synchronized with Connect PostgreSQL.</p>
+                  </div>
+                </div>
+
+                <div style={{display: 'flex', gap: 12, fontSize: 13, color: txt}}>
+                  <span style={{fontSize: 18}}>💬</span>
+                  <div>
+                    <span style={{fontWeight: 600}}>Direct Messaging</span>
+                    <p style={{fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4'}}>All chats are configured with secure low-latency WebSockets.</p>
+                  </div>
+                </div>
+
+                {followersList.length > 0 && (
+                  <div style={{display: 'flex', gap: 12, fontSize: 13, color: txt}}>
+                    <span style={{fontSize: 18}}>👤</span>
+                    <div>
+                      <span style={{fontWeight: 600}}>New Follower</span>
+                      <p style={{fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4'}}>
+                        @{followersList[0]?.username || 'user'} started following you recently.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{display: 'flex', gap: 12, fontSize: 13, color: txt}}>
+                  <span style={{fontSize: 18}}>✨</span>
+                  <div>
+                    <span style={{fontWeight: 600}}>Welcome to Connect</span>
+                    <p style={{fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4'}}>Your profile is live! Customize your avatar, web links, or bio anytime.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </>
       )}
