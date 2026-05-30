@@ -62,6 +62,51 @@ export default function LoginPage() {
     return () => clearTimeout(t);
   }, [resendCooldown]);
 
+  // Dynamic header contents for the top-left screen title above sheets
+  const getHeaderContent = () => {
+    switch (targetSheet) {
+      case 'signIn':
+        return {
+          title: "Sign In",
+          subtitle: "Welcome back! Please enter your credentials to access dashboard"
+        };
+      case 'signUp':
+        return {
+          title: "Sign Up",
+          subtitle: "Create a free account to join direct chatting chats"
+        };
+      case 'forgotPassword':
+        return {
+          title: "Forgot Password",
+          subtitle: "Enter your email to receive a recovery verification code"
+        };
+      case 'verifyReset':
+        return {
+          title: "Verify Reset Code",
+          subtitle: `We sent a 6-digit reset code to ${email}`
+        };
+      case 'resetPassword':
+        return {
+          title: "Set New Password",
+          subtitle: "Create a strong new password to secure your account"
+        };
+      case 'verify':
+        return {
+          title: "Verify Email",
+          subtitle: `We sent a 6-digit code to ${email}`
+        };
+      case 'success':
+        return {
+          title: "Verified!",
+          subtitle: "Your email has been verified and your secure account is ready"
+        };
+      default:
+        return { title: "", subtitle: "" };
+    }
+  };
+
+  const headerContent = getHeaderContent();
+
   // Handle slide sheet transitions with animations
   const triggerSheetTransition = (nextSheet: SheetState) => {
     setTargetSheet(nextSheet);
@@ -317,6 +362,22 @@ export default function LoginPage() {
         </p>
       </div>
 
+      {/* Dynamic Top Left Header Block (visible on Sign In, Sign Up, etc.) */}
+      <div 
+        className={`absolute top-[8vh] left-8 right-8 text-left z-10 flex flex-col transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
+          activeSheet !== 'welcome' && activeSheet !== 'none'
+            ? 'opacity-100 translate-x-0 scale-100 pointer-events-auto' 
+            : 'opacity-0 -translate-x-8 scale-95 pointer-events-none'
+        }`}
+      >
+        <h1 className="text-4xl font-extrabold tracking-tight text-[#121214]">
+          {headerContent.title}
+        </h1>
+        <p className="text-xs text-zinc-500 font-medium tracking-wide mt-1.5 leading-relaxed">
+          {headerContent.subtitle}
+        </p>
+      </div>
+
       {/* ── SHEET 1: WELCOME SHEET (Full width on bottom, taller pb-12 height) ── */}
       <div
         className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
@@ -371,9 +432,6 @@ export default function LoginPage() {
           <div className="w-12 h-1 bg-[#27272a] rounded-full" />
           <div className="w-10" />
         </div>
-
-        <h2 className="text-2xl font-bold text-white mb-1">Sign In</h2>
-        <p className="text-xs text-zinc-500 mb-6">Enter your email and password to access dashboard</p>
 
         {error && (
           <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
@@ -471,9 +529,6 @@ export default function LoginPage() {
           <div className="w-10" />
         </div>
 
-        <h2 className="text-2xl font-bold text-white mb-1">Sign Up</h2>
-        <p className="text-xs text-zinc-500 mb-6">Create a free account to join direct chats</p>
-
         {error && (
           <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
             {error}
@@ -564,9 +619,6 @@ export default function LoginPage() {
           <div className="w-10" />
         </div>
 
-        <h2 className="text-2xl font-bold text-white mb-1">Forgot Password</h2>
-        <p className="text-xs text-zinc-500 mb-6">Enter your email to receive a 1-minute 6-digit verification code</p>
-
         {error && (
           <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
             {error}
@@ -614,11 +666,6 @@ export default function LoginPage() {
           <div className="w-12 h-1 bg-[#27272a] rounded-full" />
           <div className="w-10" />
         </div>
-
-        <h2 className="text-2xl font-bold text-white mb-1">Verify Reset Code</h2>
-        <p className="text-xs text-zinc-500 mb-6">
-          We sent a 6-digit reset code to <span className="font-semibold text-white">{email}</span>
-        </p>
 
         {error && (
           <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
@@ -679,9 +726,6 @@ export default function LoginPage() {
           <div className="w-10" />
         </div>
 
-        <h2 className="text-2xl font-bold text-white mb-1">Set New Password</h2>
-        <p className="text-xs text-zinc-500 mb-6">Create a strong new password to secure your account</p>
-
         {error && (
           <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
             {error}
@@ -738,11 +782,6 @@ export default function LoginPage() {
           <div className="w-12 h-1 bg-[#27272a] rounded-full" />
           <div className="w-10" />
         </div>
-
-        <h2 className="text-2xl font-bold text-white mb-1">Verify Email</h2>
-        <p className="text-xs text-zinc-500 mb-6">
-          We sent a 6-digit code to <span className="font-semibold text-white">{email}</span>
-        </p>
 
         {error && (
           <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
