@@ -16,6 +16,8 @@ model User {
   image         String?
   password      String?
   createdAt     DateTime  @default(now())
+  bio           String?
+  website       String?
 
   accounts Account[]
   sessions Session[]
@@ -28,6 +30,16 @@ model User {
 
   callsMade     SocialCall[] @relation("CallsMade")
   callsReceived SocialCall[] @relation("CallsReceived")
+
+  // Social Connections
+  followers User[] @relation("UserFollows")
+  following User[] @relation("UserFollows")
+
+  sentFollowRequests     FollowRequest[] @relation("SentFollowRequests")
+  receivedFollowRequests FollowRequest[] @relation("ReceivedFollowRequests")
+
+  // Posts
+  posts Post[]
 }
 
 model TranslationHistory {
@@ -132,6 +144,27 @@ model SocialCall {
 
   caller   User @relation("CallsMade", fields: [callerId], references: [id], onDelete: Cascade)
   receiver User @relation("CallsReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+}
+
+model FollowRequest {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  createdAt  DateTime @default(now())
+
+  sender   User @relation("SentFollowRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedFollowRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+}
+
+model Post {
+  id           String   @id @default(cuid())
+  thumbnailUrl String?
+  postType     String   // "single_image", "carousel", "reel"
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
 }
 
 

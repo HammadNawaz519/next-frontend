@@ -532,3 +532,170 @@ export async function getTranslationHistory() {
     take: 50
   });
 }
+
+export async function getProfileDetails() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return null;
+
+  const user = await (prisma.user as any).findUnique({
+    where: { email: session.user.email },
+    include: {
+      followers: {
+        select: { id: true, name: true, username: true, image: true }
+      },
+      following: {
+        select: { id: true, name: true, username: true, image: true }
+      },
+      posts: {
+        orderBy: { createdAt: 'desc' }
+      },
+      receivedFollowRequests: {
+        include: {
+          sender: { select: { id: true, name: true, username: true, image: true } }
+        }
+      }
+    }
+  });
+
+  return user;
+}
+
+export async function updateProfileDetails(data: { name?: string; username?: string; bio?: string; website?: string; image?: string }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { error: 'Not authenticated' };
+
+  const updateData: any = {};
+  if (data.name !== undefined) updateData.name = data.name.trim();
+  if (data.bio !== undefined) updateData.bio = data.bio;
+  if (data.website !== undefined) updateData.website = data.website.trim();
+  if (data.image !== undefined) updateData.image = data.image;
+
+  if (data.username !== undefined) {
+    const trimmed = data.username.trim().toLowerCase().replace(/\s+/g, '');
+    if (trimmed) {
+      const existing = await prisma.user.findFirst({
+        where: { username: trimmed, NOT: { email: session.user.email } }
+      });
+      if (existing) {
+        return { error: 'Username already taken' };
+      }
+      updateData.username = trimmed;
+    }
+  }
+
+  const updated = await prisma.user.update({
+    where: { email: session.user.email },
+    data: updateData
+  });
+
+  return { success: true, user: updated };
+}
+
+export async function updateProfileImageAction(imageUrl: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { error: 'Not authenticated' };
+
+  const updated = await prisma.user.update({
+    where: { email: session.user.email },
+    data: { image: imageUrl }
+  });
+  return { success: true, image: updated.image };
+}
+
+export async function getFollowRequests() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return [];
+
+  const currentUser = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  });
+
+  if (!currentUser) return [];
+
+  return await (prisma as any).followRequest.findMany({
+    where: { receiverId: currentUser.id },
+    include: {
+      sender: { select: { id: true, name: true, username: true, image: true } }
+    }
+  });
+}
+
+export async function respondToFollowRequest(requestId: string, action: 'accept' | 'decline') {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { error: 'Not authenticated' };
+
+  const req = await (prisma as any).followRequest.findUnique({
+    where: { id: requestId }
+  });
+
+  if (!req) return { error: 'Request not found' };
+
+  if (action === 'accept') {
+    // Add to followers/following
+    await prisma.$transaction([
+      (prisma.user as any).update({
+        where: { id: req.receiverId },
+        data: { followers: { connect: { id: req.senderId } } }
+      }),
+      (prisma.user as any).update({
+        where: { id: req.senderId },
+        data: { following: { connect: { id: req.receiverId } } }
+      }),
+      (prisma as any).followRequest.delete({
+        where: { id: requestId }
+      })
+    ]);
+    return { success: true, accepted: true };
+  } else {
+    await (prisma as any).followRequest.delete({
+      where: { id: requestId }
+    });
+    return { success: true, accepted: false };
+  }
+}
+
+export async function createPostAction(thumbnailUrl: string, postType: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { error: 'Not authenticated' };
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  });
+
+  if (!user) return { error: 'User not found' };
+
+  const post = await (prisma as any).post.create({
+    data: {
+      thumbnailUrl,
+      postType,
+      userId: user.id
+    }
+  });
+
+  return { success: true, post };
+}
+
+export async function deletePostAction(postId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { error: 'Not authenticated' };
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  });
+
+  if (!user) return { error: 'User not found' };
+
+  const post = await (prisma as any).post.findUnique({
+    where: { id: postId }
+  });
+
+  if (!post || post.userId !== user.id) {
+    return { error: 'Unauthorized or not found' };
+  }
+
+  await (prisma as any).post.delete({
+    where: { id: postId }
+  });
+
+  return { success: true };
+}

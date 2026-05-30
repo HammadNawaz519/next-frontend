@@ -270,94 +270,36 @@ body {
 }
 
 
-/* =========================================
-   LIQUID GLASS BOTTOM NAV
-   ========================================= */
-
-/* Float animation — gentle bob */
-@keyframes nav-float {
-  0%, 100% { transform: translateY(0px); box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.90); }
-  50%       { transform: translateY(-4px); box-shadow: 0 16px 48px rgba(0,0,0,0.14), 0 4px 16px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.90); }
-}
-
-/* Shimmer sweep across the bar */
-@keyframes nav-shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-
 .mobile-nav {
   display: none;
   position: fixed;
-  bottom: 16px;
-  left: 16px;
-  right: 16px;
-  height: 68px;
-  border-radius: 50px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 54px;
   z-index: 1000;
   align-items: center;
   justify-content: space-around;
-  padding: 0 8px;
+  padding: 0 16px;
   overflow: hidden;
 
-  /* Liquid glass — light mode */
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.70);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.10),
-    0 2px 8px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.90);
-
-  /* Float animation */
-  animation: nav-float 4s ease-in-out infinite;
+  /* Premium static glass — light mode */
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--dm-border);
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
 }
 
-/* Shimmer pseudo-element */
-.mobile-nav::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    105deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.35) 50%,
-    transparent 70%
-  );
-  background-size: 200% 100%;
-  animation: nav-shimmer 4s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Dark mode liquid glass */
+/* Dark mode static glass */
 [data-theme="dark"] .mobile-nav {
-  background: rgba(18, 18, 24, 0.58);
-  backdrop-filter: blur(28px) saturate(160%);
-  -webkit-backdrop-filter: blur(28px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  animation: nav-float-dark 4s ease-in-out infinite;
+  background: rgba(10, 10, 12, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--dm-border);
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
 }
 
-@keyframes nav-float-dark {
-  0%, 100% { transform: translateY(0px); box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.06); }
-  50%       { transform: translateY(-4px); box-shadow: 0 20px 60px rgba(0,0,0,0.55), 0 4px 20px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.06); }
-}
-
-[data-theme="dark"] .mobile-nav::before {
-  background: linear-gradient(
-    105deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.07) 50%,
-    transparent 70%
-  );
-  background-size: 200% 100%;
-  animation: nav-shimmer 4s ease-in-out infinite;
-}
-
-/* Make nav buttons sit above the shimmer */
 .mobile-nav > * {
   position: relative;
   z-index: 1;

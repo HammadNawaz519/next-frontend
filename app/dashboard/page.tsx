@@ -4,7 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { flushSync } from 'react-dom';
-import { askAI, getChatHistory, saveChatMessage, getUserDetails, updateName } from './actions';
+import { askAI, getChatHistory, saveChatMessage, getUserDetails, updateName, getProfileDetails } from './actions';
 import SocialChat from '@/components/SocialChat';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/app/components/ThemeProvider';
@@ -137,11 +137,17 @@ export default function DashboardPage() {
 
   // Eager load User Details for Profile Panel — only once on mount
   const hasLoadedUser = useRef(false);
+  const refreshProfile = () => {
+    if (status === 'authenticated') {
+      getProfileDetails().then(setFullUser);
+    }
+  };
   useEffect(() => {
     if (status === 'authenticated' && !hasLoadedUser.current) {
       hasLoadedUser.current = true;
-      getUserDetails().then(setFullUser);
+      refreshProfile();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   useEffect(() => {
@@ -578,6 +584,7 @@ export default function DashboardPage() {
             setUsernameError('');
           }}
           onInstall={handleInstallApp}
+          refreshProfile={refreshProfile}
         />
       </div>
 
@@ -585,31 +592,30 @@ export default function DashboardPage() {
       {(activeView === 'home' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive && (
         <nav className="mobile-nav">
           {[
-            { id: 'home', label: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-            { id: 'chat', label: 'Chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-            { id: 'assistant', label: 'AI', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+            { id: 'home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+            { id: 'chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
+            { id: 'assistant', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
           ].map((item) => {
             const isMobileItemActive = !isProfileOpen && activeView === item.id;
             return (
               <button
                 key={item.id}
                 onClick={(e) => handleNavClick(item.id, e)}
-                className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-full transition-all active:scale-90"
+                className="flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90"
                 style={{ 
                   background: isMobileItemActive ? 'var(--dm-bg-active)' : 'transparent',
                   color: isMobileItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
                 }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
                 </svg>
-                <span className="text-[9px] font-semibold uppercase tracking-widest">{item.label}</span>
               </button>
             );
           })}
           <button
             onClick={() => setIsProfileOpen(true)}
-            className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-full transition-all active:scale-90"
+            className="flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90"
             style={{ 
               background: isProfileOpen ? 'var(--dm-bg-active)' : 'transparent',
               color: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
@@ -620,7 +626,6 @@ export default function DashboardPage() {
                 ? <img src={session.user.image} alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 : session?.user?.name?.charAt(0) || 'U'}
             </div>
-            <span className="text-[9px] font-semibold uppercase tracking-widest">Profile</span>
           </button>
         </nav>
       )}
