@@ -18,6 +18,7 @@ model User {
   createdAt     DateTime  @default(now())
   bio           String?
   website       String?
+  isPrivate     Boolean   @default(false)
 
   accounts Account[]
   sessions Session[]

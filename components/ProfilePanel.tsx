@@ -8,7 +8,8 @@ import {
   getFollowRequests, 
   respondToFollowRequest, 
   createPostAction, 
-  deletePostAction 
+  deletePostAction,
+  toggleProfilePrivacy
 } from '@/app/dashboard/actions';
 
 /* ─── Types ─── */
@@ -42,6 +43,7 @@ interface Props {
   onClose: () => void;
   session: any;
   fullUser: any;
+  targetUser?: any;
   isDark: boolean;
   onEditName: () => void;
   onInstall: () => void;
@@ -51,6 +53,7 @@ interface Props {
   reels?: Post[];
   tagged?: Post[];
   refreshProfile?: () => void;
+  onToggleFollow?: (targetUserId: string) => void;
 }
 
 /* ─── Default data ─── */
@@ -92,59 +95,28 @@ function StoryViewer({ highlight, onClose, isDark }: { highlight: Highlight; onC
       <div style={{position:'absolute', top:16, right:16}}>
         <button onClick={onClose} style={{background:'none',border:'none',color:'#fff',fontSize:28,cursor:'pointer'}}>✕</button>
       </div>
-      <div style={{fontSize:64}}>{highlight.emoji || '📖'}</div>
-      <p style={{marginTop:16, fontSize:20, fontWeight:700}}>{highlight.title}</p>
-      <p style={{fontSize:13, opacity:0.5, marginTop:8}}>No stories yet</p>
-    </div>
-  );
-}
-
-/* ─── Menu bottom sheet ─── */
-function MenuSheet({ onClose, onInstall, isDark }: { onClose: () => void; onInstall: () => void; isDark: boolean }) {
-  const bg  = isDark ? '#1c1c1e' : '#fff';
-  const txt = isDark ? '#fff'    : '#111';
-  return (
-    <div style={{position:'absolute',inset:0,zIndex:100,display:'flex',flexDirection:'column',justifyContent:'flex-end'}} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: bg, borderRadius:'20px 20px 0 0', padding:'20px 0 32px',
-        boxShadow:'0 -8px 40px rgba(0,0,0,0.2)',
-      }}>
-        {[
-          { label:'Install App 📲',  action: onInstall },
-          { label:'Sign Out',        action: () => signOut({ callbackUrl:'/' }), danger: true },
-        ].map(item => (
-          <button key={item.label} onClick={() => { item.action(); onClose(); }} style={{
-            width:'100%', padding:'16px 24px', background:'none', border:'none',
-            textAlign:'left', fontSize:16, fontWeight:500, cursor:'pointer',
-            color: (item as any).danger ? '#ef4444' : txt,
-          }}>
-            {item.label}
-          </button>
-        ))}
-        <button onClick={onClose} style={{
-          width:'100%', padding:'16px 24px', background:'none', border:'none',
-          textAlign:'left', fontSize:16, color: isDark ? '#a1a1aa':'#9ca3af', cursor:'pointer',
-        }}>Cancel</button>
-      </div>
+      <div style={{fontSize:64, textAlign: 'center', marginTop: 120}}>{highlight.emoji || '⭐'}</div>
+      <p style={{marginTop:16, fontSize:20, fontWeight:700, textAlign: 'center'}}>{highlight.title}</p>
+      <p style={{fontSize:13, opacity:0.5, marginTop:8, textAlign: 'center'}}>No stories yet</p>
     </div>
   );
 }
 
 /* ─── Main component ─── */
 export default function ProfilePanel({
-  isOpen, isClosing, onClose, session, fullUser, isDark,
+  isOpen, isClosing, onClose, session, fullUser, targetUser, isDark,
   onEditName, onInstall,
   hasUnreadNotifications = false,
   highlights = DEFAULT_HIGHLIGHTS,
   refreshProfile,
+  onToggleFollow,
 }: Props) {
   const [activeTab, setActiveTab]         = useState<'grid'|'reels'|'tagged'>('grid');
-  const [isMenuOpen, setIsMenuOpen]       = useState(false);
   const [activeStory, setActiveStory]     = useState<Highlight | null>(null);
   const [copyToast, setCopyToast]         = useState(false);
 
   /* Multi-page Navigation States */
-  const [subView, setSubView]             = useState<'profile' | 'followers' | 'following' | 'edit_profile' | 'follow_requests'>('profile');
+  const [subView, setSubView]             = useState<'profile' | 'followers' | 'following' | 'edit_profile' | 'follow_requests' | 'settings'>('profile');
   const [searchQuery, setSearchQuery]     = useState('');
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarInputUrl, setAvatarInputUrl] = useState('');
@@ -158,6 +130,27 @@ export default function ProfilePanel({
   const [editWebsite, setEditWebsite]     = useState('');
   const [profileError, setProfileError]   = useState('');
 
+  /* Preferences toggles (no emojis) */
+  const [prefNotifications, setPrefNotifications] = useState(true);
+  const [prefReadReceipts, setPrefReadReceipts] = useState(true);
+  const [prefOnlineStatus, setPrefOnlineStatus] = useState(true);
+
+  // Sync preferences from local storage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setPrefNotifications(localStorage.getItem('pref_notifications') !== 'false');
+      setPrefReadReceipts(localStorage.getItem('pref_read_receipts') !== 'false');
+      setPrefOnlineStatus(localStorage.getItem('pref_online_status') !== 'false');
+    }
+  }, []);
+
+  const savePreference = (key: string, value: boolean, setter: (v: boolean) => void) => {
+    setter(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(key, String(value));
+    }
+  };
+
   useEffect(() => {
     if (fullUser) {
       setEditName(fullUser.name || '');
@@ -166,6 +159,9 @@ export default function ProfilePanel({
       setEditWebsite(fullUser.website || '');
     }
   }, [fullUser]);
+
+  /* Profile ownership */
+  const isOwnProfile = !targetUser || targetUser.isCurrentUser;
 
   /* Derived profile data from Database */
   const name     = fullUser?.name     || session?.user?.name  || 'User';
@@ -269,6 +265,15 @@ export default function ProfilePanel({
     }
   };
 
+  const handleTogglePrivacy = async (newVal: boolean) => {
+    try {
+      await toggleProfilePrivacy(newVal);
+      if (refreshProfile) refreshProfile();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   /* Share / copy handler */
   const handleShare = useCallback(async () => {
     const url  = typeof window !== 'undefined' ? window.location.href : '';
@@ -301,6 +306,7 @@ export default function ProfilePanel({
   /* Long press handler for touch & mouse */
   let pressTimer: NodeJS.Timeout;
   const startPress = (postId: string) => {
+    if (!isOwnProfile) return; // Only allow deletion of own posts
     pressTimer = setTimeout(() => {
       setLongPressedPostId(postId);
     }, 600);
@@ -308,6 +314,9 @@ export default function ProfilePanel({
   const cancelPress = () => {
     clearTimeout(pressTimer);
   };
+
+  // Determine if other profile content is accessible
+  const isPrivateAndUnfollowed = !isOwnProfile && targetUser?.isPrivate && !targetUser?.isFollowing;
 
   return (
     <div
@@ -324,13 +333,8 @@ export default function ProfilePanel({
         <StoryViewer highlight={activeStory} onClose={() => setActiveStory(null)} isDark={isDark} />
       )}
 
-      {/* ── Menu Bottom Sheet ── */}
-      {isMenuOpen && (
-        <MenuSheet onClose={() => setIsMenuOpen(false)} onInstall={onInstall} isDark={isDark} />
-      )}
-
       {/* ── Center Avatar Changing Modal ── */}
-      {showAvatarModal && (
+      {showAvatarModal && isOwnProfile && (
         <div 
           style={{
             position: 'fixed', inset: 0, zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -354,7 +358,7 @@ export default function ProfilePanel({
                 background: isDark ? '#3a3a3c' : '#e5e7eb', color: txt, borderRadius: 14,
                 fontWeight: 600, fontSize: 14, cursor: 'pointer', textAlign: 'center', border: `1px solid ${border}`
               }}>
-                Choose from Library 🖼️
+                Choose from Library
                 <input type="file" accept="image/*" onChange={handleFileUpload} style={{display: 'none'}} />
               </label>
               
@@ -399,7 +403,7 @@ export default function ProfilePanel({
       )}
 
       {/* ── Center Confirm Delete Post Modal ── */}
-      {longPressedPostId && (
+      {longPressedPostId && isOwnProfile && (
         <div 
           style={{
             position: 'fixed', inset: 0, zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -414,7 +418,6 @@ export default function ProfilePanel({
             }} 
             onClick={e => e.stopPropagation()}
           >
-            <span style={{fontSize: 32}}>🗑️</span>
             <h4 style={{margin: 0, fontSize: 16, fontWeight: 700, color: txt, textAlign: 'center'}}>Delete this post?</h4>
             <p style={{margin: 0, fontSize: 13, color: sub, textAlign: 'center'}}>This action is permanent and will remove it from the database.</p>
             <div style={{display: 'flex', gap: 12, width: '100%', marginTop: 8}}>
@@ -448,10 +451,9 @@ export default function ProfilePanel({
           background:'#10b981', color:'#fff', padding:'8px 20px',
           borderRadius:100, fontSize:13, fontWeight:600, zIndex:99, whiteSpace:'nowrap',
         }}>
-          Link copied to clipboard ✓
+          Link copied to clipboard
         </div>
       )}
-
 
       {/* ========================================================
           VIEW: PROFILE PAGE
@@ -476,26 +478,30 @@ export default function ProfilePanel({
             <span style={{fontWeight:700, fontSize:16, color:txt}}>@{username}</span>
 
             <div style={{display:'flex', gap:8, alignItems:'center'}}>
-              {/* Notification bell */}
-              <button onClick={() => {}} style={{position:'relative', background:'none', border:'none', cursor:'pointer', color:txt, padding:4}}>
-                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                </svg>
-                {hasUnreadNotifications && (
-                  <span style={{
-                    position:'absolute', top:2, right:2,
-                    width:8, height:8, borderRadius:'50%', background:'#ef4444',
-                    border:`2px solid ${isDark ? '#0e0e11':'#fff'}`,
-                  }}/>
-                )}
-              </button>
+              {/* Notification bell - only for own profile */}
+              {isOwnProfile && (
+                <button onClick={() => {}} style={{position:'relative', background:'none', border:'none', cursor:'pointer', color:txt, padding:4}}>
+                  <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                  </svg>
+                  {hasUnreadNotifications && (
+                    <span style={{
+                      position:'absolute', top:2, right:2,
+                      width:8, height:8, borderRadius:'50%', background:'#ef4444',
+                      border:`2px solid ${isDark ? '#0e0e11':'#fff'}`,
+                    }}/>
+                  )}
+                </button>
+              )}
 
-              {/* Options */}
-              <button onClick={() => setIsMenuOpen(true)} style={{background:'none', border:'none', cursor:'pointer', color:txt, padding:4}}>
-                <svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24">
-                  <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
-                </svg>
-              </button>
+              {/* Options/Settings trigger - only for own profile */}
+              {isOwnProfile && (
+                <button onClick={() => setSubView('settings')} style={{background:'none', border:'none', cursor:'pointer', color:txt, padding:4}}>
+                  <svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
 
@@ -504,15 +510,15 @@ export default function ProfilePanel({
             {/* Header (Stats) */}
             <div style={{display:'flex', alignItems:'center', padding:'16px 16px 8px', gap:24}}>
               <div 
-                onClick={() => setShowAvatarModal(true)}
+                onClick={() => { if (isOwnProfile) setShowAvatarModal(true); }}
                 style={{
                   width:80, height:80, borderRadius:'50%', flexShrink:0,
                   background: isDark ? '#26262d':'#e5e7eb',
                   border:`3px solid ${isDark ? 'rgba(255,255,255,0.15)':'#d1d5db'}`,
                   overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center',
-                  cursor: 'pointer', position: 'relative'
+                  cursor: isOwnProfile ? 'pointer' : 'default', position: 'relative'
                 }}
-                title="Change profile picture"
+                title={isOwnProfile ? "Change profile picture" : ""}
               >
                 {image
                   ? <img src={image} alt={name} style={{width:'100%',height:'100%',objectFit:'cover'}} referrerPolicy="no-referrer"/>
@@ -524,10 +530,10 @@ export default function ProfilePanel({
               <div style={{flex:1, display:'flex', justifyContent:'space-around'}}>
                 {[
                   { num: metrics.posts,     label:'Posts', action: () => {} },
-                  { num: metrics.followers, label:'Followers', action: () => setSubView('followers') },
-                  { num: metrics.following, label:'Following', action: () => setSubView('following') },
+                  { num: metrics.followers, label:'Followers', action: () => { if (!isPrivateAndUnfollowed) setSubView('followers'); } },
+                  { num: metrics.following, label:'Following', action: () => { if (!isPrivateAndUnfollowed) setSubView('following'); } },
                 ].map(s => (
-                  <div key={s.label} onClick={s.action} style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2, cursor:'pointer'}}>
+                  <div key={s.label} onClick={s.action} style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2, cursor: isPrivateAndUnfollowed ? 'default' : 'pointer'}}>
                     <span style={{fontWeight:700, fontSize:17, color:txt}}>{s.num}</span>
                     <span style={{fontSize:12, color:sub}}>{s.label}</span>
                   </div>
@@ -563,133 +569,195 @@ export default function ProfilePanel({
 
             {/* Action Buttons */}
             <div style={{display:'flex', padding:'0 16px 12px', gap:8}}>
-              <button onClick={() => setSubView('edit_profile')} style={{
-                flex:1, padding:'8px', borderRadius:10, fontWeight:600, fontSize:13,
-                background:btnBg, border:`1px solid ${btnBdr}`, color:txt, cursor:'pointer', transition:'all 0.2s',
-              }}>
-                Edit Profile
-              </button>
-              <button onClick={handleShare} style={{
-                flex:1, padding:'8px', borderRadius:10, fontWeight:600, fontSize:13,
-                background:btnBg, border:`1px solid ${btnBdr}`, color:txt, cursor:'pointer', transition:'all 0.2s',
-              }}>
-                Share Profile
-              </button>
-            </div>
-
-            {/* Highlights */}
-            <div style={{display:'flex', gap:16, padding:'8px 16px 16px', overflowX:'auto', scrollbarWidth:'none'}}>
-              {highlights.map((hl, i) => (
-                <div
-                  key={hl.id}
-                  onClick={() => setActiveStory(hl)}
-                  style={{display:'flex', flexDirection:'column', alignItems:'center', gap:6, flexShrink:0, cursor:'pointer'}}
-                >
-                  <div style={{
-                    width:64, height:64, borderRadius:'50%',
-                    border:`2px solid ${isDark?'rgba(255,255,255,0.2)':'#d1d5db'}`, padding:3,
+              {isOwnProfile ? (
+                <>
+                  <button onClick={() => setSubView('edit_profile')} style={{
+                    flex:1, padding:'8px', borderRadius:10, fontWeight:600, fontSize:13,
+                    background:btnBg, border:`1px solid ${btnBdr}`, color:txt, cursor:'pointer', transition:'all 0.2s',
                   }}>
-                    <div style={{
-                      width:'100%', height:'100%', borderRadius:'50%',
-                      background: hl.coverImageUrl
-                        ? `url(${hl.coverImageUrl}) center/cover`
-                        : isDark ? `hsl(${i*60},50%,20%)` : `hsl(${i*60},60%,90%)`,
-                      display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden',
-                    }}>
-                      {!hl.coverImageUrl && <span style={{fontSize:20}}>{hl.emoji || '⭐'}</span>}
-                    </div>
-                  </div>
-                  <span style={{fontSize:11, color:sub}}>{hl.title}</span>
-                </div>
-              ))}
+                    Edit Profile
+                  </button>
+                  <button onClick={handleShare} style={{
+                    flex:1, padding:'8px', borderRadius:10, fontWeight:600, fontSize:13,
+                    background:btnBg, border:`1px solid ${btnBdr}`, color:txt, cursor:'pointer', transition:'all 0.2s',
+                  }}>
+                    Share Profile
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => onToggleFollow && onToggleFollow(targetUser.id)} 
+                    style={{
+                      flex:1, padding:'8px', borderRadius:10, fontWeight:600, fontSize:13,
+                      background: targetUser?.isFollowing 
+                        ? btnBg 
+                        : targetUser?.hasSentRequest 
+                          ? btnBg 
+                          : '#6366f1',
+                      border: targetUser?.isFollowing || targetUser?.hasSentRequest
+                        ? `1px solid ${btnBdr}`
+                        : 'none',
+                      color: targetUser?.isFollowing || targetUser?.hasSentRequest
+                        ? txt
+                        : '#fff',
+                      cursor:'pointer', transition:'all 0.2s',
+                    }}
+                  >
+                    {targetUser?.isFollowing 
+                      ? 'Following' 
+                      : targetUser?.hasSentRequest 
+                        ? 'Requested' 
+                        : 'Follow'}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      onClose();
+                      if (typeof window !== 'undefined') {
+                        window.location.href = `/dashboard?chat=${targetUser.id}`;
+                      }
+                    }} 
+                    style={{
+                      flex:1, padding:'8px', borderRadius:10, fontWeight:600, fontSize:13,
+                      background:btnBg, border:`1px solid ${btnBdr}`, color:txt, cursor:'pointer', transition:'all 0.2s',
+                    }}
+                  >
+                    Message
+                  </button>
+                </>
+              )}
             </div>
 
-            {/* Tab Navigation */}
-            <div style={{
-              display:'flex', justifyContent:'space-around', alignItems:'center',
-              borderTop:`1px solid ${border}`, borderBottom:`1px solid ${border}`,
-            }}>
-              {([
-                { id:'grid'   as const, icon:<svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M3 3h7v7H3zm0 11h7v7H3zm11-11h7v7h-7zm0 11h7v7h-7z"/></svg> },
-                { id:'reels'  as const, icon:<svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/></svg> },
-                { id:'tagged' as const, icon:<svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg> },
-              ]).map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  style={{
-                    flex:1, display:'flex', justifyContent:'center', padding:'12px 0',
-                    background:'none', border:'none', cursor:'pointer',
-                    borderBottom: activeTab === tab.id ? `2px solid ${txt}` : '2px solid transparent',
-                    color: activeTab === tab.id ? txt : sub,
-                    transition:'all 0.2s',
-                  }}
-                >
-                  {tab.icon}
-                </button>
-              ))}
-            </div>
-
-            {/* Dynamic Content Grid */}
-            <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:2}}>
-              {gridItems.map((post: any, i: number) => (
-                <div
-                  key={post.id}
-                  onMouseDown={() => startPress(post.id)}
-                  onMouseUp={cancelPress}
-                  onMouseLeave={cancelPress}
-                  onTouchStart={() => startPress(post.id)}
-                  onTouchEnd={cancelPress}
-                  onClick={() => {
-                    if (typeof window !== 'undefined') window.location.href = `/p/${post.id}`;
-                  }}
-                  style={{
-                    aspectRatio:'1/1', position:'relative', overflow:'hidden', cursor:'pointer',
-                    background: post.thumbnailUrl
-                      ? `url(${post.thumbnailUrl}) center/cover`
-                      : isDark
-                        ? `hsl(${post.hue??220},20%,${15+i*3}%)`
-                        : `hsl(${post.hue??220},30%,${80-i*5}%)`,
-                  }}
-                >
-                  <div style={{position:'absolute',inset:0,background:'linear-gradient(135deg,transparent 60%,rgba(0,0,0,.25))'}}/>
-                  <div style={{position:'absolute', top:6, right:6}}>
-                    {post.postType === 'carousel' && <CarouselIcon/>}
-                    {post.postType === 'reel'     && <ReelIcon/>}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {gridItems.length === 0 && (
-              <div style={{padding:'40px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12}}>
-                <span style={{color:sub, fontSize:14}}>
-                  No {activeTab === 'reels' ? 'reels' : activeTab === 'tagged' ? 'tagged posts' : 'posts'} yet.
-                </span>
-                
-                {/* Easy Button to create a demo post/reel in database */}
-                <button 
-                  onClick={() => handleCreatePost(activeTab === 'reels' ? 'reel' : 'single_image')}
-                  style={{
-                    padding: '8px 16px', background: txt, color: isDark ? '#000' : '#fff',
-                    border: 'none', borderRadius: 12, fontWeight: 600, fontSize: 13, cursor: 'pointer'
-                  }}
-                >
-                  + Add {activeTab === 'reels' ? 'Reel' : 'Post'}
-                </button>
+            {/* Private Profile Check Card */}
+            {isPrivateAndUnfollowed ? (
+              <div style={{
+                padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                justifyContent: 'center', textAlign: 'center', gap: 12, borderTop: `1px solid ${border}`,
+                marginTop: 20
+              }}>
+                <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: sub }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: txt }}>This account is private</h3>
+                <p style={{ fontSize: 13, color: sub, maxWidth: 260 }}>Follow this account to see their posts and reels.</p>
               </div>
+            ) : (
+              <>
+                {/* Highlights - only show if public */}
+                <div style={{display:'flex', gap:16, padding:'8px 16px 16px', overflowX:'auto', scrollbarWidth:'none'}}>
+                  {highlights.map((hl, i) => (
+                    <div
+                      key={hl.id}
+                      onClick={() => setActiveStory(hl)}
+                      style={{display:'flex', flexDirection:'column', alignItems:'center', gap:6, flexShrink:0, cursor:'pointer'}}
+                    >
+                      <div style={{
+                        width:64, height:64, borderRadius:'50%',
+                        border:`2px solid ${isDark?'rgba(255,255,255,0.2)':'#d1d5db'}`, padding:3,
+                      }}>
+                        <div style={{
+                          width:'100%', height:'100%', borderRadius:'50%',
+                          background: hl.coverImageUrl
+                            ? `url(${hl.coverImageUrl}) center/cover`
+                            : isDark ? `hsl(${i*60},50%,20%)` : `hsl(${i*60},60%,90%)`,
+                          display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden',
+                        }}>
+                          {!hl.coverImageUrl && <span style={{fontSize:20}}>{hl.emoji || '⭐'}</span>}
+                        </div>
+                      </div>
+                      <span style={{fontSize:11, color:sub}}>{hl.title}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Tab Navigation */}
+                <div style={{
+                  display:'flex', justifyContent:'space-around', alignItems:'center',
+                  borderTop:`1px solid ${border}`, borderBottom:`1px solid ${border}`,
+                }}>
+                  {([
+                    { id:'grid'   as const, icon:<svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M3 3h7v7H3zm0 11h7v7H3zm11-11h7v7h-7zm0 11h7v7h-7z"/></svg> },
+                    { id:'reels'  as const, icon:<svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/></svg> },
+                    { id:'tagged' as const, icon:<svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg> },
+                  ]).map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      style={{
+                        flex:1, display:'flex', justifyContent:'center', padding:'12px 0',
+                        background:'none', border:'none', cursor:'pointer',
+                        borderBottom: activeTab === tab.id ? `2px solid ${txt}` : '2px solid transparent',
+                        color: activeTab === tab.id ? txt : sub,
+                        transition:'all 0.2s',
+                      }}
+                    >
+                      {tab.icon}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Dynamic Content Grid */}
+                <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:2}}>
+                  {gridItems.map((post: any, i: number) => (
+                    <div
+                      key={post.id}
+                      onMouseDown={() => startPress(post.id)}
+                      onMouseUp={cancelPress}
+                      onMouseLeave={cancelPress}
+                      onTouchStart={() => startPress(post.id)}
+                      onTouchEnd={cancelPress}
+                      onClick={() => {
+                        if (typeof window !== 'undefined') window.location.href = `/p/${post.id}`;
+                      }}
+                      style={{
+                        aspectRatio:'1/1', position:'relative', overflow:'hidden', cursor:'pointer',
+                        background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+                      }}
+                    >
+                      {post.thumbnailUrl ? (
+                        <img 
+                          src={post.thumbnailUrl} 
+                          alt="thumbnail" 
+                          style={{width:'100%',height:'100%',objectFit:'cover'}}
+                        />
+                      ) : (
+                        <div style={{
+                          width:'100%', height:'100%',
+                          background: isDark ? `hsl(${post.hue || 200},40%,22%)` : `hsl(${post.hue || 200},60%,92%)`,
+                          display:'flex', alignItems:'center', justifyContent:'center',
+                        }}>
+                          <span style={{fontSize:12, fontWeight:700, color: isDark ? '#fff':'#4b5563', textTransform:'uppercase'}}>
+                            {post.postType}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Icon overlay depending on media type */}
+                      <div style={{position:'absolute', top:8, right:8, zIndex:10}}>
+                        {post.postType === 'carousel' && <CarouselIcon />}
+                        {post.postType === 'reel' && <ReelIcon />}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {gridItems.length === 0 && (
+                  <div style={{padding:'60px 20px', textAlign:'center', color:sub, fontSize:14}}>
+                    No posts yet.
+                  </div>
+                )}
+              </>
             )}
 
-            <div style={{height:60}}/>
+            <div style={{height: 100}} />
           </div>
         </>
       )}
 
-
       {/* ========================================================
-          VIEW: EDIT PROFILE
+          VIEW: SETTINGS PAGE (No emojis)
           ======================================================== */}
-      {subView === 'edit_profile' && (
+      {subView === 'settings' && (
         <>
           {/* Top Navigation Bar */}
           <div style={{
@@ -706,48 +774,200 @@ export default function ProfilePanel({
               </svg>
             </button>
 
-            <span style={{fontWeight:700, fontSize:16, color:txt}}>Edit Profile</span>
+            <span style={{fontWeight:700, fontSize:16, color:txt}}>Settings</span>
 
-            <button 
-              onClick={handleSaveProfile} 
-              disabled={isSavingProfile}
-              style={{
-                background:'none', border:'none', color: '#6366f1', fontWeight: 700, fontSize: 15, cursor:'pointer',
-                opacity: isSavingProfile ? 0.5 : 1
-              }}
-            >
-              Done
-            </button>
+            <div style={{width: 36}} />
           </div>
 
-          {/* Form Content */}
-          <div style={{flex:1, overflowY:'auto', padding: '24px 16px'}}>
-            <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 24}}>
-              <div 
-                onClick={() => setShowAvatarModal(true)}
-                style={{
-                  width:96, height:96, borderRadius:'50%',
-                  background: isDark ? '#26262d':'#e5e7eb',
-                  border:`3px solid ${isDark ? 'rgba(255,255,255,0.15)':'#d1d5db'}`,
-                  overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center',
-                  cursor: 'pointer', position: 'relative'
-                }}
-              >
-                {image
-                  ? <img src={image} alt={name} style={{width:'100%',height:'100%',objectFit:'cover'}} referrerPolicy="no-referrer"/>
-                  : <span style={{fontSize:32, fontWeight:700, color: isDark?'#fff':'#374151'}}>{name.charAt(0).toUpperCase()}</span>
-                }
+          {/* Settings Options Scrollable Body */}
+          <div style={{flex:1, overflowY:'auto', padding:'20px 16px'}}>
+            
+            {/* Account Privacy Card */}
+            <div style={{
+              background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
+              border: `1px solid ${border}`, borderRadius: 20, padding: 20, marginBottom: 20
+            }}>
+              <h3 style={{fontSize: 14, fontWeight: 700, color: txt, marginBottom: 4}}>Account Privacy</h3>
+              <p style={{fontSize: 12, color: sub, marginBottom: 16}}>Customize who can see your shared posts and reels.</p>
+              
+              <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                <span style={{fontSize: 13, fontWeight: 500, color: txt}}>Private Account</span>
+                <button 
+                  onClick={() => handleTogglePrivacy(!fullUser?.isPrivate)}
+                  style={{
+                    width: 50, height: 26, borderRadius: 100, border: 'none',
+                    background: fullUser?.isPrivate ? '#6366f1' : (isDark ? '#3a3a3c' : '#d1d5db'),
+                    position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s'
+                  }}
+                >
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: 3, 
+                    left: fullUser?.isPrivate ? 27 : 3,
+                    transition: 'left 0.2s'
+                  }} />
+                </button>
+              </div>
+            </div>
+
+            {/* Profile editing card */}
+            <div style={{
+              background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
+              border: `1px solid ${border}`, borderRadius: 20, padding: 20, marginBottom: 20,
+              display: 'flex', flexDirection: 'column', gap: 14
+            }}>
+              <div>
+                <h3 style={{fontSize: 14, fontWeight: 700, color: txt, marginBottom: 4}}>Profile Details</h3>
+                <p style={{fontSize: 12, color: sub}}>Update display identity, account bio and links.</p>
               </div>
               <button 
-                onClick={() => setShowAvatarModal(true)}
+                onClick={() => setSubView('edit_profile')}
                 style={{
-                  background: 'none', border: 'none', color: '#6366f1', fontSize: 13, fontWeight: 600, cursor: 'pointer'
+                  width: '100%', padding: '12px', background: btnBg, border: `1px solid ${btnBdr}`,
+                  color: txt, borderRadius: 12, fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                  textAlign: 'center'
                 }}
               >
-                Change profile photo
+                Edit Profile Details
               </button>
             </div>
 
+            {/* Preferences Toggles */}
+            <div style={{
+              background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
+              border: `1px solid ${border}`, borderRadius: 20, padding: 20, marginBottom: 20,
+              display: 'flex', flexDirection: 'column', gap: 18
+            }}>
+              <div>
+                <h3 style={{fontSize: 14, fontWeight: 700, color: txt, marginBottom: 4}}>App Preferences</h3>
+                <p style={{fontSize: 12, color: sub}}>Enable or disable specific features within Connect.</p>
+              </div>
+
+              {/* Toggle 1: Desktop Notifications */}
+              <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                <span style={{fontSize: 13, fontWeight: 500, color: txt}}>Desktop Notifications</span>
+                <button 
+                  onClick={() => savePreference('pref_notifications', !prefNotifications, setPrefNotifications)}
+                  style={{
+                    width: 50, height: 26, borderRadius: 100, border: 'none',
+                    background: prefNotifications ? '#6366f1' : (isDark ? '#3a3a3c' : '#d1d5db'),
+                    position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s'
+                  }}
+                >
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: 3, 
+                    left: prefNotifications ? 27 : 3,
+                    transition: 'left 0.2s'
+                  }} />
+                </button>
+              </div>
+
+              {/* Toggle 2: Read Receipts */}
+              <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                <span style={{fontSize: 13, fontWeight: 500, color: txt}}>Read Receipts</span>
+                <button 
+                  onClick={() => savePreference('pref_read_receipts', !prefReadReceipts, setPrefReadReceipts)}
+                  style={{
+                    width: 50, height: 26, borderRadius: 100, border: 'none',
+                    background: prefReadReceipts ? '#6366f1' : (isDark ? '#3a3a3c' : '#d1d5db'),
+                    position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s'
+                  }}
+                >
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: 3, 
+                    left: prefReadReceipts ? 27 : 3,
+                    transition: 'left 0.2s'
+                  }} />
+                </button>
+              </div>
+
+              {/* Toggle 3: Online Status */}
+              <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                <span style={{fontSize: 13, fontWeight: 500, color: txt}}>Online Status indicator</span>
+                <button 
+                  onClick={() => savePreference('pref_online_status', !prefOnlineStatus, setPrefOnlineStatus)}
+                  style={{
+                    width: 50, height: 26, borderRadius: 100, border: 'none',
+                    background: prefOnlineStatus ? '#6366f1' : (isDark ? '#3a3a3c' : '#d1d5db'),
+                    position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s'
+                  }}
+                >
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: 3, 
+                    left: prefOnlineStatus ? 27 : 3,
+                    transition: 'left 0.2s'
+                  }} />
+                </button>
+              </div>
+            </div>
+
+            {/* Sign Out Card */}
+            <div style={{
+              background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
+              border: `1px solid ${border}`, borderRadius: 20, padding: 20, marginBottom: 40,
+              display: 'flex', flexDirection: 'column', gap: 14
+            }}>
+              <div>
+                <h3 style={{fontSize: 14, fontWeight: 700, color: txt, marginBottom: 4}}>Account Session</h3>
+                <p style={{fontSize: 12, color: sub}}>Logout of your active session on this device.</p>
+              </div>
+              <button 
+                onClick={() => signOut({ callbackUrl: '/' })}
+                style={{
+                  width: '100%', padding: '12px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.15)',
+                  color: '#ef4444', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                  textAlign: 'center'
+                }}
+              >
+                Sign Out
+              </button>
+            </div>
+
+          </div>
+        </>
+      )}
+
+      {/* ========================================================
+          VIEW: EDIT PROFILE PAGE
+          ======================================================== */}
+      {subView === 'edit_profile' && (
+        <>
+          {/* Top Navigation Bar */}
+          <div style={{
+            display:'flex', alignItems:'center', justifyContent:'space-between',
+            padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
+          }}>
+            <button onClick={() => { setSubView(isOwnProfile ? 'profile' : 'settings'); setProfileError(''); }} style={{
+              width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              background: btnBg, color:txt,
+            }}>
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+              </svg>
+            </button>
+
+            <span style={{fontWeight:700, fontSize:16, color:txt}}>Edit Profile</span>
+
+            {/* Save Button */}
+            <button
+              onClick={handleSaveProfile}
+              disabled={isSavingProfile}
+              style={{
+                background:'none', border:'none', color:'#6366f1', fontWeight:700, fontSize:14, cursor:'pointer',
+                opacity: isSavingProfile ? 0.5 : 1
+              }}
+            >
+              {isSavingProfile ? 'Saving...' : 'Done'}
+            </button>
+          </div>
+
+          {/* Form scrollable area */}
+          <div style={{flex:1, overflowY:'auto', padding:'20px 16px'}}>
+            
             {profileError && (
               <div style={{color: '#ef4444', fontSize: 13, fontWeight: 600, textAlign: 'center', marginBottom: 12}}>
                 {profileError}
@@ -820,7 +1040,6 @@ export default function ProfilePanel({
         </>
       )}
 
-
       {/* ========================================================
           VIEW: FOLLOWERS PAGE
           ======================================================== */}
@@ -865,27 +1084,28 @@ export default function ProfilePanel({
             </div>
           </div>
 
-          {/* Follow Requests Button/Pill */}
-          <div style={{padding: '12px 16px'}}>
-            <button
-              onClick={() => setSubView('follow_requests')}
-              style={{
-                width: '100%', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', borderRadius: 14,
-                border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14
-              }}
-            >
-              <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
-                <span>👥</span>
-                <span>Follow Requests</span>
-              </div>
-              <div style={{
-                background: '#6366f1', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 10
-              }}>
-                {followRequestsList.length}
-              </div>
-            </button>
-          </div>
+          {/* Follow Requests Button - only for own profile */}
+          {isOwnProfile && (
+            <div style={{padding: '12px 16px'}}>
+              <button
+                onClick={() => setSubView('follow_requests')}
+                style={{
+                  width: '100%', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', borderRadius: 14,
+                  border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14
+                }}
+              >
+                <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
+                  <span>Follow Requests</span>
+                </div>
+                <div style={{
+                  background: '#6366f1', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 10
+                }}>
+                  {followRequestsList.length}
+                </div>
+              </button>
+            </div>
+          )}
 
           {/* Followers List */}
           <div style={{flex: 1, overflowY: 'auto', padding: '0 16px'}}>
@@ -911,12 +1131,14 @@ export default function ProfilePanel({
                       <span style={{fontSize: 12, color: sub}}>@{f.username || 'user'}</span>
                     </div>
                   </div>
-                  <button style={{
-                    padding: '6px 12px', background: btnBg, border: `1px solid ${btnBdr}`,
-                    color: txt, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer'
-                  }}>
-                    Remove
-                  </button>
+                  {isOwnProfile && (
+                    <button style={{
+                      padding: '6px 12px', background: btnBg, border: `1px solid ${btnBdr}`,
+                      color: txt, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                    }}>
+                      Remove
+                    </button>
+                  )}
                 </div>
               ))}
             
@@ -928,7 +1150,6 @@ export default function ProfilePanel({
           </div>
         </>
       )}
-
 
       {/* ========================================================
           VIEW: FOLLOWING PAGE
@@ -998,12 +1219,14 @@ export default function ProfilePanel({
                       <span style={{fontSize: 12, color: sub}}>@{f.username || 'user'}</span>
                     </div>
                   </div>
-                  <button style={{
-                    padding: '6px 12px', background: btnBg, border: `1px solid ${btnBdr}`,
-                    color: txt, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer'
-                  }}>
-                    Following
-                  </button>
+                  {isOwnProfile && (
+                    <button style={{
+                      padding: '6px 12px', background: btnBg, border: `1px solid ${btnBdr}`,
+                      color: txt, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                    }}>
+                      Following
+                    </button>
+                  )}
                 </div>
               ))}
 
@@ -1015,7 +1238,6 @@ export default function ProfilePanel({
           </div>
         </>
       )}
-
 
       {/* ========================================================
           VIEW: FOLLOW REQUESTS

@@ -114,27 +114,7 @@ export async function getUserDetails() {
   });
 }
 
-export async function searchUsers(query: string) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) return [];
 
-  return await prisma.user.findMany({
-    where: {
-      OR: [
-        { name: { contains: query, mode: 'insensitive' } },
-        { username: { contains: query, mode: 'insensitive' } }
-      ],
-      NOT: { id: (session.user as any).id }
-    },
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      email: true,
-      image: true
-    }
-  });
-}
 
 export async function getSocialMessages(otherUserId: string) {
   const session = await getServerSession(authOptions);
@@ -699,3 +679,172 @@ export async function deletePostAction(postId: string) {
 
   return { success: true };
 }
+
+export async function getExploreContent() {
+  return await (prisma as any).post.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 60,
+    include: {
+      user: { select: { id: true, name: true, username: true, image: true, isPrivate: true } }
+    }
+  });
+}
+
+export async function searchUsers(query: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return [];
+
+  const currentUser = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  });
+
+  if (!currentUser) return [];
+
+  return await (prisma.user as any).findMany({
+    where: {
+      id: { not: currentUser.id },
+      OR: [
+        { name: { contains: query, mode: 'insensitive' } },
+        { username: { contains: query, mode: 'insensitive' } }
+      ]
+    },
+    select: { id: true, name: true, username: true, image: true, bio: true, isPrivate: true }
+  });
+}
+
+export async function toggleProfilePrivacy(isPrivate: boolean) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { error: 'Not authenticated' };
+
+  await (prisma.user as any).update({
+    where: { email: session.user.email },
+    data: { isPrivate }
+  });
+
+  return { success: true };
+}
+
+export async function getOtherUserProfile(targetUserId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return null;
+
+  const currentUser = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  });
+
+  if (!currentUser) return null;
+
+  const targetUser = await (prisma.user as any).findUnique({
+    where: { id: targetUserId },
+    include: {
+      followers: {
+        select: { id: true, name: true, username: true, image: true }
+      },
+      following: {
+        select: { id: true, name: true, username: true, image: true }
+      },
+      posts: {
+        orderBy: { createdAt: 'desc' }
+      },
+      receivedFollowRequests: {
+        include: {
+          sender: { select: { id: true, name: true, username: true, image: true } }
+        }
+      }
+    }
+  });
+
+  if (!targetUser) return null;
+
+  // Check relationship status
+  const isFollowing = targetUser.followers.some((f: any) => f.id === currentUser.id);
+  const hasSentRequest = targetUser.receivedFollowRequests.some((r: any) => r.senderId === currentUser.id);
+
+  return {
+    ...targetUser,
+    isFollowing,
+    hasSentRequest,
+    isCurrentUser: currentUser.id === targetUser.id
+  };
+}
+
+export async function toggleFollowUser(targetUserId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { error: 'Not authenticated' };
+
+  const currentUser = await (prisma.user as any).findUnique({
+    where: { email: session.user.email },
+    include: {
+      following: true
+    }
+  });
+
+  if (!currentUser) return { error: 'User not found' };
+
+  const targetUser = await (prisma.user as any).findUnique({
+    where: { id: targetUserId },
+    include: {
+      followers: true,
+      receivedFollowRequests: true
+    }
+  });
+
+  if (!targetUser) return { error: 'Target user not found' };
+
+  const isFollowing = targetUser.followers.some((f: any) => f.id === currentUser.id);
+
+  if (isFollowing) {
+    // Unfollow
+    await prisma.$transaction([
+      (prisma.user as any).update({
+        where: { id: targetUserId },
+        data: { followers: { disconnect: { id: currentUser.id } } }
+      }),
+      (prisma.user as any).update({
+        where: { id: currentUser.id },
+        data: { following: { disconnect: { id: targetUserId } } }
+      })
+    ]);
+    return { success: true, isFollowing: false, hasSentRequest: false };
+  }
+
+  // If private, send request
+  if (targetUser.isPrivate) {
+    const existingRequest = targetUser.receivedFollowRequests.some((r: any) => r.senderId === currentUser.id);
+    if (existingRequest) {
+      // Cancel request
+      await (prisma as any).followRequest.delete({
+        where: {
+          senderId_receiverId: {
+            senderId: currentUser.id,
+            receiverId: targetUserId
+          }
+        }
+      });
+      return { success: true, isFollowing: false, hasSentRequest: false };
+    } else {
+      // Create request
+      await (prisma as any).followRequest.create({
+        data: {
+          senderId: currentUser.id,
+          receiverId: targetUserId
+        }
+      });
+      return { success: true, isFollowing: false, hasSentRequest: true };
+    }
+  }
+
+  // If public, follow directly
+  await prisma.$transaction([
+    (prisma.user as any).update({
+      where: { id: targetUserId },
+      data: { followers: { connect: { id: currentUser.id } } }
+    }),
+    (prisma.user as any).update({
+      where: { id: currentUser.id },
+      data: { following: { connect: { id: targetUserId } } }
+    })
+  ]);
+  return { success: true, isFollowing: true, hasSentRequest: false };
+}
+

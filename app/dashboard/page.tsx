@@ -4,12 +4,23 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { flushSync } from 'react-dom';
-import { askAI, getChatHistory, saveChatMessage, getUserDetails, updateName, getProfileDetails } from './actions';
+import { 
+  askAI, 
+  getChatHistory, 
+  saveChatMessage, 
+  getUserDetails, 
+  updateName, 
+  getProfileDetails,
+  getExploreContent,
+  searchUsers,
+  toggleProfilePrivacy,
+  getOtherUserProfile,
+  toggleFollowUser
+} from './actions';
 import SocialChat from '@/components/SocialChat';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/app/components/ThemeProvider';
 import ProfilePanel from '@/components/ProfilePanel';
-
 
 interface Message {
   id: string;
@@ -28,25 +39,24 @@ export default function DashboardPage() {
   const [inputValue, setInputValue] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
   
-  // Expose closeChat to parent via ref if needed
-  const chatRef = useRef<{ closeChat: () => void } | null>(null);
-  
   const [view, setView] = useState<'recent' | 'requests'>('recent');
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isClosingProfile, setIsClosingProfile] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
   
-  const handleCloseProfile = () => {
-    setIsClosingProfile(true);
-    setTimeout(() => {
-      setIsProfileOpen(false);
-      setIsClosingProfile(false);
-    }, 450); // match animation duration slightly less to prevent blink
-  };
+  // Explore and Search States
+  const [explorePosts, setExplorePosts] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchHistory, setSearchHistory] = useState<any[]>([]);
+  const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
+  const [selectedProfileUser, setSelectedProfileUser] = useState<any>(null);
+  
   const [fullUser, setFullUser] = useState<any>(null);
-  const [activeView, setActiveView] = useState<'home' | 'assistant' | 'chat'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'chat'>('home');
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const chatComponentRef = useRef<{ closeChat: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -70,9 +80,46 @@ export default function DashboardPage() {
     };
   }, []);
 
+  // Load Search History from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('connect_search_history');
+      if (saved) {
+        try {
+          setSearchHistory(JSON.parse(saved));
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    }
+  }, []);
+
+  // Fetch Explore Posts when search view is opened
+  useEffect(() => {
+    if (activeView === 'search') {
+      getExploreContent().then((res: any) => {
+        setExplorePosts(res || []);
+      });
+    }
+  }, [activeView]);
+
+  // Handle Search Input Changes
+  useEffect(() => {
+    if (searchQuery.trim().length > 0) {
+      const delayDebounce = setTimeout(() => {
+        searchUsers(searchQuery).then((res: any) => {
+          setSearchResults(res || []);
+        });
+      }, 300);
+      return () => clearTimeout(delayDebounce);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery]);
+
   const handleInstallApp = async () => {
     if (!deferredPrompt) {
-      alert("To download/install:\n\n1. Open this app in your browser (Safari / Chrome).\n2. Tap the 'Share' or 'Menu' button (icon with an arrow pointing up, or three dots).\n3. Select 'Add to Home Screen' (📲) to install it directly!");
+      alert("To download/install:\n\n1. Open this app in your browser (Safari / Chrome).\n2. Tap the 'Share' or 'Menu' button.\n3. Select 'Add to Home Screen' to install it directly!");
       return;
     }
     try {
@@ -87,8 +134,6 @@ export default function DashboardPage() {
     }
   };
 
-  // (handleSaveUsername removed — handleSaveName is the canonical save handler)
-
   const handleMobileBack = () => {
     if (activeView === 'chat' && selectedChatUser) {
       chatComponentRef.current?.closeChat();
@@ -97,15 +142,12 @@ export default function DashboardPage() {
     }
   };
 
-  // Intercept browser back swipe/button — navigate within app instead of going to login
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
       handleMobileBack();
-      // Push a new state so the next back press still fires this handler
       window.history.pushState(null, '', window.location.href);
     };
-    // Push an initial state so we can detect the first back press
     window.history.pushState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -135,7 +177,7 @@ export default function DashboardPage() {
     loadHistory();
   }, [status]);
 
-  // Eager load User Details for Profile Panel — only once on mount
+  // Eager load User Details for Profile Panel
   const hasLoadedUser = useRef(false);
   const refreshProfile = () => {
     if (status === 'authenticated') {
@@ -164,7 +206,6 @@ export default function DashboardPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: isViewChange ? 'instant' : 'smooth' });
   }, [messages.length, isAiTyping, activeView]);
 
-  // Render instantly if authenticated, background load data
   if (status === 'loading') return (
     <div className="h-screen w-full flex items-center justify-center" style={{ background: 'var(--dm-bg-page)' }}>
       <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: 'var(--dm-border)', borderTopColor: 'var(--dm-text-primary)' }} />
@@ -180,7 +221,6 @@ export default function DashboardPage() {
     const currentInput = inputValue;
     setInputValue('');
 
-    // 1. Optimistically add user message to UI
     const tempUserId = Date.now().toString();
     const userMsg: Message = {
       id: tempUserId,
@@ -190,7 +230,6 @@ export default function DashboardPage() {
     };
     setMessages((prev) => [...prev, userMsg]);
 
-    // 2. Save user message to DB
     try {
       await saveChatMessage(currentInput, 'user');
     } catch (err) {
@@ -200,10 +239,7 @@ export default function DashboardPage() {
     setIsAiTyping(true);
 
     try {
-      // 3. Get AI Response
       const aiResponse = await askAI(currentInput);
-      
-      // 4. Save AI response to DB
       const savedAiMsg = await saveChatMessage(aiResponse, 'ai');
       
       const aiMsg: Message = {
@@ -232,13 +268,66 @@ export default function DashboardPage() {
         setUsernameError(res.error);
       } else {
         setEditingUsername(false);
-        // Instant UI update
         if (fullUser) setFullUser({ ...fullUser, name: res.name || usernameInput });
       }
     } catch {
       setUsernameError('Failed to save name');
     } finally {
       setUsernameSaving(false);
+    }
+  };
+
+  const handleCloseProfile = () => {
+    setIsClosingProfile(true);
+    setTimeout(() => {
+      setIsProfileOpen(false);
+      setIsClosingProfile(false);
+      setSelectedProfileUser(null); // Clear other viewed profile
+    }, 450);
+  };
+
+  const handleOpenOtherProfile = async (userId: string) => {
+    try {
+      const details = await getOtherUserProfile(userId);
+      if (details) {
+        setSelectedProfileUser(details);
+        setIsProfileOpen(true);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleFollow = async (targetUserId: string) => {
+    try {
+      const res = await toggleFollowUser(targetUserId);
+      if (res.success) {
+        const updated = await getOtherUserProfile(targetUserId);
+        if (updated) {
+          setSelectedProfileUser(updated);
+        }
+        refreshProfile();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddToHistory = (user: any) => {
+    const filtered = searchHistory.filter(h => h.id !== user.id);
+    const updated = [{ id: user.id, name: user.name, username: user.username, image: user.image }, ...filtered].slice(0, 15);
+    setSearchHistory(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('connect_search_history', JSON.stringify(updated));
+    }
+  };
+
+  const handleRemoveFromHistory = (userId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = searchHistory.filter(h => h.id !== userId);
+    setSearchHistory(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('connect_search_history', JSON.stringify(updated));
     }
   };
 
@@ -249,11 +338,10 @@ export default function DashboardPage() {
 
     if (activeView === viewId && viewId !== 'chat') return;
     
-    // Always show the chat list first when clicking the Chat nav button
     if (viewId === 'chat') {
       chatComponentRef.current?.closeChat();
       setSelectedChatUser(null);
-      if (activeView === 'chat') return; // If already on chat list, don't re-animate
+      if (activeView === 'chat') return;
     }
 
     if (navTransitionInProgress.current || !(document as any).startViewTransition) {
@@ -303,30 +391,30 @@ export default function DashboardPage() {
 
   return (
     <div className="main-layout flex h-[100dvh] overflow-hidden font-sans font-light text-[0.95em] md:p-3 md:gap-3 animate-in fade-in slide-in-from-left-full duration-700 ease-[var(--ease-premium)]" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
+      
       {/* Fully Adaptive Sidebar */}
       <div className="main-sidebar w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden border-r md:border md:rounded-[40px] shadow-sm" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border-main)' }}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-            <div className="mb-8 flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-3 px-1 h-12 transition-all duration-500 ease-[var(--ease-premium)]">
-              <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
-                <img 
-                  src="/connect-logo.png" 
-                  alt="Connect Logo" 
-                  className="w-10 h-10 rounded-xl object-contain transition-transform duration-300 hover:scale-105 drop-shadow-sm" 
-                  style={{ filter: isDark ? 'invert(1) drop-shadow(0 0 8px rgba(255,255,255,0.2))' : 'none' }} 
-                />
-              </div>
-              <span className="font-extrabold text-base tracking-tight opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden" style={{ color: 'var(--dm-text-primary)' }}>
-                Connect
-              </span>
+          <div className="mb-8 flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-3 px-1 h-12 transition-all duration-500 ease-[var(--ease-premium)]">
+            <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
+              <img 
+                src="/connect-logo.png" 
+                alt="Connect Logo" 
+                className="w-10 h-10 rounded-xl object-contain transition-transform duration-300 hover:scale-105 drop-shadow-sm" 
+                style={{ filter: isDark ? 'invert(1) drop-shadow(0 0 8px rgba(255,255,255,0.2))' : 'none' }} 
+              />
             </div>
+            <span className="font-extrabold text-base tracking-tight opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden" style={{ color: 'var(--dm-text-primary)' }}>
+              Connect
+            </span>
+          </div>
           
           <nav className="flex-1 space-y-2">
             {[
               { id: 'home', name: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
               { id: 'chat', name: 'Chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-              { id: 'assistant', name: 'Assistant', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
-              { id: 'practice', name: 'Practice', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' }
+              { id: 'search', name: 'Search', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' }
             ].map((item) => {
               const isItemActive = !isProfileOpen && activeView === item.id;
               return (
@@ -338,7 +426,6 @@ export default function DashboardPage() {
                   onMouseEnter={e => { if (!isItemActive) (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
                   onMouseLeave={e => { if (!isItemActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 >
-
                   <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
@@ -350,8 +437,6 @@ export default function DashboardPage() {
                 </div>
               );
             })}
-            
-
           </nav>
 
           {/* Profile Section */}
@@ -381,45 +466,38 @@ export default function DashboardPage() {
             </div>
           </div>
             
-            <button
-              onClick={() => signOut({ callbackUrl: '/' })}
-              className="w-full flex items-center justify-start gap-0 group-hover:gap-4 px-1 py-2 transition-[gap] duration-500 ease-[var(--ease-premium)] rounded-full overflow-hidden"
-              style={{ color: 'var(--dm-text-muted)', border: '1px solid transparent' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444'; (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.05)'; (e.currentTarget as HTMLElement).style.borderColor = isDark ? 'rgba(239,68,68,0.3)' : '#fecaca'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--dm-text-muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; }}
-            >
-
-              <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'inherit' }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </div>
-              <span className="text-[13px] font-light opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden">
-                Sign out
-              </span>
-            </button>
-          </div>
+          <button
+            onClick={() => signOut({ callbackUrl: '/' })}
+            className="w-full flex items-center justify-start gap-0 group-hover:gap-4 px-1 py-2 transition-[gap] duration-500 ease-[var(--ease-premium)] rounded-full overflow-hidden"
+            style={{ color: 'var(--dm-text-muted)', border: '1px solid transparent' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444'; (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.05)'; (e.currentTarget as HTMLElement).style.borderColor = isDark ? 'rgba(239,68,68,0.3)' : '#fecaca'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--dm-text-muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; }}
+          >
+            <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'inherit' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </div>
+            <span className="text-[13px] font-light opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden">
+              Sign out
+            </span>
+          </button>
         </div>
+      </div>
 
       {/* Main Container */}
       <div className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[40px] shadow-sm md:border" style={{ background: activeView === 'home' ? 'transparent' : 'var(--dm-bg-main)', borderColor: 'var(--dm-border-main)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.02\'/%3E%3C/svg%3E")', opacity: 0.4, pointerEvents: 'none' }} />
 
-
-
-        {/* Content Views */}
         {/* Content Views */}
         {activeView === 'home' && (
           <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden">
-
-            {/* Full-page animated blob background */}
             <div className="home-blob-bg">
               <div className="home-blob home-blob-1" />
               <div className="home-blob home-blob-2" />
               <div className="home-blob home-blob-3" />
             </div>
 
-            {/* Top glass pill — status + theme */}
             <div className="relative z-10 px-5 pt-5">
               <div
                 className="flex items-center justify-between px-4 py-2.5 rounded-full"
@@ -441,7 +519,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Welcome glass card */}
             <div className="relative z-10 px-5 pt-4 animate-in fade-in slide-in-from-top-4 duration-700">
               <div
                 className="flex flex-col items-center gap-3 w-full py-10 rounded-[2rem]"
@@ -463,101 +540,196 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-
           </div>
         )}
 
-
-        {activeView === 'assistant' && (
-          <div className="w-full h-full flex flex-col min-h-0" style={{ background: 'var(--dm-bg-main)' }}>
-
-            {/* Floating rounded header */}
-            <div className="mx-4 mt-4 flex items-center px-4 flex-shrink-0 relative rounded-full" style={{ minHeight: '56px', border: '1px solid var(--dm-border)', background: 'var(--dm-bg-sidebar)', boxShadow: 'var(--shadow-sm)' }}>
-              <button
-                onClick={(e) => handleNavClick('home', e, true)}
-                className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90 z-10"
-                style={{ background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-muted)' }}
+        {/* Search Explore Page */}
+        {activeView === 'search' && (
+          <div className="w-full h-full flex flex-col min-h-0 relative" style={{ background: 'var(--dm-bg-main)' }}>
+            
+            {/* Top Search Action Bar */}
+            <div className="px-4 pt-4 pb-2 flex-shrink-0">
+              <div 
+                onClick={() => setIsSearchOverlayOpen(true)}
+                className="flex items-center gap-3 px-4 py-3 rounded-full cursor-pointer transition-all duration-300 border hover:border-zinc-400"
+                style={{
+                  background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
+                }}
               >
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-              </button>
-              <div className="absolute inset-x-0 flex items-center justify-center pointer-events-none">
-                <div className="flex items-center gap-2">
-                  <div style={{ width: '7px', height: '7px', background: 'var(--dm-text-primary)', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-                  <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.25em', color: 'var(--dm-text-secondary)', margin: 0 }}>AI Assistant</h2>
-                </div>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span className="text-sm font-light" style={{ color: 'var(--dm-text-muted)' }}>Search people...</span>
               </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6 space-y-4">
-              {messages.length === 0 && (
-                <div className="h-full flex flex-col items-center justify-center text-center gap-5 pb-12 animate-in fade-in duration-700">
+            {/* Explore mixed Grid */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-20 pt-2">
+              <div className="grid grid-cols-3 gap-1">
+                {explorePosts.map((post: any) => (
                   <div
-                    className="w-20 h-20 rounded-full flex items-center justify-center"
-                    style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)', border: '1px solid var(--dm-border)' }}
+                    key={post.id}
+                    onClick={() => handleOpenOtherProfile(post.user.id)}
+                    className="aspect-square relative cursor-pointer overflow-hidden group rounded-lg"
+                    style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
                   >
-                    <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-primary)' }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    {post.thumbnailUrl ? (
+                      <img 
+                        src={post.thumbnailUrl} 
+                        alt="explore post" 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center" style={{ background: isDark ? '#1a1a1f' : '#f4f4f5' }}>
+                        <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider">{post.postType}</span>
+                      </div>
+                    )}
+                    
+                    {/* Media Type Indicators */}
+                    <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md p-1.5 rounded-full z-10">
+                      {post.postType === 'reel' ? (
+                        <svg width="12" height="12" fill="#fff" viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/></svg>
+                      ) : (
+                        <svg width="12" height="12" fill="#fff" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                      )}
+                    </div>
+
+                    {/* Overlay info */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-2.5">
+                      <p className="text-[11px] font-semibold text-white truncate">@{post.user?.username || 'user'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Sliding Fullscreen Search Overlay */}
+            {isSearchOverlayOpen && (
+              <div 
+                className="absolute inset-0 z-50 flex flex-col animate-search-in"
+                style={{
+                  background: isDark ? '#0a0a0c' : '#ffffff'
+                }}
+              >
+                {/* Search Overlay Header */}
+                <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
+                  <button 
+                    onClick={() => {
+                      setSearchQuery('');
+                      setIsSearchOverlayOpen(false);
+                    }}
+                    className="w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90"
+                    style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', color: 'var(--dm-text-primary)' }}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-xl font-bold" style={{ color: isDark ? '#fff' : '#1e1b4b' }}>How can I help?</p>
-                    <p className="text-sm" style={{ color: 'var(--dm-text-muted)' }}>Ask me anything — I'll do my best.</p>
-                  </div>
+                  </button>
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Type name or username..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="flex-1 h-10 px-4 rounded-full text-sm font-light border focus:outline-none"
+                    style={{
+                      background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+                      color: 'var(--dm-text-primary)'
+                    }}
+                  />
                 </div>
-              )}
 
-              {messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                  <div
-                    className={`max-w-[82%] px-4 py-3 text-[0.88rem] leading-relaxed ${
-                      msg.role === 'user' ? 'rounded-[1.4rem] rounded-tr-md' : 'rounded-[1.4rem] rounded-tl-md'
-                    }`}
-                    style={msg.role === 'user'
-                      ? { background: isDark ? 'linear-gradient(135deg, #27272a, #09090b)' : 'linear-gradient(135deg, #18181b, #27272a)', color: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }
-                      : { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.80)', color: isDark ? 'rgba(255,255,255,0.9)' : '#1e1b4b', border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid var(--dm-border)', backdropFilter: 'blur(12px)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }
-                    }
-                  >
-                    {msg.content}
-                  </div>
+                {/* Search Content */}
+                <div className="flex-1 overflow-y-auto px-4 py-4">
+                  {searchQuery.trim().length === 0 ? (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-zinc-500">Recent Searches</p>
+                      {searchHistory.length === 0 ? (
+                        <p className="text-sm font-light text-zinc-500 py-4 text-center">No search history</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {searchHistory.map((item: any) => (
+                            <div
+                              key={item.id}
+                              onClick={() => {
+                                handleAddToHistory(item);
+                                handleOpenOtherProfile(item.id);
+                                setIsSearchOverlayOpen(false);
+                              }}
+                              className="flex items-center justify-between p-3.5 rounded-xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'var(--dm-bg-active)' }}>
+                                  {item.image ? (
+                                    <img src={item.image} alt="user" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-xs font-bold bg-zinc-400 text-white">
+                                      {item.name?.charAt(0) || 'U'}
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold" style={{ color: 'var(--dm-text-primary)' }}>{item.name || 'User'}</p>
+                                  <p className="text-xs text-zinc-500">@{item.username || 'username'}</p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={(e) => handleRemoveFromHistory(item.id, e)}
+                                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 transition-colors"
+                              >
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-zinc-500">Search Results</p>
+                      {searchResults.length === 0 ? (
+                        <p className="text-sm font-light text-zinc-500 py-4 text-center">No matching profiles found</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {searchResults.map((item: any) => (
+                            <div
+                              key={item.id}
+                              onClick={() => {
+                                handleAddToHistory(item);
+                                handleOpenOtherProfile(item.id);
+                                setIsSearchOverlayOpen(false);
+                              }}
+                              className="flex items-center gap-3 p-3.5 rounded-xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
+                            >
+                              <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'var(--dm-bg-active)' }}>
+                                {item.image ? (
+                                  <img src={item.image} alt="user" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-xs font-bold bg-zinc-400 text-white">
+                                    {item.name?.charAt(0) || 'U'}
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold" style={{ color: 'var(--dm-text-primary)' }}>{item.name || 'User'}</p>
+                                <p className="text-xs text-zinc-500">@{item.username || 'username'}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
-
-              {isAiTyping && (
-                <div className="flex justify-start">
-                  <div className="px-5 py-3.5 rounded-[1.4rem] rounded-tl-md flex gap-1.5 items-center" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.80)', border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid var(--dm-border)', backdropFilter: 'blur(12px)' }}>
-                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--dm-text-muted)', opacity: 0.8, animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--dm-text-muted)', opacity: 0.6, animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--dm-text-muted)', opacity: 0.4, animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input — Transparent/Floating pill styling */}
-            <div className="relative z-10 flex-shrink-0 px-4 md:px-8 pb-6 pt-2 bg-transparent">
-              <form onSubmit={handleSendMessage} className="relative">
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Ask me anything..."
-                  className="w-full h-14 pl-6 pr-16 rounded-full focus:outline-none text-sm shadow-md"
-                  style={{ background: isDark ? 'rgba(24,24,28,0.95)' : 'rgba(255,255,255,0.95)', border: '1px solid var(--dm-border)', color: isDark ? '#fff' : '#1e1b4b', backdropFilter: 'blur(12px)' }}
-                  disabled={isAiTyping}
-                />
-                <button
-                  type="submit"
-                  disabled={!inputValue.trim() || isAiTyping}
-                  onTouchStart={(e) => { if (inputValue.trim() && !isAiTyping) { e.preventDefault(); handleSendMessage(e); } }}
-                  className="absolute right-2.5 top-2.5 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 disabled:opacity-30"
-                  style={{ background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)', boxShadow: 'none' }}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14M12 5l7 7-7 7" /></svg>
-                </button>
-              </form>
-            </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -576,7 +748,8 @@ export default function DashboardPage() {
           isClosing={isClosingProfile}
           onClose={handleCloseProfile}
           session={session}
-          fullUser={fullUser}
+          fullUser={selectedProfileUser || fullUser}
+          targetUser={selectedProfileUser}
           isDark={isDark}
           onEditName={() => {
             setUsernameInput(fullUser?.name || '');
@@ -585,16 +758,17 @@ export default function DashboardPage() {
           }}
           onInstall={handleInstallApp}
           refreshProfile={refreshProfile}
+          onToggleFollow={handleToggleFollow}
         />
       </div>
 
-      {/* Mobile Bottom Navigation — home + chat list only (not AI view, not inside conversation, not during call) */}
-      {(activeView === 'home' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive && (
+      {/* Mobile Bottom Navigation — round glass pill bar floats nicely near the bottom */}
+      {((activeView === 'home' || activeView === 'search' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive) && (
         <nav className="mobile-nav">
           {[
             { id: 'home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
             { id: 'chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-            { id: 'assistant', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+            { id: 'search', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
           ].map((item) => {
             const isMobileItemActive = !isProfileOpen && activeView === item.id;
             return (
@@ -629,7 +803,6 @@ export default function DashboardPage() {
           </button>
         </nav>
       )}
-
 
     </div>
   );
