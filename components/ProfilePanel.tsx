@@ -430,7 +430,7 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={onClose} style={{
-              width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
+              width:36, height:36, borderRadius:'50%', border:`1px solid ${btnBdr}`, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center',
               background: btnBg, color:txt,
             }}>
@@ -447,9 +447,9 @@ export default function ProfilePanel({
                 <button 
                   onClick={() => setSubView('notifications')} 
                   style={{
-                    position:'relative', width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
+                    position:'relative', width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
                     display:'flex', alignItems:'center', justifyContent:'center',
-                    background: btnBg, color:txt,
+                    background: 'none', color:txt,
                   }}
                 >
                   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -469,8 +469,8 @@ export default function ProfilePanel({
               <button 
                 onClick={toggleTheme} 
                 style={{
-                  width: 36, height: 36, borderRadius: 4, border: `1px solid ${btnBdr}`,
-                  background: btnBg, color: txt, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 36, height: 36, borderRadius: '50%', border: 'none',
+                  background: 'none', color: txt, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0
                 }}
                 title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
@@ -491,13 +491,13 @@ export default function ProfilePanel({
                 <button 
                   onClick={() => setSubView('settings')} 
                   style={{
-                    width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
+                    width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
                     display:'flex', alignItems:'center', justifyContent:'center',
-                    background: btnBg, color:txt,
+                    background: 'none', color:txt,
                   }}
                 >
                   <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
-                    <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                    <circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/>
                   </svg>
                 </button>
               )}
