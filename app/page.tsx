@@ -296,22 +296,8 @@ export default function LoginPage() {
   return (
     <div className="relative h-screen w-full bg-white flex flex-col justify-between overflow-hidden select-none font-sans">
       
-      {/* Top half: simple white screen with logo and name that moves up with animation */}
-      <div 
-        className={`relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
-          activeSheet === 'welcome' 
-            ? 'pt-[16vh] pb-[20vh] translate-y-0 scale-100' 
-            : 'pt-[4vh] pb-[40vh] -translate-y-16 scale-75 opacity-90'
-        }`}
-      >
-        {/* Connect Arc Logo in elegant black/dark gray */}
-        <div className="w-20 h-20 text-[#121214] opacity-100 mb-4 transition-transform duration-500 hover:rotate-12">
-          <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-            <path d="M 64 220 C 64 60, 448 60, 448 220 C 390 100, 122 100, 64 220 Z" fill="currentColor"/>
-            <path d="M 64 292 C 64 452, 448 452, 448 292 C 390 412, 122 412, 64 292 Z" fill="currentColor"/>
-            <text x="256" y="325" font-family="Arial, sans-serif" font-weight="900" font-size="140" text-anchor="middle" fill="currentColor" letter-spacing="-4">C</text>
-          </svg>
-        </div>
+      {/* Top Text: 1 inch from top, no logo, simple elegant Connect identity */}
+      <div className="relative z-10 flex flex-col items-center text-center px-4 pt-[6vh] pb-4 transition-all duration-500 ease-out">
         <h1 className="text-4xl font-extrabold tracking-widest text-[#121214] uppercase mb-1">
           Connect
         </h1>
@@ -320,12 +306,12 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* ── SHEET 1: WELCOME SHEET ── */}
+      {/* ── SHEET 1: WELCOME SHEET (moved up, floating) ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-[5vh] left-0 right-0 w-[92%] max-w-md mx-auto z-40 bg-[#121214] border border-[#1e1e21] rounded-[2.5rem] p-8 pb-10 shadow-[0_15px_50px_rgba(0,0,0,0.3)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'welcome' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
-            : 'translate-y-full opacity-0 pointer-events-none'
+            : 'translate-y-[120%] opacity-0 pointer-events-none'
         }`}
       >
         {/* Handle bar */}
@@ -352,12 +338,12 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ── SHEET 2: SIGN IN SHEET ── */}
+      {/* ── SHEET 2: SIGN IN SHEET (moved up, floating) ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-[5vh] left-0 right-0 w-[92%] max-w-md mx-auto z-40 bg-[#121214] border border-[#1e1e21] rounded-[2.5rem] p-8 pb-10 shadow-[0_15px_50px_rgba(0,0,0,0.3)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'signIn' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
-            : 'translate-y-full opacity-0 pointer-events-none'
+            : 'translate-y-[120%] opacity-0 pointer-events-none'
         }`}
       >
         {/* Top bar back button */}
@@ -451,12 +437,12 @@ export default function LoginPage() {
         </button>
       </div>
 
-      {/* ── SHEET 3: SIGN UP SHEET ── */}
+      {/* ── SHEET 3: SIGN UP SHEET (moved up, floating) ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-[5vh] left-0 right-0 w-[92%] max-w-md mx-auto z-40 bg-[#121214] border border-[#1e1e21] rounded-[2.5rem] p-8 pb-10 shadow-[0_15px_50px_rgba(0,0,0,0.3)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'signUp' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
-            : 'translate-y-full opacity-0 pointer-events-none'
+            : 'translate-y-[120%] opacity-0 pointer-events-none'
         }`}
       >
         {/* Top bar back button */}
@@ -521,12 +507,12 @@ export default function LoginPage() {
         </form>
       </div>
 
-      {/* ── SHEET 4: FORGOT PASSWORD ── */}
+      {/* ── SHEET 4: FORGOT PASSWORD (moved up, floating) ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-[5vh] left-0 right-0 w-[92%] max-w-md mx-auto z-40 bg-[#121214] border border-[#1e1e21] rounded-[2.5rem] p-8 pb-10 shadow-[0_15px_50px_rgba(0,0,0,0.3)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'forgotPassword' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
-            : 'translate-y-full opacity-0 pointer-events-none'
+            : 'translate-y-[120%] opacity-0 pointer-events-none'
         }`}
       >
         <div className="flex items-center justify-between mb-4">
@@ -572,12 +558,12 @@ export default function LoginPage() {
         </form>
       </div>
 
-      {/* ── SHEET 5: VERIFY RESET CODE (OTP) ── */}
+      {/* ── SHEET 5: VERIFY RESET CODE (OTP) (moved up, floating) ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-[5vh] left-0 right-0 w-[92%] max-w-md mx-auto z-40 bg-[#121214] border border-[#1e1e21] rounded-[2.5rem] p-8 pb-10 shadow-[0_15px_50px_rgba(0,0,0,0.3)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'verifyReset' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
-            : 'translate-y-full opacity-0 pointer-events-none'
+            : 'translate-y-[120%] opacity-0 pointer-events-none'
         }`}
       >
         <div className="flex items-center justify-between mb-4">
@@ -649,12 +635,12 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ── SHEET 6: RESET PASSWORD ── */}
+      {/* ── SHEET 6: NEW PASSWORD (moved up, floating) ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-[5vh] left-0 right-0 w-[92%] max-w-md mx-auto z-40 bg-[#121214] border border-[#1e1e21] rounded-[2.5rem] p-8 pb-10 shadow-[0_15px_50px_rgba(0,0,0,0.3)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'resetPassword' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
-            : 'translate-y-full opacity-0 pointer-events-none'
+            : 'translate-y-[120%] opacity-0 pointer-events-none'
         }`}
       >
         <div className="flex items-center justify-between mb-4">
@@ -701,12 +687,12 @@ export default function LoginPage() {
         </form>
       </div>
 
-      {/* ── SHEET 7: SIGN UP EMAIL VERIFICATION (OTP) ── */}
+      {/* ── SHEET 7: SIGN UP EMAIL VERIFICATION (OTP) (moved up, floating) ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-[5vh] left-0 right-0 w-[92%] max-w-md mx-auto z-40 bg-[#121214] border border-[#1e1e21] rounded-[2.5rem] p-8 pb-10 shadow-[0_15px_50px_rgba(0,0,0,0.3)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'verify' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
-            : 'translate-y-full opacity-0 pointer-events-none'
+            : 'translate-y-[120%] opacity-0 pointer-events-none'
         }`}
       >
         <div className="flex items-center justify-between mb-4">
@@ -778,12 +764,12 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ── SHEET 8: SUCCESS SHEET ── */}
+      {/* ── SHEET 8: SUCCESS SHEET (moved up, floating) ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-[5vh] left-0 right-0 w-[92%] max-w-md mx-auto z-40 bg-[#121214] border border-[#1e1e21] rounded-[2.5rem] p-8 pb-10 shadow-[0_15px_50px_rgba(0,0,0,0.3)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'success' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
-            : 'translate-y-full opacity-0 pointer-events-none'
+            : 'translate-y-[120%] opacity-0 pointer-events-none'
         }`}
       >
         <div className="w-12 h-1 bg-[#27272a] rounded-full mx-auto mb-6" />
