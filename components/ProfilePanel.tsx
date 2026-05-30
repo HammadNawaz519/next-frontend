@@ -308,7 +308,7 @@ export default function ProfilePanel({
         >
           <div 
             style={{
-              width: '85%', maxWidth: 360, background: isDark ? '#1c1c1e' : '#fff', borderRadius: 24, padding: 24,
+              width: '85%', maxWidth: 360, background: isDark ? '#1c1c1e' : '#fff', borderRadius: '24px', padding: 24,
               boxShadow: '0 8px 32px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: 18,
             }} 
             onClick={e => e.stopPropagation()}
@@ -319,7 +319,7 @@ export default function ProfilePanel({
               {/* File upload option */}
               <label style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px',
-                background: isDark ? '#3a3a3c' : '#e5e7eb', color: txt, borderRadius: 14,
+                background: isDark ? '#3a3a3c' : '#e5e7eb', color: txt, borderRadius: '24px',
                 fontWeight: 600, fontSize: 14, cursor: 'pointer', textAlign: 'center', border: `1px solid ${border}`
               }}>
                 Choose from Library
@@ -338,7 +338,7 @@ export default function ProfilePanel({
                   value={avatarInputUrl}
                   onChange={e => setAvatarInputUrl(e.target.value)}
                   style={{
-                    flex: 1, padding: '12px 14px', borderRadius: 14, border: `1px solid ${border}`,
+                    flex: 1, padding: '12px 18px', borderRadius: '24px', border: `1px solid ${border}`,
                     background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)', color: txt, fontSize: 13,
                     outline: 'none'
                   }}
@@ -346,8 +346,8 @@ export default function ProfilePanel({
                 <button
                   onClick={() => handleUpdateAvatar(avatarInputUrl)}
                   style={{
-                    padding: '0 16px', background: txt, color: isDark ? '#000' : '#fff',
-                    border: 'none', borderRadius: 14, fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                    padding: '0 20px', background: txt, color: isDark ? '#000' : '#fff',
+                    border: 'none', borderRadius: '24px', fontWeight: 600, fontSize: 13, cursor: 'pointer',
                   }}
                 >
                   Set
@@ -377,7 +377,7 @@ export default function ProfilePanel({
         >
           <div 
             style={{
-              width: '80%', maxWidth: 300, background: isDark ? '#1c1c1e' : '#fff', borderRadius: 24, padding: 24,
+              width: '80%', maxWidth: 300, background: isDark ? '#1c1c1e' : '#fff', borderRadius: '24px', padding: 24,
               boxShadow: '0 8px 32px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center'
             }} 
             onClick={e => e.stopPropagation()}
@@ -389,7 +389,7 @@ export default function ProfilePanel({
                 onClick={() => setLongPressedPostId(null)}
                 style={{
                   flex: 1, padding: '12px', background: btnBg, border: `1px solid ${btnBdr}`, color: txt,
-                  borderRadius: 14, fontWeight: 600, cursor: 'pointer', borderStyle: 'solid'
+                  borderRadius: '20px', fontWeight: 600, cursor: 'pointer', borderStyle: 'solid'
                 }}
               >
                 Cancel
@@ -398,7 +398,7 @@ export default function ProfilePanel({
                 onClick={handleDeletePost}
                 style={{
                   flex: 1, padding: '12px', background: '#ef4444', border: 'none', color: '#fff',
-                  borderRadius: 14, fontWeight: 600, cursor: 'pointer',
+                  borderRadius: '20px', fontWeight: 600, cursor: 'pointer',
                 }}
               >
                 Delete
@@ -558,10 +558,10 @@ export default function ProfilePanel({
                   rel="noopener noreferrer"
                   style={{display:'flex', alignItems:'center', gap:4, textDecoration:'none', marginTop:2}}
                 >
-                  <svg width="12" height="12" fill="none" stroke="#6366f1" viewBox="0 0 24 24">
+                  <svg width="12" height="12" fill="none" stroke={sub} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
                   </svg>
-                  <span style={{fontSize:12, color:'#6366f1', fontWeight:600}}>{website}</span>
+                  <span style={{fontSize:12, color:sub, fontWeight:600}}>{website}</span>
                 </a>
               )}
             </div>
@@ -571,13 +571,13 @@ export default function ProfilePanel({
               {isOwnProfile ? (
                 <>
                   <button onClick={() => setSubView('edit_profile')} style={{
-                    flex:1, padding:'8px', borderRadius:10, fontWeight:600, fontSize:13,
+                    flex:1, padding:'8px', borderRadius:'20px', fontWeight:600, fontSize:13,
                     background:btnBg, border:`1px solid ${btnBdr}`, color:txt, cursor:'pointer', transition:'all 0.2s',
                   }}>
                     Edit Profile
                   </button>
                   <button onClick={handleShare} style={{
-                    flex:1, padding:'8px', borderRadius:10, fontWeight:600, fontSize:13,
+                    flex:1, padding:'8px', borderRadius:'20px', fontWeight:600, fontSize:13,
                     background:btnBg, border:`1px solid ${btnBdr}`, color:txt, cursor:'pointer', transition:'all 0.2s',
                   }}>
                     Share Profile
@@ -588,18 +588,18 @@ export default function ProfilePanel({
                   <button 
                     onClick={() => onToggleFollow && onToggleFollow(targetUser.id)} 
                     style={{
-                      flex:1, padding:'8px', borderRadius:10, fontWeight:600, fontSize:13,
+                      flex:1, padding:'8px', borderRadius:'20px', fontWeight:600, fontSize:13,
                       background: targetUser?.isFollowing 
                         ? btnBg 
                         : targetUser?.hasSentRequest 
                           ? btnBg 
-                          : '#6366f1',
+                          : (isDark ? '#fff' : '#111'),
                       border: targetUser?.isFollowing || targetUser?.hasSentRequest
                         ? `1px solid ${btnBdr}`
                         : 'none',
                       color: targetUser?.isFollowing || targetUser?.hasSentRequest
                         ? txt
-                        : '#fff',
+                        : (isDark ? '#000' : '#fff'),
                       cursor:'pointer', transition:'all 0.2s',
                     }}
                   >
@@ -617,7 +617,7 @@ export default function ProfilePanel({
                       }
                     }} 
                     style={{
-                      flex:1, padding:'8px', borderRadius:10, fontWeight:600, fontSize:13,
+                      flex:1, padding:'8px', borderRadius:'20px', fontWeight:600, fontSize:13,
                       background:btnBg, border:`1px solid ${btnBdr}`, color:txt, cursor:'pointer', transition:'all 0.2s',
                     }}
                   >
@@ -793,7 +793,7 @@ export default function ProfilePanel({
                 }}
               >
                 <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: '#6366f1', display: 'flex', alignItems: 'center'}}>
+                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                     </svg>
@@ -813,7 +813,7 @@ export default function ProfilePanel({
                 }}
               >
                 <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: '#6366f1', display: 'flex', alignItems: 'center'}}>
+                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
@@ -824,12 +824,13 @@ export default function ProfilePanel({
                   onClick={() => handleTogglePrivacy(!fullUser?.isPrivate)}
                   style={{
                     width: 44, height: 24, borderRadius: 100, border: 'none',
-                    background: fullUser?.isPrivate ? '#6366f1' : (isDark ? '#3a3a3c' : '#d1d5db'),
+                    background: fullUser?.isPrivate ? (isDark ? '#fff' : '#111') : (isDark ? '#3a3a3c' : '#d1d5db'),
                     position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s'
                   }}
                 >
                   <div style={{
-                    width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                    width: 18, height: 18, borderRadius: '50%', 
+                    background: fullUser?.isPrivate && isDark ? '#000' : '#fff',
                     position: 'absolute', top: 3, 
                     left: fullUser?.isPrivate ? 23 : 3,
                     transition: 'left 0.2s'
@@ -846,7 +847,7 @@ export default function ProfilePanel({
                 }}
               >
                 <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: '#6366f1', display: 'flex', alignItems: 'center'}}>
+                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                     </svg>
@@ -867,7 +868,7 @@ export default function ProfilePanel({
                 }}
               >
                 <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: '#6366f1', display: 'flex', alignItems: 'center'}}>
+                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                     </svg>
@@ -888,7 +889,7 @@ export default function ProfilePanel({
                 }}
               >
                 <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: '#6366f1', display: 'flex', alignItems: 'center'}}>
+                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h2m0 0l-1.5-1.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
@@ -909,7 +910,7 @@ export default function ProfilePanel({
                 }}
               >
                 <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: '#6366f1', display: 'flex', alignItems: 'center'}}>
+                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
@@ -930,7 +931,7 @@ export default function ProfilePanel({
                 }}
               >
                 <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: '#6366f1', display: 'flex', alignItems: 'center'}}>
+                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
                     </svg>
@@ -951,7 +952,7 @@ export default function ProfilePanel({
                 }}
               >
                 <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: '#6366f1', display: 'flex', alignItems: 'center'}}>
+                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
@@ -972,7 +973,7 @@ export default function ProfilePanel({
                 }}
               >
                 <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: '#6366f1', display: 'flex', alignItems: 'center'}}>
+                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
@@ -993,7 +994,7 @@ export default function ProfilePanel({
                 }}
               >
                 <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: '#6366f1', display: 'flex', alignItems: 'center'}}>
+                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
                     </svg>
@@ -1044,7 +1045,7 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => { setSubView(isOwnProfile ? 'profile' : 'settings'); setProfileError(''); }} style={{
-              width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
+              width:36, height:36, borderRadius:'50%', border:`1px solid ${btnBdr}`, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center',
               background: btnBg, color:txt,
             }}>
@@ -1060,7 +1061,7 @@ export default function ProfilePanel({
               onClick={handleSaveProfile}
               disabled={isSavingProfile}
               style={{
-                background:'none', border:'none', color:'#6366f1', fontWeight:700, fontSize:14, cursor:'pointer',
+                background:'none', border:'none', color:txt, fontWeight:700, fontSize:14, cursor:'pointer',
                 opacity: isSavingProfile ? 0.5 : 1
               }}
             >
@@ -1086,7 +1087,7 @@ export default function ProfilePanel({
                   value={editName}
                   onChange={e => setEditName(e.target.value)}
                   style={{
-                    padding: '12px 14px', borderRadius: 4, border: `1px solid ${border}`,
+                    padding: '12px 18px', borderRadius: '24px', border: `1px solid ${border}`,
                     background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none'
                   }}
                 />
@@ -1100,7 +1101,7 @@ export default function ProfilePanel({
                   value={editUsername}
                   onChange={e => setEditUsername(e.target.value)}
                   style={{
-                    padding: '12px 14px', borderRadius: 4, border: `1px solid ${border}`,
+                    padding: '12px 18px', borderRadius: '24px', border: `1px solid ${border}`,
                     background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none'
                   }}
                 />
@@ -1115,7 +1116,7 @@ export default function ProfilePanel({
                   placeholder="https://yourwebsite.com"
                   onChange={e => setEditWebsite(e.target.value)}
                   style={{
-                    padding: '12px 14px', borderRadius: 4, border: `1px solid ${border}`,
+                    padding: '12px 18px', borderRadius: '24px', border: `1px solid ${border}`,
                     background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none'
                   }}
                 />
@@ -1130,7 +1131,7 @@ export default function ProfilePanel({
                   rows={4}
                   placeholder="Tell us about yourself..."
                   style={{
-                    padding: '12px 14px', borderRadius: 4, border: `1px solid ${border}`,
+                    padding: '12px 18px', borderRadius: '16px', border: `1px solid ${border}`,
                     background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none',
                     resize: 'none', lineHeight: '1.4'
                   }}
@@ -1153,7 +1154,7 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => { setSubView('profile'); setSearchQuery(''); }} style={{
-              width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
+              width:36, height:36, borderRadius:'50%', border:`1px solid ${btnBdr}`, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center',
               background: btnBg, color:txt,
             }}>
@@ -1176,11 +1177,11 @@ export default function ProfilePanel({
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 style={{
-                  width: '100%', padding: '10px 14px 10px 38px', borderRadius: 4, border: `1px solid ${border}`,
+                  width: '100%', padding: '10px 14px 10px 38px', borderRadius: '24px', border: `1px solid ${border}`,
                   background: isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6', color: txt, fontSize: 14, outline: 'none'
                 }}
               />
-              <svg style={{position: 'absolute', left: 12, color: sub}} width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg style={{position: 'absolute', left: 14, color: sub}} width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
@@ -1192,8 +1193,8 @@ export default function ProfilePanel({
               <button
                 onClick={() => setSubView('follow_requests')}
                 style={{
-                  width: '100%', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', borderRadius: 4,
+                  width: '100%', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)', color: txt, borderRadius: '24px',
                   border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14
                 }}
               >
@@ -1201,7 +1202,7 @@ export default function ProfilePanel({
                   <span>Follow Requests</span>
                 </div>
                 <div style={{
-                  background: '#6366f1', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 4
+                  background: isDark ? '#fff' : '#111', color: isDark ? '#000' : '#fff', fontSize: 11, padding: '2px 8px', borderRadius: '12px'
                 }}>
                   {followRequestsList.length}
                 </div>
@@ -1235,8 +1236,8 @@ export default function ProfilePanel({
                   </div>
                   {isOwnProfile && (
                     <button style={{
-                      padding: '6px 12px', background: btnBg, border: `1px solid ${btnBdr}`,
-                      color: txt, borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                      padding: '6px 14px', background: btnBg, border: `1px solid ${btnBdr}`,
+                      color: txt, borderRadius: '20px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
                     }}>
                       Remove
                     </button>
@@ -1264,7 +1265,7 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => { setSubView('profile'); setSearchQuery(''); }} style={{
-              width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
+              width:36, height:36, borderRadius:'50%', border:`1px solid ${btnBdr}`, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center',
               background: btnBg, color:txt,
             }}>
@@ -1287,11 +1288,11 @@ export default function ProfilePanel({
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 style={{
-                  width: '100%', padding: '10px 14px 10px 38px', borderRadius: 4, border: `1px solid ${border}`,
+                  width: '100%', padding: '10px 14px 10px 38px', borderRadius: '24px', border: `1px solid ${border}`,
                   background: isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6', color: txt, fontSize: 14, outline: 'none'
                 }}
               />
-              <svg style={{position: 'absolute', left: 12, color: sub}} width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg style={{position: 'absolute', left: 14, color: sub}} width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
@@ -1323,8 +1324,8 @@ export default function ProfilePanel({
                   </div>
                   {isOwnProfile && (
                     <button style={{
-                      padding: '6px 12px', background: btnBg, border: `1px solid ${btnBdr}`,
-                      color: txt, borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                      padding: '6px 14px', background: btnBg, border: `1px solid ${btnBdr}`,
+                      color: txt, borderRadius: '20px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
                     }}>
                       Following
                     </button>
@@ -1352,7 +1353,7 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => setSubView('followers')} style={{
-              width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
+              width:36, height:36, borderRadius:'50%', border:`1px solid ${btnBdr}`, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center',
               background: btnBg, color:txt,
             }}>
@@ -1391,8 +1392,8 @@ export default function ProfilePanel({
                   <button 
                     onClick={() => handleRespondRequest(req.id, 'accept')}
                     style={{
-                      padding: '6px 14px', background: '#6366f1', color: '#fff',
-                      border: 'none', borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                      padding: '6px 14px', background: isDark ? '#fff' : '#111', color: isDark ? '#000' : '#fff',
+                      border: 'none', borderRadius: '20px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
                     }}
                   >
                     Accept
@@ -1401,7 +1402,7 @@ export default function ProfilePanel({
                     onClick={() => handleRespondRequest(req.id, 'decline')}
                     style={{
                       padding: '6px 14px', background: btnBg, border: `1px solid ${btnBdr}`,
-                      color: txt, borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                      color: txt, borderRadius: '20px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
                     }}
                   >
                     Decline
@@ -1430,7 +1431,7 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => setSubView('profile')} style={{
-              width:36, height:36, borderRadius:4, border:`1px solid ${btnBdr}`, cursor:'pointer',
+              width:36, height:36, borderRadius:'50%', border:`1px solid ${btnBdr}`, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center',
               background: btnBg, color:txt,
             }}>
@@ -1451,7 +1452,7 @@ export default function ProfilePanel({
             {followRequestsList.length > 0 && (
               <div style={{
                 background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
-                border: `1px solid ${border}`, borderRadius: 4, padding: 16
+                border: `1px solid ${border}`, borderRadius: '16px', padding: 16
               }}>
                 <h3 style={{fontSize: 12, fontWeight: 700, color: txt, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em'}}>
                   Follow Requests ({followRequestsList.length})
@@ -1478,8 +1479,8 @@ export default function ProfilePanel({
                         <button 
                           onClick={() => handleRespondRequest(req.id, 'accept')}
                           style={{
-                            padding: '6px 12px', background: '#6366f1', color: '#fff',
-                            border: 'none', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer'
+                            padding: '6px 12px', background: isDark ? '#fff' : '#111', color: isDark ? '#000' : '#fff',
+                            border: 'none', borderRadius: '20px', fontSize: 11, fontWeight: 600, cursor: 'pointer'
                           }}
                         >
                           Accept
@@ -1488,7 +1489,7 @@ export default function ProfilePanel({
                           onClick={() => handleRespondRequest(req.id, 'decline')}
                           style={{
                             padding: '6px 12px', background: btnBg, border: `1px solid ${btnBdr}`,
-                            color: txt, borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer'
+                            color: txt, borderRadius: '20px', fontSize: 11, fontWeight: 600, cursor: 'pointer'
                           }}
                         >
                           Decline
@@ -1503,7 +1504,7 @@ export default function ProfilePanel({
             {/* General Activity */}
             <div style={{
               background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
-              border: `1px solid ${border}`, borderRadius: 4, padding: 16
+              border: `1px solid ${border}`, borderRadius: '16px', padding: 16
             }}>
               <h3 style={{fontSize: 12, fontWeight: 700, color: txt, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em'}}>
                 Recent Activity
@@ -1511,7 +1512,7 @@ export default function ProfilePanel({
 
               <div style={{display: 'flex', flexDirection: 'column', gap: 16}}>
                 <div style={{display: 'flex', gap: 12, fontSize: 13, color: txt}}>
-                  <span style={{fontSize: 18}}>🛡️</span>
+                  <span style={{width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7}} />
                   <div>
                     <span style={{fontWeight: 600}}>System Guard</span>
                     <p style={{fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4'}}>Your account privacy mode is fully synchronized with Connect PostgreSQL.</p>
@@ -1519,7 +1520,7 @@ export default function ProfilePanel({
                 </div>
 
                 <div style={{display: 'flex', gap: 12, fontSize: 13, color: txt}}>
-                  <span style={{fontSize: 18}}>💬</span>
+                  <span style={{width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7}} />
                   <div>
                     <span style={{fontWeight: 600}}>Direct Messaging</span>
                     <p style={{fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4'}}>All chats are configured with secure low-latency WebSockets.</p>
@@ -1528,7 +1529,7 @@ export default function ProfilePanel({
 
                 {followersList.length > 0 && (
                   <div style={{display: 'flex', gap: 12, fontSize: 13, color: txt}}>
-                    <span style={{fontSize: 18}}>👤</span>
+                    <span style={{width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7}} />
                     <div>
                       <span style={{fontWeight: 600}}>New Follower</span>
                       <p style={{fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4'}}>
@@ -1539,7 +1540,7 @@ export default function ProfilePanel({
                 )}
 
                 <div style={{display: 'flex', gap: 12, fontSize: 13, color: txt}}>
-                  <span style={{fontSize: 18}}>✨</span>
+                  <span style={{width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7}} />
                   <div>
                     <span style={{fontWeight: 600}}>Welcome to Connect</span>
                     <p style={{fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4'}}>Your profile is live! Customize your avatar, web links, or bio anytime.</p>
