@@ -318,6 +318,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [showActivityOverlay, setShowActivityOverlay] = useState(false);
 
   const [isSlidingOut, setIsSlidingOut] = useState(false);
   const transitionInProgress = React.useRef(false);
@@ -1394,12 +1395,108 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         <div className="main-wrap">
           <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'}`}>
             <div className="search-wrap relative">
-              <div className="flex items-center gap-3 mb-3">
-                <button style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', flexShrink: 0 }} onClick={() => onBack && onBack()}>
-                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              <div className="flex items-center justify-between mb-3 w-full">
+                <div className="flex items-center gap-3">
+                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', flexShrink: 0 }} onClick={() => onBack && onBack()}>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                  </button>
+                  <h2 className="text-xl font-bold" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
+                </div>
+
+                {/* Notifications Bell (Alert) */}
+                <button 
+                  onClick={() => setShowActivityOverlay(!showActivityOverlay)}
+                  style={{
+                    position: 'relative', width: '40px', height: '40px', borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)',
+                    color: 'var(--dm-text-primary)', cursor: 'pointer', flexShrink: 0
+                  }}
+                  title="Notifications & Activity"
+                >
+                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                  </svg>
+                  {requests.length > 0 && (
+                    <span style={{
+                      position: 'absolute', top: 10, right: 10,
+                      width: 8, height: 8, borderRadius: '50%', background: '#ef4444'
+                    }} />
+                  )}
                 </button>
-                <h2 className="text-xl font-bold" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
               </div>
+
+              {showActivityOverlay && (
+                <div 
+                  className="absolute inset-0 z-[100] flex flex-col"
+                  style={{
+                    background: 'var(--dm-bg-sidebar)',
+                    animation: 'slideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
+                  }}
+                >
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 16px', borderBottom: '1px solid var(--dm-border)', flexShrink: 0
+                  }}>
+                    <button 
+                      onClick={() => setShowActivityOverlay(false)} 
+                      style={{
+                        width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--dm-border)', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)'
+                      }}
+                    >
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                      </svg>
+                    </button>
+
+                    <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--dm-text-primary)' }}>Activity & Alerts</span>
+
+                    <div style={{ width: 36 }} />
+                  </div>
+
+                  {/* Activity List */}
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+                    {/* General Activity logs */}
+                    <div style={{
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px solid var(--dm-border)', borderRadius: '24px', padding: 16
+                    }}>
+                      <h3 style={{ fontSize: 12, fontWeight: 700, color: 'var(--dm-text-primary)', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Recent Activity
+                      </h3>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <div style={{ display: 'flex', gap: 12, fontSize: 13, color: 'var(--dm-text-primary)' }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7 }} />
+                          <div>
+                            <span style={{ fontWeight: 600 }}>System Guard</span>
+                            <p style={{ fontSize: 12, color: 'var(--dm-text-muted)', marginTop: 3, lineHeight: '1.4' }}>Your account privacy mode is fully synchronized with Connect PostgreSQL.</p>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 12, fontSize: 13, color: 'var(--dm-text-primary)' }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7 }} />
+                          <div>
+                            <span style={{ fontWeight: 600 }}>Direct Messaging</span>
+                            <p style={{ fontSize: 12, color: 'var(--dm-text-muted)', marginTop: 3, lineHeight: '1.4' }}>All chats are configured with secure low-latency WebSockets.</p>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 12, fontSize: 13, color: 'var(--dm-text-primary)' }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7 }} />
+                          <div>
+                            <span style={{ fontWeight: 600 }}>Welcome to Connect</span>
+                            <p style={{ fontSize: 12, color: 'var(--dm-text-muted)', marginTop: 3, lineHeight: '1.4' }}>Your profile is live! Customize your avatar, web links, or bio anytime.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <input
                 type="text"
                 placeholder="Search contacts..."

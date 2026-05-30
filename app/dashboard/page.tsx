@@ -759,6 +759,10 @@ export default function DashboardPage() {
           onInstall={handleInstallApp}
           refreshProfile={refreshProfile}
           onToggleFollow={handleToggleFollow}
+          onOpenChat={(targetUser) => {
+            setSelectedChatUser(targetUser);
+            setActiveView('chat');
+          }}
         />
       </div>
 

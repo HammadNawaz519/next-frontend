@@ -47,6 +47,7 @@ interface Props {
   tagged?: Post[];
   refreshProfile?: () => void;
   onToggleFollow?: (targetUserId: string) => void;
+  onOpenChat?: (user: any) => void;
 }
 
 /* ─── Default data ─── */
@@ -77,6 +78,7 @@ export default function ProfilePanel({
   hasUnreadNotifications = false,
   refreshProfile,
   onToggleFollow,
+  onOpenChat,
 }: Props) {
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab]         = useState<'grid'|'reels'|'tagged'>('grid');
@@ -441,30 +443,7 @@ export default function ProfilePanel({
 
             <span style={{fontWeight:700, fontSize:16, color:txt}}>@{username}</span>
 
-            <div style={{display:'flex', gap:8, alignItems:'center'}}>
-              {/* Notification bell - only for own profile */}
-              {isOwnProfile && (
-                <button 
-                  onClick={() => setSubView('notifications')} 
-                  style={{
-                    position:'relative', width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
-                    display:'flex', alignItems:'center', justifyContent:'center',
-                    background: 'none', color:txt,
-                  }}
-                >
-                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                  </svg>
-                  {hasUnreadNotifications && (
-                    <span style={{
-                      position:'absolute', top:2, right:2,
-                      width:7, height:7, borderRadius:'50%', background:'#ef4444',
-                      border:`2.2px solid ${isDark ? '#0e0e11':'#fff'}`,
-                    }}/>
-                  )}
-                </button>
-              )}
-
+            <div style={{display:'flex', gap:3, alignItems:'center'}}>
               {/* Theme Toggle Button - Sleek rectangular web vibe */}
               <button 
                 onClick={toggleTheme} 
@@ -504,12 +483,11 @@ export default function ProfilePanel({
             </div>
           </div>
 
-          {/* Body */}
           <div style={{flex:1, overflowY:'auto'}}>
             {/* Header (Stats) */}
             <div style={{display:'flex', alignItems:'center', padding:'16px 16px 8px', gap:24}}>
               <div 
-                onClick={() => { if (isOwnProfile) setShowAvatarModal(true); }}
+                onClick={isOwnProfile ? () => setShowAvatarModal(true) : undefined}
                 style={{
                   width:80, height:80, borderRadius:'50%', flexShrink:0,
                   background: isDark ? '#26262d':'#e5e7eb',
@@ -612,7 +590,9 @@ export default function ProfilePanel({
                   <button 
                     onClick={() => {
                       onClose();
-                      if (typeof window !== 'undefined') {
+                      if (onOpenChat) {
+                        onOpenChat(targetUser);
+                      } else if (typeof window !== 'undefined') {
                         window.location.href = `/dashboard?chat=${targetUser.id}`;
                       }
                     }} 
