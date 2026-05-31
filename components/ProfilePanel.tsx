@@ -99,6 +99,8 @@ export default function ProfilePanel({
   // Switch account state
   const [activeAccountSheet, setActiveAccountSheet] = useState<'none' | 'accounts' | 'options' | 'signIn' | 'signUp' | 'verify' | 'success'>('none');
   const [targetAccountSheet, setTargetAccountSheet] = useState<'none' | 'accounts' | 'options' | 'signIn' | 'signUp' | 'verify' | 'success'>('none');
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [avatarInputUrl, setAvatarInputUrl] = useState('');
   const [savedAccounts, setSavedAccounts] = useState<any[]>([]);
 
   // Switch account form fields
@@ -255,8 +257,6 @@ export default function ProfilePanel({
   /* Multi-page Navigation States */
   const [subView, setSubView]             = useState<'profile' | 'followers' | 'following' | 'edit_profile' | 'follow_requests' | 'settings' | 'notifications'>('profile');
   const [searchQuery, setSearchQuery]     = useState('');
-  const [showAvatarModal, setShowAvatarModal] = useState(false);
-  const [avatarInputUrl, setAvatarInputUrl] = useState('');
   const [longPressedPostId, setLongPressedPostId] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
