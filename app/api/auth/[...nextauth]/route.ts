@@ -4,6 +4,13 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
+// Dynamically resolve the correct base URL for NextAuth callbacks.
+// VERCEL_URL is automatically set by Vercel on every deployment.
+// Falls back to NEXTAUTH_URL for local dev.
+if (process.env.VERCEL_URL) {
+  process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+}
+
 export const authOptions: NextAuthOptions = {
   // No PrismaAdapter — JWT sessions are incompatible with it when using CredentialsProvider.
   // We handle DB writes manually via signIn callback (Google) and /api/register (credentials).

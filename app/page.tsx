@@ -179,25 +179,47 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const res = await signIn('credentials', { redirect: false, email, password });
-    if (res?.error === 'EMAIL_NOT_VERIFIED') {
-      setError('');
-      setOtp(['', '', '', '', '', '']);
-      triggerSheetTransition('verify');
-      setInfo("Your email isn't verified yet. We've sent a new code.");
-      fetch('/api/resend-code', {
+    try {
+      // First, check if the account exists and is verified via a preflight
+      const preflight = await fetch('/api/auth/preflight', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-      setResendCooldown(60);
+      if (preflight.ok) {
+        const { verified } = await preflight.json();
+        if (verified === false) {
+          // Email exists but not verified — go to verify sheet
+          setError('');
+          setOtp(['', '', '', '', '', '']);
+          triggerSheetTransition('verify');
+          setInfo("Your email isn't verified yet. We've sent a new code.");
+          fetch('/api/resend-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+          setResendCooldown(60);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const res = await signIn('credentials', { redirect: false, email, password });
+      if (res?.error) {
+        setError('Invalid email or password.');
+        setLoading(false);
+      } else if (res?.ok) {
+        router.push('/dashboard');
+        router.refresh();
+      } else {
+        setError('Sign in failed. Please try again.');
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error('[LOGIN_ERROR]', err);
+      setError('Connection error. Please check your network and try again.');
       setLoading(false);
-    } else if (res?.error) {
-      setError('Invalid email or password.');
-      setLoading(false);
-    } else {
-      router.push('/dashboard');
-      router.refresh();
     }
   };
 
