@@ -65,6 +65,7 @@ export default function DashboardPage() {
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [usernameSaving, setUsernameSaving] = useState(false);
+  const [isAccountSheetOpen, setIsAccountSheetOpen] = useState(false);
   
   // PWA Manual Installation Trigger
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -452,7 +453,7 @@ export default function DashboardPage() {
                 <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center font-normal text-xs shadow-sm transition-transform duration-300 group-hover/profile:scale-105" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: isProfileOpen ? 'var(--dm-bg-main)' : 'var(--dm-text-secondary)' }}>
                   {session.user?.image
                     ? <img src={session.user.image} alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    : session.user?.name?.slice(0, 1).toUpperCase() || 'U'}
+                    : <img src="/Avatar.avif" alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
                 </div>
               </div>
               <div className="flex-1 min-w-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden">
@@ -763,12 +764,13 @@ export default function DashboardPage() {
             setSelectedChatUser(targetUser);
             setActiveView('chat');
           }}
+          onAccountSheetChange={setIsAccountSheetOpen}
         />
       </div>
 
       {/* Mobile Bottom Navigation — round glass pill bar floats nicely near the bottom */}
       {((activeView === 'home' || activeView === 'search' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive) && (
-        <nav className="mobile-nav">
+        <nav className={`mobile-nav ${isAccountSheetOpen ? 'mobile-nav-hidden' : ''}`}>
           {[
             { id: 'home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
             { id: 'chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
@@ -802,7 +804,7 @@ export default function DashboardPage() {
             <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-active)', color: isProfileOpen ? 'var(--dm-bg-main)' : 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}>
               {session?.user?.image
                 ? <img src={session.user.image} alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                : session?.user?.name?.charAt(0) || 'U'}
+                : <img src="/Avatar.avif" alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
             </div>
           </button>
         </nav>

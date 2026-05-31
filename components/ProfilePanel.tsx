@@ -48,6 +48,7 @@ interface Props {
   refreshProfile?: () => void;
   onToggleFollow?: (targetUserId: string) => void;
   onOpenChat?: (user: any) => void;
+  onAccountSheetChange?: (isOpen: boolean) => void;
 }
 
 /* ─── Default data ─── */
@@ -71,10 +72,14 @@ const ReelIcon = () => (
   </svg>
 );
 
-const DefaultAvatarSvg = ({ size = 32, color = 'currentColor', style }: { size?: number; color?: string; style?: React.CSSProperties }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" style={{ display: 'block', ...style }}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
-  </svg>
+const DefaultAvatarSvg = ({ size = 32, color, style }: { size?: number; color?: string; style?: React.CSSProperties }) => (
+  <img 
+    src="/Avatar.avif" 
+    alt="Default Avatar" 
+    width={size} 
+    height={size} 
+    style={{ display: 'block', width: size, height: size, borderRadius: '50%', objectFit: 'cover', ...style }} 
+  />
 );
 
 /* ─── Main component ─── */
@@ -85,6 +90,7 @@ export default function ProfilePanel({
   refreshProfile,
   onToggleFollow,
   onOpenChat,
+  onAccountSheetChange,
 }: Props) {
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab]         = useState<'grid'|'reels'|'tagged'>('grid');
@@ -130,6 +136,13 @@ export default function ProfilePanel({
       }
     }
   }, [fullUser, session]);
+
+  // Sync sheet state with parent (accounts sheet and avatar picker sheet)
+  useEffect(() => {
+    if (onAccountSheetChange) {
+      onAccountSheetChange(activeAccountSheet !== 'none' || showAvatarModal);
+    }
+  }, [activeAccountSheet, showAvatarModal, onAccountSheetChange]);
 
   // Transition helper
   const triggerAccountSheetTransition = (nextSheet: typeof activeAccountSheet) => {
@@ -455,74 +468,98 @@ export default function ProfilePanel({
       {/* Spacer for status bar/camera cutout safe area top */}
       <div style={{ height: 'env(safe-area-inset-top, 0px)', width: '100%', flexShrink: 0 }} />
 
-      {/* ── Center Avatar Changing Modal ── */}
-      {showAvatarModal && isOwnProfile && (
-        <div 
-          style={{
-            position: 'fixed', inset: 0, zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-          }} 
-          onClick={() => setShowAvatarModal(false)}
-        >
-          <div 
-            style={{
-              width: '85%', maxWidth: 360, background: isDark ? '#1c1c1e' : '#fff', borderRadius: '24px', padding: 24,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: 18,
-            }} 
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 style={{margin: 0, fontSize: 18, fontWeight: 700, color: txt, textAlign: 'center'}}>Change Profile Picture</h3>
-            
-            <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
-              {/* File upload option */}
-              <label style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px',
-                background: isDark ? '#3a3a3c' : '#e5e7eb', color: txt, borderRadius: '24px',
-                fontWeight: 600, fontSize: 14, cursor: 'pointer', textAlign: 'center', border: `1px solid ${border}`
-              }}>
-                Choose from Library
-                <input type="file" accept="image/*" onChange={handleFileUpload} style={{display: 'none'}} />
-              </label>
-              
-              <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '4px 0', color: sub, fontSize: 11}}>
-                — OR —
-              </div>
+      {/* ── Avatar Changing Bottom Sheet ── */}
+      <div
+        style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
+          background: isDark ? '#1c1c1e' : '#ffffff', 
+          borderTop: `1px solid ${border}`, 
+          borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
+          padding: '24px 24px 32px', 
+          boxShadow: isDark ? '0 -15px 40px rgba(0,0,0,0.4)' : '0 -15px 40px rgba(0,0,0,0.15)',
+          transform: (showAvatarModal && isOwnProfile) ? 'translateY(0)' : 'translateY(100%)',
+          opacity: (showAvatarModal && isOwnProfile) ? 1 : 0,
+          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
+          pointerEvents: (showAvatarModal && isOwnProfile) ? 'auto' : 'none',
+        }}
+      >
+        <div style={{ width: 48, height: 4, background: isDark ? '#3a3a3c' : '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: txt, marginBottom: 16, textAlign: 'center' }}>Change Profile Picture</h2>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+          {/* File upload option */}
+          <label style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px',
+            background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6', 
+            color: txt, 
+            borderRadius: '100px',
+            fontWeight: 700, 
+            fontSize: 13, 
+            cursor: 'pointer', 
+            textAlign: 'center', 
+            border: `1px solid ${border}`,
+            transition: 'background-color 0.2s'
+          }}>
+            Choose from Library
+            <input type="file" accept="image/*" onChange={handleFileUpload} style={{display: 'none'}} />
+          </label>
+          
+          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '4px 0', color: sub, fontSize: 11, fontWeight: 600}}>
+            — OR —
+          </div>
 
-              {/* URL paste option */}
-              <div style={{display: 'flex', gap: 8}}>
-                <input
-                  type="text"
-                  placeholder="Paste avatar URL..."
-                  value={avatarInputUrl}
-                  onChange={e => setAvatarInputUrl(e.target.value)}
-                  style={{
-                    flex: 1, padding: '12px 18px', borderRadius: '24px', border: `1px solid ${border}`,
-                    background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)', color: txt, fontSize: 13,
-                    outline: 'none'
-                  }}
-                />
-                <button
-                  onClick={() => handleUpdateAvatar(avatarInputUrl)}
-                  style={{
-                    padding: '0 20px', background: txt, color: isDark ? '#000' : '#fff',
-                    border: 'none', borderRadius: '24px', fontWeight: 600, fontSize: 13, cursor: 'pointer',
-                  }}
-                >
-                  Set
-                </button>
-              </div>
-            </div>
-            
-            <div style={{borderTop: `1px solid ${border}`, paddingTop: 14, display: 'flex', justifyContent: 'center'}}>
-              <button onClick={() => setShowAvatarModal(false)} style={{
-                background: 'none', border: 'none', color: '#ef4444', fontWeight: 600, fontSize: 14, cursor: 'pointer'
-              }}>
-                Cancel
-              </button>
-            </div>
+          {/* URL paste option */}
+          <div style={{display: 'flex', gap: 8}}>
+            <input
+              type="text"
+              placeholder="Paste avatar URL..."
+              value={avatarInputUrl}
+              onChange={e => setAvatarInputUrl(e.target.value)}
+              style={{
+                flex: 1, 
+                padding: '12px 20px', 
+                borderRadius: '100px', 
+                border: `1px solid ${border}`,
+                background: isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb', 
+                color: txt, 
+                fontSize: 13,
+                outline: 'none'
+              }}
+            />
+            <button
+              onClick={() => handleUpdateAvatar(avatarInputUrl)}
+              style={{
+                padding: '0 24px', 
+                background: txt, 
+                color: isDark ? '#000' : '#fff',
+                border: 'none', 
+                borderRadius: '100px', 
+                fontWeight: 700, 
+                fontSize: 13, 
+                cursor: 'pointer',
+              }}
+            >
+              Set
+            </button>
           </div>
         </div>
-      )}
+
+        <button 
+          onClick={() => setShowAvatarModal(false)} 
+          style={{
+            width: '100%', 
+            padding: '12px 0', 
+            background: 'none', 
+            color: '#ef4444', 
+            fontWeight: 700, 
+            fontSize: 13, 
+            cursor: 'pointer',
+            border: 'none'
+          }}
+        >
+          Cancel
+        </button>
+      </div>
 
       {/* ── Center Confirm Delete Post Modal ── */}
       {longPressedPostId && isOwnProfile && (
@@ -599,9 +636,31 @@ export default function ProfilePanel({
 
             <span 
               onClick={() => triggerAccountSheetTransition('accounts')}
-              style={{fontWeight:700, fontSize:16, color:txt, cursor:'pointer'}}
+              style={{
+                fontWeight: 700,
+                fontSize: 16,
+                color: txt,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
             >
-              @{username}
+              {username}
+              <svg 
+                width="14" 
+                height="14" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2.5" 
+                viewBox="0 0 24 24" 
+                style={{ 
+                  transform: activeAccountSheet === 'accounts' ? 'rotate(180deg)' : 'none', 
+                  transition: 'transform 0.25s ease' 
+                }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
             </span>
 
             <div style={{display:'flex', gap:3, alignItems:'center'}}>
@@ -1669,10 +1728,13 @@ export default function ProfilePanel({
         </>
       )}
 
-      {/* ── Switch Account Sheets Overlay & Backdrop ── */}
-      {activeAccountSheet !== 'none' && (
+      {/* ── Sheets Overlay & Backdrop ── */}
+      {(activeAccountSheet !== 'none' || (showAvatarModal && isOwnProfile)) && (
         <div 
-          onClick={() => triggerAccountSheetTransition('none')}
+          onClick={() => {
+            triggerAccountSheetTransition('none');
+            setShowAvatarModal(false);
+          }}
           style={{
             position: 'absolute', inset: 0, zIndex: 90,
             background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
