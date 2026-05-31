@@ -137,12 +137,7 @@ export default function ProfilePanel({
     }
   }, [fullUser, session]);
 
-  // Sync sheet state with parent (accounts sheet and avatar picker sheet)
-  useEffect(() => {
-    if (onAccountSheetChange) {
-      onAccountSheetChange(activeAccountSheet !== 'none' || showAvatarModal);
-    }
-  }, [activeAccountSheet, showAvatarModal, onAccountSheetChange]);
+  // Sync sheet state with parent is handled below variables declaration
 
   // Transition helper
   const triggerAccountSheetTransition = (nextSheet: typeof activeAccountSheet) => {
@@ -297,6 +292,22 @@ export default function ProfilePanel({
 
   /* Profile ownership */
   const isOwnProfile = !targetUser || targetUser.isCurrentUser;
+
+  // Sync sheet state with parent (accounts sheet, avatar picker sheet, subviews, target profile)
+  useEffect(() => {
+    if (onAccountSheetChange) {
+      if (isClosing) {
+        onAccountSheetChange(false);
+      } else {
+        const shouldHideBottomNav = 
+          activeAccountSheet !== 'none' || 
+          showAvatarModal || 
+          subView !== 'profile' || 
+          !isOwnProfile;
+        onAccountSheetChange(shouldHideBottomNav);
+      }
+    }
+  }, [activeAccountSheet, showAvatarModal, subView, isOwnProfile, isClosing, onAccountSheetChange]);
 
   /* Derived profile data from Database */
   const name     = fullUser?.name     || session?.user?.name  || 'User';
@@ -688,7 +699,7 @@ export default function ProfilePanel({
                 style={{
                   width:80, height:80, borderRadius:'50%', flexShrink:0,
                   background: isDark ? '#26262d':'#e5e7eb',
-                  border:`3px solid ${isDark ? 'rgba(255,255,255,0.15)':'#d1d5db'}`,
+                  border:`0.5px solid ${isDark ? 'rgba(255,255,255,0.15)':'#d1d5db'}`,
                   overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center',
                   cursor: isOwnProfile ? 'pointer' : 'default', position: 'relative'
                 }}
@@ -939,7 +950,7 @@ export default function ProfilePanel({
               <div style={{
                 width: 60, height: 60, borderRadius: '50%', overflow: 'hidden',
                 background: isDark ? '#26262d' : '#e5e7eb', flexShrink: 0,
-                border: `2px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`
+                border: `0.5px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`
               }}>
                 {image 
                   ? <img src={image} alt={name} style={{width: '100%', height: '100%', objectFit: 'cover'}} referrerPolicy="no-referrer" />
@@ -1216,9 +1227,9 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => { setSubView(isOwnProfile ? 'profile' : 'settings'); setProfileError(''); }} style={{
-              width:36, height:36, borderRadius:'50%', border:`1px solid ${btnBdr}`, cursor:'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              background: btnBg, color:txt,
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: txt, padding: 0
             }}>
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -1270,12 +1281,10 @@ export default function ProfilePanel({
                 <input
                   type="text"
                   value={editUsername}
-                  disabled
-                  readOnly
+                  onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/\s+/g,''))}
                   style={{
                     padding: '12px 18px', borderRadius: '24px', border: `1px solid ${border}`,
-                    background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: sub, fontSize: 14, outline: 'none',
-                    cursor: 'not-allowed', opacity: 0.6
+                    background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none'
                   }}
                 />
               </div>
@@ -1327,9 +1336,9 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => { setSubView('profile'); setSearchQuery(''); }} style={{
-              width:36, height:36, borderRadius:'50%', border:`1px solid ${btnBdr}`, cursor:'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              background: btnBg, color:txt,
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: txt, padding: 0
             }}>
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -1438,9 +1447,9 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => { setSubView('profile'); setSearchQuery(''); }} style={{
-              width:36, height:36, borderRadius:'50%', border:`1px solid ${btnBdr}`, cursor:'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              background: btnBg, color:txt,
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: txt, padding: 0
             }}>
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -1526,9 +1535,9 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => setSubView('followers')} style={{
-              width:36, height:36, borderRadius:'50%', border:`1px solid ${btnBdr}`, cursor:'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              background: btnBg, color:txt,
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: txt, padding: 0
             }}>
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -1604,9 +1613,9 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={() => setSubView('profile')} style={{
-              width:36, height:36, borderRadius:'50%', border:`1px solid ${btnBdr}`, cursor:'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              background: btnBg, color:txt,
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: txt, padding: 0
             }}>
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>

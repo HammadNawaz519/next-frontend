@@ -274,8 +274,10 @@ body {
   display: none;
   position: fixed;
   bottom: 12px;
-  left: 16px;
-  right: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 85%;
+  max-width: 280px;
   height: 58px;
   z-index: 1000;
   align-items: center;
@@ -295,7 +297,7 @@ body {
 }
 
 .mobile-nav-hidden {
-  transform: translateY(80px) !important;
+  transform: translate(-50%, 80px) !important;
   opacity: 0;
   pointer-events: none;
 }
