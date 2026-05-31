@@ -630,8 +630,11 @@ export default function LoginPage() {
     );
   };
 
-  // Show loader while resolving session (MUST be after all handlers/functions are defined)
-  if (sessStatus === 'loading' || sessStatus === 'authenticated') {
+  // Show full-page spinner ONLY when authenticated and waiting for router to redirect.
+  // Do NOT block on sessStatus === 'loading' — that fires during every NextAuth
+  // internal session refresh (including after submitting credentials), which
+  // causes the entire page to freeze after the user clicks Sign In / Sign Up.
+  if (sessStatus === 'authenticated') {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-white z-[9999]">
         <div className="w-12 h-12 border-4 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
