@@ -297,7 +297,8 @@ export default function ProfilePanel({
         borderLeft: `1px solid ${border}`,
       }}
     >
-
+      {/* Spacer for status bar/camera cutout safe area top */}
+      <div style={{ height: 'env(safe-area-inset-top, 0px)', width: '100%', flexShrink: 0 }} />
 
       {/* ── Center Avatar Changing Modal ── */}
       {showAvatarModal && isOwnProfile && (

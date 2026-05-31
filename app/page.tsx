@@ -364,7 +364,7 @@ export default function LoginPage() {
 
       {/* Dynamic Top Left Header Block (visible on Sign In, Sign Up, etc.) */}
       <div 
-        className={`absolute top-[8vh] left-8 right-8 text-left z-10 flex flex-col transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
+        className={`absolute top-[calc(8vh+env(safe-area-inset-top,0px))] left-8 right-8 text-left z-10 flex flex-col transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
           activeSheet !== 'welcome' && activeSheet !== 'none'
             ? 'opacity-100 translate-x-0 scale-100 pointer-events-auto' 
             : 'opacity-0 -translate-x-8 scale-95 pointer-events-none'

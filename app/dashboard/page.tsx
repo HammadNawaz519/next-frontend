@@ -498,7 +498,7 @@ export default function DashboardPage() {
               <div className="home-blob home-blob-3" />
             </div>
 
-            <div className="relative z-10 px-5 pt-5">
+            <div className="relative z-10 px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))]">
               <div
                 className="flex items-center justify-between px-4 py-2.5 rounded-full"
                 style={{
@@ -548,7 +548,7 @@ export default function DashboardPage() {
           <div className="w-full h-full flex flex-col min-h-0 relative" style={{ background: 'var(--dm-bg-main)' }}>
             
             {/* Top Search Action Bar */}
-            <div className="px-4 pt-4 pb-2 flex-shrink-0">
+            <div className="px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-2 flex-shrink-0">
               <div 
                 onClick={() => setIsSearchOverlayOpen(true)}
                 className="flex items-center gap-3 px-4 py-3 rounded-full cursor-pointer transition-all duration-300 border hover:border-zinc-400"
@@ -616,7 +616,7 @@ export default function DashboardPage() {
                 }}
               >
                 {/* Search Overlay Header */}
-                <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
+                <div className="flex items-center gap-3 px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
                   <button 
                     onClick={() => {
                       setSearchQuery('');

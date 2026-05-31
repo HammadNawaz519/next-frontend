@@ -1436,7 +1436,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 >
                   <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '14px 16px', borderBottom: '1px solid var(--dm-border)', flexShrink: 0
+                    padding: 'calc(14px + env(safe-area-inset-top, 0px)) 16px 14px', borderBottom: '1px solid var(--dm-border)', flexShrink: 0
                   }}>
                     <button 
                       onClick={() => setShowActivityOverlay(false)} 
