@@ -132,15 +132,6 @@ export default function LoginPage() {
     }, 350);
   };
 
-  // Show loader while resolving session
-  if (sessStatus === 'loading' || sessStatus === 'authenticated') {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white z-[9999]">
-        <div className="w-12 h-12 border-4 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   // OTP handlers
   const handleOtpChange = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '');
@@ -597,6 +588,15 @@ export default function LoginPage() {
       </div>
     );
   };
+
+  // Show loader while resolving session (MUST be after all handlers/functions are defined)
+  if (sessStatus === 'loading' || sessStatus === 'authenticated') {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white z-[9999]">
+        <div className="w-12 h-12 border-4 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>
