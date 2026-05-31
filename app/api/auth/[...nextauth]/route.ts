@@ -113,7 +113,7 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
 
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, account, trigger, session }) {
       if (user) {
         // Find the user in our DB to get their CUID
         const dbUser = await prisma.user.findUnique({
@@ -128,6 +128,9 @@ export const authOptions: NextAuthOptions = {
         token.name = user.name;
         token.picture = user.image;
       }
+      if (account) {
+        token.provider = account.provider;
+      }
       return token;
     },
 
@@ -135,6 +138,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token && session.user) {
         (session.user as any).id = token.id;
+        (session.user as any).provider = token.provider;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
         session.user.image = token.picture as string;

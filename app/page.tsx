@@ -56,6 +56,18 @@ export default function LoginPage() {
     }
   }, [sessStatus, router]);
 
+  // Load sheet state from query parameter on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const sheet = searchParams.get('sheet') as SheetState;
+      if (sheet && ['welcome', 'signIn', 'signUp', 'forgotPassword', 'verifyReset', 'resetPassword', 'verify', 'success', 'none'].includes(sheet)) {
+        setActiveSheet(sheet);
+        setTargetSheet(sheet);
+      }
+    }
+  }, []);
+
   // Resend cooldown timer
   useEffect(() => {
     if (resendCooldown <= 0) return;

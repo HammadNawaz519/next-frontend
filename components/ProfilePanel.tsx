@@ -119,17 +119,21 @@ export default function ProfilePanel({
       const curEmail = fullUser?.email || session?.user?.email || '';
       const curImage = fullUser?.image || session?.user?.image || '';
       const curName = fullUser?.name || session?.user?.name || 'User';
+      const curProvider = session?.user?.provider || 'credentials';
 
       try {
         const stored = localStorage.getItem('connected_accounts');
         let list = stored ? JSON.parse(stored) : [];
         if (!Array.isArray(list)) list = [];
         
-        const exists = list.some((acc: any) => acc.email === curEmail || acc.username === curUsername);
-        if (!exists && curEmail) {
-          list.push({ username: curUsername, email: curEmail, image: curImage, name: curName });
-          localStorage.setItem('connected_accounts', JSON.stringify(list));
+        const idx = list.findIndex((acc: any) => acc.email === curEmail);
+        const accInfo = { username: curUsername, email: curEmail, image: curImage, name: curName, provider: curProvider };
+        if (idx === -1) {
+          if (curEmail) list.push(accInfo);
+        } else {
+          list[idx] = { ...list[idx], ...accInfo };
         }
+        localStorage.setItem('connected_accounts', JSON.stringify(list));
         setSavedAccounts(list);
       } catch (e) {
         console.error(e);
@@ -1190,7 +1194,7 @@ export default function ProfilePanel({
 
               {/* Sign Out Row */}
               <div 
-                onClick={() => signOut({ callbackUrl: '/' })}
+                onClick={() => signOut({ callbackUrl: '/accounts' })}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '20px 8px', cursor: 'pointer', marginTop: 8
