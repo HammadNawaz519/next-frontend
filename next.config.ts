@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["localhost", "100.123.234.111"],
+  allowedDevOrigins: ["localhost", "127.0.0.1", "::1", "100.123.234.111"],
   
   // Disable server-side bundling for these native/browser-only modules
   serverExternalPackages: [
