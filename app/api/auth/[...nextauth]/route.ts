@@ -4,10 +4,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
-// Dynamically resolve the correct base URL for NextAuth callbacks.
+// Dynamically resolve the correct base URL for NextAuth callbacks if not already configured.
 // VERCEL_URL is automatically set by Vercel on every deployment.
-// Falls back to NEXTAUTH_URL for local dev.
-if (process.env.VERCEL_URL) {
+if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
   process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
 }
 

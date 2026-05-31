@@ -180,29 +180,34 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      // First, check if the account exists and is verified via a preflight
-      const preflight = await fetch('/api/auth/preflight', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (preflight.ok) {
-        const { verified } = await preflight.json();
-        if (verified === false) {
-          // Email exists but not verified — go to verify sheet
-          setError('');
-          setOtp(['', '', '', '', '', '']);
-          triggerSheetTransition('verify');
-          setInfo("Your email isn't verified yet. We've sent a new code.");
-          fetch('/api/resend-code', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email }),
-          });
-          setResendCooldown(60);
-          setLoading(false);
-          return;
+      // Check verification status via preflight, but catch any errors so it doesn't block login
+      try {
+        const preflight = await fetch('/api/auth/preflight', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        }).catch(() => null);
+
+        if (preflight && preflight.ok) {
+          const { verified } = await preflight.json();
+          if (verified === false) {
+            // Email exists but not verified — go to verify sheet
+            setError('');
+            setOtp(['', '', '', '', '', '']);
+            triggerSheetTransition('verify');
+            setInfo("Your email isn't verified yet. We've sent a new code.");
+            fetch('/api/resend-code', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email }),
+            });
+            setResendCooldown(60);
+            setLoading(false);
+            return;
+          }
         }
+      } catch (preflightErr) {
+        console.warn('Preflight check failed, proceeding directly to signIn:', preflightErr);
       }
 
       const res = await signIn('credentials', { redirect: false, email, password });
