@@ -76,9 +76,7 @@ const DefaultAvatarSvg = ({ size = 32, color, style }: { size?: number; color?: 
   <img 
     src="/Avatar.avif" 
     alt="Default Avatar" 
-    width={size} 
-    height={size} 
-    style={{ display: 'block', width: size, height: size, borderRadius: '50%', objectFit: 'cover', ...style }} 
+    style={{ display: 'block', width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', ...style }} 
   />
 );
 

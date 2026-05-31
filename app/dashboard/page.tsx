@@ -669,9 +669,7 @@ export default function DashboardPage() {
                                   {item.image ? (
                                     <img src={item.image} alt="user" className="w-full h-full object-cover" />
                                   ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-xs font-bold bg-zinc-400 text-white">
-                                      {item.name?.charAt(0) || 'U'}
-                                    </div>
+                                    <img src="/Avatar.avif" alt="user" className="w-full h-full object-cover" />
                                   )}
                                 </div>
                                 <div>
@@ -713,9 +711,7 @@ export default function DashboardPage() {
                                 {item.image ? (
                                   <img src={item.image} alt="user" className="w-full h-full object-cover" />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-xs font-bold bg-zinc-400 text-white">
-                                    {item.name?.charAt(0) || 'U'}
-                                  </div>
+                                  <img src="/Avatar.avif" alt="user" className="w-full h-full object-cover" />
                                 )}
                               </div>
                               <div>

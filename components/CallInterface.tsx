@@ -445,7 +445,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
                 </>
               )}
               <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 shadow-2xl flex items-center justify-center text-4xl font-bold" style={{ borderColor: 'var(--dm-border)', background: 'var(--dm-bg-sidebar)', color: 'var(--dm-text-primary)' }}>
-                {peer.image ? <img src={peer.image} className="w-full h-full object-cover" /> : peer.name?.charAt(0)}
+                {peer.image ? <img src={peer.image} className="w-full h-full object-cover" /> : <img src="/Avatar.avif" className="w-full h-full object-cover" />}
               </div>
             </div>
             <div className="space-y-2">

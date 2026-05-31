@@ -236,7 +236,7 @@ const SidebarItem = memo(({ user, isActive, onClick }: { user: User, isActive: b
         {user.image && user.image.length > 5 ? (
           <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
         ) : (
-          <span>{user.name?.charAt(0).toUpperCase()}</span>
+          <img src="/Avatar.avif" alt="avatar" />
         )}
       </div>
       <div className="meta">
@@ -1558,7 +1558,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <div className="user-pfp">
                         {user.image && user.image.length > 5
                           ? <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
-                          : user.name?.charAt(0).toUpperCase()
+                          : <img src="/Avatar.avif" alt="avatar" />
                         }
                       </div>
                       <span style={{
@@ -1612,7 +1612,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       {selectedUser.image && selectedUser.image.length > 5 ? (
                         <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
                       ) : (
-                        <span>{selectedUser.name?.charAt(0).toUpperCase()}</span>
+                        <img src="/Avatar.avif" alt="avatar" />
                       )}
                     </div>
                     <div className="info">
@@ -1691,7 +1691,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         {selectedUser.image && selectedUser.image.length > 5 ? (
                           <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
                         ) : (
-                          <div className="avatar-initials">{selectedUser.name?.charAt(0).toUpperCase()}</div>
+                          <img src="/Avatar.avif" alt="avatar" />
                         )}
                       </div>
                       <h3>Start a conversation</h3>
@@ -1944,7 +1944,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 <div className="absolute inset-0 rounded-full animate-ping [animation-duration:2s]" style={{ background: 'var(--dm-bg-input)' }} />
                 <div className="absolute -inset-6 rounded-full animate-pulse [animation-duration:3s]" style={{ background: 'var(--dm-bg-active)', opacity: 0.5 }} />
                 <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 shadow-2xl flex items-center justify-center text-4xl font-bold" style={{ borderColor: 'var(--dm-bg-main)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)' }}>
-                  {incomingCall.from.image ? <img src={incomingCall.from.image} className="w-full h-full object-cover" /> : incomingCall.from.name?.charAt(0)}
+                  {incomingCall.from.image ? <img src={incomingCall.from.image} className="w-full h-full object-cover" /> : <img src="/Avatar.avif" className="w-full h-full object-cover" />}
                 </div>
               </div>
               <div className="space-y-2">
