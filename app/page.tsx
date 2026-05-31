@@ -22,6 +22,20 @@ interface SuccessUser {
   image?: string;
 }
 
+const getApiUrl = (path: string): string => {
+  if (typeof window !== 'undefined') {
+    const isNative = 
+      (window as any).Capacitor ||
+      window.location.origin.includes('capacitor://') || 
+      window.location.protocol === 'file:' ||
+      (window.location.hostname === 'localhost' && !window.location.port);
+    if (isNative) {
+      return `https://the-dev-core.vercel.app${path}`;
+    }
+  }
+  return path;
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -182,7 +196,7 @@ export default function LoginPage() {
     try {
       // Check verification status via preflight, but catch any errors so it doesn't block login
       try {
-        const preflight = await fetch('/api/auth/preflight', {
+        const preflight = await fetch(getApiUrl('/api/auth/preflight'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email }),
@@ -196,7 +210,7 @@ export default function LoginPage() {
             setOtp(['', '', '', '', '', '']);
             triggerSheetTransition('verify');
             setInfo("Your email isn't verified yet. We've sent a new code.");
-            fetch('/api/resend-code', {
+            fetch(getApiUrl('/api/resend-code'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email }),
@@ -212,7 +226,7 @@ export default function LoginPage() {
 
       const res = await signIn('credentials', { redirect: false, email, password });
       if (res?.error) {
-        setError('Invalid email or password.');
+        setError(`Invalid email or password (${res.error}).`);
         setLoading(false);
       } else if (res?.ok) {
         router.push('/dashboard');
@@ -221,9 +235,9 @@ export default function LoginPage() {
         setError('Sign in failed. Please try again.');
         setLoading(false);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[LOGIN_ERROR]', err);
-      setError('Connection error. Please check your network and try again.');
+      setError(`Connection error: ${err?.message || err || 'Please check your network and try again.'}`);
       setLoading(false);
     }
   };
@@ -234,7 +248,7 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/register', {
+      const res = await fetch(getApiUrl('/api/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password }),
@@ -251,8 +265,8 @@ export default function LoginPage() {
         setLoading(false);
         setTimeout(() => otpRefs.current[0]?.focus(), 150);
       }
-    } catch {
-      setError('An error occurred. Please try again.');
+    } catch (err: any) {
+      setError(`Signup failed: ${err?.message || err || 'Please try again.'}`);
       setLoading(false);
     }
   };
@@ -265,7 +279,7 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/verify-email', {
+      const res = await fetch(getApiUrl('/api/verify-email'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code }),
@@ -281,12 +295,12 @@ export default function LoginPage() {
           setSuccessUser({ email, username });
           triggerSheetTransition('success');
         } else {
-          setError('Verified! Please sign in to continue.');
+          setError(`Verified, but sign in failed: ${signInRes?.error || 'Please sign in manually.'}`);
           triggerSheetTransition('signIn');
         }
       }
-    } catch {
-      setError('An error occurred. Please try again.');
+    } catch (err: any) {
+      setError(`Verification failed: ${err?.message || err || 'Please try again.'}`);
       setLoading(false);
     }
   };
@@ -345,7 +359,7 @@ export default function LoginPage() {
     setError('');
     setInfo('Sending new code...');
     try {
-      const res = await fetch('/api/resend-code', {
+      const res = await fetch(getApiUrl('/api/resend-code'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

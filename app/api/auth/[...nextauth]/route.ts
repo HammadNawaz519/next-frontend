@@ -10,6 +10,9 @@ if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
   process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
 }
 
+// Trust the host headers (essential for mobile WebView redirects and proxies)
+process.env.AUTH_TRUST_HOST = "true";
+
 export const authOptions: NextAuthOptions = {
   // No PrismaAdapter — JWT sessions are incompatible with it when using CredentialsProvider.
   // We handle DB writes manually via signIn callback (Google) and /api/register (credentials).
