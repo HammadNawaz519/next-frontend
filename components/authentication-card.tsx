@@ -232,7 +232,7 @@ export default function AuthenticationCard() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-white/90">
-                    Full Name
+                    Username
                   </Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
@@ -242,7 +242,7 @@ export default function AuthenticationCard() {
                       value={formData.name}
                       onChange={(e) => handleInputChange("name", e.target.value)}
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
-                      placeholder="Enter your full name"
+                      placeholder="Username"
                       required
                     />
                   </div>

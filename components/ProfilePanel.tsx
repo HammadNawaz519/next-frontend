@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { signOut } from 'next-auth/react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { signOut, signIn } from 'next-auth/react';
 import { useTheme } from '@/app/components/ThemeProvider';
 import { 
   updateProfileDetails, 
@@ -71,6 +71,12 @@ const ReelIcon = () => (
   </svg>
 );
 
+const DefaultAvatarSvg = ({ size = 32, color = 'currentColor', style }: { size?: number; color?: string; style?: React.CSSProperties }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" style={{ display: 'block', ...style }}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+
 /* ─── Main component ─── */
 export default function ProfilePanel({
   isOpen, isClosing, onClose, session, fullUser, targetUser, isDark,
@@ -83,6 +89,155 @@ export default function ProfilePanel({
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab]         = useState<'grid'|'reels'|'tagged'>('grid');
   const [copyToast, setCopyToast]         = useState(false);
+
+  // Switch account state
+  const [activeAccountSheet, setActiveAccountSheet] = useState<'none' | 'accounts' | 'options' | 'signIn' | 'signUp' | 'verify' | 'success'>('none');
+  const [targetAccountSheet, setTargetAccountSheet] = useState<'none' | 'accounts' | 'options' | 'signIn' | 'signUp' | 'verify' | 'success'>('none');
+  const [savedAccounts, setSavedAccounts] = useState<any[]>([]);
+
+  // Switch account form fields
+  const [switchEmail, setSwitchEmail] = useState('');
+  const [switchPassword, setSwitchPassword] = useState('');
+  const [switchUsername, setSwitchUsername] = useState('');
+  const [switchOtp, setSwitchOtp] = useState(['', '', '', '', '', '']);
+  const [switchError, setSwitchError] = useState('');
+  const [switchLoading, setSwitchLoading] = useState(false);
+  const [switchCooldown, setSwitchCooldown] = useState(0);
+
+  const switchOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Sync saved accounts
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (fullUser || session?.user)) {
+      const curUsername = fullUser?.username || session?.user?.username || (fullUser?.email || session?.user?.email || '').split('@')[0] || 'user';
+      const curEmail = fullUser?.email || session?.user?.email || '';
+      const curImage = fullUser?.image || session?.user?.image || '';
+      const curName = fullUser?.name || session?.user?.name || 'User';
+
+      try {
+        const stored = localStorage.getItem('connected_accounts');
+        let list = stored ? JSON.parse(stored) : [];
+        if (!Array.isArray(list)) list = [];
+        
+        const exists = list.some((acc: any) => acc.email === curEmail || acc.username === curUsername);
+        if (!exists && curEmail) {
+          list.push({ username: curUsername, email: curEmail, image: curImage, name: curName });
+          localStorage.setItem('connected_accounts', JSON.stringify(list));
+        }
+        setSavedAccounts(list);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, [fullUser, session]);
+
+  // Transition helper
+  const triggerAccountSheetTransition = (nextSheet: typeof activeAccountSheet) => {
+    setTargetAccountSheet(nextSheet);
+    setActiveAccountSheet('none');
+    setTimeout(() => {
+      setActiveAccountSheet(nextSheet);
+    }, 250);
+  };
+
+  const handleAccountSwitch = async (acc: any) => {
+    const curUsername = fullUser?.username || session?.user?.username || (fullUser?.email || session?.user?.email || '').split('@')[0] || 'user';
+    if (acc.username === curUsername) {
+      triggerAccountSheetTransition('none');
+      return;
+    }
+    setSwitchEmail(acc.email);
+    setSwitchPassword('');
+    setSwitchError('');
+    triggerAccountSheetTransition('signIn');
+  };
+
+  const handleSwitchLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSwitchLoading(true);
+    setSwitchError('');
+    try {
+      const res = await signIn('credentials', { redirect: false, email: switchEmail, password: switchPassword });
+      if (res?.error === 'EMAIL_NOT_VERIFIED') {
+        setSwitchOtp(['', '', '', '', '', '']);
+        triggerAccountSheetTransition('verify');
+        fetch('/api/resend-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: switchEmail }),
+        });
+        setSwitchCooldown(60);
+      } else if (res?.error) {
+        setSwitchError('Invalid email or password.');
+      } else {
+        if (refreshProfile) refreshProfile();
+        triggerAccountSheetTransition('none');
+        if (typeof window !== 'undefined') {
+          window.location.reload();
+        }
+      }
+    } catch (err) {
+      setSwitchError('An error occurred.');
+    } finally {
+      setSwitchLoading(false);
+    }
+  };
+
+  const handleSwitchSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSwitchLoading(true);
+    setSwitchError('');
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: switchUsername, email: switchEmail, password: switchPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSwitchError(data.message || 'Registration failed.');
+      } else {
+        setSwitchOtp(['', '', '', '', '', '']);
+        setSwitchCooldown(60);
+        triggerAccountSheetTransition('verify');
+      }
+    } catch (err) {
+      setSwitchError('An error occurred.');
+    } finally {
+      setSwitchLoading(false);
+    }
+  };
+
+  const handleSwitchVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = switchOtp.join('');
+    if (code.length < 6) { setSwitchError('Please enter the full code.'); return; }
+    setSwitchLoading(true);
+    setSwitchError('');
+    try {
+      const res = await fetch('/api/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: switchEmail, code }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSwitchError(data.message || 'Verification failed.');
+      } else {
+        const signInRes = await signIn('credentials', { redirect: false, email: switchEmail, password: switchPassword });
+        if (signInRes?.ok) {
+          triggerAccountSheetTransition('success');
+        } else {
+          setSwitchError('Verified! Please sign in.');
+          triggerAccountSheetTransition('signIn');
+        }
+      }
+    } catch (err) {
+      setSwitchError('An error occurred.');
+    } finally {
+      setSwitchLoading(false);
+    }
+  };
 
   /* Multi-page Navigation States */
   const [subView, setSubView]             = useState<'profile' | 'followers' | 'following' | 'edit_profile' | 'follow_requests' | 'settings' | 'notifications'>('profile');
@@ -122,7 +277,7 @@ export default function ProfilePanel({
 
   useEffect(() => {
     if (fullUser) {
-      setEditName(fullUser.name || '');
+      setEditName(fullUser.name || 'User');
       setEditUsername(fullUser.username || '');
       setEditBio(fullUser.bio || '');
       setEditWebsite(fullUser.website || '');
@@ -433,39 +588,23 @@ export default function ProfilePanel({
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
             <button onClick={onClose} style={{
-              width:36, height:36, borderRadius:'50%', border:`1px solid ${btnBdr}`, cursor:'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              background: btnBg, color:txt,
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: txt, padding: 0
             }}>
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
               </svg>
             </button>
 
-            <span style={{fontWeight:700, fontSize:16, color:txt}}>@{username}</span>
+            <span 
+              onClick={() => triggerAccountSheetTransition('accounts')}
+              style={{fontWeight:700, fontSize:16, color:txt, cursor:'pointer'}}
+            >
+              @{username}
+            </span>
 
             <div style={{display:'flex', gap:3, alignItems:'center'}}>
-              {/* Theme Toggle Button - Sleek rectangular web vibe */}
-              <button 
-                onClick={toggleTheme} 
-                style={{
-                  width: 36, height: 36, borderRadius: '50%', border: 'none',
-                  background: 'none', color: txt, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0
-                }}
-                title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              >
-                {theme === 'dark' ? (
-                  <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                    <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                  </svg>
-                ) : (
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                  </svg>
-                )}
-              </button>
-
               {/* Options/Settings trigger - only for own profile */}
               {isOwnProfile && (
                 <button 
@@ -500,7 +639,7 @@ export default function ProfilePanel({
               >
                 {image
                   ? <img src={image} alt={name} style={{width:'100%',height:'100%',objectFit:'cover'}} referrerPolicy="no-referrer"/>
-                  : <span style={{fontSize:28, fontWeight:700, color: isDark?'#fff':'#374151'}}>{name.charAt(0).toUpperCase()}</span>
+                  : <DefaultAvatarSvg size={60} color={isDark ? '#fff' : '#374151'} />
                 }
               </div>
 
@@ -522,13 +661,9 @@ export default function ProfilePanel({
             {/* Bio Section */}
             <div style={{padding:'4px 16px 12px', display:'flex', flexDirection:'column', gap:3}}>
               <span style={{fontWeight:700, fontSize:14, color:txt}}>{name}</span>
-              {bio ? (
-                bio.split('\n').map((line: string, i: number) => (
-                  <span key={i} style={{fontSize:13, color:sub}}>{line}</span>
-                ))
-              ) : (
-                <span style={{fontSize:13, color:sub, fontStyle: 'italic'}}>No bio set yet.</span>
-              )}
+              {bio && bio.split('\n').map((line: string, i: number) => (
+                <span key={i} style={{fontSize:13, color:sub}}>{line}</span>
+              ))}
               
               {website && (
                 <a
@@ -751,9 +886,7 @@ export default function ProfilePanel({
               }}>
                 {image 
                   ? <img src={image} alt={name} style={{width: '100%', height: '100%', objectFit: 'cover'}} referrerPolicy="no-referrer" />
-                  : <div style={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 20, color: txt}}>
-                      {name.charAt(0).toUpperCase()}
-                    </div>
+                  : <DefaultAvatarSvg size={44} color={txt} />
                 }
               </div>
               <div style={{display: 'flex', flexDirection: 'column', gap: 2}}>
@@ -1080,10 +1213,12 @@ export default function ProfilePanel({
                 <input
                   type="text"
                   value={editUsername}
-                  onChange={e => setEditUsername(e.target.value)}
+                  disabled
+                  readOnly
                   style={{
                     padding: '12px 18px', borderRadius: '24px', border: `1px solid ${border}`,
-                    background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none'
+                    background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: sub, fontSize: 14, outline: 'none',
+                    cursor: 'not-allowed', opacity: 0.6
                   }}
                 />
               </div>
@@ -1207,7 +1342,7 @@ export default function ProfilePanel({
                     }}>
                       {f.image 
                         ? <img src={f.image} alt={f.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                        : <span style={{fontWeight: 700}}>{(f.name || 'U').charAt(0).toUpperCase()}</span>
+                        : <DefaultAvatarSvg size={28} color={txt} />
                       }
                     </div>
                     <div style={{display: 'flex', flexDirection: 'column'}}>
@@ -1295,7 +1430,7 @@ export default function ProfilePanel({
                     }}>
                       {f.image 
                         ? <img src={f.image} alt={f.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                        : <span style={{fontWeight: 700}}>{(f.name || 'U').charAt(0).toUpperCase()}</span>
+                        : <DefaultAvatarSvg size={28} color={txt} />
                       }
                     </div>
                     <div style={{display: 'flex', flexDirection: 'column'}}>
@@ -1359,7 +1494,7 @@ export default function ProfilePanel({
                   }}>
                     {req.sender.image 
                       ? <img src={req.sender.image} alt={req.sender.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                      : <span style={{fontWeight: 700}}>{(req.sender.name || 'U').charAt(0).toUpperCase()}</span>
+                      : <DefaultAvatarSvg size={28} color={txt} />
                     }
                   </div>
                   <div style={{display: 'flex', flexDirection: 'column'}}>
@@ -1448,7 +1583,7 @@ export default function ProfilePanel({
                         }}>
                           {req.sender.image 
                             ? <img src={req.sender.image} alt={req.sender.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                            : <span style={{fontWeight: 700}}>{(req.sender.name || 'U').charAt(0).toUpperCase()}</span>
+                            : <DefaultAvatarSvg size={24} color={txt} />
                           }
                         </div>
                         <div style={{display: 'flex', flexDirection: 'column'}}>
@@ -1533,6 +1668,404 @@ export default function ProfilePanel({
           </div>
         </>
       )}
+
+      {/* ── Switch Account Sheets Overlay & Backdrop ── */}
+      {activeAccountSheet !== 'none' && (
+        <div 
+          onClick={() => triggerAccountSheetTransition('none')}
+          style={{
+            position: 'absolute', inset: 0, zIndex: 90,
+            background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
+            transition: 'opacity 0.3s ease',
+          }}
+        />
+      )}
+
+      {/* 1. Accounts list sheet */}
+      <div
+        style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
+          background: '#ffffff', borderTop: '1px solid #e5e7eb', borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
+          padding: '24px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.15)',
+          transform: activeAccountSheet === 'accounts' ? 'translateY(0)' : 'translateY(100%)',
+          opacity: activeAccountSheet === 'accounts' ? 1 : 0,
+          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
+          pointerEvents: activeAccountSheet === 'accounts' ? 'auto' : 'none',
+        }}
+      >
+        <div style={{ width: 48, height: 4, background: '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#121214', marginBottom: 16, textAlign: 'center' }}>Switch Account</h2>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20, maxHeight: 220, overflowY: 'auto' }}>
+          {savedAccounts.map((acc, idx) => {
+            const curUsername = fullUser?.username || session?.user?.username || (fullUser?.email || session?.user?.email || '').split('@')[0] || 'user';
+            const isActive = acc.username === curUsername;
+            return (
+              <div 
+                key={idx}
+                onClick={() => handleAccountSwitch(acc)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 16px', borderRadius: '16px', background: '#f9fafb',
+                  cursor: 'pointer', border: isActive ? '1px solid #121214' : '1px solid transparent',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 38, height: 38, borderRadius: '50%', background: '#e5e7eb',
+                    overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {acc.image 
+                      ? <img src={acc.image} alt={acc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <DefaultAvatarSvg size={24} color="#374151" />
+                    }
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#121214' }}>{acc.name || 'User'}</span>
+                    <span style={{ fontSize: 11, color: '#6b7280' }}>@{acc.username}</span>
+                  </div>
+                </div>
+                {isActive && (
+                  <svg width="18" height="18" fill="none" stroke="#121214" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div 
+          onClick={() => triggerAccountSheetTransition('options')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '12px 16px', borderRadius: '16px', background: '#f3f4f6',
+            cursor: 'pointer', transition: 'all 0.2s',
+          }}
+        >
+          <div style={{
+            width: 38, height: 38, borderRadius: '50%', background: '#121214',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+          }}>
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#121214' }}>Add Account</span>
+        </div>
+      </div>
+
+      {/* 2. Options (SignIn/SignUp chooser) sheet */}
+      <div
+        style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
+          background: '#ffffff', borderTop: '1px solid #e5e7eb', borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
+          padding: '24px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.15)',
+          transform: activeAccountSheet === 'options' ? 'translateY(0)' : 'translateY(100%)',
+          opacity: activeAccountSheet === 'options' ? 1 : 0,
+          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
+          pointerEvents: activeAccountSheet === 'options' ? 'auto' : 'none',
+        }}
+      >
+        <div style={{ width: 48, height: 4, background: '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#121214', marginBottom: 4, textAlign: 'center' }}>Add Account</h2>
+        <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 20, textAlign: 'center' }}>
+          Choose whether to log in to an existing account or create a new one.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+          <button
+            onClick={() => triggerAccountSheetTransition('signIn')}
+            style={{
+              width: '100%', padding: '14px 0', background: '#121214', color: '#fff',
+              borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 13,
+            }}
+          >
+            Log into Existing Account
+          </button>
+          <button
+            onClick={() => triggerAccountSheetTransition('signUp')}
+            style={{
+              width: '100%', padding: '14px 0', background: '#f3f4f6', color: '#121214',
+              borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: '1px solid #e5e7eb', fontSize: 13,
+            }}
+          >
+            Create New Account
+          </button>
+          <button
+            onClick={() => triggerAccountSheetTransition('accounts')}
+            style={{
+              width: '100%', padding: '10px 0', background: 'none', color: '#6b7280',
+              borderRadius: '100px', fontWeight: 600, cursor: 'pointer', border: 'none', fontSize: 12,
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      {/* 3. Sign In form sheet */}
+      <div
+        style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
+          background: '#ffffff', borderTop: '1px solid #e5e7eb', borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
+          padding: '24px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.15)',
+          transform: activeAccountSheet === 'signIn' ? 'translateY(0)' : 'translateY(100%)',
+          opacity: activeAccountSheet === 'signIn' ? 1 : 0,
+          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
+          pointerEvents: activeAccountSheet === 'signIn' ? 'auto' : 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <button 
+            type="button"
+            onClick={() => triggerAccountSheetTransition('options')}
+            style={{ background: 'none', border: 'none', color: '#121214', cursor: 'pointer', padding: 0 }}
+          >
+            <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </button>
+          <div style={{ width: 48, height: 4, background: '#e5e7eb', borderRadius: 2 }} />
+          <div style={{ width: 22 }} />
+        </div>
+
+        <form onSubmit={handleSwitchLogin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#121214', marginBottom: 4 }}>Sign In</h2>
+          {switchError && <div style={{ color: '#ef4444', fontSize: 12, fontWeight: 600 }}>{switchError}</div>}
+          
+          <input
+            type="email"
+            placeholder="Email Address"
+            required
+            value={switchEmail}
+            onChange={e => setSwitchEmail(e.target.value)}
+            style={{
+              width: '100%', borderRadius: '100px', background: '#f9fafb', color: '#121214', border: '1px solid #e5e7eb',
+              padding: '12px 20px', outline: 'none', fontSize: 13
+            }}
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            required
+            value={switchPassword}
+            onChange={e => setSwitchPassword(e.target.value)}
+            style={{
+              width: '100%', borderRadius: '100px', background: '#f9fafb', color: '#121214', border: '1px solid #e5e7eb',
+              padding: '12px 20px', outline: 'none', fontSize: 13
+            }}
+          />
+
+          <button
+            type="submit"
+            disabled={switchLoading}
+            style={{
+              width: '100%', padding: '14px 0', background: '#121214', color: '#fff',
+              borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 13,
+              opacity: switchLoading ? 0.6 : 1, transition: 'all 0.2s', marginTop: 10
+            }}
+          >
+            {switchLoading ? 'Signing In...' : 'Sign In'}
+          </button>
+        </form>
+      </div>
+
+      {/* 4. Sign Up form sheet */}
+      <div
+        style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
+          background: '#ffffff', borderTop: '1px solid #e5e7eb', borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
+          padding: '24px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.15)',
+          transform: activeAccountSheet === 'signUp' ? 'translateY(0)' : 'translateY(100%)',
+          opacity: activeAccountSheet === 'signUp' ? 1 : 0,
+          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
+          pointerEvents: activeAccountSheet === 'signUp' ? 'auto' : 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <button 
+            type="button"
+            onClick={() => triggerAccountSheetTransition('options')}
+            style={{ background: 'none', border: 'none', color: '#121214', cursor: 'pointer', padding: 0 }}
+          >
+            <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </button>
+          <div style={{ width: 48, height: 4, background: '#e5e7eb', borderRadius: 2 }} />
+          <div style={{ width: 22 }} />
+        </div>
+
+        <form onSubmit={handleSwitchSignup} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#121214', marginBottom: 4 }}>Sign Up</h2>
+          {switchError && <div style={{ color: '#ef4444', fontSize: 12, fontWeight: 600 }}>{switchError}</div>}
+
+          <input
+            type="text"
+            placeholder="Username"
+            required
+            value={switchUsername}
+            onChange={e => setSwitchUsername(e.target.value)}
+            style={{
+              width: '100%', borderRadius: '100px', background: '#f9fafb', color: '#121214', border: '1px solid #e5e7eb',
+              padding: '12px 20px', outline: 'none', fontSize: 13
+            }}
+          />
+
+          <input
+            type="email"
+            placeholder="Email Address"
+            required
+            value={switchEmail}
+            onChange={e => setSwitchEmail(e.target.value)}
+            style={{
+              width: '100%', borderRadius: '100px', background: '#f9fafb', color: '#121214', border: '1px solid #e5e7eb',
+              padding: '12px 20px', outline: 'none', fontSize: 13
+            }}
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            required
+            value={switchPassword}
+            onChange={e => setSwitchPassword(e.target.value)}
+            style={{
+              width: '100%', borderRadius: '100px', background: '#f9fafb', color: '#121214', border: '1px solid #e5e7eb',
+              padding: '12px 20px', outline: 'none', fontSize: 13
+            }}
+          />
+
+          <button
+            type="submit"
+            disabled={switchLoading}
+            style={{
+              width: '100%', padding: '14px 0', background: '#121214', color: '#fff',
+              borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 13,
+              opacity: switchLoading ? 0.6 : 1, transition: 'all 0.2s', marginTop: 10
+            }}
+          >
+            {switchLoading ? 'Creating Account...' : 'Sign Up'}
+          </button>
+        </form>
+      </div>
+
+      {/* 5. OTP verification sheet */}
+      <div
+        style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
+          background: '#ffffff', borderTop: '1px solid #e5e7eb', borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
+          padding: '24px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.15)',
+          transform: activeAccountSheet === 'verify' ? 'translateY(0)' : 'translateY(100%)',
+          opacity: activeAccountSheet === 'verify' ? 1 : 0,
+          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
+          pointerEvents: activeAccountSheet === 'verify' ? 'auto' : 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <button 
+            type="button"
+            onClick={() => triggerAccountSheetTransition('signUp')}
+            style={{ background: 'none', border: 'none', color: '#121214', cursor: 'pointer', padding: 0 }}
+          >
+            <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </button>
+          <div style={{ width: 48, height: 4, background: '#e5e7eb', borderRadius: 2 }} />
+          <div style={{ width: 22 }} />
+        </div>
+
+        <form onSubmit={handleSwitchVerify} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#121214' }}>Verify Email</h2>
+          <p style={{ fontSize: 13, color: '#6b7280', margin: '-10px 0 10px 0' }}>We sent a 6-digit code to {switchEmail}</p>
+          {switchError && <div style={{ color: '#ef4444', fontSize: 12, fontWeight: 600 }}>{switchError}</div>}
+
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+            {switchOtp.map((digit, i) => (
+              <input
+                key={i}
+                ref={el => { switchOtpRefs.current[i] = el; }}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={e => {
+                  const raw = e.target.value.replace(/\D/g, '');
+                  const next = [...switchOtp];
+                  next[i] = raw;
+                  setSwitchOtp(next);
+                  if (raw && i < 5) switchOtpRefs.current[i + 1]?.focus();
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Backspace' && !switchOtp[i] && i > 0) {
+                    switchOtpRefs.current[i - 1]?.focus();
+                  }
+                }}
+                style={{
+                  width: 40, height: 40, textAlign: 'center', fontSize: 18, fontWeight: 700,
+                  background: '#f9fafb', color: '#121214', border: '1px solid #e5e7eb', borderRadius: '12px',
+                  outline: 'none'
+                }}
+              />
+            ))}
+          </div>
+
+          <button
+            type="submit"
+            disabled={switchLoading || switchOtp.some(d => !d)}
+            style={{
+              width: '100%', padding: '14px 0', background: '#121214', color: '#fff',
+              borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 13,
+              opacity: switchLoading ? 0.6 : 1, transition: 'all 0.2s', marginTop: 10
+            }}
+          >
+            {switchLoading ? 'Verifying...' : 'Verify Code'}
+          </button>
+        </form>
+      </div>
+
+      {/* 6. Success sheet */}
+      <div
+        style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
+          background: '#ffffff', borderTop: '1px solid #e5e7eb', borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
+          padding: '32px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.15)',
+          transform: activeAccountSheet === 'success' ? 'translateY(0)' : 'translateY(100%)',
+          opacity: activeAccountSheet === 'success' ? 1 : 0,
+          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
+          pointerEvents: activeAccountSheet === 'success' ? 'auto' : 'none',
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: '50%', background: '#10b981',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+          }}>
+            <svg width="26" height="26" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#121214' }}>Welcome!</h2>
+          <p style={{ fontSize: 13, color: '#6b7280' }}>Your account is verified and ready to go.</p>
+          <button
+            onClick={() => {
+              triggerAccountSheetTransition('none');
+              if (typeof window !== 'undefined') window.location.reload();
+            }}
+            style={{
+              width: '100%', padding: '14px 0', background: '#121214', color: '#fff',
+              borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 13,
+              marginTop: 10
+            }}
+          >
+            Let's Go
+          </button>
+        </div>
+      </div>
 
     </div>
   );
