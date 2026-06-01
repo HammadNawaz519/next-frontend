@@ -148,42 +148,52 @@ export default function LoginPage() {
 
   // OTP handlers
   const handleOtpChange = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    // Strip non-digits; take the LAST character so replacing a filled box works
     const raw = e.target.value.replace(/\D/g, '');
     if (!raw) {
       const next = [...otp];
       next[i] = '';
       setOtp(next);
-      if (i > 0) requestAnimationFrame(() => otpRefs.current[i - 1]?.focus());
       return;
     }
-
-    if (raw.length > 1) {
-      const digits = raw.slice(0, 6 - i).split('');
-      const next = [...otp];
-      digits.forEach((d, offset) => { if (i + offset < 6) next[i + offset] = d; });
-      setOtp(next);
-      const nextIdx = Math.min(i + digits.length, 5);
-      requestAnimationFrame(() => otpRefs.current[nextIdx]?.focus());
-      return;
-    }
-
+    const digit = raw[raw.length - 1]; // always 1 char
     const next = [...otp];
-    next[i] = raw;
+    next[i] = digit;
     setOtp(next);
+    // Auto-advance to next box
     if (i < 5) requestAnimationFrame(() => otpRefs.current[i + 1]?.focus());
   };
 
-  const handleOtpKeyDown = (i: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otp[i] && i > 0) {
+  const handleOtpKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (otp[i]) {
+        // Clear current box
+        const next = [...otp];
+        next[i] = '';
+        setOtp(next);
+      } else if (i > 0) {
+        // Already empty — move back and clear previous
+        const next = [...otp];
+        next[i - 1] = '';
+        setOtp(next);
+        requestAnimationFrame(() => otpRefs.current[i - 1]?.focus());
+      }
+      e.preventDefault();
+    } else if (e.key === 'ArrowLeft' && i > 0) {
       requestAnimationFrame(() => otpRefs.current[i - 1]?.focus());
+    } else if (e.key === 'ArrowRight' && i < 5) {
+      requestAnimationFrame(() => otpRefs.current[i + 1]?.focus());
     }
   };
 
   const handleOtpPaste = (e: React.ClipboardEvent) => {
     const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (text.length === 6) {
-      setOtp(text.split(''));
-      otpRefs.current[5]?.focus();
+    if (text.length > 0) {
+      const next = ['', '', '', '', '', ''];
+      text.split('').forEach((d, idx) => { next[idx] = d; });
+      setOtp(next);
+      const focusIdx = Math.min(text.length, 5);
+      requestAnimationFrame(() => otpRefs.current[focusIdx]?.focus());
     }
     e.preventDefault();
   };
@@ -458,10 +468,11 @@ export default function LoginPage() {
                       ref={(el) => { otpRefs.current[i] = el; }}
                       type="text"
                       inputMode="numeric"
-                      maxLength={6}
+                      maxLength={1}
                       value={digit}
                       onChange={(e) => handleOtpChange(i, e)}
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                      onFocus={(e) => e.target.select()}
                       className="w-[48px] h-[54px] text-center text-xl font-medium border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-900"
                     />
                   ))}
@@ -968,11 +979,12 @@ export default function LoginPage() {
                   type="text"
                   inputMode="numeric"
                   autoComplete={i === 0 ? 'one-time-code' : 'off'}
-                  maxLength={6}
+                  maxLength={1}
                   value={digit}
                   onChange={(e) => handleOtpChange(i, e)}
                   onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                  className="w-10 h-10 text-center text-lg font-bold bg-[#1c1c1e] text-white border border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-500 transition-colors caret-transparent"
+                  onFocus={(e) => e.target.select()}
+                  className="w-10 h-10 text-center text-lg font-bold bg-[#1c1c1e] text-white border border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-500 transition-colors"
                 />
               ))}
             </div>
@@ -1086,11 +1098,12 @@ export default function LoginPage() {
                 type="text"
                 inputMode="numeric"
                 autoComplete={i === 0 ? 'one-time-code' : 'off'}
-                maxLength={6}
+                maxLength={1}
                 value={digit}
                 onChange={(e) => handleOtpChange(i, e)}
                 onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                className="w-10 h-10 text-center text-lg font-bold bg-[#1c1c1e] text-white border border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-500 transition-colors caret-transparent"
+                onFocus={(e) => e.target.select()}
+                className="w-10 h-10 text-center text-lg font-bold bg-[#1c1c1e] text-white border border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-500 transition-colors"
               />
             ))}
           </div>
