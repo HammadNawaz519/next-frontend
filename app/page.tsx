@@ -960,7 +960,7 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleVerifyResetCode} className="space-y-4">
-            <div className="flex gap-2 justify-center my-6" onPaste={handleOtpPaste}>
+            <div className="flex gap-2 justify-center mb-4" onPaste={handleOtpPaste}>
               {otp.map((digit, i) => (
                 <input
                   key={i}
@@ -986,7 +986,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="text-center mt-6">
+          <div className="text-center mt-2">
             <button
               type="button"
               onClick={handleResend}
@@ -1078,7 +1078,7 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleVerify} className="space-y-4">
-          <div className="flex gap-2 justify-center my-6" onPaste={handleOtpPaste}>
+          <div className="flex gap-2 justify-center mb-4" onPaste={handleOtpPaste}>
             {otp.map((digit, i) => (
               <input
                 key={i}
@@ -1104,7 +1104,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="text-center mt-6">
+        <div className="text-center mt-2">
           <button
             type="button"
             onClick={handleResend}
