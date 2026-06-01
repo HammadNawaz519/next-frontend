@@ -4,27 +4,18 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
-// Dynamically resolve the correct base URL for NextAuth callbacks if not already configured.
-// VERCEL_URL is automatically set by Vercel on every deployment.
-if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
-  process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
-}
-
-// Trust the host headers (essential for mobile WebView redirects and proxies)
+// Trust host headers — required for Vercel, proxies, and mobile WebViews
 process.env.AUTH_TRUST_HOST = "true";
 
 export const authOptions: NextAuthOptions = {
-  // No PrismaAdapter — JWT sessions are incompatible with it when using CredentialsProvider.
-  // We handle DB writes manually via signIn callback (Google) and /api/register (credentials).
-
   providers: [
-    // ── Google OAuth ──────────────────────────────────────────────────────────
+    // ── Google OAuth ─────────────────────────────────────────────────────────
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
 
-    // ── Email + Password ──────────────────────────────────────────────────────
+    // ── Email + Password ─────────────────────────────────────────────────────
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -38,23 +29,31 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            username: true,
+            image: true,
+            password: true,
+            emailVerified: true,
+          },
         });
 
         if (!user || !user.password) {
           throw new Error("No account found with this email.");
         }
 
-        // Block unverified users
         if (!user.emailVerified) {
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
-        const isPasswordValid = await bcrypt.compare(
+        const passwordOk = await bcrypt.compare(
           credentials.password,
           user.password
         );
 
-        if (!isPasswordValid) {
+        if (!passwordOk) {
           throw new Error("Incorrect password.");
         }
 
@@ -62,7 +61,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name ?? user.username ?? null,
-          image: user.image,
+          image: user.image ?? null,
         };
       },
     }),
@@ -70,32 +69,31 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: "jwt",
-    maxAge: 365 * 24 * 60 * 60, // 1 year session persistence for mobile/PWA
+    maxAge: 365 * 24 * 60 * 60,
   },
+
   cookies: {
     sessionToken: {
-      name: process.env.NODE_ENV === "production" ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 365 * 24 * 60 * 60, // Keep session cookie on disk for 1 year
+        maxAge: 365 * 24 * 60 * 60,
       },
     },
   },
 
   callbacks: {
-    // ── Save Google users to DB on first sign-in ──────────────────────────────
+    // ── Google: upsert user in DB on first sign-in ───────────────────────────
     async signIn({ user, account }) {
       if (account?.provider === "google") {
+        if (!user.email) return false;
         try {
-          if (!user.email) {
-            console.error("[GOOGLE_SIGNIN_ERROR] No email returned from Google");
-            return false;
-          }
-
-          // Attempt DB write
           await prisma.user.upsert({
             where: { email: user.email },
             update: {
@@ -110,39 +108,34 @@ export const authOptions: NextAuthOptions = {
               emailVerified: new Date(),
             },
           });
-          
-          console.log("[GOOGLE_SIGNIN_SUCCESS] User saved to database");
           return true;
-        } catch (error) {
-          console.error("[GOOGLE_SIGNIN_DB_ERROR] Failed to upsert user:", error);
-          // Return false to block sign-in if database write fails (prevents inconsistent state)
+        } catch (err) {
+          console.error("[GOOGLE_SIGNIN_ERROR]", err);
           return false;
         }
       }
       return true;
     },
 
-    async jwt({ token, user, account, trigger, session }) {
+    // ── JWT: written once on sign-in, no extra DB calls after ────────────────
+    async jwt({ token, user, account }) {
       if (user) {
-        // Find the user in our DB to get their CUID
-        const dbUser = await prisma.user.findUnique({
-          where: { email: user.email! }
-        });
-        if (dbUser) {
-          token.id = dbUser.id;
+        if (account?.provider === "google" && user.email) {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: user.email },
+            select: { id: true },
+          });
+          token.id = dbUser?.id ?? user.id;
         } else {
           token.id = user.id;
         }
         token.email = user.email;
         token.name = user.name;
-        token.picture = user.image;
-      }
-      if (account) {
-        token.provider = account.provider;
+        token.picture = user.image ?? null;
+        token.provider = account?.provider ?? "credentials";
       }
       return token;
     },
-
 
     async session({ session, token }) {
       if (token && session.user) {
@@ -158,16 +151,10 @@ export const authOptions: NextAuthOptions = {
 
   pages: {
     signIn: "/",
-    // Temporarily disabled to see the real NextAuth error page
-    // error: "/", 
   },
 
   secret: process.env.NEXTAUTH_SECRET,
 };
-
-// Runtime environment check
-console.log("[AUTH_INIT] NEXTAUTH_URL:", process.env.NEXTAUTH_URL);
-console.log("[AUTH_INIT] DATABASE_URL present:", !!process.env.DATABASE_URL);
 
 export const dynamic = "force-dynamic";
 

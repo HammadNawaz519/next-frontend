@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
-    const { email, code } = await req.json();
+    const { email, code } = await req.json() as { email: string; code: string };
 
     if (!email || !code) {
       return NextResponse.json(
@@ -14,7 +14,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Look up the pending (unverified) registration
     const pending = await prisma.pendingUser.findUnique({ where: { email } });
 
     if (!pending) {
@@ -25,10 +24,9 @@ export async function POST(req: Request) {
     }
 
     if (new Date() > pending.verifyExpiry) {
-      // Clean up expired pending record
       await prisma.pendingUser.delete({ where: { email } });
       return NextResponse.json(
-        { message: "Verification code has expired. Please sign up again." },
+        { message: "Verification code expired. Please sign up again." },
         { status: 400 }
       );
     }
@@ -40,7 +38,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // OTP is valid — create the real User record
+    // Promote PendingUser → real User
     await prisma.user.create({
       data: {
         email: pending.email,
@@ -51,13 +49,10 @@ export async function POST(req: Request) {
       },
     });
 
-    // Remove the pending record
+    // Clean up pending record
     await prisma.pendingUser.delete({ where: { email } });
 
-    return NextResponse.json(
-      { message: "Email verified successfully." },
-      { status: 200 }
-    );
+    return NextResponse.json({ message: "Email verified successfully." }, { status: 200 });
   } catch (error) {
     console.error("[VERIFY_EMAIL_ERROR]", error);
     return NextResponse.json(

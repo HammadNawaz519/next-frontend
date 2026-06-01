@@ -194,39 +194,21 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      // Check verification status via preflight, but catch any errors so it doesn't block login
-      try {
-        const preflight = await fetch(getApiUrl('/api/auth/preflight'), {
+      const res = await signIn('credentials', { redirect: false, email, password });
+      if (res?.error === 'EMAIL_NOT_VERIFIED') {
+        // Redirect to OTP verify sheet and resend code
+        setOtp(['', '', '', '', '', '']);
+        triggerSheetTransition('verify');
+        setInfo("Your email isn't verified yet. We've sent a new code.");
+        fetch('/api/resend-code', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email }),
-        }).catch(() => null);
-
-        if (preflight && preflight.ok) {
-          const { verified } = await preflight.json();
-          if (verified === false) {
-            // Email exists but not verified — go to verify sheet
-            setError('');
-            setOtp(['', '', '', '', '', '']);
-            triggerSheetTransition('verify');
-            setInfo("Your email isn't verified yet. We've sent a new code.");
-            fetch(getApiUrl('/api/resend-code'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email }),
-            });
-            setResendCooldown(60);
-            setLoading(false);
-            return;
-          }
-        }
-      } catch (preflightErr) {
-        console.warn('Preflight check failed, proceeding directly to signIn:', preflightErr);
-      }
-
-      const res = await signIn('credentials', { redirect: false, email, password });
-      if (res?.error) {
-        setError(`Invalid email or password (${res.error}).`);
+        });
+        setResendCooldown(60);
+        setLoading(false);
+      } else if (res?.error) {
+        setError('Invalid email or password. Please try again.');
         setLoading(false);
       } else if (res?.ok) {
         router.push('/dashboard');
@@ -237,7 +219,7 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.error('[LOGIN_ERROR]', err);
-      setError(`Connection error: ${err?.message || err || 'Please check your network and try again.'}`);
+      setError('Connection error. Please check your network and try again.');
       setLoading(false);
     }
   };
@@ -248,7 +230,7 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(getApiUrl('/api/register'), {
+      const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password }),
@@ -266,7 +248,7 @@ export default function LoginPage() {
         setTimeout(() => otpRefs.current[0]?.focus(), 150);
       }
     } catch (err: any) {
-      setError(`Signup failed: ${err?.message || err || 'Please try again.'}`);
+      setError('Signup failed. Please check your connection and try again.');
       setLoading(false);
     }
   };
@@ -279,7 +261,7 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(getApiUrl('/api/verify-email'), {
+      const res = await fetch('/api/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code }),
@@ -289,18 +271,21 @@ export default function LoginPage() {
         setError(data.message || 'Verification failed.');
         setLoading(false);
       } else {
+        // OTP verified — sign in immediately
         const signInRes = await signIn('credentials', { redirect: false, email, password });
         setLoading(false);
         if (signInRes?.ok) {
           setSuccessUser({ email, username });
           triggerSheetTransition('success');
         } else {
-          setError(`Verified, but sign in failed: ${signInRes?.error || 'Please sign in manually.'}`);
+          // Verified but auto-login failed — send them to sign-in
+          setError('');
+          setInfo('Email verified! Please sign in.');
           triggerSheetTransition('signIn');
         }
       }
     } catch (err: any) {
-      setError(`Verification failed: ${err?.message || err || 'Please try again.'}`);
+      setError('Verification failed. Please check your connection.');
       setLoading(false);
     }
   };
@@ -359,7 +344,7 @@ export default function LoginPage() {
     setError('');
     setInfo('Sending new code...');
     try {
-      const res = await fetch(getApiUrl('/api/resend-code'), {
+      const res = await fetch('/api/resend-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -379,7 +364,7 @@ export default function LoginPage() {
         setInfo('');
       }
     } catch {
-      setError('An error occurred.');
+      setError('Connection error. Please try again.');
       setInfo('');
     }
   };

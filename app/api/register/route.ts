@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { sendVerificationEmail } from "@/lib/mail";
 
 export const dynamic = "force-dynamic";
-
-import { sendVerificationEmail } from "@/lib/mail";
 
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -12,7 +11,12 @@ function generateOTP(): string {
 
 export async function POST(req: Request) {
   try {
-    const { username, email, password } = await req.json();
+    const body = await req.json();
+    const { username, email, password } = body as {
+      username?: string;
+      email: string;
+      password: string;
+    };
 
     if (!email || !password) {
       return NextResponse.json(
@@ -21,7 +25,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Block if a verified User already exists with this email
+    // Check if email is already a verified account
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return NextResponse.json(
@@ -30,12 +34,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Block if username is already taken by a real (verified) user
+    // Check username uniqueness
     if (username) {
-      const existingUsername = await prisma.user.findUnique({
+      const takenUsername = await prisma.user.findUnique({
         where: { username },
+        select: { id: true },
       });
-      if (existingUsername) {
+      if (takenUsername) {
         return NextResponse.json(
           { message: "This username is already taken." },
           { status: 409 }
@@ -45,21 +50,20 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = generateOTP();
-    console.log(`[DEV_OTP] Generated OTP for ${email}: ${otp}`);
-    const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 min
 
-    // Save/overwrite in PendingUser — not in User
+    // Store in PendingUser — only promoted to User after OTP verified
     await prisma.pendingUser.upsert({
       where: { email },
       update: {
-        username: username || null,
+        username: username ?? null,
         password: hashedPassword,
         verifyCode: otp,
         verifyExpiry: expiry,
       },
       create: {
         email,
-        username: username || null,
+        username: username ?? null,
         password: hashedPassword,
         verifyCode: otp,
         verifyExpiry: expiry,
@@ -67,22 +71,21 @@ export async function POST(req: Request) {
     });
 
     // Send OTP email
-    try {
-      await sendVerificationEmail(email, otp, username);
-    } catch (err) {
-      console.error("[MAIL_ERROR]", err);
-      return NextResponse.json(
-        { message: "Failed to send verification email. Please verify your email address is correct." },
-        { status: 500 }
-      );
-    }
+    await sendVerificationEmail(email, otp, username);
 
     return NextResponse.json(
       { message: "Verification code sent.", requiresVerification: true },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("[REGISTER_ERROR]", error);
+    // If email send failed, surface a clear message
+    if (error?.message?.toLowerCase().includes("mail")) {
+      return NextResponse.json(
+        { message: "Failed to send verification email. Check your email address." },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       { message: "Internal server error. Please try again." },
       { status: 500 }
