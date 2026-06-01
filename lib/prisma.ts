@@ -12,23 +12,22 @@ declare global {
 function createPool(): Pool {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    console.error("❌ CRITICAL ERROR: DATABASE_URL is missing!");
+    console.error("❌ CRITICAL ERROR: DATABASE_URL environment variable is not set!");
+    throw new Error("DATABASE_URL is not configured. Set it in Vercel Environment Variables.");
   }
 
-  return new Pool({
+  const pool = new Pool({
     connectionString,
-    ssl: { rejectUnauthorized: false },
-    // Keep at least 1 connection alive at all times — eliminates cold-start delay
+    ssl: { rejectUnauthorized: false }, // no-verify — skip cert validation for Aiven
     min: 1,
     max: 5,
-    // Keep idle connections alive for 10 minutes
-    idleTimeoutMillis: 600_000,
-    // Fail fast on unreachable DB
-    connectionTimeoutMillis: 8_000,
-    // Send a keepalive packet every 30 s so Aiven doesn't drop the connection
+    idleTimeoutMillis: 600_000,        // keep idle connections alive 10 min
+    connectionTimeoutMillis: 8_000,    // fail fast if unreachable
     keepAlive: true,
     keepAliveInitialDelayMillis: 30_000,
   });
+
+  return pool;
 }
 
 function getPrismaClient(): PrismaClient {
@@ -42,17 +41,16 @@ function getPrismaClient(): PrismaClient {
   });
 }
 
-// Singleton: reuse the same client (and pool) across hot-reloads in dev
+// Singleton: reuse across hot-reloads in dev AND across invocations in production
 export const prisma = global.__prisma ?? getPrismaClient();
 
-if (process.env.NODE_ENV !== "production") {
-  global.__prisma = prisma;
-}
+// Always save to global — production lambda containers reuse process globals too
+global.__prisma = prisma;
 
-// ── Pre-warm: open the connection immediately so the first sign-in is fast ──
-// Run as a fire-and-forget — never blocks module load
-if (typeof global.__pgPool !== "undefined") {
+// ── Pre-warm: fire-and-forget ping so first real request is fast ──
+if (global.__pgPool) {
   global.__pgPool.query("SELECT 1").catch(() => {
-    // Silently ignore — this is just a warm-up ping
+    // Silently ignore — warm-up failure is non-fatal
   });
 }
+
