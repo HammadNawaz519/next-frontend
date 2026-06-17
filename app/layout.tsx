@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Connect",
   description: "Connect — Chat, call, and AI in one place.",
+  icons: {
+    icon: "/icon.png",
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -26,6 +29,13 @@ export const metadata: Metadata = {
   other: {
     "mobile-web-app-capable": "yes",
   },
+  verification: {
+    google: "googlebeec3702392f09eb",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  }
 };
 
 export const viewport: Viewport = {
