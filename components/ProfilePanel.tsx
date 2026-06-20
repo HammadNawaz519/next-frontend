@@ -522,7 +522,6 @@ export default function ProfilePanel({
         position:'absolute', inset:0, zIndex:50, display:'flex',
         flexDirection:'column', overflow:'hidden',
         background: isDark ? '#0e0e11' : '#fff',
-        borderLeft: `1px solid ${border}`,
       }}
     >
       {/* Spacer for status bar/camera cutout safe area top */}

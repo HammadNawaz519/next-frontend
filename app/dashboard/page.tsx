@@ -21,6 +21,7 @@ import SocialChat from '@/components/SocialChat';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/app/components/ThemeProvider';
 import ProfilePanel from '@/components/ProfilePanel';
+import DashboardSkeleton from '@/components/DashboardSkeleton';
 
 interface Message {
   id: string;
@@ -49,6 +50,7 @@ export default function DashboardPage() {
   
   // Explore and Search States
   const [explorePosts, setExplorePosts] = useState<any[]>([]);
+  const [isExploreLoading, setIsExploreLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchHistory, setSearchHistory] = useState<any[]>([]);
@@ -98,8 +100,10 @@ export default function DashboardPage() {
   // Fetch Explore Posts when search view is opened
   useEffect(() => {
     if (activeView === 'search') {
+      setIsExploreLoading(true);
       getExploreContent().then((res: any) => {
         setExplorePosts(res || []);
+        setIsExploreLoading(false);
       });
     }
   }, [activeView]);
@@ -207,11 +211,7 @@ export default function DashboardPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: isViewChange ? 'instant' : 'smooth' });
   }, [messages.length, isAiTyping, activeView]);
 
-  if (status === 'loading') return (
-    <div className="h-screen w-full flex items-center justify-center" style={{ background: 'var(--dm-bg-page)' }}>
-      <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: 'var(--dm-border)', borderTopColor: 'var(--dm-text-primary)' }} />
-    </div>
-  );
+  if (status === 'loading') return <DashboardSkeleton />;
   
   if (!session) return null;
 
@@ -567,9 +567,25 @@ export default function DashboardPage() {
 
             {/* Explore mixed Grid */}
             <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-20 pt-2">
-              <div className="grid grid-cols-3 gap-1">
-                {explorePosts.map((post: any) => (
-                  <div
+              {isExploreLoading ? (
+                <div className="flex flex-col gap-1 w-full">
+                  {/* Top 3 horizontally */}
+                  <div className="grid grid-cols-3 gap-1">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="aspect-square rounded-lg animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+                    ))}
+                  </div>
+                  {/* Rest vertically, height about 1 inch (h-24) */}
+                  <div className="flex flex-col gap-1">
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <div key={i} className="w-full h-24 rounded-lg animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-1">
+                  {explorePosts.map((post: any) => (
+                    <div
                     key={post.id}
                     onClick={() => handleOpenOtherProfile(post.user.id)}
                     className="aspect-square relative cursor-pointer overflow-hidden group rounded-lg"
@@ -606,6 +622,7 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
 
             {/* Sliding Fullscreen Search Overlay */}

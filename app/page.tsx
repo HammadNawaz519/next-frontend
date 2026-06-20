@@ -4,6 +4,7 @@ import { signIn, useSession } from 'next-auth/react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { GrainGradient } from '@paper-design/shaders-react';
+import DashboardSkeleton from '@/components/DashboardSkeleton';
 
 type SheetState = 
   | 'welcome' 
@@ -661,17 +662,21 @@ export default function LoginPage() {
     );
   };
 
-  // Show full-page spinner ONLY when authenticated and waiting for router to redirect.
-  // We also show it during the *initial* session load to prevent the login screen from flashing.
+  const isLikelyLoggedIn = typeof window !== 'undefined' && (() => {
+    try {
+      const stored = localStorage.getItem('connected_accounts');
+      return stored && JSON.parse(stored).length > 0;
+    } catch { return false; }
+  })();
+
+  // Show full-page skeleton ONLY when authenticated and waiting for router to redirect.
+  // We also show it during the *initial* session load to prevent the login screen from flashing,
+  // but ONLY if the user is likely logged in based on their local storage.
   // Do NOT block on sessStatus === 'loading' after initial load — that fires during every NextAuth
   // internal session refresh (including after submitting credentials), which
   // causes the entire page to freeze after the user clicks Sign In / Sign Up.
-  if (sessStatus === 'authenticated' || initialLoading) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white z-[9999]">
-        <div className="w-12 h-12 border-4 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
-      </div>
-    );
+  if (sessStatus === 'authenticated' || (initialLoading && isLikelyLoggedIn)) {
+    return <DashboardSkeleton />;
   }
 
   return (
