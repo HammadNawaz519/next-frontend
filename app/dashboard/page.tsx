@@ -211,9 +211,24 @@ export default function DashboardPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: isViewChange ? 'instant' : 'smooth' });
   }, [messages.length, isAiTyping, activeView]);
 
-  if (status === 'loading') return <DashboardSkeleton />;
-  
-  if (!session) return null;
+  // Create a fast, optimistic session from local storage to achieve an instant, zero-lag start
+  // just like native apps, skipping any skeletons or spinners while NextAuth validates in background.
+  let displaySession = session;
+  if (status === 'loading' && !session) {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('connected_accounts');
+        if (stored) {
+          const list = JSON.parse(stored);
+          if (list.length > 0) {
+            displaySession = { user: list[0], expires: '' } as any;
+          }
+        }
+      } catch {}
+    }
+  }
+
+  if (!displaySession) return null;
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -451,14 +466,14 @@ export default function DashboardPage() {
             >
               <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
                 <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center font-normal text-xs shadow-sm transition-transform duration-300 group-hover/profile:scale-105" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: isProfileOpen ? 'var(--dm-bg-main)' : 'var(--dm-text-secondary)' }}>
-                  {session.user?.image
-                    ? <img src={session.user.image} alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  {displaySession.user?.image
+                    ? <img src={displaySession.user.image} alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     : <img src="/Avatar.avif" alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
                 </div>
               </div>
               <div className="flex-1 min-w-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden">
                 <p className="text-[13px] font-normal truncate transition-colors" style={{ color: 'var(--dm-text-primary)' }}>
-                  {session.user?.name || session.user?.email?.split('@')[0] || 'User'}
+                  {displaySession.user?.name || displaySession.user?.email?.split('@')[0] || 'User'}
                 </p>
                 <p className="text-[10px] truncate uppercase tracking-widest mt-0.5" style={{ color: isProfileOpen ? 'var(--dm-text-secondary)' : 'var(--dm-text-muted)' }}>
                   View Profile
@@ -537,7 +552,7 @@ export default function DashboardPage() {
                   Welcome back 👋
                 </h1>
                 <p className="text-base mt-0.5" style={{ color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)' }}>
-                  {session.user?.name?.split(' ')[0] || 'there'}
+                  {displaySession.user?.name?.split(' ')[0] || 'there'}
                 </p>
               </div>
             </div>
@@ -568,19 +583,10 @@ export default function DashboardPage() {
             {/* Explore mixed Grid */}
             <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-20 pt-2">
               {isExploreLoading ? (
-                <div className="flex flex-col gap-1 w-full">
-                  {/* Top 3 horizontally */}
-                  <div className="grid grid-cols-3 gap-1">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="aspect-square rounded-lg animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
-                    ))}
-                  </div>
-                  {/* Rest vertically, height about 1 inch (h-24) */}
-                  <div className="flex flex-col gap-1">
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <div key={i} className="w-full h-24 rounded-lg animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
-                    ))}
-                  </div>
+                <div className="grid grid-cols-3 gap-1">
+                  {[...Array(15)].map((_, i) => (
+                    <div key={i} className="w-full h-36 rounded-lg animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+                  ))}
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-1">
@@ -761,7 +767,7 @@ export default function DashboardPage() {
           isOpen={isProfileOpen}
           isClosing={isClosingProfile}
           onClose={handleCloseProfile}
-          session={session}
+          session={displaySession}
           fullUser={selectedProfileUser || fullUser}
           targetUser={selectedProfileUser}
           isDark={isDark}

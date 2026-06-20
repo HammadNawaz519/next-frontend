@@ -4,7 +4,7 @@ import { signIn, useSession } from 'next-auth/react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { GrainGradient } from '@paper-design/shaders-react';
-import DashboardSkeleton from '@/components/DashboardSkeleton';
+import DashboardPage from './dashboard/page';
 
 type SheetState = 
   | 'welcome' 
@@ -73,12 +73,7 @@ export default function LoginPage() {
     }
   }, [sessStatus]);
 
-  // Redirect authenticated users
-  useEffect(() => {
-    if (sessStatus === 'authenticated') {
-      router.replace('/dashboard');
-    }
-  }, [sessStatus, router]);
+  // Remove automatic redirect to prevent jitter; we now render DashboardPage directly below.
 
   // Load sheet state from query parameter on mount
   useEffect(() => {
@@ -669,14 +664,10 @@ export default function LoginPage() {
     } catch { return false; }
   })();
 
-  // Show full-page skeleton ONLY when authenticated and waiting for router to redirect.
-  // We also show it during the *initial* session load to prevent the login screen from flashing,
-  // but ONLY if the user is likely logged in based on their local storage.
-  // Do NOT block on sessStatus === 'loading' after initial load — that fires during every NextAuth
-  // internal session refresh (including after submitting credentials), which
-  // causes the entire page to freeze after the user clicks Sign In / Sign Up.
+  // Render the real DashboardPage instantly to avoid any route transition lag or jitter.
+  // The DashboardPage itself will handle its own graceful loading state or display instantly.
   if (sessStatus === 'authenticated' || (initialLoading && isLikelyLoggedIn)) {
-    return <DashboardSkeleton />;
+    return <DashboardPage />;
   }
 
   return (
