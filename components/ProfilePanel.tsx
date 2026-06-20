@@ -158,6 +158,28 @@ export default function ProfilePanel({
       triggerAccountSheetTransition('none');
       return;
     }
+    
+    if (acc.password) {
+      setSwitchLoading(true);
+      try {
+        const res = await signIn('credentials', { redirect: false, email: acc.email, password: acc.password });
+        if (res?.ok) {
+          if (refreshProfile) refreshProfile();
+          triggerAccountSheetTransition('none');
+          if (typeof window !== 'undefined') {
+            window.location.reload();
+          }
+          return;
+        } else {
+          setSwitchError('Please sign in again.');
+        }
+      } catch (err) {
+        setSwitchError('Failed to sign in.');
+      } finally {
+        setSwitchLoading(false);
+      }
+    }
+    
     setSwitchEmail(acc.email);
     setSwitchPassword('');
     setSwitchError('');
@@ -182,6 +204,19 @@ export default function ProfilePanel({
       } else if (res?.error) {
         setSwitchError('Invalid email or password.');
       } else {
+        try {
+          const stored = localStorage.getItem('connected_accounts');
+          let list = stored ? JSON.parse(stored) : [];
+          if (!Array.isArray(list)) list = [];
+          const idx = list.findIndex((a: any) => a.email === switchEmail);
+          if (idx !== -1) {
+            list[idx].password = switchPassword;
+          } else {
+            list.push({ email: switchEmail, password: switchPassword, provider: 'credentials' });
+          }
+          localStorage.setItem('connected_accounts', JSON.stringify(list));
+        } catch (e) {}
+
         if (refreshProfile) refreshProfile();
         triggerAccountSheetTransition('none');
         if (typeof window !== 'undefined') {
@@ -238,6 +273,18 @@ export default function ProfilePanel({
       } else {
         const signInRes = await signIn('credentials', { redirect: false, email: switchEmail, password: switchPassword });
         if (signInRes?.ok) {
+          try {
+            const stored = localStorage.getItem('connected_accounts');
+            let list = stored ? JSON.parse(stored) : [];
+            if (!Array.isArray(list)) list = [];
+            const idx = list.findIndex((a: any) => a.email === switchEmail);
+            if (idx !== -1) {
+              list[idx].password = switchPassword;
+            } else {
+              list.push({ email: switchEmail, password: switchPassword, provider: 'credentials' });
+            }
+            localStorage.setItem('connected_accounts', JSON.stringify(list));
+          } catch (e) {}
           triggerAccountSheetTransition('success');
         } else {
           setSwitchError('Verified! Please sign in.');

@@ -63,6 +63,14 @@ export default function LoginPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [successUser, setSuccessUser] = useState<SuccessUser | null>(null);
   const [showMobilePassword, setShowMobilePassword] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  // Handle initial load status
+  useEffect(() => {
+    if (sessStatus !== 'loading') {
+      setInitialLoading(false);
+    }
+  }, [sessStatus]);
 
   // Redirect authenticated users
   useEffect(() => {
@@ -221,6 +229,20 @@ export default function LoginPage() {
         setError('Invalid email or password. Please try again.');
         setLoading(false);
       } else if (res?.ok) {
+        // Save password to connected accounts for seamless switching
+        try {
+          const stored = localStorage.getItem('connected_accounts');
+          let list = stored ? JSON.parse(stored) : [];
+          if (!Array.isArray(list)) list = [];
+          const idx = list.findIndex((acc: any) => acc.email === email);
+          if (idx !== -1) {
+            list[idx].password = password;
+          } else {
+            list.push({ email, password, provider: 'credentials' });
+          }
+          localStorage.setItem('connected_accounts', JSON.stringify(list));
+        } catch (e) {}
+
         router.push('/dashboard');
         router.refresh();
       } else {
@@ -285,6 +307,19 @@ export default function LoginPage() {
         const signInRes = await signIn('credentials', { redirect: false, email, password });
         setLoading(false);
         if (signInRes?.ok) {
+          try {
+            const stored = localStorage.getItem('connected_accounts');
+            let list = stored ? JSON.parse(stored) : [];
+            if (!Array.isArray(list)) list = [];
+            const idx = list.findIndex((acc: any) => acc.email === email);
+            if (idx !== -1) {
+              list[idx].password = password;
+            } else {
+              list.push({ email, password, provider: 'credentials' });
+            }
+            localStorage.setItem('connected_accounts', JSON.stringify(list));
+          } catch (e) {}
+
           setSuccessUser({ email, username });
           triggerSheetTransition('success');
         } else {
@@ -574,7 +609,7 @@ export default function LoginPage() {
 
     const isLogin = view === 'signIn';
     return (
-      <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full overflow-y-auto bg-white">
+      <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full bg-white">
         <div className="w-full max-w-[380px] space-y-4 md:space-y-6 py-4 text-left">
           <div className="space-y-2">
             <h1 className="text-[28px] md:text-[32px] font-normal tracking-tight text-gray-900">{isLogin ? 'Welcome back' : 'Create your account'}</h1>
@@ -627,10 +662,11 @@ export default function LoginPage() {
   };
 
   // Show full-page spinner ONLY when authenticated and waiting for router to redirect.
-  // Do NOT block on sessStatus === 'loading' — that fires during every NextAuth
+  // We also show it during the *initial* session load to prevent the login screen from flashing.
+  // Do NOT block on sessStatus === 'loading' after initial load — that fires during every NextAuth
   // internal session refresh (including after submitting credentials), which
   // causes the entire page to freeze after the user clicks Sign In / Sign Up.
-  if (sessStatus === 'authenticated') {
+  if (sessStatus === 'authenticated' || initialLoading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-white z-[9999]">
         <div className="w-12 h-12 border-4 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
@@ -1176,16 +1212,16 @@ export default function LoginPage() {
       </div>
 
       {/* Laptop/Desktop viewport layout (lg: and above) - Floating Original Card */}
-      <div className="hidden lg:flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#F4F4F4] p-6 md:px-12 md:py-8 select-none font-sans">
+      <div className="hidden lg:flex min-h-screen w-full items-center justify-center overflow-y-auto bg-[#F4F4F4] p-6 md:px-12 md:py-8 select-none font-sans">
         <div 
-          className="w-full max-w-[960px] aspect-[16/9] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_-10px_rgba(0,0,0,0.4)] bg-white bg-opacity-20 bg-clip-padding backdrop-filter backdrop-blur-2xl border border-gray-100 flex flex-col lg:grid lg:grid-cols-2" 
+          className="w-full max-w-[960px] min-h-[640px] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_-10px_rgba(0,0,0,0.4)] bg-white bg-opacity-20 bg-clip-padding backdrop-filter backdrop-blur-2xl border border-gray-100 flex flex-col lg:grid lg:grid-cols-2 my-auto" 
           style={{ 
             position: 'relative', 
             zIndex: 1,
           }}
         >
           {renderLeft()}
-          <div className="flex-1 overflow-y-auto bg-white">
+          <div className="flex-1 bg-white">
             {renderDesktopRight()}
           </div>
         </div>
