@@ -839,24 +839,28 @@ export default function ProfilePanel({
                       ? 'Following' 
                       : targetUser?.hasSentRequest 
                         ? 'Requested' 
-                        : 'Follow'}
+                        : targetUser?.isPrivate
+                          ? 'Request'
+                          : 'Follow'}
                   </button>
-                  <button 
-                    onClick={() => {
-                      onClose();
-                      if (onOpenChat) {
-                        onOpenChat(targetUser);
-                      } else if (typeof window !== 'undefined') {
-                        window.location.href = `/dashboard?chat=${targetUser.id}`;
-                      }
-                    }} 
-                    style={{
-                      flex:1, padding:'8px', borderRadius:'20px', fontWeight:600, fontSize:13,
-                      background:btnBg, border:`1px solid ${btnBdr}`, color:txt, cursor:'pointer', transition:'all 0.2s',
-                    }}
-                  >
-                    Message
-                  </button>
+                  {!isPrivateAndUnfollowed && (
+                    <button 
+                      onClick={() => {
+                        onClose();
+                        if (onOpenChat) {
+                          onOpenChat(targetUser);
+                        } else if (typeof window !== 'undefined') {
+                          window.location.href = `/dashboard?chat=${targetUser.id}`;
+                        }
+                      }} 
+                      style={{
+                        flex:1, padding:'8px', borderRadius:'20px', fontWeight:600, fontSize:13,
+                        background:btnBg, border:`1px solid ${btnBdr}`, color:txt, cursor:'pointer', transition:'all 0.2s',
+                      }}
+                    >
+                      Message
+                    </button>
+                  )}
                 </>
               )}
             </div>
