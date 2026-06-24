@@ -605,16 +605,16 @@ export default function LoginPage() {
 
     const isLogin = view === 'signIn';
     return (
-      <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full bg-white">
-        <div className="w-full max-w-[380px] space-y-4 md:space-y-6 py-4 text-left">
-          <div className="space-y-2">
-            <h1 className="text-[28px] md:text-[32px] font-normal tracking-tight text-gray-900">{isLogin ? 'Welcome back' : 'Create your account'}</h1>
-            <p className="text-[13px] md:text-[14px] text-gray-500">{isLogin ? 'Let\'s sign you into your Connect account.' : 'Create an account to start chatting.'}</p>
+      <div className="flex flex-col items-center justify-center p-4 md:p-8 lg:p-10 xl:p-14 h-full overflow-y-auto bg-white">
+        <div className="w-full max-w-[380px] space-y-3 lg:space-y-4 py-2 text-left">
+          <div className="space-y-1">
+            <h1 className="text-[24px] lg:text-[28px] xl:text-[32px] font-normal tracking-tight text-gray-900">{isLogin ? 'Welcome back' : 'Create your account'}</h1>
+            <p className="text-[12px] lg:text-[13px] xl:text-[14px] text-gray-500">{isLogin ? "Let's sign you into your Connect account." : 'Create an account to start chatting.'}</p>
           </div>
-          {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">{error}</div>}
-          <div className="space-y-3 md:space-y-4">
-            <button type="button" disabled={googleLoading} onClick={async () => { setGoogleLoading(true); await signIn('google', { callbackUrl: '/dashboard' }); }} className="w-full h-[46px] flex items-center justify-center gap-3 bg-gray-50 hover:bg-gray-100 text-gray-800 border border-gray-200 rounded-2xl font-normal text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-              <svg className="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24">
+          {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">{error}</div>}
+          <div className="space-y-2 lg:space-y-3">
+            <button type="button" disabled={googleLoading} onClick={async () => { setGoogleLoading(true); await signIn('google', { callbackUrl: '/dashboard' }); }} className="w-full h-[42px] lg:h-[46px] flex items-center justify-center gap-3 bg-gray-50 hover:bg-gray-100 text-gray-800 border border-gray-200 rounded-2xl font-normal text-[13px] lg:text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+              <svg className="h-4 w-4 lg:h-5 lg:w-5 flex-shrink-0" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
@@ -623,33 +623,30 @@ export default function LoginPage() {
               {googleLoading ? 'Redirecting...' : isLogin ? 'Sign in with Google' : 'Sign up with Google'}
             </button>
             <div className="flex items-center gap-3 text-gray-400 text-sm"><div className="h-px flex-1 bg-gray-200" />or<div className="h-px flex-1 bg-gray-200" /></div>
-            <form onSubmit={isLogin ? handleLogin : handleSignup} className="space-y-3">
+            <form onSubmit={isLogin ? handleLogin : handleSignup} className="space-y-2 lg:space-y-3">
               {!isLogin && (
                 <div className="space-y-1">
-                  <label htmlFor="desktop-username" className="text-[13px] font-normal text-gray-700">Username</label>
-                  <input id="desktop-username" type="text" required placeholder="johndoe" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[14px] text-gray-900 placeholder:text-gray-400" />
+                  <label htmlFor="desktop-username" className="text-[12px] lg:text-[13px] font-normal text-gray-700">Username</label>
+                  <input id="desktop-username" type="text" required placeholder="johndoe" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full h-[42px] lg:h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[13px] lg:text-[14px] text-gray-900 placeholder:text-gray-400" />
                 </div>
               )}
               <div className="space-y-1">
-                <label htmlFor="desktop-email" className="text-[13px] font-normal text-gray-700">Email</label>
-                <input id="desktop-email" type="email" required placeholder="name@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[14px] text-gray-900 placeholder:text-gray-400" />
+                <label htmlFor="desktop-email" className="text-[12px] lg:text-[13px] font-normal text-gray-700">Email</label>
+                <input id="desktop-email" type="email" required placeholder="name@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full h-[42px] lg:h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[13px] lg:text-[14px] text-gray-900 placeholder:text-gray-400" />
               </div>
               <div className="space-y-1">
-                <label htmlFor="desktop-password" className="text-[13px] font-normal text-gray-700">Password</label>
-                <input id="desktop-password" type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[14px] text-gray-900 placeholder:text-gray-400" />
+                <label htmlFor="desktop-password" className="text-[12px] lg:text-[13px] font-normal text-gray-700">Password</label>
+                <input id="desktop-password" type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full h-[42px] lg:h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[13px] lg:text-[14px] text-gray-900 placeholder:text-gray-400" />
               </div>
-              <div className="text-right">
-                <span 
-                  onClick={() => triggerSheetTransition('forgotPassword')}
-                  className="text-xs text-zinc-500 hover:text-gray-900 transition-colors cursor-pointer"
-                >
-                  Forgot Password?
-                </span>
-              </div>
-              <button type="submit" disabled={loading} className="w-full h-[46px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed mt-2">{loading ? 'Processing...' : isLogin ? 'Sign in' : 'Create account'}</button>
+              {isLogin && (
+                <div className="text-right">
+                  <span onClick={() => triggerSheetTransition('forgotPassword')} className="text-xs text-zinc-500 hover:text-gray-900 transition-colors cursor-pointer">Forgot Password?</span>
+                </div>
+              )}
+              <button type="submit" disabled={loading} className="w-full h-[42px] lg:h-[46px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[13px] lg:text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">{loading ? 'Processing...' : isLogin ? 'Sign in' : 'Create account'}</button>
             </form>
-            <div className="text-center pt-2">
-              <button type="button" onClick={() => { triggerSheetTransition(isLogin ? 'signUp' : 'signIn'); setError(''); }} className="text-[13px] font-normal text-gray-500 hover:text-gray-900 transition-colors">{isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}</button>
+            <div className="text-center pt-1">
+              <button type="button" onClick={() => { triggerSheetTransition(isLogin ? 'signUp' : 'signIn'); setError(''); }} className="text-[12px] lg:text-[13px] font-normal text-gray-500 hover:text-gray-900 transition-colors">{isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}</button>
             </div>
           </div>
         </div>
