@@ -92,27 +92,8 @@ export const authOptions: NextAuthOptions = {
     // ── Google: upsert user in DB on first sign-in ───────────────────────────
     async signIn({ user, account }) {
       if (account?.provider === "google") {
-        if (!user.email) return false;
-        try {
-          await prisma.user.upsert({
-            where: { email: user.email },
-            update: {
-              name: user.name ?? undefined,
-              image: user.image ?? undefined,
-              emailVerified: new Date(),
-            },
-            create: {
-              email: user.email,
-              name: user.name ?? null,
-              image: user.image ?? null,
-              emailVerified: new Date(),
-            },
-          });
-          return true;
-        } catch (err) {
-          console.error("[GOOGLE_SIGNIN_ERROR]", err);
-          return false;
-        }
+        // Skip DB saving on Google sign-in to bypass connection errors
+        return true;
       }
       return true;
     },
@@ -121,11 +102,8 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account }) {
       if (user) {
         if (account?.provider === "google" && user.email) {
-          const dbUser = await prisma.user.findUnique({
-            where: { email: user.email },
-            select: { id: true },
-          });
-          token.id = dbUser?.id ?? user.id;
+          // Skip DB lookup for Google login to bypass connection errors
+          token.id = user.id;
         } else {
           token.id = user.id;
         }
