@@ -517,7 +517,6 @@ export default function ProfilePanel({
 
   return (
     <div
-      className={isClosing ? 'animate-profile-out' : 'animate-profile-in'}
       style={{
         position:'absolute', inset:0, zIndex:50, display:'flex',
         flexDirection:'column', overflow:'hidden',
@@ -683,7 +682,7 @@ export default function ProfilePanel({
             display:'flex', alignItems:'center', justifyContent:'space-between',
             padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
           }}>
-            <button onClick={onClose} style={{
+            <button onClick={(e) => (onClose as any)(e)} style={{
               background: 'none', border: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: txt, padding: 0

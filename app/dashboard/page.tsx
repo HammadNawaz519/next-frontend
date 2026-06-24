@@ -63,6 +63,39 @@ export default function DashboardPage() {
   const chatComponentRef = useRef<{ closeChat: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const navTransitionInProgress = useRef(false);
+  const profileTransitionInProgress = useRef(false);
+
+  const runProfileTransition = (action: () => void, x: number, y: number, reverse = false) => {
+    if (profileTransitionInProgress.current || !(document as any).startViewTransition) {
+      action();
+      return;
+    }
+    profileTransitionInProgress.current = true;
+    const endRadius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+    let transition: any;
+    try {
+      transition = (document as any).startViewTransition(() => { flushSync(action); });
+    } catch {
+      action();
+      profileTransitionInProgress.current = false;
+      return;
+    }
+    transition.ready
+      .then(() => {
+        const keyframes = reverse
+          ? [{ clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }, { clipPath: `circle(0px at ${x}px ${y}px)` }]
+          : [{ clipPath: `circle(0px at ${x}px ${y}px)` }, { clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }];
+        document.documentElement.animate(keyframes, {
+          duration: 700,
+          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+          pseudoElement: reverse ? '::view-transition-old(root)' : '::view-transition-new(root)',
+        });
+      })
+      .catch(() => {});
+    transition.finished
+      .then(() => { profileTransitionInProgress.current = false; })
+      .catch(() => { profileTransitionInProgress.current = false; });
+  };
   const [editingUsername, setEditingUsername] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameError, setUsernameError] = useState('');
@@ -293,16 +326,20 @@ export default function DashboardPage() {
     }
   };
 
-  const handleCloseProfile = () => {
-    setIsClosingProfile(true);
-    setTimeout(() => {
+  const handleCloseProfile = (e?: React.MouseEvent) => {
+    const x = e?.clientX ?? window.innerWidth / 2;
+    const y = e?.clientY ?? window.innerHeight / 2;
+    runProfileTransition(() => {
       setIsProfileOpen(false);
       setIsClosingProfile(false);
-      setSelectedProfileUser(null); // Clear other viewed profile
-    }, 450);
+      setSelectedProfileUser(null);
+    }, x, y, true);
   };
 
-  const handleOpenOtherProfile = async (userId: string, fallbackUser?: any) => {
+  const handleOpenOtherProfile = async (userId: string, fallbackUser?: any, e?: React.MouseEvent) => {
+    const x = e?.clientX ?? window.innerWidth / 2;
+    const y = e?.clientY ?? window.innerHeight / 2;
+
     if (fallbackUser) {
       const initialDetails = {
         id: userId,
@@ -319,8 +356,10 @@ export default function DashboardPage() {
         hasSentRequest: fallbackUser.hasSentRequest || false,
         isCurrentUser: false
       };
-      setSelectedProfileUser(initialDetails);
-      setIsProfileOpen(true);
+      runProfileTransition(() => {
+        setSelectedProfileUser(initialDetails);
+        setIsProfileOpen(true);
+      }, x, y, false);
     }
 
     try {
@@ -328,7 +367,7 @@ export default function DashboardPage() {
       if (details) {
         setSelectedProfileUser(details);
         if (!fallbackUser) {
-          setIsProfileOpen(true);
+          runProfileTransition(() => setIsProfileOpen(true), x, y, false);
         }
       }
     } catch (err) {
@@ -371,7 +410,7 @@ export default function DashboardPage() {
 
   const handleNavClick = (viewId: any, e: React.MouseEvent, reverse = false) => {
     if (isProfileOpen) {
-      handleCloseProfile();
+      handleCloseProfile(e);
     }
 
     if (activeView === viewId && viewId !== 'chat') return;
@@ -480,7 +519,7 @@ export default function DashboardPage() {
           {/* Profile Section */}
           <div className="mt-auto pt-4 pb-4" style={{ borderTop: '1px solid var(--dm-border)' }}>
             <div 
-              onClick={() => setIsProfileOpen(true)}
+              onClick={(e) => runProfileTransition(() => setIsProfileOpen(true), e.clientX, e.clientY, false)}
               className="flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-4 px-1 py-1 rounded-full cursor-pointer group/profile active:scale-95 transition-all duration-500 ease-[var(--ease-premium)] overflow-hidden"
               style={{ background: isProfileOpen ? 'var(--dm-bg-active)' : 'transparent' }}
               onMouseEnter={e => { if (!isProfileOpen) (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
@@ -615,7 +654,7 @@ export default function DashboardPage() {
                   {explorePosts.map((post: any) => (
                     <div
                     key={post.id}
-                    onClick={() => handleOpenOtherProfile(post.user.id, post.user)}
+                    onClick={(e) => handleOpenOtherProfile(post.user.id, post.user, e)}
                     className="aspect-square relative cursor-pointer overflow-hidden group rounded-lg"
                     style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
                   >
@@ -702,9 +741,9 @@ export default function DashboardPage() {
                           {searchHistory.map((item: any) => (
                             <div
                               key={item.id}
-                              onClick={() => {
+                              onClick={(e) => {
                                 handleAddToHistory(item);
-                                handleOpenOtherProfile(item.id, item);
+                                handleOpenOtherProfile(item.id, item, e);
                                 setIsSearchOverlayOpen(false);
                               }}
                               className="flex items-center justify-between p-3.5 rounded-xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
@@ -745,9 +784,9 @@ export default function DashboardPage() {
                           {searchResults.map((item: any) => (
                             <div
                               key={item.id}
-                              onClick={() => {
+                              onClick={(e) => {
                                 handleAddToHistory(item);
-                                handleOpenOtherProfile(item.id, item);
+                                handleOpenOtherProfile(item.id, item, e);
                                 setIsSearchOverlayOpen(false);
                               }}
                               className="flex items-center gap-3 p-3.5 rounded-xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
@@ -811,7 +850,7 @@ export default function DashboardPage() {
 
       {/* Mobile Bottom Navigation — round glass pill bar floats nicely near the bottom */}
       {((activeView === 'home' || activeView === 'search' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive) && (
-        <nav className={`mobile-nav ${(isAccountSheetOpen || isSearchOverlayOpen || isProfileOpen) ? 'mobile-nav-hidden' : ''}`}>
+        <nav className={`mobile-nav ${(isAccountSheetOpen || isSearchOverlayOpen) ? 'mobile-nav-hidden' : ''}`}>
           {[
             { id: 'home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
             { id: 'chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
@@ -835,7 +874,7 @@ export default function DashboardPage() {
             );
           })}
           <button
-            onClick={() => setIsProfileOpen(true)}
+            onClick={(e) => runProfileTransition(() => setIsProfileOpen(true), e.clientX, e.clientY, false)}
             className="flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90"
             style={{ 
               background: isProfileOpen ? 'var(--dm-bg-active)' : 'transparent',
