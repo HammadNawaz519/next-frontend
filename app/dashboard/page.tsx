@@ -22,6 +22,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/app/components/ThemeProvider';
 import ProfilePanel from '@/components/ProfilePanel';
 import DashboardSkeleton from '@/components/DashboardSkeleton';
+import HomeFeed from '@/components/HomeFeed';
 
 interface Message {
   id: string;
@@ -578,60 +579,13 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Container */}
-      <div className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[40px] shadow-sm md:border" style={{ background: activeView === 'home' ? 'transparent' : 'var(--dm-bg-main)', borderColor: 'var(--dm-border-main)' }}>
+      <div className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[40px] shadow-sm md:border" style={{ background: 'var(--dm-bg-main)', borderColor: 'var(--dm-border-main)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.02\'/%3E%3C/svg%3E")', opacity: 0.4, pointerEvents: 'none' }} />
 
         {/* Content Views */}
         {activeView === 'home' && (
           <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden">
-            <div className="home-blob-bg">
-              <div className="home-blob home-blob-1" />
-              <div className="home-blob home-blob-2" />
-              <div className="home-blob home-blob-3" />
-            </div>
-
-            <div className="relative z-10 px-5 pt-[calc(1.25rem+env(safe-area-inset-top,0px))]">
-              <div
-                className="flex items-center justify-between px-4 py-2.5 rounded-full"
-                style={{
-                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.60)',
-                  backdropFilter: 'blur(24px)',
-                  WebkitBackdropFilter: 'blur(24px)',
-                  border: isDark ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(255,255,255,0.85)',
-                  boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)' : '0 4px 20px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1)',
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'} animate-pulse`} />
-                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }}>
-                    {isConnected ? 'Online' : 'Connecting...'}
-                  </span>
-                </div>
-                <ThemeToggle />
-              </div>
-            </div>
-
-            <div className="relative z-10 px-5 pt-4 animate-in fade-in slide-in-from-top-4 duration-700">
-              <div
-                className="flex flex-col items-center gap-3 w-full py-10 rounded-[2rem]"
-                style={{
-                  background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.55)',
-                  backdropFilter: 'blur(28px)',
-                  WebkitBackdropFilter: 'blur(28px)',
-                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(255,255,255,0.90)',
-                  boxShadow: isDark
-                    ? '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.10)'
-                    : '0 8px 40px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1)',
-                }}
-              >
-                <h1 className="text-2xl font-bold tracking-tight text-center" style={{ color: isDark ? '#fff' : '#1e1b4b' }}>
-                  Welcome back 👋
-                </h1>
-                <p className="text-base mt-0.5" style={{ color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)' }}>
-                  {displaySession.user?.name?.split(' ')[0] || 'there'}
-                </p>
-              </div>
-            </div>
+            <HomeFeed isDark={isDark} />
           </div>
         )}
 
