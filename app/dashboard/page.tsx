@@ -23,6 +23,7 @@ import { useTheme } from '@/app/components/ThemeProvider';
 import ProfilePanel from '@/components/ProfilePanel';
 import DashboardSkeleton from '@/components/DashboardSkeleton';
 import HomeFeed from '@/components/HomeFeed';
+import ReelsPlayer from '@/components/ReelsPlayer';
 
 interface Message {
   id: string;
@@ -59,7 +60,7 @@ export default function DashboardPage() {
   const [selectedProfileUser, setSelectedProfileUser] = useState<any>(null);
   
   const [fullUser, setFullUser] = useState<any>(null);
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'chat'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'reels' | 'chat'>('home');
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
   const chatComponentRef = useRef<{ closeChat: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -72,6 +73,11 @@ export default function DashboardPage() {
       return;
     }
     profileTransitionInProgress.current = true;
+    
+    if (reverse) {
+      document.documentElement.classList.add('view-transition-reverse');
+    }
+
     const endRadius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
     let transition: any;
     try {
@@ -79,6 +85,7 @@ export default function DashboardPage() {
     } catch {
       action();
       profileTransitionInProgress.current = false;
+      document.documentElement.classList.remove('view-transition-reverse');
       return;
     }
     transition.ready
@@ -94,8 +101,14 @@ export default function DashboardPage() {
       })
       .catch(() => {});
     transition.finished
-      .then(() => { profileTransitionInProgress.current = false; })
-      .catch(() => { profileTransitionInProgress.current = false; });
+      .then(() => { 
+        profileTransitionInProgress.current = false; 
+        document.documentElement.classList.remove('view-transition-reverse');
+      })
+      .catch(() => { 
+        profileTransitionInProgress.current = false; 
+        document.documentElement.classList.remove('view-transition-reverse');
+      });
   };
   const [editingUsername, setEditingUsername] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
@@ -115,6 +128,11 @@ export default function DashboardPage() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
+  }, []);
+
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
   }, []);
 
   // Load Search History from localStorage on mount
@@ -248,21 +266,27 @@ export default function DashboardPage() {
   // Create a fast, optimistic session from local storage to achieve an instant, zero-lag start
   // just like native apps, skipping any skeletons or spinners while NextAuth validates in background.
   let displaySession = session;
-  if (status === 'loading' && !session) {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('connected_accounts');
-        if (stored) {
-          const list = JSON.parse(stored);
-          if (list.length > 0) {
-            displaySession = { user: list[0], expires: '' } as any;
-          }
+  if (hasMounted && status === 'loading' && !session) {
+    try {
+      const stored = localStorage.getItem('connected_accounts');
+      if (stored) {
+        const list = JSON.parse(stored);
+        if (list.length > 0) {
+          displaySession = { user: list[0], expires: '' } as any;
         }
-      } catch {}
-    }
+      }
+    } catch {}
   }
 
-  if (!displaySession) return null;
+  // To prevent hydration mismatch, we must match the server render during initial client render.
+  if (!hasMounted || (!displaySession && status === 'loading')) {
+    return null;
+  }
+
+  // Type guard to ensure displaySession is not null for TS compiler
+  if (!displaySession) {
+    return null;
+  }
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -425,7 +449,7 @@ export default function DashboardPage() {
         if (viewId !== activeView || viewId === 'chat') {
           setActiveView(viewId);
         }
-      }, e.clientX, e.clientY, true);
+      }, e.clientX, e.clientY, false);
       return; // ← critical: skip the nav transition below
     }
 
@@ -444,6 +468,10 @@ export default function DashboardPage() {
     
     navTransitionInProgress.current = true;
 
+    if (reverse) {
+      document.documentElement.classList.add('view-transition-reverse');
+    }
+
     const x = e.clientX;
     const y = e.clientY;
     const endRadius = Math.hypot(
@@ -461,6 +489,7 @@ export default function DashboardPage() {
     } catch {
       setActiveView(viewId);
       navTransitionInProgress.current = false;
+      document.documentElement.classList.remove('view-transition-reverse');
       return;
     }
 
@@ -478,8 +507,14 @@ export default function DashboardPage() {
       .catch(() => {});
       
     transition.finished
-      .then(() => { navTransitionInProgress.current = false; })
-      .catch(() => { navTransitionInProgress.current = false; });
+      .then(() => { 
+        navTransitionInProgress.current = false; 
+        document.documentElement.classList.remove('view-transition-reverse');
+      })
+      .catch(() => { 
+        navTransitionInProgress.current = false; 
+        document.documentElement.classList.remove('view-transition-reverse');
+      });
   };
 
   return (
@@ -506,13 +541,14 @@ export default function DashboardPage() {
           <nav className="flex-1 space-y-2">
             {[
               { id: 'home', name: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+              { id: 'reels', name: 'Reels', icon: '' },
               { id: 'chat', name: 'Chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
               { id: 'search', name: 'Search', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' }
             ].map((item) => {
               const isItemActive = !isProfileOpen && activeView === item.id;
               return (
                 <div 
-                  key={item.name} 
+                  key={item.id} 
                   onClick={(e) => handleNavClick(item.id, e)}
                   className={`flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-4 px-1 py-1 rounded-full cursor-pointer transition-all duration-500 ease-[var(--ease-premium)] group/item overflow-hidden`}
                   style={{ background: isItemActive ? 'var(--dm-bg-active)' : 'transparent' }}
@@ -520,9 +556,16 @@ export default function DashboardPage() {
                   onMouseLeave={e => { if (!isItemActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 >
                   <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-                    </svg>
+                    {item.id === 'reels' ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
+                        <rect x="4" y="4" width="16" height="16" rx="3" strokeWidth={2} />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 9h16M9 4l2 5M14 4l2 5M15 13l-4 3v-6l4 3z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                      </svg>
+                    )}
                   </div>
                   <span className="text-[12px] font-light opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)' }}>
                     {item.name}
@@ -585,7 +628,21 @@ export default function DashboardPage() {
         {/* Content Views */}
         {activeView === 'home' && (
           <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden">
-            <HomeFeed isDark={isDark} />
+            <HomeFeed 
+              isDark={isDark} 
+              session={displaySession}
+              onNavigate={(viewId) => setActiveView(viewId)}
+            />
+          </div>
+        )}
+
+        {activeView === 'reels' && (
+          <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden">
+            <ReelsPlayer 
+              onBack={() => setActiveView('home')}
+              onOpenProfile={(userId, fallbackUser, e) => handleOpenOtherProfile(userId, fallbackUser, e)}
+              isDark={isDark}
+            />
           </div>
         )}
 
@@ -821,24 +878,54 @@ export default function DashboardPage() {
       {((activeView === 'home' || activeView === 'search' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive) && (
         <nav className={`mobile-nav ${(isAccountSheetOpen || isSearchOverlayOpen) ? 'mobile-nav-hidden' : ''}`}>
           {[
-            { id: 'home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-            { id: 'chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-            { id: 'search', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
+            { 
+              id: 'home', 
+              element: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+              )
+            },
+            { 
+              id: 'search', 
+              element: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              )
+            },
+            { 
+              id: 'reels', 
+              element: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="4" y="4" width="16" height="16" rx="3" strokeWidth={2} />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 9h16M9 4l2 5M14 4l2 5M15 13l-4 3v-6l4 3z" />
+                </svg>
+              )
+            },
+            { 
+              id: 'chat', 
+              element: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
+                </svg>
+              )
+            },
           ].map((item) => {
             const isMobileItemActive = !isProfileOpen && activeView === item.id;
             return (
               <button
                 key={item.id}
-                onClick={(e) => handleNavClick(item.id, e)}
+                onClick={(e) => {
+                  handleNavClick(item.id, e);
+                }}
                 className="flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90"
                 style={{ 
                   background: isMobileItemActive ? 'var(--dm-bg-active)' : 'transparent',
                   color: isMobileItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
                 }}
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-                </svg>
+                {item.element}
               </button>
             );
           })}
@@ -850,10 +937,8 @@ export default function DashboardPage() {
               color: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
             }}
           >
-            <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-active)', color: isProfileOpen ? 'var(--dm-bg-main)' : 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}>
-              {session?.user?.image
-                ? <img src={session.user.image} alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                : <img src="/Avatar.avif" alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+            <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-active)', color: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}>
+              <img src="/Avatar.avif" alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
           </button>
         </nav>

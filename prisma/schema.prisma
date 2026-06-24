@@ -41,7 +41,11 @@ model User {
   receivedFollowRequests FollowRequest[] @relation("ReceivedFollowRequests")
 
   // Posts
-  posts Post[]
+  posts      Post[]
+  likes      Like[]
+  comments   Comment[]
+  savedPosts SavedPost[]
+  stories    Story[]
 }
 
 model TranslationHistory {
@@ -163,10 +167,56 @@ model FollowRequest {
 model Post {
   id           String   @id @default(cuid())
   thumbnailUrl String?
+  imageUrl     String?
+  caption      String?
   postType     String   // "single_image", "carousel", "reel"
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
+
+  likes      Like[]
+  comments   Comment[]
+  savedPosts SavedPost[]
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model SavedPost {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model Story {
+  id        String   @id @default(cuid())
+  imageUrl  String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
 
 

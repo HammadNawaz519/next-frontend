@@ -83,6 +83,14 @@
   z-index: 9999;
 }
 
+/* Reverse View Transition: keep old page on top so it can shrink/fade out */
+.view-transition-reverse::view-transition-old(root) {
+  z-index: 9999;
+}
+.view-transition-reverse::view-transition-new(root) {
+  z-index: 1;
+}
+
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -273,7 +281,7 @@ body {
 .mobile-nav {
   display: none;
   position: fixed;
-  bottom: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   width: 85%;
@@ -371,4 +379,48 @@ body {
 .animate-search-in {
   animation: slideFromTop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
+
+/* REELS ANIMATIONS */
+@keyframes heartPop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1.2);
+    opacity: 0.9;
+  }
+  30% {
+    transform: scale(0.9);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+.animate-heart-pop {
+  animation: heartPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slideUp 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
 

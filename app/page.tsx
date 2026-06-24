@@ -481,8 +481,8 @@ export default function LoginPage() {
     if (view === 'verify' || view === 'verifyReset') {
       const isReset = view === 'verifyReset';
       return (
-        <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full overflow-y-auto bg-white">
-          <div className="w-full max-w-[380px] space-y-6 py-6 text-left">
+        <div className="flex flex-col items-center justify-start pt-12 md:pt-16 lg:pt-20 p-6 h-full overflow-hidden bg-white">
+          <div className="w-full max-w-[380px] space-y-6 py-4 text-left">
             <div>
               <h1 className="text-[32px] font-normal tracking-tight text-gray-900">Check your inbox</h1>
               <p className="text-[14px] text-gray-500 mt-1">We sent a 6-digit code to <span className="font-medium text-gray-900">{email}</span></p>
@@ -528,8 +528,8 @@ export default function LoginPage() {
 
     if (view === 'success' && successUser) {
       return (
-        <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full overflow-y-auto bg-white">
-          <div className="w-full max-w-[380px] space-y-6 py-6 text-left">
+        <div className="flex flex-col items-center justify-start pt-12 md:pt-16 lg:pt-20 p-6 h-full overflow-hidden bg-white">
+          <div className="w-full max-w-[380px] space-y-6 py-4 text-left">
             <div>
               <h1 className="text-[32px] font-normal tracking-tight text-gray-900">You&apos;re in!</h1>
               <p className="text-[14px] text-gray-500 mt-1">Your email has been verified and your account is ready.</p>
@@ -555,8 +555,8 @@ export default function LoginPage() {
 
     if (view === 'forgotPassword') {
       return (
-        <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full overflow-y-auto bg-white">
-          <div className="w-full max-w-[380px] space-y-6 py-6 text-left">
+        <div className="flex flex-col items-center justify-start pt-12 md:pt-16 lg:pt-20 p-6 h-full overflow-hidden bg-white">
+          <div className="w-full max-w-[380px] space-y-6 py-4 text-left">
             <div>
               <h1 className="text-[32px] font-normal tracking-tight text-gray-900">Forgot Password</h1>
               <p className="text-[14px] text-gray-500 mt-1">Enter your email to receive a recovery code.</p>
@@ -580,8 +580,8 @@ export default function LoginPage() {
 
     if (view === 'resetPassword') {
       return (
-        <div className="flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 h-full overflow-y-auto bg-white">
-          <div className="w-full max-w-[380px] space-y-6 py-6 text-left">
+        <div className="flex flex-col items-center justify-start pt-12 md:pt-16 lg:pt-20 p-6 h-full overflow-hidden bg-white">
+          <div className="w-full max-w-[380px] space-y-6 py-4 text-left">
             <div>
               <h1 className="text-[32px] font-normal tracking-tight text-gray-900">Set New Password</h1>
               <p className="text-[14px] text-gray-500 mt-1">Create a strong new password to secure your account.</p>
@@ -605,16 +605,25 @@ export default function LoginPage() {
 
     const isLogin = view === 'signIn';
     return (
-      <div className="flex flex-col items-center justify-center p-4 md:p-8 lg:p-10 xl:p-14 h-full overflow-y-auto bg-white">
-        <div className="w-full max-w-[380px] space-y-3 lg:space-y-4 py-2 text-left">
-          <div className="space-y-1">
-            <h1 className="text-[24px] lg:text-[28px] xl:text-[32px] font-normal tracking-tight text-gray-900">{isLogin ? 'Welcome back' : 'Create your account'}</h1>
-            <p className="text-[12px] lg:text-[13px] xl:text-[14px] text-gray-500">{isLogin ? "Let's sign you into your Connect account." : 'Create an account to start chatting.'}</p>
+      <div className="flex flex-col items-center justify-start pt-6 lg:pt-10 xl:pt-12 pb-6 px-4 md:px-8 lg:px-10 xl:px-14 h-full overflow-hidden bg-white">
+        <div className={`w-full max-w-[380px] ${isLogin ? 'space-y-3 lg:space-y-4' : 'space-y-2 lg:space-y-3'} py-1 text-left`}>
+          <div className="space-y-0.5">
+            <h1 className={`${isLogin ? 'text-[24px] lg:text-[28px] xl:text-[32px]' : 'text-[20px] lg:text-[24px] xl:text-[28px]'} font-normal tracking-tight text-gray-900`}>
+              {isLogin ? 'Welcome back' : 'Create your account'}
+            </h1>
+            <p className={`${isLogin ? 'text-[12px] lg:text-[13px] xl:text-[14px]' : 'text-[11px] lg:text-[12px] xl:text-[13px]'} text-gray-500`}>
+              {isLogin ? "Let's sign you into your Connect account." : 'Create an account to start chatting.'}
+            </p>
           </div>
-          {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">{error}</div>}
-          <div className="space-y-2 lg:space-y-3">
-            <button type="button" disabled={googleLoading} onClick={async () => { setGoogleLoading(true); await signIn('google', { callbackUrl: '/dashboard' }); }} className="w-full h-[42px] lg:h-[46px] flex items-center justify-center gap-3 bg-gray-50 hover:bg-gray-100 text-gray-800 border border-gray-200 rounded-2xl font-normal text-[13px] lg:text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-              <svg className="h-4 w-4 lg:h-5 lg:w-5 flex-shrink-0" viewBox="0 0 24 24">
+          {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-4 py-2">{error}</div>}
+          <div className={`space-y-2 ${isLogin ? 'lg:space-y-3' : 'lg:space-y-2'}`}>
+            <button 
+              type="button" 
+              disabled={googleLoading} 
+              onClick={async () => { setGoogleLoading(true); await signIn('google', { callbackUrl: '/dashboard' }); }} 
+              className={`w-full ${isLogin ? 'h-[42px] lg:h-[46px]' : 'h-[38px] lg:h-[42px]'} flex items-center justify-center gap-3 bg-gray-50 hover:bg-gray-100 text-gray-800 border border-gray-200 rounded-2xl font-normal ${isLogin ? 'text-[13px] lg:text-[14px]' : 'text-[12px] lg:text-[13px]'} transition-colors disabled:opacity-60 disabled:cursor-not-allowed`}
+            >
+              <svg className={`flex-shrink-0 ${isLogin ? 'h-4 w-4 lg:h-5 lg:w-5' : 'h-4 w-4 lg:h-4.5 lg:w-4.5'}`} viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
@@ -622,31 +631,31 @@ export default function LoginPage() {
               </svg>
               {googleLoading ? 'Redirecting...' : isLogin ? 'Sign in with Google' : 'Sign up with Google'}
             </button>
-            <div className="flex items-center gap-3 text-gray-400 text-sm"><div className="h-px flex-1 bg-gray-200" />or<div className="h-px flex-1 bg-gray-200" /></div>
-            <form onSubmit={isLogin ? handleLogin : handleSignup} className="space-y-2 lg:space-y-3">
+            <div className={`flex items-center gap-3 text-gray-400 ${isLogin ? 'text-sm' : 'text-xs'}`}><div className="h-px flex-1 bg-gray-200" />or<div className="h-px flex-1 bg-gray-200" /></div>
+            <form onSubmit={isLogin ? handleLogin : handleSignup} className={`space-y-2 ${isLogin ? 'lg:space-y-3' : 'lg:space-y-2.5'}`}>
               {!isLogin && (
-                <div className="space-y-1">
-                  <label htmlFor="desktop-username" className="text-[12px] lg:text-[13px] font-normal text-gray-700">Username</label>
-                  <input id="desktop-username" type="text" required placeholder="johndoe" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full h-[42px] lg:h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[13px] lg:text-[14px] text-gray-900 placeholder:text-gray-400" />
+                <div className="space-y-0.5">
+                  <label htmlFor="desktop-username" className="text-[11px] lg:text-[12px] font-normal text-gray-700">Username</label>
+                  <input id="desktop-username" type="text" required placeholder="johndoe" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full h-[38px] lg:h-[42px] px-3.5 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[12px] lg:text-[13px] text-gray-900 placeholder:text-gray-400" />
                 </div>
               )}
-              <div className="space-y-1">
-                <label htmlFor="desktop-email" className="text-[12px] lg:text-[13px] font-normal text-gray-700">Email</label>
-                <input id="desktop-email" type="email" required placeholder="name@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full h-[42px] lg:h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[13px] lg:text-[14px] text-gray-900 placeholder:text-gray-400" />
+              <div className="space-y-0.5">
+                <label htmlFor="desktop-email" className={`text-[11px] ${isLogin ? 'lg:text-[13px]' : 'lg:text-[12px]'} font-normal text-gray-700`}>Email</label>
+                <input id="desktop-email" type="email" required placeholder="name@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full ${isLogin ? 'h-[42px] lg:h-[46px] px-4 text-[13px] lg:text-[14px]' : 'h-[38px] lg:h-[42px] px-3.5 text-[12px] lg:text-[13px]'} bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-gray-900 placeholder:text-gray-400`} />
               </div>
-              <div className="space-y-1">
-                <label htmlFor="desktop-password" className="text-[12px] lg:text-[13px] font-normal text-gray-700">Password</label>
-                <input id="desktop-password" type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full h-[42px] lg:h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[13px] lg:text-[14px] text-gray-900 placeholder:text-gray-400" />
+              <div className="space-y-0.5">
+                <label htmlFor="desktop-password" className={`text-[11px] ${isLogin ? 'lg:text-[13px]' : 'lg:text-[12px]'} font-normal text-gray-700`}>Password</label>
+                <input id="desktop-password" type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full ${isLogin ? 'h-[42px] lg:h-[46px] px-4 text-[13px] lg:text-[14px]' : 'h-[38px] lg:h-[42px] px-3.5 text-[12px] lg:text-[13px]'} bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-gray-900 placeholder:text-gray-400`} />
               </div>
               {isLogin && (
                 <div className="text-right">
                   <span onClick={() => triggerSheetTransition('forgotPassword')} className="text-xs text-zinc-500 hover:text-gray-900 transition-colors cursor-pointer">Forgot Password?</span>
                 </div>
               )}
-              <button type="submit" disabled={loading} className="w-full h-[42px] lg:h-[46px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[13px] lg:text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">{loading ? 'Processing...' : isLogin ? 'Sign in' : 'Create account'}</button>
+              <button type="submit" disabled={loading} className={`w-full ${isLogin ? 'h-[42px] lg:h-[46px] text-[13px] lg:text-[14px]' : 'h-[38px] lg:h-[42px] text-[12px] lg:text-[13px]'} bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${isLogin ? '' : 'mt-1'}`}>{loading ? 'Processing...' : isLogin ? 'Sign in' : 'Create account'}</button>
             </form>
-            <div className="text-center pt-1">
-              <button type="button" onClick={() => { triggerSheetTransition(isLogin ? 'signUp' : 'signIn'); setError(''); }} className="text-[12px] lg:text-[13px] font-normal text-gray-500 hover:text-gray-900 transition-colors">{isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}</button>
+            <div className="text-center pt-0.5">
+              <button type="button" onClick={() => { triggerSheetTransition(isLogin ? 'signUp' : 'signIn'); setError(''); }} className={`text-[12px] ${isLogin ? 'lg:text-[13px]' : 'lg:text-[12px]'} font-normal text-gray-500 hover:text-gray-900 transition-colors`}>{isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}</button>
             </div>
           </div>
         </div>
@@ -711,7 +720,7 @@ export default function LoginPage() {
 
         {/* ── SHEET 1: WELCOME SHEET (Full width on bottom, taller pb-12 height) ── */}
         <div
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
             activeSheet === 'welcome' 
               ? 'translate-y-0 opacity-100 pointer-events-auto' 
               : 'translate-y-full opacity-0 pointer-events-none'
@@ -738,7 +747,7 @@ export default function LoginPage() {
 
         {/* ── SHEET 2: SIGN IN SHEET (Full width on bottom, taller pb-12 height) ── */}
         <div
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
             activeSheet === 'signIn' 
               ? 'translate-y-0 opacity-100 pointer-events-auto' 
               : 'translate-y-full opacity-0 pointer-events-none'
@@ -828,7 +837,7 @@ export default function LoginPage() {
 
         {/* ── SHEET 3: SIGN UP SHEET ── */}
         <div
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
             activeSheet === 'signUp' 
               ? 'translate-y-0 opacity-100 pointer-events-auto' 
               : 'translate-y-full opacity-0 pointer-events-none'
@@ -913,7 +922,7 @@ export default function LoginPage() {
 
         {/* ── SHEET 4: FORGOT PASSWORD ── */}
         <div
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
             activeSheet === 'forgotPassword' 
               ? 'translate-y-0 opacity-100 pointer-events-auto' 
               : 'translate-y-full opacity-0 pointer-events-none'
@@ -967,7 +976,7 @@ export default function LoginPage() {
 
         {/* ── SHEET 5: VERIFY RESET CODE ── */}
         <div
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
             activeSheet === 'verifyReset' 
               ? 'translate-y-0 opacity-100 pointer-events-auto' 
               : 'translate-y-full opacity-0 pointer-events-none'
@@ -1041,7 +1050,7 @@ export default function LoginPage() {
 
         {/* ── SHEET 6: SET NEW PASSWORD ── */}
         <div
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
             activeSheet === 'resetPassword' 
               ? 'translate-y-0 opacity-100 pointer-events-auto' 
               : 'translate-y-full opacity-0 pointer-events-none'
@@ -1086,7 +1095,7 @@ export default function LoginPage() {
 
       {/* ── SHEET 7: VERIFY EMAIL (OTP FLOW) ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'verify' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
             : 'translate-y-full opacity-0 pointer-events-none'
@@ -1160,7 +1169,7 @@ export default function LoginPage() {
 
       {/* ── SHEET 8: SUCCESS SHEET ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeSheet === 'success' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
             : 'translate-y-full opacity-0 pointer-events-none'
@@ -1204,17 +1213,17 @@ export default function LoginPage() {
       />
       </div>
 
-      {/* Laptop/Desktop viewport layout (lg: and above) - Floating Original Card */}
       <div className="hidden lg:flex h-screen w-full items-center justify-center overflow-hidden bg-[#F4F4F4] py-[0.25in] px-6 md:px-12 select-none font-sans">
         <div 
-          className="w-full max-w-[960px] h-auto max-h-full rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_-10px_rgba(0,0,0,0.4)] bg-white bg-opacity-20 bg-clip-padding backdrop-filter backdrop-blur-2xl border border-gray-100 flex flex-col lg:grid lg:grid-cols-2" 
+          className="w-full max-w-[960px] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_-10px_rgba(0,0,0,0.4)] bg-white border border-gray-100 flex flex-col lg:grid lg:grid-cols-2" 
           style={{ 
             position: 'relative', 
             zIndex: 1,
+            height: 'min(680px, calc(100vh - 0.5in))',
           }}
         >
           {renderLeft()}
-          <div className="flex-1 bg-white">
+          <div className="h-full bg-white overflow-hidden">
             {renderDesktopRight()}
           </div>
         </div>

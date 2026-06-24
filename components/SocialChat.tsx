@@ -338,6 +338,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     transitionInProgress.current = true;
 
+    if (reverse) {
+      document.documentElement.classList.add('view-transition-reverse');
+    }
+
     const endRadius = Math.hypot(
       Math.max(x, window.innerWidth - x),
       Math.max(y, window.innerHeight - y)
@@ -351,6 +355,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     } catch {
       action();
       transitionInProgress.current = false;
+      document.documentElement.classList.remove('view-transition-reverse');
       return;
     }
 
@@ -370,8 +375,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       });
 
     transition.finished
-      .then(() => { transitionInProgress.current = false; })
-      .catch(() => { transitionInProgress.current = false; });
+      .then(() => { 
+        transitionInProgress.current = false; 
+        document.documentElement.classList.remove('view-transition-reverse');
+      })
+      .catch(() => { 
+        transitionInProgress.current = false; 
+        document.documentElement.classList.remove('view-transition-reverse');
+      });
   };
 
   // Custom Delete Modal State

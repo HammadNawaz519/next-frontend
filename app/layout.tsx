@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NextAuthProvider } from "./components/NextAuthProvider";
 import { ThemeProvider } from "./components/ThemeProvider";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -73,7 +74,9 @@ export default function RootLayout({
           <NextAuthProvider>{children}</NextAuthProvider>
         </ThemeProvider>
         {/* Register service worker */}
-        <script
+        <Script
+          id="register-sw"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {

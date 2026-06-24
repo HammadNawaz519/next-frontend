@@ -10,7 +10,8 @@ import {
   respondToFollowRequest, 
   createPostAction, 
   deletePostAction,
-  toggleProfilePrivacy
+  toggleProfilePrivacy,
+  getSavedPostsAction
 } from '@/app/dashboard/actions';
 
 /* ─── Types ─── */
@@ -93,6 +94,8 @@ export default function ProfilePanel({
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab]         = useState<'grid'|'reels'|'tagged'>('grid');
   const [copyToast, setCopyToast]         = useState(false);
+  const [savedPostsList, setSavedPostsList] = useState<any[]>([]);
+  const [loadingSaved, setLoadingSaved]     = useState(false);
 
   // Switch account state
   const [activeAccountSheet, setActiveAccountSheet] = useState<'none' | 'accounts' | 'options' | 'signIn' | 'signUp' | 'verify' | 'success'>('none');
@@ -299,7 +302,7 @@ export default function ProfilePanel({
   };
 
   /* Multi-page Navigation States */
-  const [subView, setSubView]             = useState<'profile' | 'followers' | 'following' | 'edit_profile' | 'follow_requests' | 'settings' | 'notifications'>('profile');
+  const [subView, setSubView]             = useState<'profile' | 'followers' | 'following' | 'edit_profile' | 'follow_requests' | 'settings' | 'notifications' | 'saved'>('profile');
   const [searchQuery, setSearchQuery]     = useState('');
   const [longPressedPostId, setLongPressedPostId] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -1034,6 +1037,39 @@ export default function ProfilePanel({
                     </svg>
                   </span>
                   <span style={{fontSize: 14, fontWeight: 500, color: txt}}>Manage Profile</span>
+                </div>
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                </svg>
+              </div>
+
+              {/* Saved Posts & Reels */}
+              <div 
+                onClick={() => {
+                  setSubView('saved');
+                  setLoadingSaved(true);
+                  getSavedPostsAction().then(res => {
+                    if (Array.isArray(res)) {
+                      setSavedPostsList(res.map((item: any) => item.post));
+                    }
+                    setLoadingSaved(false);
+                  }).catch(e => {
+                    console.error(e);
+                    setLoadingSaved(false);
+                  });
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '16px 8px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
+                }}
+              >
+                <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
+                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                    </svg>
+                  </span>
+                  <span style={{fontSize: 14, fontWeight: 500, color: txt}}>Saved Posts & Reels</span>
                 </div>
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
@@ -1784,6 +1820,95 @@ export default function ProfilePanel({
               </div>
             </div>
 
+          </div>
+        </>
+      )}
+
+      {/* ========================================================
+          VIEW: SAVED POSTS PAGE
+          ======================================================== */}
+      {subView === 'saved' && (
+        <>
+          {/* Top Navigation Bar */}
+          <div style={{
+            display:'flex', alignItems:'center', justifyContent:'space-between',
+            padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
+          }}>
+            <button onClick={() => setSubView('settings')} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: txt, padding: 0
+            }}>
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </button>
+
+            <span style={{fontWeight:700, fontSize:16, color:txt}}>Saved</span>
+
+            <div style={{width: 36}} />
+          </div>
+
+          {/* Grid area */}
+          <div style={{flex: 1, overflowY: 'auto'}}>
+            {loadingSaved ? (
+              <div style={{padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13}}>
+                Loading saved items...
+              </div>
+            ) : savedPostsList.length === 0 ? (
+              <div style={{
+                padding: '80px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                justifyContent: 'center', textAlign: 'center', gap: 12
+              }}>
+                <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: sub }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                </svg>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: txt }}>Save Photos and Videos</h3>
+                <p style={{ fontSize: 13, color: sub, maxWidth: 260 }}>
+                  When you save photos and videos, they will appear here. Only you can see what you've saved.
+                </p>
+              </div>
+            ) : (
+              <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:2}}>
+                {savedPostsList.map((post: any) => (
+                  <div
+                    key={post.id}
+                    onClick={() => {
+                      if (typeof window !== 'undefined') window.location.href = `/p/${post.id}`;
+                    }}
+                    style={{
+                      aspectRatio:'1/1', position:'relative', overflow:'hidden', cursor:'pointer',
+                      background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+                    }}
+                  >
+                    {post.thumbnailUrl || post.imageUrl ? (
+                      <img 
+                        src={post.thumbnailUrl || post.imageUrl} 
+                        alt="saved thumbnail" 
+                        style={{width:'100%',height:'100%',objectFit:'cover'}}
+                      />
+                    ) : (
+                      <div style={{
+                        width:'100%', height:'100%',
+                        background: isDark ? `hsl(200,40%,22%)` : `hsl(200,60%,92%)`,
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                      }}>
+                        <span style={{fontSize: 12, fontWeight: 700, color: isDark ? '#fff':'#4b5563', textTransform:'uppercase'}}>
+                          {post.postType}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Icon overlay depending on media type */}
+                    <div style={{position:'absolute', top:8, right:8, zIndex:10}}>
+                      {post.postType === 'carousel' && <CarouselIcon />}
+                      {post.postType === 'reel' && <ReelIcon />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{height: 80}} />
           </div>
         </>
       )}
