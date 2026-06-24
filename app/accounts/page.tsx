@@ -3,7 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { MoreVertical, Trash2, Plus, UserPlus, LogIn, Lock, Eye, EyeOff, X, ArrowLeft } from 'lucide-react';
+import { MoreVertical, Trash2, Plus, UserPlus, LogIn, Lock, Eye, EyeOff, X, ArrowLeft, ChevronRight } from 'lucide-react';
+import { GrainGradient } from '@paper-design/shaders-react';
+import { useTheme } from '@/app/components/ThemeProvider';
+import ThemeToggle from '@/components/ThemeToggle';
 
 interface SavedAccount {
   email: string;
@@ -15,6 +18,9 @@ interface SavedAccount {
 
 export default function AccountsPage() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  
   const [mounted, setMounted] = useState(false);
   const [accounts, setAccounts] = useState<SavedAccount[]>([]);
   const [removeMode, setRemoveMode] = useState(false);
@@ -58,8 +64,12 @@ export default function AccountsPage() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      <div className={`min-h-screen flex items-center justify-center transition-colors duration-500 ${
+        isDark ? 'bg-[#050505]' : 'bg-[#f3f4f6]'
+      }`}>
+        <div className={`w-8 h-8 border-2 rounded-full animate-spin ${
+          isDark ? 'border-white/20 border-t-white' : 'border-black/20 border-t-black'
+        }`} />
       </div>
     );
   }
@@ -135,61 +145,106 @@ export default function AccountsPage() {
     return acc.email.slice(0, 2).toUpperCase();
   };
 
-  return (
-    <div className="min-h-screen bg-[#09090b] text-white flex flex-col justify-center items-center p-4 relative overflow-hidden select-none font-sans">
-      {/* Decorative Blur Spheres */}
-      <div className="absolute top-[-20%] left-[-10%] w-[60%] aspect-square rounded-full bg-violet-600/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[60%] aspect-square rounded-full bg-amber-600/10 blur-[120px] pointer-events-none" />
+  const renderLeft = () => {
+    return (
+      <div className="relative overflow-hidden hidden lg:flex flex-col items-center justify-center h-full">
+        <GrainGradient
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+          colorBack={isDark ? "#0A0A0C" : "#F8F9FA"}
+          softness={0.5}
+          intensity={0.8}
+          noise={0.06}
+          shape="corners"
+          offsetX={0}
+          offsetY={0}
+          scale={0.8}
+          rotation={0}
+          speed={0.5}
+          colors={['#8B5CF6', '#3B82F6', '#F59E0B']}
+        />
+        <div className="relative z-10 flex flex-col items-center justify-center gap-6 px-12 text-center select-none">
+          <p
+            className="font-light lg:tracking-[0.4em] uppercase text-sm lg:[writing-mode:vertical-rl] lg:rotate-180"
+            style={{ 
+              letterSpacing: '0.45em', 
+              opacity: 0.75,
+              color: isDark ? '#ffffff' : '#111827'
+            }}
+          >
+            Account Center
+          </p>
+        </div>
+      </div>
+    );
+  };
 
-      {/* Main Container Card */}
-      <div className="relative w-full max-w-md bg-zinc-950/40 border border-zinc-800/80 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-2xl flex flex-col overflow-hidden">
-        
+  const renderAccountCenterContent = () => {
+    return (
+      <div className="w-full h-full flex flex-col p-8 md:p-10 justify-between relative overflow-hidden">
         {/* Top Header */}
-        <div className="flex items-center justify-between mb-8 relative">
+        <div className="flex items-center justify-between mb-6 relative z-10">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center font-bold text-white tracking-wider text-sm">
               C
             </div>
             <div>
-              <h1 className="text-xl font-semibold tracking-tight text-white">Account Center</h1>
-              <p className="text-xs text-zinc-500 mt-0.5">Switch accounts instantly</p>
+              <h1 className={`text-xl font-semibold tracking-tight ${isDark ? 'text-white' : 'text-gray-950'}`}>Account Center</h1>
+              <p className={`text-xs mt-0.5 ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>Switch accounts instantly</p>
             </div>
           </div>
 
-          {accounts.length > 0 && (
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setShowDropdown(!showDropdown)}
-                className="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:bg-zinc-850 transition-colors"
-              >
-                <MoreVertical className="w-5 h-5 text-zinc-400" />
-              </button>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            
+            {accounts.length > 0 && (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className={`w-9 h-9 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${
+                    isDark 
+                      ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-850' 
+                      : 'bg-gray-100 border-gray-200 hover:bg-gray-150'
+                  }`}
+                >
+                  <MoreVertical className={`w-5 h-5 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`} />
+                </button>
 
-              {showDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-[#121214] border border-zinc-800 rounded-2xl py-2 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <button
-                    onClick={() => {
-                      setRemoveMode(!removeMode);
-                      setShowDropdown(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-zinc-900 text-zinc-200 hover:text-white transition-colors flex items-center gap-2"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-400" />
-                    {removeMode ? 'Exit Remove Mode' : 'Remove an account'}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                {showDropdown && (
+                  <div className={`absolute right-0 mt-2 w-48 border rounded-2xl py-2 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200 ${
+                    isDark ? 'bg-[#121214] border-zinc-800' : 'bg-white border-gray-200'
+                  }`}>
+                    <button
+                      onClick={() => {
+                        setRemoveMode(!removeMode);
+                        setShowDropdown(false);
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2 cursor-pointer ${
+                        isDark 
+                          ? 'hover:bg-zinc-900 text-zinc-200 hover:text-white' 
+                          : 'hover:bg-gray-100 text-gray-750 hover:text-gray-950'
+                      }`}
+                    >
+                      <Trash2 className="w-4 h-4 text-red-400" />
+                      {removeMode ? 'Exit Remove Mode' : 'Remove an account'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Remove mode active banner */}
         {removeMode && (
-          <div className="flex items-center justify-between bg-red-950/30 border border-red-900/30 rounded-2xl px-4 py-3 mb-6 animate-in slide-in-from-top duration-300">
+          <div className={`flex items-center justify-between border rounded-2xl px-4 py-2.5 mb-4 animate-in slide-in-from-top duration-300 z-10 ${
+            isDark 
+              ? 'bg-red-950/20 border-red-900/30' 
+              : 'bg-red-50 border-red-200'
+          }`}>
             <span className="text-xs text-red-400 font-medium">Remove Mode Active</span>
             <button
               onClick={() => setRemoveMode(false)}
-              className="text-xs text-zinc-400 hover:text-white transition-colors"
+              className="text-xs text-zinc-400 hover:text-zinc-650 dark:hover:text-white transition-colors cursor-pointer"
             >
               Done
             </button>
@@ -197,14 +252,16 @@ export default function AccountsPage() {
         )}
 
         {/* Saved Accounts List */}
-        <div className="space-y-3.5 mb-8 min-h-[160px] flex flex-col justify-center">
+        <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 mb-6 relative z-10 min-h-[160px] flex flex-col justify-start">
           {accounts.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4">
-                <Lock className="w-5 h-5 text-zinc-500" />
+            <div className="text-center py-8 my-auto">
+              <div className={`w-12 h-12 rounded-full border flex items-center justify-center mx-auto mb-4 ${
+                isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-100 border-gray-200'
+              }`}>
+                <Lock className={`w-5 h-5 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`} />
               </div>
-              <p className="text-sm text-zinc-400 font-medium">No saved accounts found</p>
-              <p className="text-xs text-zinc-600 mt-1">Sign in below to save your credentials</p>
+              <p className={`text-sm font-medium ${isDark ? 'text-zinc-400' : 'text-gray-600'}`}>No saved accounts found</p>
+              <p className={`text-xs mt-1 ${isDark ? 'text-zinc-600' : 'text-gray-400'}`}>Sign in below to save your credentials</p>
             </div>
           ) : (
             accounts.map((acc) => (
@@ -213,8 +270,12 @@ export default function AccountsPage() {
                 onClick={() => handleAccountClick(acc)}
                 className={`group flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-300 ${
                   removeMode
-                    ? 'border-red-900/10 bg-red-950/5 cursor-default'
-                    : 'border-zinc-800/60 bg-zinc-900/30 hover:bg-zinc-900/70 hover:border-zinc-700/60 cursor-pointer active:scale-[0.99]'
+                    ? isDark 
+                      ? 'border-red-900/20 bg-red-950/10 cursor-default' 
+                      : 'border-red-200 bg-red-50/50 cursor-default'
+                    : isDark
+                      ? 'border-zinc-800 bg-zinc-900/30 hover:bg-zinc-800/50 hover:border-zinc-700 cursor-pointer active:scale-[0.99]'
+                      : 'border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 cursor-pointer active:scale-[0.99]'
                 }`}
               >
                 <div className="flex items-center gap-3.5 min-w-0">
@@ -222,24 +283,36 @@ export default function AccountsPage() {
                     <img
                       src={acc.image}
                       alt={acc.name || acc.username}
-                      className="w-11 h-11 rounded-full border border-zinc-800 object-cover flex-shrink-0"
+                      className={`w-11 h-11 rounded-full border object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${
+                        isDark ? 'border-zinc-855' : 'border-gray-250'
+                      }`}
                     />
                   ) : (
-                    <div className="w-11 h-11 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-zinc-300 text-sm flex-shrink-0 uppercase">
+                    <div className={`w-11 h-11 rounded-full border flex items-center justify-center font-bold text-sm flex-shrink-0 uppercase transition-transform duration-300 group-hover:scale-105 ${
+                      isDark 
+                        ? 'bg-zinc-800 border-zinc-700 text-zinc-300' 
+                        : 'bg-gray-100 border-gray-200 text-gray-700'
+                    }`}>
                       {getInitials(acc)}
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-zinc-200 truncate group-hover:text-white transition-colors">
+                    <p className={`text-sm font-semibold truncate transition-colors ${
+                      isDark ? 'text-zinc-200 group-hover:text-white' : 'text-gray-900 group-hover:text-gray-950'
+                    }`}>
                       {acc.name || acc.username || acc.email.split('@')[0]}
                     </p>
-                    <p className="text-xs text-zinc-500 truncate mt-0.5">{acc.email}</p>
+                    <p className={`text-xs truncate mt-0.5 ${
+                      isDark ? 'text-zinc-500' : 'text-gray-500'
+                    }`}>{acc.email}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0 pl-2">
                   {acc.provider === 'google' && !removeMode && (
-                    <span className="text-[10px] bg-zinc-900 border border-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full font-medium">
+                    <span className={`text-[10px] border px-2 py-0.5 rounded-full font-medium ${
+                      isDark ? 'bg-zinc-900 border-zinc-850 text-zinc-400' : 'bg-gray-100 border-gray-200 text-gray-500'
+                    }`}>
                       Google
                     </span>
                   )}
@@ -249,13 +322,13 @@ export default function AccountsPage() {
                         e.stopPropagation();
                         handleRemoveAccount(acc.email);
                       }}
-                      className="p-2 bg-red-500/10 hover:bg-red-500/25 border border-red-500/20 text-red-400 hover:text-red-300 rounded-xl transition-all active:scale-95"
+                      className="p-2 bg-red-500/10 hover:bg-red-500/25 border border-red-500/20 text-red-400 hover:text-red-300 rounded-xl transition-all active:scale-95 cursor-pointer"
                       title="Remove from Account Center"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   ) : (
-                    <ChevronRightIcon className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+                    <ChevronRight className={`w-4 h-4 transition-colors ${isDark ? 'text-zinc-650 group-hover:text-zinc-400' : 'text-gray-400 group-hover:text-gray-650'}`} />
                   )}
                 </div>
               </div>
@@ -264,10 +337,14 @@ export default function AccountsPage() {
         </div>
 
         {/* Bottom Options */}
-        <div className="space-y-3 pt-6 border-t border-zinc-900">
+        <div className={`space-y-3 pt-6 border-t z-10 ${isDark ? 'border-zinc-900' : 'border-gray-200'}`}>
           <button
             onClick={() => router.push('/?sheet=signUp')}
-            className="w-full flex items-center justify-center gap-2 bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3 font-semibold text-sm shadow-md"
+            className={`w-full flex items-center justify-center gap-2 transition-all active:scale-98 rounded-full py-3 font-semibold text-sm shadow-md cursor-pointer ${
+              isDark 
+                ? 'bg-white text-black hover:bg-zinc-200' 
+                : 'bg-zinc-900 text-white hover:bg-zinc-800'
+            }`}
           >
             <UserPlus className="w-4 h-4" />
             Create an Account
@@ -275,12 +352,52 @@ export default function AccountsPage() {
           
           <button
             onClick={() => router.push('/?sheet=signIn')}
-            className="w-full flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 hover:text-white border border-zinc-800 rounded-full py-3 font-semibold text-sm transition-all active:scale-98"
+            className={`w-full flex items-center justify-center gap-2 border rounded-full py-3 font-semibold text-sm transition-all active:scale-98 cursor-pointer ${
+              isDark 
+                ? 'bg-zinc-950 hover:bg-zinc-900 text-zinc-300 hover:text-white border-zinc-800' 
+                : 'bg-white hover:bg-gray-50 text-gray-750 hover:text-gray-950 border-gray-200'
+            }`}
           >
             <LogIn className="w-4 h-4" />
             Sign In to Existing Account
           </button>
         </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className={`min-h-screen flex flex-col justify-center items-center p-4 relative overflow-hidden select-none font-sans transition-colors duration-500 ${
+      isDark ? 'bg-[#050505] text-white' : 'bg-[#f3f4f6] text-gray-900'
+    }`}>
+      {/* Decorative Blur Spheres */}
+      <div className={`absolute top-[-20%] left-[-10%] w-[60%] aspect-square rounded-full blur-[120px] pointer-events-none transition-colors duration-1000 ${
+        isDark ? 'bg-violet-600/10' : 'bg-violet-400/10'
+      }`} />
+      <div className={`absolute bottom-[-20%] right-[-10%] w-[60%] aspect-square rounded-full blur-[120px] pointer-events-none transition-colors duration-1000 ${
+        isDark ? 'bg-amber-600/10' : 'bg-amber-400/10'
+      }`} />
+
+      {/* Desktop split card view */}
+      <div className="hidden lg:flex w-full max-w-[960px] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_-10px_rgba(0,0,0,0.45)] border flex-col lg:grid lg:grid-cols-2 relative z-10 transition-all duration-500"
+        style={{ 
+          height: 'min(640px, calc(100vh - 0.5in))',
+          backgroundColor: isDark ? 'rgba(18, 18, 20, 0.4)' : 'rgba(255, 255, 255, 0.8)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+          backdropFilter: 'blur(24px)',
+        }}
+      >
+        {renderLeft()}
+        <div className={`h-full overflow-hidden ${isDark ? 'bg-[#0E0E11]' : 'bg-white'}`}>
+          {renderAccountCenterContent()}
+        </div>
+      </div>
+
+      {/* Mobile view layout */}
+      <div className={`lg:hidden relative w-full max-w-md border backdrop-blur-xl rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden z-10 transition-colors duration-500 ${
+        isDark ? 'bg-zinc-950/40 border-zinc-800/80' : 'bg-white border-gray-250/80'
+      }`}>
+        {renderAccountCenterContent()}
       </div>
 
       {/* ── PASSWORD DIALOG MODAL ── */}
@@ -289,32 +406,42 @@ export default function AccountsPage() {
           {/* Backdrop overlay listener to close */}
           <div className="absolute inset-0" onClick={() => !loading && setSelectedAccount(null)} />
           
-          <div className="relative w-full max-w-md bg-[#121214] border-t sm:border border-zinc-800/80 rounded-t-[2.5rem] sm:rounded-[2rem] p-8 pb-12 sm:pb-8 shadow-2xl z-10 transform animate-in slide-in-from-bottom sm:zoom-in-95 duration-300">
+          <div className={`relative w-full max-w-md border-t sm:border rounded-t-[2.5rem] sm:rounded-[2rem] p-8 pb-12 sm:pb-8 shadow-2xl z-10 transform animate-in slide-in-from-bottom sm:zoom-in-95 duration-300 ${
+            isDark ? 'bg-[#121214] border-zinc-800/80' : 'bg-white border-gray-200'
+          }`}>
             {/* Grab Bar for mobile feel */}
-            <div className="w-12 h-1 bg-zinc-800 rounded-full mx-auto mb-6 sm:hidden" />
+            <div className={`w-12 h-1 rounded-full mx-auto mb-6 sm:hidden ${isDark ? 'bg-zinc-800' : 'bg-gray-200'}`} />
             
             <button
               disabled={loading}
               onClick={() => setSelectedAccount(null)}
-              className="absolute top-6 right-6 p-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-50"
+              className={`absolute top-6 right-6 p-1.5 rounded-full border transition-colors disabled:opacity-50 cursor-pointer ${
+                isDark 
+                  ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800' 
+                  : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-950 hover:bg-gray-200'
+              }`}
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="text-center mb-6">
-              <div className="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4 overflow-hidden">
+              <div className={`w-16 h-16 rounded-full border flex items-center justify-center mx-auto mb-4 overflow-hidden ${
+                isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-150 border-gray-200'
+              }`}>
                 {selectedAccount.image ? (
                   <img src={selectedAccount.image} alt={selectedAccount.username} className="w-full h-full object-cover" />
                 ) : (
-                  <span className="font-bold text-xl uppercase text-zinc-300">{getInitials(selectedAccount)}</span>
+                  <span className={`font-bold text-xl uppercase ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>{getInitials(selectedAccount)}</span>
                 )}
               </div>
-              <h2 className="text-lg font-bold text-white">Enter Password</h2>
-              <p className="text-xs text-zinc-500 mt-1">Sign in as {selectedAccount.name || selectedAccount.username || selectedAccount.email}</p>
+              <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-950'}`}>Enter Password</h2>
+              <p className={`text-xs mt-1 ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>Sign in as {selectedAccount.name || selectedAccount.username || selectedAccount.email}</p>
             </div>
 
             {error && (
-              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3.5 mb-4 animate-in shake duration-300">
+              <div className={`text-xs border rounded-2xl px-4 py-3.5 mb-4 animate-in shake duration-300 ${
+                isDark ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-red-600 bg-red-50 border-red-200'
+              }`}>
                 {error}
               </div>
             )}
@@ -328,13 +455,17 @@ export default function AccountsPage() {
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm pr-12"
+                  className={`w-full rounded-full border px-5 py-3 focus:outline-none transition-colors text-sm pr-12 ${
+                    isDark 
+                      ? 'bg-[#1c1c1e] text-white placeholder:text-zinc-500 border-zinc-800 focus:border-zinc-500' 
+                      : 'bg-gray-50 text-gray-900 placeholder:text-gray-400 border-gray-200 focus:border-gray-400'
+                  }`}
                   autoFocus
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -343,10 +474,14 @@ export default function AccountsPage() {
               <button
                 type="submit"
                 disabled={loading || !password}
-                className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                className={`w-full transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer ${
+                  isDark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-zinc-800'
+                }`}
               >
                 {loading ? (
-                  <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                  <div className={`w-4 h-4 border-2 rounded-full animate-spin ${
+                    isDark ? 'border-black/20 border-t-black' : 'border-white/20 border-t-white'
+                  }`} />
                 ) : 'Sign In'}
               </button>
             </form>
@@ -354,24 +489,5 @@ export default function AccountsPage() {
         </div>
       )}
     </div>
-  );
-}
-
-function ChevronRightIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
   );
 }

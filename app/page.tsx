@@ -65,6 +65,11 @@ export default function LoginPage() {
   const [successUser, setSuccessUser] = useState<SuccessUser | null>(null);
   const [showMobilePassword, setShowMobilePassword] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   // Handle initial load status
   useEffect(() => {
@@ -672,6 +677,10 @@ export default function LoginPage() {
 
   // Render the real DashboardPage instantly to avoid any route transition lag or jitter.
   // The DashboardPage itself will handle its own graceful loading state or display instantly.
+  if (!hasMounted) {
+    return null;
+  }
+
   if (sessStatus === 'authenticated' || (initialLoading && isLikelyLoggedIn)) {
     return <DashboardPage />;
   }
