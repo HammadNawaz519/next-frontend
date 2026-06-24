@@ -409,8 +409,23 @@ export default function DashboardPage() {
   };
 
   const handleNavClick = (viewId: any, e: React.MouseEvent, reverse = false) => {
+    // If profile is open, close it AND switch view in ONE single ripple transition
+    // to avoid two conflicting startViewTransition calls causing a glitch.
     if (isProfileOpen) {
-      handleCloseProfile(e);
+      if (viewId === 'chat') {
+        chatComponentRef.current?.closeChat();
+        setSelectedChatUser(null);
+      }
+      runProfileTransition(() => {
+        setIsProfileOpen(false);
+        setIsClosingProfile(false);
+        setSelectedProfileUser(null);
+        // Only change the view if we're actually going somewhere different
+        if (viewId !== activeView || viewId === 'chat') {
+          setActiveView(viewId);
+        }
+      }, e.clientX, e.clientY, true);
+      return; // ← critical: skip the nav transition below
     }
 
     if (activeView === viewId && viewId !== 'chat') return;
