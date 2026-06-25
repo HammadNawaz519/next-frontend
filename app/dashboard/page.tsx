@@ -875,13 +875,18 @@ export default function DashboardPage() {
           refreshProfile={refreshProfile}
           onToggleFollow={handleToggleFollow}
           onOpenChat={(targetUser) => {
+            // Reset nav transition lock so it doesn't block
+            navTransitionInProgress.current = false;
+            // Origin from bottom-center to match bottom nav bar feel (bottom-to-top ripple)
+            const x = window.innerWidth / 2;
+            const y = window.innerHeight;
             runProfileTransition(() => {
               setIsProfileOpen(false);
               setIsClosingProfile(false);
               setSelectedProfileUser(null);
               setSelectedChatUser(targetUser);
               setActiveView('chat');
-            }, window.innerWidth / 2, window.innerHeight / 2, false);
+            }, x, y, false);
           }}
           onAccountSheetChange={setIsAccountSheetOpen}
           onOpenUpload={(type) => {
