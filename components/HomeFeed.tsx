@@ -709,13 +709,7 @@ interface HomeFeedProps {
   onNavigate?: (viewId: 'home' | 'chat' | 'search') => void;
 }
 
-const SUGGESTIONS = [
-  { id: 1, username: 'sarah_k', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80', hue: 145, description: 'Followed by alex_ray + 3 more' },
-  { id: 2, username: 'mia.ux', image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&h=150&q=80', hue: 52, description: 'Followed by dev_dan' },
-  { id: 3, username: 'tomás', image: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=150&h=150&q=80', hue: 15, description: 'Suggested for you' },
-  { id: 4, username: 'zara_j', image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80', hue: 340, description: 'New to Connect' },
-  { id: 5, username: 'dev_dan', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&h=150&q=80', hue: 188, description: 'Followed by sarah_k' },
-];
+
 
 export default function HomeFeed({ isDark, session, onNavigate }: HomeFeedProps) {
   const [activeStories, setActiveStories] = useState<Story[]>([]);
@@ -914,81 +908,7 @@ export default function HomeFeed({ isDark, session, onNavigate }: HomeFeedProps)
               <div className="h-20 lg:h-10" />
             </div>
 
-            {/* Right Sidebar Suggestions Column */}
-            <div className="hidden xl:block w-[320px] flex-shrink-0 pt-4">
-              <div className="sticky top-6 space-y-4">
-                {/* User profile row */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-[44px] h-[44px] rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-800 flex items-center justify-center bg-zinc-100 dark:bg-zinc-900">
-                      <img src={userAvatar} alt="profile" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-[14px] font-semibold tracking-tight" style={{ color: isDark ? '#fff' : '#09090b' }}>
-                        {userHandle}
-                      </p>
-                      <p className="text-[12px] text-zinc-500 truncate max-w-[160px]">
-                        {userDisplayName}
-                      </p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => onNavigate?.('search')} 
-                    className="text-[12px] font-semibold text-[#0095f6] hover:text-[#00376b] active:opacity-60 transition-colors"
-                  >
-                    Switch
-                  </button>
-                </div>
 
-                {/* Suggestions header */}
-                <div className="flex items-center justify-between pt-2">
-                  <span className="text-[13px] font-semibold text-zinc-500">Suggested for you</span>
-                  <button className="text-[12px] font-semibold hover:opacity-60 transition-opacity" style={{ color: isDark ? '#fff' : '#09090b' }}>
-                    See All
-                  </button>
-                </div>
-
-                {/* Suggestions list */}
-                <div className="space-y-3.5 pt-1">
-                  {SUGGESTIONS.map(s => {
-                    const isFollowing = followingMap[s.id];
-                    return (
-                      <div key={s.id} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar image={s.image} hue={s.hue} size={32} />
-                          <div className="text-left">
-                            <p className="text-[12px] font-semibold" style={{ color: isDark ? '#fff' : '#09090b' }}>
-                              {s.username}
-                            </p>
-                            <p className="text-[10px] text-zinc-500 truncate max-w-[150px]">
-                              {s.description}
-                            </p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => toggleFollow(s.id)}
-                          className={`text-[12px] font-semibold transition-colors ${
-                            isFollowing 
-                              ? 'text-zinc-500 dark:text-zinc-400' 
-                              : 'text-[#0095f6] hover:text-[#00376b]'
-                          }`}
-                        >
-                          {isFollowing ? 'Following' : 'Follow'}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Footer links */}
-                <div className="pt-6 space-y-3 text-[11px] text-zinc-400 text-left leading-relaxed">
-                  <p className="hover:underline cursor-pointer">
-                    About · Help · Press · API · Jobs · Privacy · Terms · Locations · Language · Meta Verified
-                  </p>
-                  <p>© 2026 Connect from Meta</p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

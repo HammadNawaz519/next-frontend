@@ -445,20 +445,14 @@ export default function DashboardPage() {
     // If profile is open, close it AND switch view in ONE single ripple transition
     // to avoid two conflicting startViewTransition calls causing a glitch.
     if (isProfileOpen) {
-      if (viewId === 'chat') {
-        chatComponentRef.current?.closeChat();
-        setSelectedChatUser(null);
-        // Instant transition with no animation
-        setIsProfileOpen(false);
-        setIsClosingProfile(false);
-        setSelectedProfileUser(null);
-        setActiveView('chat');
-        return;
-      }
       runProfileTransition(() => {
         setIsProfileOpen(false);
         setIsClosingProfile(false);
         setSelectedProfileUser(null);
+        if (viewId === 'chat') {
+          chatComponentRef.current?.closeChat();
+          setSelectedChatUser(null);
+        }
         // Only change the view if we're actually going somewhere different
         if (viewId !== activeView) {
           setActiveView(viewId);
@@ -881,8 +875,13 @@ export default function DashboardPage() {
           refreshProfile={refreshProfile}
           onToggleFollow={handleToggleFollow}
           onOpenChat={(targetUser) => {
-            setSelectedChatUser(targetUser);
-            setActiveView('chat');
+            runProfileTransition(() => {
+              setIsProfileOpen(false);
+              setIsClosingProfile(false);
+              setSelectedProfileUser(null);
+              setSelectedChatUser(targetUser);
+              setActiveView('chat');
+            });
           }}
           onAccountSheetChange={setIsAccountSheetOpen}
           onOpenUpload={(type) => {
@@ -1002,17 +1001,29 @@ export default function DashboardPage() {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 6 }}>Media URL (Image or Video)</div>
-                <input 
-                  type="text" 
-                  placeholder={`Paste ${uploadType === 'reel' ? 'video' : 'image'} URL here...`}
-                  value={uploadUrl}
-                  onChange={e => setUploadUrl(e.target.value)}
-                  style={{
-                    width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0'}`,
-                    background: isDark ? '#1a1a1f' : '#f9fafb', color: isDark ? '#fff' : '#111', outline: 'none', fontSize: 14
-                  }}
-                />
+                <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 6 }}>Select from Gallery</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
+                  {[
+                    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=300&h=450&q=80',
+                    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=300&h=450&q=80',
+                    'https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=300&h=450&q=80',
+                    'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=300&h=450&q=80',
+                    'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?auto=format&fit=crop&w=300&h=450&q=80',
+                    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=300&h=450&q=80'
+                  ].map((imgUrl, idx) => (
+                    <div 
+                      key={idx} 
+                      onClick={() => setUploadUrl(imgUrl)}
+                      style={{
+                        aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer',
+                        border: uploadUrl === imgUrl ? '2px solid #0095f6' : '2px solid transparent',
+                        transition: 'border 0.2s', padding: '2px'
+                      }}
+                    >
+                      <img src={imgUrl} alt="gallery" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }} />
+                    </div>
+                  ))}
+                </div>
               </div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 6 }}>Caption</div>

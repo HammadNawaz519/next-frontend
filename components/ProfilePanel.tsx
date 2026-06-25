@@ -851,10 +851,10 @@ export default function ProfilePanel({
                   {!isPrivateAndUnfollowed && (
                     <button 
                       onClick={() => {
-                        onClose();
                         if (onOpenChat) {
                           onOpenChat(targetUser);
                         } else if (typeof window !== 'undefined') {
+                          onClose();
                           window.location.href = `/dashboard?chat=${targetUser.id}`;
                         }
                       }} 

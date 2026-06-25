@@ -411,20 +411,20 @@ function ReelItem({ reel, isActive, onOpenProfile, isDark }: {
         </div>
       </div>
 
-      {/* Right Interaction Sidebar — anchored to right: 35px, bottom: 450px */}
+      {/* Right Interaction Sidebar — anchored to right: 15px, bottom: 20px */}
       <div 
-        className="absolute right-[35px] flex flex-col items-center gap-5.5 z-30"
-        style={{ bottom: '450px' }}
+        className="absolute right-[15px] flex flex-col items-center gap-6 z-30 pb-4"
+        style={{ bottom: '20px' }}
       >
         {/* Heart (Like) Icon */}
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex flex-col items-center gap-1.5">
           <button 
             onClick={handleLikeToggle}
-            className="w-11 h-11 rounded-full flex items-center justify-center bg-black/35 backdrop-blur-md border border-white/10 active:scale-90 transition-transform"
+            className="w-10 h-10 flex items-center justify-center text-white active:scale-90 transition-transform drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]"
             style={{ color: liked ? '#ef4444' : 'white' }}
           >
             <svg 
-              className={`w-6 h-6 ${liked ? 'fill-current' : ''}`}
+              className={`w-7 h-7 ${liked ? 'fill-current' : ''}`}
               fill={liked ? 'currentColor' : 'none'} 
               stroke="currentColor" 
               strokeWidth={2} 
@@ -433,44 +433,44 @@ function ReelItem({ reel, isActive, onOpenProfile, isDark }: {
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
           </button>
-          <span className="text-[10px] text-white font-medium drop-shadow-md select-none">{likeCount}</span>
+          <span className="text-[12px] text-white font-medium drop-shadow-md select-none">{likeCount}</span>
         </div>
 
         {/* Comment Icon */}
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex flex-col items-center gap-1.5">
           <button 
             onClick={handleOpenComments}
-            className="w-11 h-11 rounded-full flex items-center justify-center bg-black/35 backdrop-blur-md border border-white/10 text-white active:scale-90 transition-transform"
+            className="w-10 h-10 flex items-center justify-center text-white active:scale-90 transition-transform drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]"
           >
-            <svg className="w-5.5 h-5.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </button>
-          <span className="text-[10px] text-white font-medium drop-shadow-md select-none">{commentsList.length}</span>
+          <span className="text-[12px] text-white font-medium drop-shadow-md select-none">{commentsList.length}</span>
         </div>
 
         {/* Share (Paper Plane) Icon */}
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex flex-col items-center gap-1.5">
           <button 
             onClick={handleShare}
-            className="w-11 h-11 rounded-full flex items-center justify-center bg-black/35 backdrop-blur-md border border-white/10 text-white active:scale-90 transition-transform"
+            className="w-10 h-10 flex items-center justify-center text-white active:scale-90 transition-transform drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]"
           >
-            <svg className="w-5.5 h-5.5 -rotate-12 translate-x-[1px] -translate-y-[1px]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="w-7 h-7 -rotate-12 translate-x-[1px] -translate-y-[1px]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 10.742l8.139-4.07M8.684 10.742l-2.085 9.02a.75.75 0 001.089.818l5.584-3.72M8.684 10.742L21 3m0 0l-5.38 18.062a.75.75 0 01-1.355-.008L9.88 12.06 21 3z" />
             </svg>
           </button>
-          <span className="text-[10px] text-white font-medium drop-shadow-md select-none">Share</span>
+          <span className="text-[12px] text-white font-medium drop-shadow-md select-none">Share</span>
         </div>
 
         {/* Save/Bookmark Icon */}
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex flex-col items-center gap-1.5">
           <button 
             onClick={handleSaveToggle}
-            className="w-11 h-11 rounded-full flex items-center justify-center bg-black/35 backdrop-blur-md border border-white/10 active:scale-90 transition-transform"
+            className="w-10 h-10 flex items-center justify-center text-white active:scale-90 transition-transform drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]"
             style={{ color: saved ? '#f59e0b' : 'white' }}
           >
             <svg 
-              className={`w-5.5 h-5.5 ${saved ? 'fill-current' : ''}`}
+              className={`w-7 h-7 ${saved ? 'fill-current' : ''}`}
               fill={saved ? 'currentColor' : 'none'} 
               stroke="currentColor" 
               strokeWidth={2} 
@@ -479,7 +479,7 @@ function ReelItem({ reel, isActive, onOpenProfile, isDark }: {
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
           </button>
-          <span className="text-[10px] text-white font-medium drop-shadow-md select-none">Save</span>
+          <span className="text-[12px] text-white font-medium drop-shadow-md select-none">Save</span>
         </div>
       </div>
 

@@ -265,14 +265,14 @@ export default function AccountsPage() {
               <div
                 key={acc.email}
                 onClick={() => handleAccountClick(acc)}
-                className={`group flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-300 ${
+                className={`group flex items-center justify-between p-4 rounded-2xl border backdrop-blur-xl transition-all duration-500 hover:shadow-xl ${
                   removeMode
                     ? isDark 
-                      ? 'border-red-900/20 bg-red-950/10 cursor-default' 
-                      : 'border-red-200 bg-red-50/50 cursor-default'
+                      ? 'border-red-500/30 bg-red-900/20 cursor-default' 
+                      : 'border-red-300 bg-red-50/60 cursor-default'
                     : isDark
-                      ? 'border-zinc-800 bg-zinc-900/30 hover:bg-zinc-800/50 hover:border-zinc-700 cursor-pointer active:scale-[0.99]'
-                      : 'border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 cursor-pointer active:scale-[0.99]'
+                      ? 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 cursor-pointer active:scale-[0.98]'
+                      : 'border-black/5 bg-white/60 hover:bg-white/80 hover:border-black/10 shadow-sm cursor-pointer active:scale-[0.98]'
                 }`}
               >
                 <div className="flex items-center gap-3.5 min-w-0">
@@ -364,7 +364,7 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col justify-center items-center p-4 relative overflow-hidden select-none font-sans transition-colors duration-500 ${
+    <div className={`min-h-[100dvh] w-full flex flex-col justify-center items-center relative overflow-hidden select-none font-sans transition-colors duration-500 ${
       isDark ? 'bg-[#050505] text-white' : 'bg-[#f3f4f6] text-gray-900'
     }`}>
       {/* Decorative Blur Spheres */}
@@ -376,23 +376,20 @@ export default function AccountsPage() {
       }`} />
 
       {/* Desktop split card view */}
-      <div className="hidden lg:flex w-full max-w-[960px] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_-10px_rgba(0,0,0,0.45)] border flex-col lg:grid lg:grid-cols-2 relative z-10 transition-all duration-500"
+      <div className="hidden lg:grid lg:grid-cols-2 w-full h-full relative z-10 transition-all duration-500 overflow-hidden"
         style={{ 
-          height: 'min(640px, calc(100vh - 0.5in))',
-          backgroundColor: isDark ? 'rgba(18, 18, 20, 0.4)' : 'rgba(255, 255, 255, 0.8)',
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
-          backdropFilter: 'blur(24px)',
+          backgroundColor: isDark ? 'transparent' : 'transparent'
         }}
       >
         {renderLeft()}
-        <div className={`h-full overflow-hidden ${isDark ? 'bg-[#0E0E11]' : 'bg-white'}`}>
+        <div className={`h-full overflow-hidden flex flex-col ${isDark ? 'bg-[#0E0E11]' : 'bg-white'}`}>
           {renderAccountCenterContent()}
         </div>
       </div>
 
       {/* Mobile view layout */}
-      <div className={`lg:hidden relative w-full max-w-md border backdrop-blur-xl rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden z-10 transition-colors duration-500 ${
-        isDark ? 'bg-zinc-950/40 border-zinc-800/80' : 'bg-white border-gray-250/80'
+      <div className={`lg:hidden relative w-full h-full flex flex-col overflow-hidden z-10 transition-colors duration-500 ${
+        isDark ? 'bg-[#0E0E11]' : 'bg-white'
       }`}>
         {renderAccountCenterContent()}
       </div>
