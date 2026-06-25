@@ -50,6 +50,7 @@ interface Props {
   onToggleFollow?: (targetUserId: string) => void;
   onOpenChat?: (user: any) => void;
   onAccountSheetChange?: (isOpen: boolean) => void;
+  onOpenUpload?: (type: 'single_image' | 'reel') => void;
 }
 
 /* ─── Default data ─── */
@@ -90,6 +91,7 @@ export default function ProfilePanel({
   onToggleFollow,
   onOpenChat,
   onAccountSheetChange,
+  onOpenUpload,
 }: Props) {
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab]         = useState<'grid'|'reels'|'tagged'>('grid');
@@ -910,6 +912,34 @@ export default function ProfilePanel({
                     </button>
                   ))}
                 </div>
+
+                {/* Add Post/Reel Action Bar */}
+                {isOwnProfile && (
+                  <div style={{ display: 'flex', padding: '12px 16px', gap: 8 }}>
+                    <button
+                      onClick={() => onOpenUpload?.('single_image')}
+                      style={{
+                        flex: 1, padding: '10px', borderRadius: '12px', border: `1px solid ${btnBdr}`,
+                        background: btnBg, color: txt, fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                      }}
+                    >
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                      Add Post
+                    </button>
+                    <button
+                      onClick={() => onOpenUpload?.('reel')}
+                      style={{
+                        flex: 1, padding: '10px', borderRadius: '12px', border: `1px solid ${btnBdr}`,
+                        background: btnBg, color: txt, fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                      }}
+                    >
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                      Add Reel
+                    </button>
+                  </div>
+                )}
 
                 {/* Dynamic Content Grid */}
                 <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:2}}>

@@ -90,7 +90,10 @@ export default function AccountsPage() {
   };
 
   const handleAccountClick = async (acc: SavedAccount) => {
-    if (removeMode) return;
+    if (removeMode) {
+      handleRemoveAccount(acc.email);
+      return;
+    }
     
     if (acc.provider === 'google') {
       setLoading(true);
@@ -181,20 +184,14 @@ export default function AccountsPage() {
   const renderAccountCenterContent = () => {
     return (
       <div className="w-full h-full flex flex-col p-8 md:p-10 justify-between relative overflow-hidden">
-        {/* Top Header */}
         <div className="flex items-center justify-between mb-6 relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center font-bold text-white tracking-wider text-sm">
-              C
-            </div>
             <div>
               <h1 className={`text-xl font-semibold tracking-tight ${isDark ? 'text-white' : 'text-gray-950'}`}>Account Center</h1>
-              <p className={`text-xs mt-0.5 ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>Switch accounts instantly</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <ThemeToggle />
             
             {accounts.length > 0 && (
               <div className="relative" ref={dropdownRef}>

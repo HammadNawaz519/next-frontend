@@ -885,6 +885,12 @@ export default function DashboardPage() {
             setActiveView('chat');
           }}
           onAccountSheetChange={setIsAccountSheetOpen}
+          onOpenUpload={(type) => {
+            setUploadType(type);
+            setUploadUrl('');
+            setUploadCaption('');
+            setShowUploadModal(true);
+          }}
         />
       </div>
 
