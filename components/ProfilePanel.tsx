@@ -104,13 +104,6 @@ export default function ProfilePanel({
   const [avatarInputUrl, setAvatarInputUrl] = useState('');
   const [savedAccounts, setSavedAccounts] = useState<any[]>([]);
 
-  // Upload state
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadType, setUploadType] = useState<'single_image' | 'reel'>('single_image');
-  const [uploadUrl, setUploadUrl] = useState('');
-  const [uploadCaption, setUploadCaption] = useState('');
-  const [uploadLoading, setUploadLoading] = useState(false);
-
   // Switch account form fields
   const [switchEmail, setSwitchEmail] = useState('');
   const [switchPassword, setSwitchPassword] = useState('');
@@ -735,38 +728,18 @@ export default function ProfilePanel({
             <div style={{display:'flex', gap:3, alignItems:'center'}}>
               {/* Options/Settings trigger - only for own profile */}
               {isOwnProfile && (
-                <>
-                  <button
-                    onClick={() => { setUploadType('single_image'); setUploadUrl(''); setUploadCaption(''); setShowUploadModal(true); }}
-                    style={{
-                      padding: '4px 8px', borderRadius: '8px', border: `1px solid ${border}`,
-                      background: 'none', color: txt, fontSize: '11px', fontWeight: 600, cursor: 'pointer'
-                    }}
-                  >
-                    + Post
-                  </button>
-                  <button
-                    onClick={() => { setUploadType('reel'); setUploadUrl(''); setUploadCaption(''); setShowUploadModal(true); }}
-                    style={{
-                      padding: '4px 8px', borderRadius: '8px', border: `1px solid ${border}`,
-                      background: 'none', color: txt, fontSize: '11px', fontWeight: 600, cursor: 'pointer', marginRight: '6px'
-                    }}
-                  >
-                    + Reel
-                  </button>
-                  <button 
-                    onClick={() => setSubView('settings')} 
-                    style={{
-                      width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                      background: 'none', color:txt,
-                    }}
-                  >
-                    <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
-                      <circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/>
-                    </svg>
-                  </button>
-                </>
+                <button 
+                  onClick={() => setSubView('settings')} 
+                  style={{
+                    width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    background: 'none', color:txt,
+                  }}
+                >
+                  <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/>
+                  </svg>
+                </button>
               )}
             </div>
           </div>
@@ -2340,77 +2313,5 @@ export default function ProfilePanel({
             Let's Go
           </button>
         </div>
-      </div>
-
-      {/* Upload Modal */}
-      {showUploadModal && (
-        <div style={{
-          position: 'absolute', inset: 0, zIndex: 110,
-          background: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-          <div style={{
-            background: bg, borderRadius: '20px', padding: '24px', width: '90%', maxWidth: '400px',
-            border: `1px solid ${border}`, boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: txt }}>Create {uploadType === 'reel' ? 'Reel' : 'Post'}</h3>
-              <button onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none', color: txt, cursor: 'pointer' }}>
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ fontSize: 12, color: sub, marginBottom: -8 }}>Media URL (Image or Video)</div>
-              <input 
-                type="text" 
-                placeholder={`Paste ${uploadType === 'reel' ? 'video' : 'image'} URL here...`}
-                value={uploadUrl}
-                onChange={e => setUploadUrl(e.target.value)}
-                style={{
-                  width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${border}`,
-                  background: isDark ? '#1a1a1f' : '#f9fafb', color: txt, outline: 'none', fontSize: 13
-                }}
-              />
-              <div style={{ fontSize: 12, color: sub, marginBottom: -8 }}>Caption</div>
-              <textarea 
-                placeholder="Write a caption..."
-                value={uploadCaption}
-                onChange={e => setUploadCaption(e.target.value)}
-                rows={3}
-                style={{
-                  width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${border}`,
-                  background: isDark ? '#1a1a1f' : '#f9fafb', color: txt, outline: 'none', fontSize: 13, resize: 'none'
-                }}
-              />
-              
-              <button 
-                onClick={async () => {
-                  if (!uploadUrl) return;
-                  setUploadLoading(true);
-                  try {
-                    await createPostAction({ imageUrl: uploadUrl, caption: uploadCaption, postType: uploadType });
-                    if (refreshProfile) refreshProfile();
-                    setShowUploadModal(false);
-                  } catch (e) {
-                    console.error('Upload failed', e);
-                  }
-                  setUploadLoading(false);
-                }}
-                disabled={uploadLoading || !uploadUrl}
-                style={{
-                  width: '100%', padding: '12px', background: txt, color: bg, border: 'none', borderRadius: '12px',
-                  fontWeight: 700, fontSize: 14, cursor: uploadUrl && !uploadLoading ? 'pointer' : 'not-allowed',
-                  opacity: uploadUrl && !uploadLoading ? 1 : 0.6, marginTop: 8
-                }}
-              >
-                {uploadLoading ? 'Posting...' : 'Post'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-    </div>
   );
 }

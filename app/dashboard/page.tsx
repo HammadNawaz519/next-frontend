@@ -15,7 +15,8 @@ import {
   searchUsers,
   toggleProfilePrivacy,
   getOtherUserProfile,
-  toggleFollowUser
+  toggleFollowUser,
+  createPostAction
 } from './actions';
 import SocialChat from '@/components/SocialChat';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -62,6 +63,13 @@ export default function DashboardPage() {
   const [fullUser, setFullUser] = useState<any>(null);
   const [activeView, setActiveView] = useState<'home' | 'search' | 'reels' | 'chat'>('home');
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
+
+  // Upload Modal State
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadType, setUploadType] = useState<'single_image' | 'reel'>('single_image');
+  const [uploadUrl, setUploadUrl] = useState('');
+  const [uploadCaption, setUploadCaption] = useState('');
+  const [uploadLoading, setUploadLoading] = useState(false);
   const chatComponentRef = useRef<{ closeChat: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const navTransitionInProgress = useRef(false);
@@ -948,6 +956,101 @@ export default function DashboardPage() {
             </div>
           </button>
         </nav>
+      )}
+
+      {/* Floating Action Button (FAB) for Add Post/Reel */}
+      {(activeView === 'home' || activeView === 'reels') && !isProfileOpen && !isSearchOverlayOpen && (
+        <button
+          onClick={() => {
+            setUploadType(activeView === 'reels' ? 'reel' : 'single_image');
+            setUploadUrl('');
+            setUploadCaption('');
+            setShowUploadModal(true);
+          }}
+          className="fixed bottom-24 right-6 md:bottom-12 md:right-12 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform active:scale-90 hover:scale-105 z-[90]"
+          style={{ background: '#36454F', color: '#fff' }} /* Cute charcoal color */
+        >
+          <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      )}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{
+            background: isDark ? '#1c1c1e' : '#ffffff', borderRadius: '24px', padding: '24px', width: '90%', maxWidth: '400px',
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0'}`, boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: isDark ? '#fff' : '#111' }}>Create {uploadType === 'reel' ? 'Reel' : 'Post'}</h3>
+              <button onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none', color: isDark ? '#fff' : '#111', cursor: 'pointer', opacity: 0.7 }}>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 6 }}>Media URL (Image or Video)</div>
+                <input 
+                  type="text" 
+                  placeholder={`Paste ${uploadType === 'reel' ? 'video' : 'image'} URL here...`}
+                  value={uploadUrl}
+                  onChange={e => setUploadUrl(e.target.value)}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0'}`,
+                    background: isDark ? '#1a1a1f' : '#f9fafb', color: isDark ? '#fff' : '#111', outline: 'none', fontSize: 14
+                  }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 6 }}>Caption</div>
+                <textarea 
+                  placeholder="Write a caption..."
+                  value={uploadCaption}
+                  onChange={e => setUploadCaption(e.target.value)}
+                  rows={3}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0'}`,
+                    background: isDark ? '#1a1a1f' : '#f9fafb', color: isDark ? '#fff' : '#111', outline: 'none', fontSize: 14, resize: 'none'
+                  }}
+                />
+              </div>
+              
+              <button 
+                onClick={async () => {
+                  if (!uploadUrl) return;
+                  setUploadLoading(true);
+                  try {
+                    await createPostAction({ imageUrl: uploadUrl, caption: uploadCaption, postType: uploadType });
+                    if (activeView === 'home' || activeView === 'reels') {
+                      // Optionally refresh feeds here if logic was lifted, else the components handle their own cache.
+                      // For now, reload window to force refresh data everywhere just to be safe.
+                      window.location.reload();
+                    }
+                    setShowUploadModal(false);
+                  } catch (e) {
+                    console.error('Upload failed', e);
+                  }
+                  setUploadLoading(false);
+                }}
+                disabled={uploadLoading || !uploadUrl}
+                style={{
+                  width: '100%', padding: '14px', background: isDark ? '#fff' : '#111', color: isDark ? '#111' : '#fff', border: 'none', borderRadius: '14px',
+                  fontWeight: 700, fontSize: 15, cursor: uploadUrl && !uploadLoading ? 'pointer' : 'not-allowed',
+                  opacity: uploadUrl && !uploadLoading ? 1 : 0.6, marginTop: 4, transition: 'opacity 0.2s'
+                }}
+              >
+                {uploadLoading ? 'Posting...' : 'Post'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
