@@ -634,7 +634,7 @@ export async function respondToFollowRequest(requestId: string, action: 'accept'
   }
 }
 
-export async function createPostAction(thumbnailUrl: string, postType: string) {
+export async function createPostAction(data: { imageUrl: string; thumbnailUrl?: string; caption: string; postType: 'single_image' | 'reel' }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return { error: 'Not authenticated' };
 
@@ -646,8 +646,10 @@ export async function createPostAction(thumbnailUrl: string, postType: string) {
 
   const post = await (prisma as any).post.create({
     data: {
-      thumbnailUrl,
-      postType,
+      imageUrl: data.imageUrl,
+      thumbnailUrl: data.thumbnailUrl || data.imageUrl,
+      caption: data.caption,
+      postType: data.postType,
       userId: user.id
     }
   });

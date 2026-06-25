@@ -440,13 +440,19 @@ export default function DashboardPage() {
       if (viewId === 'chat') {
         chatComponentRef.current?.closeChat();
         setSelectedChatUser(null);
+        // Instant transition with no animation
+        setIsProfileOpen(false);
+        setIsClosingProfile(false);
+        setSelectedProfileUser(null);
+        setActiveView('chat');
+        return;
       }
       runProfileTransition(() => {
         setIsProfileOpen(false);
         setIsClosingProfile(false);
         setSelectedProfileUser(null);
         // Only change the view if we're actually going somewhere different
-        if (viewId !== activeView || viewId === 'chat') {
+        if (viewId !== activeView) {
           setActiveView(viewId);
         }
       }, e.clientX, e.clientY, false);
@@ -557,9 +563,9 @@ export default function DashboardPage() {
                 >
                   <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
                     {item.id === 'reels' ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
-                        <rect x="4" y="4" width="16" height="16" rx="3" strokeWidth={2} />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 9h16M9 4l2 5M14 4l2 5M15 13l-4 3v-6l4 3z" />
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
+                        <rect x="5" y="3" width="14" height="18" rx="3" />
+                        <polygon points="10 9 15 12 10 15 10 9" fill="currentColor" stroke="none" />
                       </svg>
                     ) : (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
@@ -676,12 +682,12 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-1">
+                <div className="grid grid-cols-3 gap-0">
                   {explorePosts.map((post: any) => (
                     <div
                     key={post.id}
                     onClick={(e) => handleOpenOtherProfile(post.user.id, post.user, e)}
-                    className="aspect-square relative cursor-pointer overflow-hidden group rounded-lg"
+                    className="aspect-[4/5] relative cursor-pointer overflow-hidden group"
                     style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
                   >
                     {post.thumbnailUrl ? (
@@ -897,9 +903,9 @@ export default function DashboardPage() {
             { 
               id: 'reels', 
               element: (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <rect x="4" y="4" width="16" height="16" rx="3" strokeWidth={2} />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 9h16M9 4l2 5M14 4l2 5M15 13l-4 3v-6l4 3z" />
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <rect x="5" y="3" width="14" height="18" rx="3" />
+                  <polygon points="10 9 15 12 10 15 10 9" fill="currentColor" stroke="none" />
                 </svg>
               )
             },

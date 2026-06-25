@@ -465,7 +465,6 @@ export default function LoginPage() {
           scale={0.8}
           rotation={0}
           speed={0.5}
-          colors={['#FF7A00', '#007AFF', '#7ED9D9']}
         />
         <div className="relative z-10 flex flex-col items-center justify-center gap-6 px-12 text-center">
           <p
