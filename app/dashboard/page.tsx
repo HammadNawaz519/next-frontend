@@ -881,7 +881,7 @@ export default function DashboardPage() {
               setSelectedProfileUser(null);
               setSelectedChatUser(targetUser);
               setActiveView('chat');
-            });
+            }, window.innerWidth / 2, window.innerHeight / 2, false);
           }}
           onAccountSheetChange={setIsAccountSheetOpen}
           onOpenUpload={(type) => {
