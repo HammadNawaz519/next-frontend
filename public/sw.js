@@ -1,42 +1,137 @@
-const CACHE_NAME = 'connect-v1';
-const STATIC_ASSETS = [
+const CACHE_VERSION = 'connect-v3';
+const STATIC_CACHE = `${CACHE_VERSION}-static`;
+const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
+const IMAGE_CACHE = `${CACHE_VERSION}-images`;
+
+// Core assets to pre-cache on install (app shell)
+const APP_SHELL = [
   '/',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
   '/apple-touch-icon.png',
+  '/Avatar.avif',
+  '/connect-logo.png',
 ];
 
-// Install — cache static assets
+// ── Install: pre-cache the app shell ──
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+    caches.open(STATIC_CACHE)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
-// Activate — clean old caches
+// ── Activate: clean up old caches ──
 self.addEventListener('activate', (event) => {
+  const allowed = [STATIC_CACHE, DYNAMIC_CACHE, IMAGE_CACHE];
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys.filter((k) => !allowed.includes(k)).map((k) => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Fetch — network first, fallback to cache
-self.addEventListener('fetch', (event) => {
-  // Skip non-GET and chrome-extension requests
-  if (event.request.method !== 'GET' || event.request.url.startsWith('chrome-extension')) return;
+// ── Helpers ──
+function isStaticAsset(url) {
+  return /\.(js|css|woff2?|ttf|svg|png|jpg|jpeg|gif|avif|webp|ico)(\?.*)?$/.test(url.pathname);
+}
+function isImage(url) {
+  return /\.(png|jpg|jpeg|gif|avif|webp|svg|ico)(\?.*)?$/.test(url.pathname) ||
+    url.hostname.includes('unsplash.com') ||
+    url.hostname.includes('googleusercontent.com') ||
+    url.hostname.includes('githubusercontent.com');
+}
+function isNavigation(request) {
+  return request.mode === 'navigate';
+}
+function isAPICall(url) {
+  return url.pathname.startsWith('/api/') ||
+    url.hostname.includes('railway.app') ||
+    url.hostname.includes('socket.io');
+}
 
+// ── Fetch: smart caching strategy ──
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Skip non-GET and browser extensions
+  if (event.request.method !== 'GET') return;
+  if (event.request.url.startsWith('chrome-extension')) return;
+
+  // 1. API / WebSocket calls: always network-only
+  if (isAPICall(url)) return;
+
+  // 2. Images: cache-first (long-lived, rarely change)
+  if (isImage(url)) {
+    event.respondWith(
+      caches.open(IMAGE_CACHE).then((cache) =>
+        cache.match(event.request).then((cached) => {
+          if (cached) return cached;
+          return fetch(event.request)
+            .then((response) => {
+              if (response && response.status === 200) {
+                cache.put(event.request, response.clone());
+              }
+              return response;
+            })
+            .catch(() => cached || new Response('', { status: 404 }));
+        })
+      )
+    );
+    return;
+  }
+
+  // 3. Static JS/CSS assets (Next.js chunks): cache-first
+  if (isStaticAsset(url)) {
+    event.respondWith(
+      caches.open(STATIC_CACHE).then((cache) =>
+        cache.match(event.request).then((cached) => {
+          if (cached) return cached;
+          return fetch(event.request).then((response) => {
+            if (response && response.status === 200) {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          });
+        })
+      )
+    );
+    return;
+  }
+
+  // 4. Page navigations: network-first, fallback to cache, then offline page
+  if (isNavigation(event.request)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() =>
+          caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            // Offline fallback: return cached home page
+            return caches.match('/');
+          })
+        )
+    );
+    return;
+  }
+
+  // 5. Everything else: network-first, fallback to cache
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Cache successful page navigations
-        if (response && response.status === 200 && event.request.mode === 'navigate') {
+        if (response && response.status === 200) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          caches.open(DYNAMIC_CACHE).then((cache) => cache.put(event.request, clone));
         }
         return response;
       })
@@ -44,67 +139,41 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// ── PWA Notification Handlers — Call & Message Notifications ──
-
-// Push event listener (For background push server alerts)
+// ── Push Notifications (background) ──
 self.addEventListener('push', (event) => {
   let data = {};
   if (event.data) {
-    try {
-      data = event.data.json();
-    } catch {
-      data = { title: 'New Notification', body: event.data.text() };
-    }
+    try { data = event.data.json(); } catch { data = { title: 'Connect', body: event.data.text() }; }
   }
 
-  const title = data.title || 'New Notification';
   const type = data.type || 'message';
-
   const options = {
-    body: data.body || 'You have a new message.',
+    body: data.body || 'You have a new notification.',
     icon: '/connect-logo.png',
     badge: '/icon-192.png',
-    vibrate: type === 'call' 
-      ? [200, 100, 200, 100, 200, 100, 200, 100, 400] 
+    vibrate: type === 'call'
+      ? [200, 100, 200, 100, 200, 100, 200, 100, 400]
       : [100, 50, 100],
     tag: type === 'call' ? 'incoming-call' : `msg-${data.partnerId || 'general'}`,
     renotify: true,
     requireInteraction: type === 'call',
-    data: {
-      url: '/dashboard',
-      partnerId: data.partnerId,
-      callType: data.callType,
-      ...data
-    },
+    data: { url: '/dashboard', partnerId: data.partnerId, callType: data.callType, ...data },
     actions: type === 'call'
-      ? [
-          { action: 'answer', title: 'Answer' },
-          { action: 'decline', title: 'Decline' }
-        ]
-      : [
-          { action: 'view', title: 'View' }
-        ]
+      ? [{ action: 'answer', title: '📞 Answer' }, { action: 'decline', title: '❌ Decline' }]
+      : [{ action: 'view', title: 'View' }]
   };
 
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
+  event.waitUntil(self.registration.showNotification(data.title || 'Connect', options));
 });
 
-// Notification click — handles deep-linking & action buttons
+// ── Notification Click — deep-linking ──
 self.addEventListener('notificationclick', (event) => {
-  const notification = event.notification;
-  const action = event.action;
-  const data = notification.data || {};
-
-  notification.close();
+  const { action, data = {} } = event;
+  event.notification.close();
 
   if (action === 'decline') {
-    // Decline call: notify all active tabs to stop ringing/reject
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      clients.forEach((client) => {
-        client.postMessage({ type: 'DECLINE_CALL', callerEmail: data.callerEmail });
-      });
+      clients.forEach((c) => c.postMessage({ type: 'DECLINE_CALL', callerEmail: data.callerEmail }));
     });
     return;
   }
@@ -118,17 +187,13 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // If there's an open window, focus it and redirect
       for (const client of clientList) {
         if (client.url.includes('/dashboard') && 'focus' in client) {
           client.postMessage({ type: 'NAVIGATE', url: targetUrl });
           return client.focus();
         }
       }
-      // Otherwise open a new window
-      if (self.clients.openWindow) {
-        return self.clients.openWindow(targetUrl);
-      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
     })
   );
 });
