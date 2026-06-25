@@ -449,6 +449,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   React.useImperativeHandle(ref, () => ({
     closeChat: () => {
       runCircleTransition(() => setSelectedUser(null), 28, 28, true);
+    },
+    // Silent version: resets without firing a nested startViewTransition
+    // Use this when called from inside another ongoing view transition
+    silentReset: () => {
+      setSelectedUser(null);
     }
   }));
 

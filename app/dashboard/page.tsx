@@ -70,7 +70,7 @@ export default function DashboardPage() {
   const [uploadUrl, setUploadUrl] = useState('');
   const [uploadCaption, setUploadCaption] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
-  const chatComponentRef = useRef<{ closeChat: () => void } | null>(null);
+  const chatComponentRef = useRef<{ closeChat: () => void; silentReset: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const navTransitionInProgress = useRef(false);
   const profileTransitionInProgress = useRef(false);
@@ -450,7 +450,8 @@ export default function DashboardPage() {
         setIsClosingProfile(false);
         setSelectedProfileUser(null);
         if (viewId === 'chat') {
-          chatComponentRef.current?.closeChat();
+          // silentReset instead of closeChat to avoid nesting a 2nd startViewTransition
+          chatComponentRef.current?.silentReset();
           setSelectedChatUser(null);
         }
         // Only change the view if we're actually going somewhere different
@@ -464,7 +465,8 @@ export default function DashboardPage() {
     if (activeView === viewId && viewId !== 'chat') return;
     
     if (viewId === 'chat') {
-      chatComponentRef.current?.closeChat();
+      // Called before any startViewTransition starts — safe, no nesting
+      chatComponentRef.current?.silentReset();
       setSelectedChatUser(null);
       if (activeView === 'chat') return;
     }
