@@ -963,23 +963,7 @@ export default function DashboardPage() {
         </nav>
       )}
 
-      {/* Floating Action Button (FAB) for Add Post/Reel */}
-      {(activeView === 'home' || activeView === 'reels') && !isProfileOpen && !isSearchOverlayOpen && (
-        <button
-          onClick={() => {
-            setUploadType(activeView === 'reels' ? 'reel' : 'single_image');
-            setUploadUrl('');
-            setUploadCaption('');
-            setShowUploadModal(true);
-          }}
-          className="fixed bottom-24 right-6 md:bottom-12 md:right-12 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform active:scale-90 hover:scale-105 z-[90]"
-          style={{ background: '#36454F', color: '#fff' }} /* Cute charcoal color */
-        >
-          <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      )}
+
 
       {/* Upload Modal */}
       {showUploadModal && (
