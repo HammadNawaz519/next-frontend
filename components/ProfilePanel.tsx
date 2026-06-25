@@ -2313,5 +2313,7 @@ export default function ProfilePanel({
             Let's Go
           </button>
         </div>
+      </div>
+    </div>
   );
 }
