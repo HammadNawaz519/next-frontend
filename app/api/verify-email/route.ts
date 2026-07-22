@@ -45,6 +45,7 @@ export async function POST(req: Request) {
         username: pending.username,
         name: pending.username,
         password: pending.password,
+        phone: pending.phone,
         emailVerified: new Date(),
       },
     });

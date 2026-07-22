@@ -1,11 +1,13 @@
 generator client {
-  provider   = "prisma-client-js"
-  engineType = "library"
+  provider = "prisma-client-js"
 }
+
+
 
 datasource db {
   provider = "postgresql"
 }
+
 
 
 model User {
@@ -16,6 +18,7 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
+  phone         String?
   createdAt     DateTime  @default(now())
   bio           String?
   website       String?
@@ -97,6 +100,7 @@ model PendingUser {
   id           String   @id @default(cuid())
   email        String   @unique
   username     String?
+  phone        String?
   password     String
   verifyCode   String
   verifyExpiry DateTime

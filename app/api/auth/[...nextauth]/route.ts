@@ -91,9 +91,28 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     // ── Google: upsert user in DB on first sign-in ───────────────────────────
     async signIn({ user, account }) {
-      if (account?.provider === "google") {
-        // Skip DB saving on Google sign-in to bypass connection errors
-        return true;
+      if (account?.provider === "google" && user.email) {
+        try {
+          // Upsert Google user into DB so they have a real user record
+          await prisma.user.upsert({
+            where: { email: user.email },
+            update: {
+              name: user.name ?? undefined,
+              image: user.image ?? undefined,
+              emailVerified: new Date(),
+            },
+            create: {
+              email: user.email,
+              name: user.name,
+              image: user.image,
+              emailVerified: new Date(),
+              username: user.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, ""),
+            },
+          });
+        } catch (err) {
+          console.error("[GOOGLE_SIGNIN_DB_ERROR]", err);
+          // Don't block sign-in if DB save fails
+        }
       }
       return true;
     },
@@ -102,8 +121,16 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account }) {
       if (user) {
         if (account?.provider === "google" && user.email) {
-          // Skip DB lookup for Google login to bypass connection errors
-          token.id = user.id;
+          // Fetch real DB user ID for Google user
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { email: user.email },
+              select: { id: true },
+            });
+            token.id = dbUser?.id ?? user.id;
+          } catch {
+            token.id = user.id;
+          }
         } else {
           token.id = user.id;
         }

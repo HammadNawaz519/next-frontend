@@ -12,10 +12,11 @@ function generateOTP(): string {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { username, email, password } = body as {
+    const { username, email, password, phone } = body as {
       username?: string;
       email: string;
       password: string;
+      phone?: string;
     };
 
     if (!email || !password) {
@@ -57,6 +58,7 @@ export async function POST(req: Request) {
       where: { email },
       update: {
         username: username ?? null,
+        phone: phone ?? null,
         password: hashedPassword,
         verifyCode: otp,
         verifyExpiry: expiry,
@@ -64,6 +66,7 @@ export async function POST(req: Request) {
       create: {
         email,
         username: username ?? null,
+        phone: phone ?? null,
         password: hashedPassword,
         verifyCode: otp,
         verifyExpiry: expiry,

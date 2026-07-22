@@ -51,6 +51,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [phone, setPhone] = useState('');
+
 
   // OTP state
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -266,7 +268,7 @@ export default function LoginPage() {
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username, email, password, phone: phone || undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -647,6 +649,12 @@ export default function LoginPage() {
                 <label htmlFor="desktop-email" className={`text-[11px] ${isLogin ? 'lg:text-[13px]' : 'lg:text-[12px]'} font-normal text-gray-700`}>Email</label>
                 <input id="desktop-email" type="email" required placeholder="name@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full ${isLogin ? 'h-[42px] lg:h-[46px] px-4 text-[13px] lg:text-[14px]' : 'h-[38px] lg:h-[42px] px-3.5 text-[12px] lg:text-[13px]'} bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-gray-900 placeholder:text-gray-400`} />
               </div>
+              {!isLogin && (
+                <div className="space-y-0.5">
+                  <label htmlFor="desktop-phone" className="text-[11px] lg:text-[12px] font-normal text-gray-700">Phone Number <span className="text-gray-400">(optional)</span></label>
+                  <input id="desktop-phone" type="tel" placeholder="+1 555 000 0000" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full h-[38px] lg:h-[42px] px-3.5 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[12px] lg:text-[13px] text-gray-900 placeholder:text-gray-400" />
+                </div>
+              )}
               <div className="space-y-0.5">
                 <label htmlFor="desktop-password" className={`text-[11px] ${isLogin ? 'lg:text-[13px]' : 'lg:text-[12px]'} font-normal text-gray-700`}>Password</label>
                 <input id="desktop-password" type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full ${isLogin ? 'h-[42px] lg:h-[46px] px-4 text-[13px] lg:text-[14px]' : 'h-[38px] lg:h-[42px] px-3.5 text-[12px] lg:text-[13px]'} bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-gray-900 placeholder:text-gray-400`} />
@@ -888,6 +896,14 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
+            />
+
+            <input
+              type="tel"
+              placeholder="Phone Number (optional)"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
             />
 

@@ -702,15 +702,19 @@ export async function searchUsers(query: string) {
 
   if (!currentUser) return [];
 
-  return await (prisma.user as any).findMany({
+  if (!query || query.trim().length === 0) return [];
+
+  return await prisma.user.findMany({
     where: {
       id: { not: currentUser.id },
       OR: [
-        { name: { contains: query, mode: 'insensitive' } },
-        { username: { contains: query, mode: 'insensitive' } }
+        { name: { contains: query.trim(), mode: 'insensitive' } },
+        { username: { contains: query.trim(), mode: 'insensitive' } },
+        { email: { contains: query.trim(), mode: 'insensitive' } },
       ]
     },
-    select: { id: true, name: true, username: true, image: true, bio: true, isPrivate: true }
+    select: { id: true, name: true, username: true, image: true, bio: true, isPrivate: true },
+    take: 20,
   });
 }
 
