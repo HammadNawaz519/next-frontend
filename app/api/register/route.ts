@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { sendVerificationEmail } from "@/lib/mail";
 
@@ -49,7 +48,6 @@ export async function POST(req: Request) {
       }
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
     const otp = generateOTP();
     const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 min
 
@@ -59,7 +57,7 @@ export async function POST(req: Request) {
       update: {
         username: username ?? null,
         phone: phone ?? null,
-        password: hashedPassword,
+        password: password,
         verifyCode: otp,
         verifyExpiry: expiry,
       },
@@ -67,7 +65,7 @@ export async function POST(req: Request) {
         email,
         username: username ?? null,
         phone: phone ?? null,
-        password: hashedPassword,
+        password: password,
         verifyCode: otp,
         verifyExpiry: expiry,
       },

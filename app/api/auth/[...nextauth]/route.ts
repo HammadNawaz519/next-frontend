@@ -48,10 +48,8 @@ export const authOptions: NextAuthOptions = {
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
-        const passwordOk = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
+        const passwordOk = credentials.password === user.password || 
+          (user.password.startsWith('$2') && await bcrypt.compare(credentials.password, user.password));
 
         if (!passwordOk) {
           throw new Error("Incorrect password.");

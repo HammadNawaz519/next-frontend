@@ -217,16 +217,10 @@ export default function LoginPage() {
     try {
       const res = await signIn('credentials', { redirect: false, email, password });
       if (res?.error === 'EMAIL_NOT_VERIFIED') {
-        // Redirect to OTP verify sheet and resend code
+        // Navigate to verify screen — do NOT auto-resend, it would overwrite the original OTP
         setOtp(['', '', '', '', '', '']);
         triggerSheetTransition('verify');
-        setInfo("Your email isn't verified yet. We've sent a new code.");
-        fetch('/api/resend-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        });
-        setResendCooldown(60);
+        setInfo('Please verify your email using the code we sent when you signed up.');
         setLoading(false);
       } else if (res?.error) {
         setError('Invalid email or password. Please try again.');
@@ -341,18 +335,32 @@ export default function LoginPage() {
   // ── Forgot Password OTP flows ─────────────────────────────────────────────
   const handleSendResetCode = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email) { setError('Please enter your email.'); return; }
     setLoading(true);
     setError('');
     setInfo('');
-    // Simulate sending 6-digit verification code with 1-min timer
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Failed to send reset code.');
+        setLoading(false);
+      } else {
+        setLoading(false);
+        setResendCooldown(60);
+        setOtp(['', '', '', '', '', '']);
+        setInfo(data.message || 'Reset code sent to ' + email);
+        triggerSheetTransition('verifyReset');
+        setTimeout(() => otpRefs.current[0]?.focus(), 150);
+      }
+    } catch (err) {
+      setError('Connection error. Please try again.');
       setLoading(false);
-      setResendCooldown(60);
-      setOtp(['', '', '', '', '', '']);
-      setInfo('Reset code sent to ' + email);
-      triggerSheetTransition('verifyReset');
-      setTimeout(() => otpRefs.current[0]?.focus(), 150);
-    }, 1000);
+    }
   };
 
   const handleVerifyResetCode = async (e: React.FormEvent) => {
@@ -365,7 +373,7 @@ export default function LoginPage() {
       setLoading(false);
       setInfo('');
       triggerSheetTransition('resetPassword');
-    }, 1000);
+    }, 300);
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -374,16 +382,34 @@ export default function LoginPage() {
       setError('Passwords do not match.');
       return;
     }
+    const code = otp.join('');
+    if (code.length < 6) {
+      setError('Invalid or missing verification code.');
+      return;
+    }
     setLoading(true);
     setError('');
-    // Simulate database update
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code, newPassword: password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Failed to reset password.');
+        setLoading(false);
+      } else {
+        setLoading(false);
+        setInfo('Password reset successfully! Please sign in.');
+        setPassword('');
+        setConfirmPassword('');
+        triggerSheetTransition('signIn');
+      }
+    } catch (err) {
+      setError('Connection error. Please try again.');
       setLoading(false);
-      setInfo('Password reset successfully!');
-      setPassword('');
-      setConfirmPassword('');
-      triggerSheetTransition('signIn');
-    }, 1200);
+    }
   };
 
   // ── Resend OTP ────────────────────────────────────────────────────────────
@@ -392,7 +418,8 @@ export default function LoginPage() {
     setError('');
     setInfo('Sending new code...');
     try {
-      const res = await fetch('/api/resend-code', {
+      const endpoint = activeSheet === 'verifyReset' ? '/api/forgot-password' : '/api/resend-code';
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

