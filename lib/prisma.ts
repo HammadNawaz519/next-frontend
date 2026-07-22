@@ -18,7 +18,7 @@ function createPool(): Pool {
 
   const pool = new Pool({
     connectionString,
-    ssl: { rejectUnauthorized: false }, // no-verify — skip cert validation for Aiven
+    ssl: { rejectUnauthorized: false }, // Allow self-signed certs (Aiven uses internal CA)
     min: 1,
     max: 5,
     idleTimeoutMillis: 600_000,        // keep idle connections alive 10 min

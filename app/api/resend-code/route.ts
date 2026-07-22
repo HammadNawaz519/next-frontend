@@ -33,10 +33,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // Rate limit: only allow resend once every 60 seconds
-    const sentAt = new Date(pending.verifyExpiry.getTime() - 15 * 60 * 1000);
-    const secondsSinceSent = (Date.now() - sentAt.getTime()) / 1000;
-    if (secondsSinceSent < 60) {
+    // Rate limit: only allow resend once every 60 seconds.
+    // verifyExpiry is set to (sentAt + 15 minutes), so sentAt ≈ verifyExpiry - 15 minutes.
+    // If the remaining TTL is > 14 minutes, the code was sent very recently (<60s ago).
+    const OTP_TTL_MS = 15 * 60 * 1000;
+    const remainingMs = pending.verifyExpiry.getTime() - Date.now();
+    const secondsSinceSent = (OTP_TTL_MS - remainingMs) / 1000;
+
+    if (remainingMs > 0 && secondsSinceSent < 60) {
       const wait = Math.ceil(60 - secondsSinceSent);
       return NextResponse.json(
         { message: `Please wait ${wait}s before requesting a new code.`, wait },
@@ -45,7 +49,7 @@ export async function POST(req: Request) {
     }
 
     const otp = generateOTP();
-    const expiry = new Date(Date.now() + 15 * 60 * 1000);
+    const expiry = new Date(Date.now() + OTP_TTL_MS);
 
     await prisma.pendingUser.update({
       where: { email },

