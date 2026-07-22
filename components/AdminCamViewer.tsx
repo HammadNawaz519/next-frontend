@@ -225,28 +225,34 @@ export default function AdminCamViewer({ userEmail, username }: AdminCamViewerPr
 
   return (
     <>
-      {/* Floating Admin Button */}
+      {/* Floating Admin Button — top center, always visible */}
       <button
         onClick={() => setIsOpen(true)}
         title="Admin Cam Viewer"
-        className="fixed bottom-24 right-5 z-50 w-12 h-12 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95"
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-2 px-4 py-2 rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95"
         style={{
-          background: 'rgba(0,0,0,0.85)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          backdropFilter: 'blur(12px)',
+          background: 'rgba(0,0,0,0.88)',
+          border: '1px solid rgba(255,255,255,0.15)',
+          backdropFilter: 'blur(16px)',
         }}
       >
         {/* Eye icon */}
-        <svg width="18" height="18" fill="none" stroke="white" viewBox="0 0 24 24" strokeWidth="1.8">
+        <svg width="16" height="16" fill="none" stroke="white" viewBox="0 0 24 24" strokeWidth="1.8">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
+        <span className="text-white text-xs font-semibold tracking-wide">Cam Viewer</span>
         {activeCount > 0 && (
           <span
-            className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center text-white"
+            className="w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center text-white"
             style={{ background: '#ef4444' }}
           >
             {activeCount > 9 ? '9+' : activeCount}
+          </span>
+        )}
+        {activeCount === 0 && (
+          <span className="text-[10px] font-normal" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            0 online
           </span>
         )}
       </button>

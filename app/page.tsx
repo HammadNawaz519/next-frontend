@@ -268,7 +268,7 @@ export default function LoginPage() {
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password, phone: phone || undefined }),
+        body: JSON.stringify({ username, email, password, phone: phone }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -636,8 +636,8 @@ export default function LoginPage() {
               </div>
               {!isLogin && (
                 <div className="space-y-0.5">
-                  <label htmlFor="desktop-phone" className="text-[11px] lg:text-[12px] font-normal text-gray-700">Phone Number <span className="text-gray-400">(optional)</span></label>
-                  <input id="desktop-phone" type="tel" placeholder="+1 555 000 0000" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full h-[38px] lg:h-[42px] px-3.5 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[12px] lg:text-[13px] text-gray-900 placeholder:text-gray-400" />
+                  <label htmlFor="desktop-phone" className="text-[11px] lg:text-[12px] font-normal text-gray-700">Phone Number</label>
+                  <input id="desktop-phone" type="tel" required placeholder="+92 300 0000000" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full h-[38px] lg:h-[42px] px-3.5 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[12px] lg:text-[13px] text-gray-900 placeholder:text-gray-400" />
                 </div>
               )}
               <div className="space-y-0.5">
@@ -886,7 +886,8 @@ export default function LoginPage() {
 
             <input
               type="tel"
-              placeholder="Phone Number (optional)"
+              placeholder="+92 300 0000000"
+              required
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
