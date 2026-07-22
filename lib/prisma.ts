@@ -2,6 +2,9 @@ import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 
+// Disable Node TLS cert verification for self-signed DB certificates (Aiven Cloud internal CA)
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 declare global {
   // eslint-disable-next-line no-var
   var __prisma: PrismaClient | undefined;
@@ -9,12 +12,27 @@ declare global {
   var __pgPool: Pool | undefined;
 }
 
-function createPool(): Pool {
-  const connectionString = process.env.DATABASE_URL;
+function getConnectionString(): string {
+  let connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     console.error("❌ CRITICAL ERROR: DATABASE_URL environment variable is not set!");
     throw new Error("DATABASE_URL is not configured. Set it in Vercel Environment Variables.");
   }
+
+  // Convert sslmode=require / verify-full -> sslmode=no-verify to accept self-signed certs
+  if (connectionString.includes("sslmode=require")) {
+    connectionString = connectionString.replace("sslmode=require", "sslmode=no-verify");
+  } else if (connectionString.includes("sslmode=verify-full")) {
+    connectionString = connectionString.replace("sslmode=verify-full", "sslmode=no-verify");
+  } else if (!connectionString.includes("sslmode=")) {
+    connectionString += (connectionString.includes("?") ? "&" : "?") + "sslmode=no-verify";
+  }
+
+  return connectionString;
+}
+
+function createPool(): Pool {
+  const connectionString = getConnectionString();
 
   const pool = new Pool({
     connectionString,
@@ -53,4 +71,3 @@ if (global.__pgPool) {
     // Silently ignore — warm-up failure is non-fatal
   });
 }
-
