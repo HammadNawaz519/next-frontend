@@ -75,7 +75,6 @@ export default function DashboardPage() {
   // Admin cam viewer state
   const [isAdminCamOpen, setIsAdminCamOpen] = useState(false);
   const [camOnlineCount, setCamOnlineCount] = useState(0);
-  const isAdmin = displaySession?.user?.email?.toLowerCase() === 'hammadnawz519@gmail.com';
   const chatComponentRef = useRef<{ closeChat: () => void; silentReset: () => void } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const navTransitionInProgress = useRef(false);
@@ -301,6 +300,8 @@ export default function DashboardPage() {
   if (!displaySession) {
     return null;
   }
+
+  const isAdmin = displaySession.user?.email?.toLowerCase() === 'hammadnawz519@gmail.com';
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
