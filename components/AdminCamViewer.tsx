@@ -235,12 +235,14 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
       {/* Full-Screen Admin Panel */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-[9999] flex"
+          className="fixed inset-0 z-[9999] flex flex-col md:flex-row"
           style={{ background: '#000000', fontFamily: 'system-ui, sans-serif' }}
         >
-          {/* Left sidebar: user list */}
+          {/* User list sidebar (hidden on mobile when viewing a stream) */}
           <div
-            className="w-[280px] flex-shrink-0 flex flex-col border-r overflow-hidden"
+            className={`w-full md:w-[280px] flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r overflow-hidden h-full ${
+              viewingUser ? 'hidden md:flex' : 'flex'
+            }`}
             style={{ borderColor: 'rgba(255,255,255,0.08)', background: '#0a0a0a' }}
           >
             {/* Header */}
@@ -269,10 +271,10 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
             <div className="px-5 py-2 flex-shrink-0">
               <button
                 onClick={() => socketRef.current?.emit('cam_get_users')}
-                className="w-full py-2 rounded-xl text-xs font-medium transition-colors"
+                className="w-full py-2.5 rounded-xl text-xs font-medium transition-colors cursor-pointer"
                 style={{
                   background: 'rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.6)',
+                  color: 'rgba(255,255,255,0.7)',
                   border: '1px solid rgba(255,255,255,0.08)',
                 }}
               >
@@ -283,17 +285,18 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
             {/* User list */}
             <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
               {camUsers.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-40 text-center px-4">
+                <div className="flex flex-col items-center justify-center h-48 text-center px-4">
                   <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center mb-3"
+                    className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
                     style={{ background: 'rgba(255,255,255,0.06)' }}
                   >
-                    <svg width="18" height="18" fill="none" stroke="rgba(255,255,255,0.3)" viewBox="0 0 24 24" strokeWidth="1.5">
+                    <svg width="20" height="20" fill="none" stroke="rgba(255,255,255,0.3)" viewBox="0 0 24 24" strokeWidth="1.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                   </div>
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>No active users</p>
+                  <p className="text-xs font-medium text-white/40">No active users online</p>
+                  <p className="text-[11px] text-white/20 mt-1">Users will appear here when they open the app</p>
                 </div>
               ) : (
                 camUsers.map(user => {
@@ -302,7 +305,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                     <button
                       key={user.socketId}
                       onClick={() => isViewing ? stopViewing() : startViewing(user)}
-                      className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-left"
+                      className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer"
                       style={{
                         background: isViewing ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.04)',
                         border: `1px solid ${isViewing ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.06)'}`,
@@ -338,8 +341,13 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
             </div>
           </div>
 
-          {/* Right: video feed */}
-          <div className="flex-1 flex flex-col items-center justify-center relative" style={{ background: '#000' }}>
+          {/* Right/Main: video feed */}
+          <div
+            className={`flex-1 flex flex-col items-center justify-center relative w-full h-full ${
+              !viewingUser ? 'hidden md:flex' : 'flex'
+            }`}
+            style={{ background: '#000' }}
+          >
             {!viewingUser ? (
               <div className="flex flex-col items-center gap-4 text-center px-6">
                 <div
@@ -356,9 +364,21 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
               </div>
             ) : (
               <>
-                {/* Status badge */}
+                {/* Mobile Back Button */}
+                <button
+                  onClick={stopViewing}
+                  className="md:hidden absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-white transition-colors"
+                  style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)' }}
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  <span>Users</span>
+                </button>
+
+                {/* Desktop Status badge */}
                 <div
-                  className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full z-10"
+                  className="hidden md:flex absolute top-4 left-4 items-center gap-2 px-3 py-1.5 rounded-full z-10"
                   style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)' }}
                 >
                   <div
@@ -376,19 +396,19 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                   </span>
                 </div>
 
-                {/* Stop viewing button */}
+                {/* Stop viewing / Close button */}
                 <button
-                  onClick={stopViewing}
-                  className="absolute top-4 right-4 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium text-white transition-colors hover:bg-white/20"
-                  style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)' }}
+                  onClick={() => { stopViewing(); onOpenChange(false); }}
+                  className="absolute top-4 right-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium text-white transition-colors hover:bg-white/20 cursor-pointer"
+                  style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)' }}
                 >
                   <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  Stop
+                  Close
                 </button>
 
-                {/* Video */}
+                {/* Video element */}
                 <video
                   ref={remoteVideoRef}
                   autoPlay

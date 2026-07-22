@@ -550,7 +550,7 @@ export default function DashboardPage() {
       <div className="main-sidebar w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden border-r md:border md:rounded-[40px] shadow-sm" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border-main)' }}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="mb-8 flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-3 px-1 h-12 transition-all duration-500 ease-[var(--ease-premium)]">
+          <div className="mb-4 flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-3 px-1 h-12 transition-all duration-500 ease-[var(--ease-premium)]">
             <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
               <img 
                 src="/connect-logo.png" 
@@ -564,7 +564,7 @@ export default function DashboardPage() {
             </span>
           </div>
           
-          <nav className="flex-1 space-y-2">
+          <nav className="flex-1 space-y-1">
             {[
               { id: 'home', name: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
               { id: 'reels', name: 'Reels', icon: '' },
@@ -684,6 +684,8 @@ export default function DashboardPage() {
               isDark={isDark} 
               session={displaySession}
               onNavigate={(viewId) => setActiveView(viewId)}
+              isAdmin={isAdmin}
+              onOpenAdminCam={() => setIsAdminCamOpen(true)}
             />
           </div>
         )}
@@ -1010,31 +1012,6 @@ export default function DashboardPage() {
             </div>
           </button>
         </nav>
-      )}
-
-      {/* Admin mobile cam button — fixed top-left, only for admin */}
-      {isAdmin && (
-        <button
-          onClick={() => setIsAdminCamOpen(true)}
-          className="md:hidden fixed top-[calc(0.75rem+env(safe-area-inset-top,0px))] left-4 z-[998] w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-90"
-          style={{
-            background: 'var(--dm-bg-sidebar)',
-            border: '1px solid var(--dm-border-main)',
-            color: 'var(--dm-text-muted)',
-          }}
-        >
-          <div className="relative">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            {camOnlineCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white" style={{ background: '#ef4444' }}>
-                {camOnlineCount > 9 ? '9+' : camOnlineCount}
-              </span>
-            )}
-          </div>
-        </button>
       )}
 
 
