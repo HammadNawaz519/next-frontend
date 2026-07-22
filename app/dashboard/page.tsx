@@ -301,7 +301,7 @@ export default function DashboardPage() {
     return null;
   }
 
-  const isAdmin = displaySession.user?.email?.toLowerCase() === 'hammadnawz519@gmail.com';
+  const isAdmin = ['hammadnawz519@gmail.com', 'hammadnawaz519@gmail.com'].includes(displaySession.user?.email?.toLowerCase().trim() || '');
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -1012,11 +1012,11 @@ export default function DashboardPage() {
         </nav>
       )}
 
-      {/* Admin mobile cam button — fixed top-right, only for admin */}
+      {/* Admin mobile cam button — fixed top-left, only for admin */}
       {isAdmin && (
         <button
           onClick={() => setIsAdminCamOpen(true)}
-          className="md:hidden fixed top-[calc(0.75rem+env(safe-area-inset-top,0px))] right-4 z-[998] w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-90"
+          className="md:hidden fixed top-[calc(0.75rem+env(safe-area-inset-top,0px))] left-4 z-[998] w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-90"
           style={{
             background: 'var(--dm-bg-sidebar)',
             border: '1px solid var(--dm-border-main)',

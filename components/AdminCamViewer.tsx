@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-production-265c.up.railway.app';
-const ADMIN_EMAIL = 'hammadnawz519@gmail.com';
+const ADMIN_EMAILS = ['hammadnawz519@gmail.com', 'hammadnawaz519@gmail.com'];
 
 const STUN_SERVERS = {
   iceServers: [
@@ -29,7 +29,7 @@ interface AdminCamViewerProps {
 }
 
 export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChange, onCamUsersCount }: AdminCamViewerProps) {
-  const isAdmin = userEmail?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isAdmin = !!userEmail && ADMIN_EMAILS.includes(userEmail.toLowerCase().trim());
 
   const [camUsers, setCamUsers] = useState<CamUser[]>([]);
   const [viewingUser, setViewingUser] = useState<CamUser | null>(null);
