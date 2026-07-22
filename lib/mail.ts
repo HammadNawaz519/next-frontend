@@ -9,6 +9,10 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function sendVerificationEmail(to: string, code: string, username?: string | null) {
+  if (!process.env.MAIL_USERNAME || !process.env.MAIL_PASSWORD) {
+    throw new Error("Email server credentials (MAIL_USERNAME / MAIL_PASSWORD) are not configured in Vercel Environment Variables.");
+  }
+
   const displayName = username || to.split("@")[0];
 
   await transporter.sendMail({

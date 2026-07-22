@@ -25,8 +25,11 @@ export async function POST(req: Request) {
       );
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanUsername = username?.trim() || cleanEmail.split('@')[0];
+
     // Check if email is already a verified account
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (existingUser) {
       return NextResponse.json(
         { message: "An account with this email already exists." },
@@ -35,9 +38,9 @@ export async function POST(req: Request) {
     }
 
     // Check username uniqueness
-    if (username) {
+    if (cleanUsername) {
       const takenUsername = await prisma.user.findUnique({
-        where: { username },
+        where: { username: cleanUsername },
         select: { id: true },
       });
       if (takenUsername) {
@@ -53,18 +56,18 @@ export async function POST(req: Request) {
 
     // Store in PendingUser — only promoted to User after OTP verified
     await prisma.pendingUser.upsert({
-      where: { email },
+      where: { email: cleanEmail },
       update: {
-        username: username ?? null,
-        phone: phone ?? null,
+        username: cleanUsername,
+        phone: phone ? phone.trim() : null,
         password: password,
         verifyCode: otp,
         verifyExpiry: expiry,
       },
       create: {
-        email,
-        username: username ?? null,
-        phone: phone ?? null,
+        email: cleanEmail,
+        username: cleanUsername,
+        phone: phone ? phone.trim() : null,
         password: password,
         verifyCode: otp,
         verifyExpiry: expiry,
@@ -72,7 +75,15 @@ export async function POST(req: Request) {
     });
 
     // Send OTP email
-    await sendVerificationEmail(email, otp, username);
+    try {
+      await sendVerificationEmail(cleanEmail, otp, cleanUsername);
+    } catch (mailError: any) {
+      console.error("[REGISTER_EMAIL_ERROR]", mailError);
+      return NextResponse.json(
+        { message: mailError?.message || "Failed to send verification email. Please check your email address." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
       { message: "Verification code sent.", requiresVerification: true },
@@ -80,15 +91,8 @@ export async function POST(req: Request) {
     );
   } catch (error: any) {
     console.error("[REGISTER_ERROR]", error);
-    // If email send failed, surface a clear message
-    if (error?.message?.toLowerCase().includes("mail")) {
-      return NextResponse.json(
-        { message: "Failed to send verification email. Check your email address." },
-        { status: 500 }
-      );
-    }
     return NextResponse.json(
-      { message: "Internal server error. Please try again." },
+      { message: error?.message || "Internal server error. Please try again." },
       { status: 500 }
     );
   }
