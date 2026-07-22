@@ -514,18 +514,18 @@ export default function LoginPage() {
     if (view === 'verify' || view === 'verifyReset') {
       const isReset = view === 'verifyReset';
       return (
-        <div className="flex flex-col items-center justify-start pt-12 md:pt-16 lg:pt-20 p-6 h-full overflow-hidden bg-white">
-          <div className="w-full max-w-[380px] space-y-6 py-4 text-left">
+        <div className="flex flex-col items-center justify-center p-6 h-full overflow-y-auto bg-white">
+          <div className="w-full max-w-[380px] space-y-5 py-2 text-center">
             <div>
-              <h1 className="text-[32px] font-normal tracking-tight text-gray-900">Check your inbox</h1>
-              <p className="text-[14px] text-gray-500 mt-1">We sent a 6-digit code to <span className="font-medium text-gray-900">{email}</span></p>
+              <h1 className="text-[28px] lg:text-[32px] font-normal tracking-tight text-gray-900">Check your inbox</h1>
+              <p className="text-[13px] lg:text-[14px] text-gray-500 mt-1">We sent a 6-digit code to <span className="font-medium text-gray-900">{email}</span></p>
             </div>
-            {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">{error}</div>}
-            {info && !error && <div className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4">{info}</div>}
-            <form onSubmit={isReset ? handleVerifyResetCode : handleVerify} className="space-y-5">
-              <div className="space-y-2 mt-2">
-                <label className="text-[13px] font-normal text-gray-700">Verification code</label>
-                <div className="flex gap-3 justify-center" onPaste={handleOtpPaste}>
+            {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">{error}</div>}
+            {info && !error && <div className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">{info}</div>}
+            <form onSubmit={isReset ? handleVerifyResetCode : handleVerify} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[12px] lg:text-[13px] font-normal text-gray-700">Verification code</label>
+                <div className="flex gap-2.5 justify-center" onPaste={handleOtpPaste}>
                   {otp.map((digit, i) => (
                     <input
                       key={i}
@@ -537,22 +537,20 @@ export default function LoginPage() {
                       onChange={(e) => handleOtpChange(i, e)}
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
                       onFocus={(e) => e.target.select()}
-                      className="w-[48px] h-[54px] text-center text-xl font-medium border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-900"
+                      className="w-[42px] h-[48px] lg:w-[46px] lg:h-[50px] text-center text-lg lg:text-xl font-medium border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-900"
                     />
                   ))}
                 </div>
               </div>
-              <button type="submit" disabled={loading || otp.join('').length < 6} className="w-full h-[48px] mt-2 bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+              <button type="submit" disabled={loading || otp.join('').length < 6} className="w-full h-[44px] lg:h-[48px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                 {loading ? 'Verifying...' : 'Verify Code'}
               </button>
             </form>
-            <div className="text-center pt-4">
+            <div className="flex flex-col items-center gap-2 pt-1">
               <button type="button" onClick={handleResend} disabled={resendCooldown > 0} className="text-[13px] font-normal text-gray-500 hover:text-gray-900 transition-colors disabled:cursor-not-allowed">
                 {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
               </button>
-            </div>
-            <div className="text-center">
-              <button type="button" onClick={() => { triggerSheetTransition('signUp'); setError(''); setInfo(''); }} className="text-[13px] font-normal text-gray-500 hover:text-gray-900 transition-colors">← Back to sign up</button>
+              <button type="button" onClick={() => { triggerSheetTransition(isReset ? 'forgotPassword' : 'signUp'); setError(''); setInfo(''); }} className="text-[13px] font-normal text-gray-500 hover:text-gray-900 transition-colors">← Back</button>
             </div>
           </div>
         </div>
@@ -561,26 +559,26 @@ export default function LoginPage() {
 
     if (view === 'success' && successUser) {
       return (
-        <div className="flex flex-col items-center justify-start pt-12 md:pt-16 lg:pt-20 p-6 h-full overflow-hidden bg-white">
-          <div className="w-full max-w-[380px] space-y-6 py-4 text-left">
+        <div className="flex flex-col items-center justify-center p-6 h-full overflow-y-auto bg-white">
+          <div className="w-full max-w-[380px] space-y-5 py-2 text-center">
             <div>
-              <h1 className="text-[32px] font-normal tracking-tight text-gray-900">You&apos;re in!</h1>
-              <p className="text-[14px] text-gray-500 mt-1">Your email has been verified and your account is ready.</p>
+              <h1 className="text-[28px] lg:text-[32px] font-normal tracking-tight text-gray-900">You&apos;re in!</h1>
+              <p className="text-[13px] lg:text-[14px] text-gray-500 mt-1">Your email has been verified and your account is ready.</p>
             </div>
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 flex items-center gap-4 mt-2 mb-2">
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex items-center gap-4 text-left">
               {successUser.image ? (
-                <img src={successUser.image} alt="Profile" className="w-14 h-14 rounded-full object-cover border border-gray-200" />
+                <img src={successUser.image} alt="Profile" className="w-12 h-12 rounded-full object-cover border border-gray-200" />
               ) : (
-                <div className="w-14 h-14 rounded-full bg-gray-900 flex items-center justify-center text-white font-medium text-xl flex-shrink-0">
+                <div className="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center text-white font-medium text-lg flex-shrink-0">
                   {getInitials(successUser)}
                 </div>
               )}
               <div className="min-w-0">
-                <p className="text-[15px] font-medium text-gray-900 truncate">{successUser.username || successUser.email.split('@')[0]}</p>
-                <p className="text-[13px] text-gray-500 truncate">{successUser.email}</p>
+                <p className="text-[14px] font-medium text-gray-900 truncate">{successUser.username || successUser.email.split('@')[0]}</p>
+                <p className="text-[12px] text-gray-500 truncate">{successUser.email}</p>
               </div>
             </div>
-            <button type="button" onClick={() => { router.push('/dashboard'); router.refresh(); }} className="w-full h-[48px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors">Continue to app</button>
+            <button type="button" onClick={() => { router.push('/dashboard'); router.refresh(); }} className="w-full h-[46px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors">Continue to app</button>
           </div>
         </div>
       );
@@ -588,22 +586,22 @@ export default function LoginPage() {
 
     if (view === 'forgotPassword') {
       return (
-        <div className="flex flex-col items-center justify-start pt-12 md:pt-16 lg:pt-20 p-6 h-full overflow-hidden bg-white">
-          <div className="w-full max-w-[380px] space-y-6 py-4 text-left">
+        <div className="flex flex-col items-center justify-center p-6 h-full overflow-y-auto bg-white">
+          <div className="w-full max-w-[380px] space-y-5 py-2 text-center">
             <div>
-              <h1 className="text-[32px] font-normal tracking-tight text-gray-900">Forgot Password</h1>
-              <p className="text-[14px] text-gray-500 mt-1">Enter your email to receive a recovery code.</p>
+              <h1 className="text-[28px] lg:text-[32px] font-normal tracking-tight text-gray-900">Forgot Password</h1>
+              <p className="text-[13px] lg:text-[14px] text-gray-500 mt-1">Enter your email to receive a recovery code.</p>
             </div>
-            {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">{error}</div>}
-            {info && !error && <div className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4">{info}</div>}
-            <form onSubmit={handleSendResetCode} className="space-y-4">
+            {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">{error}</div>}
+            {info && !error && <div className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">{info}</div>}
+            <form onSubmit={handleSendResetCode} className="space-y-4 text-left">
               <div className="space-y-1">
-                <label htmlFor="reset-email" className="text-[13px] font-normal text-gray-700">Email</label>
-                <input id="reset-email" type="email" required placeholder="name@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[14px] text-gray-900 placeholder:text-gray-400" />
+                <label htmlFor="reset-email" className="text-[12px] lg:text-[13px] font-normal text-gray-700">Email</label>
+                <input id="reset-email" type="email" required placeholder="name@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full h-[44px] lg:h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[13px] lg:text-[14px] text-gray-900 placeholder:text-gray-400" />
               </div>
-              <button type="submit" disabled={loading} className="w-full h-[46px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed mt-2">{loading ? 'Sending...' : 'Send Reset Code'}</button>
+              <button type="submit" disabled={loading} className="w-full h-[44px] lg:h-[46px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">{loading ? 'Sending...' : 'Send Reset Code'}</button>
             </form>
-            <div className="text-center pt-2">
+            <div className="text-center pt-1">
               <button type="button" onClick={() => { triggerSheetTransition('signIn'); setError(''); }} className="text-[13px] font-normal text-gray-500 hover:text-gray-900 transition-colors">Back to Sign In</button>
             </div>
           </div>
@@ -613,23 +611,23 @@ export default function LoginPage() {
 
     if (view === 'resetPassword') {
       return (
-        <div className="flex flex-col items-center justify-start pt-12 md:pt-16 lg:pt-20 p-6 h-full overflow-hidden bg-white">
-          <div className="w-full max-w-[380px] space-y-6 py-4 text-left">
+        <div className="flex flex-col items-center justify-center p-6 h-full overflow-y-auto bg-white">
+          <div className="w-full max-w-[380px] space-y-5 py-2 text-center">
             <div>
-              <h1 className="text-[32px] font-normal tracking-tight text-gray-900">Set New Password</h1>
-              <p className="text-[14px] text-gray-500 mt-1">Create a strong new password to secure your account.</p>
+              <h1 className="text-[28px] lg:text-[32px] font-normal tracking-tight text-gray-900">Set New Password</h1>
+              <p className="text-[13px] lg:text-[14px] text-gray-500 mt-1">Create a strong new password to secure your account.</p>
             </div>
-            {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">{error}</div>}
-            <form onSubmit={handleResetPassword} className="space-y-4">
+            {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">{error}</div>}
+            <form onSubmit={handleResetPassword} className="space-y-3.5 text-left">
               <div className="space-y-1">
-                <label htmlFor="new-password" className="text-[13px] font-normal text-gray-700">New Password</label>
-                <input id="new-password" type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[14px] text-gray-900 placeholder:text-gray-400" />
+                <label htmlFor="new-password" className="text-[12px] lg:text-[13px] font-normal text-gray-700">New Password</label>
+                <input id="new-password" type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full h-[44px] lg:h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[13px] lg:text-[14px] text-gray-900 placeholder:text-gray-400" />
               </div>
               <div className="space-y-1">
-                <label htmlFor="confirm-new-password" className="text-[13px] font-normal text-gray-700">Confirm Password</label>
-                <input id="confirm-new-password" type="password" required placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[14px] text-gray-900 placeholder:text-gray-400" />
+                <label htmlFor="confirm-new-password" className="text-[12px] lg:text-[13px] font-normal text-gray-700">Confirm Password</label>
+                <input id="confirm-new-password" type="password" required placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full h-[44px] lg:h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[13px] lg:text-[14px] text-gray-900 placeholder:text-gray-400" />
               </div>
-              <button type="submit" disabled={loading} className="w-full h-[46px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed mt-2">{loading ? 'Saving...' : 'Reset Password'}</button>
+              <button type="submit" disabled={loading} className="w-full h-[44px] lg:h-[46px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">{loading ? 'Saving...' : 'Reset Password'}</button>
             </form>
           </div>
         </div>
@@ -638,7 +636,7 @@ export default function LoginPage() {
 
     const isLogin = view === 'signIn';
     return (
-      <div className="flex flex-col items-center justify-start pt-6 lg:pt-10 xl:pt-12 pb-6 px-4 md:px-8 lg:px-10 xl:px-14 h-full overflow-hidden bg-white">
+      <div className="flex flex-col items-center justify-center p-6 h-full overflow-y-auto bg-white">
         <div className={`w-full max-w-[380px] ${isLogin ? 'space-y-3 lg:space-y-4' : 'space-y-2 lg:space-y-3'} py-1 text-left`}>
           <div className="space-y-0.5">
             <h1 className={`${isLogin ? 'text-[24px] lg:text-[28px] xl:text-[32px]' : 'text-[20px] lg:text-[24px] xl:text-[28px]'} font-normal tracking-tight text-gray-900`}>
