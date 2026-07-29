@@ -735,11 +735,14 @@ export default function ProfilePanel({
                   style={{
                     width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
                     display:'flex', alignItems:'center', justifyContent:'center',
-                    background: 'none', color:txt,
+                    background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color:txt,
+                    transition:'all 0.2s'
                   }}
+                  title="Settings & Privacy"
                 >
-                  <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
-                    <circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </button>
               )}
@@ -1002,6 +1005,9 @@ export default function ProfilePanel({
       {/* ========================================================
           VIEW: SETTINGS PAGE (No emojis)
           ======================================================== */}
+      {/* ========================================================
+          VIEW: SETTINGS & PRIVACY PAGE
+          ======================================================== */}
       {subView === 'settings' && (
         <>
           {/* Top Navigation Bar */}
@@ -1019,316 +1025,232 @@ export default function ProfilePanel({
               </svg>
             </button>
 
-            <span style={{fontWeight:700, fontSize:18, color:txt}}>Profile</span>
+            <span style={{fontWeight:800, fontSize:17, color:txt, tracking: '-0.02em'}}>Settings & Privacy</span>
 
             <div style={{width: 22}} />
           </div>
 
           {/* Settings Options Scrollable Body */}
-          <div style={{flex:1, overflowY:'auto', padding:'20px 20px'}}>
+          <div style={{flex:1, overflowY:'auto', padding:'20px 20px', display:'flex', flexDirection:'column', gap:20}}>
             
-            {/* User Profile Header Card - Rounded & styled like attached picture */}
+            {/* User Profile Header Card */}
             <div style={{
-              background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
-              border: `1px solid ${border}`, borderRadius: 20, padding: '16px 20px',
-              display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24,
-              boxShadow: isDark ? 'none' : '0 4px 12px rgba(0,0,0,0.02)'
+              background: isDark ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)' : '#f9fafb',
+              border: `1px solid ${border}`, borderRadius: 24, padding: '18px 20px',
+              display: 'flex', alignItems: 'center', gap: 16,
+              boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.3)' : '0 4px 16px rgba(0,0,0,0.04)'
             }}>
               <div style={{
-                width: 60, height: 60, borderRadius: '50%', overflow: 'hidden',
+                width: 64, height: 64, borderRadius: '50%', overflow: 'hidden',
                 background: isDark ? '#26262d' : '#e5e7eb', flexShrink: 0,
-                border: `0.5px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`
+                border: `2px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db'}`
               }}>
                 {image 
                   ? <img src={image} alt={name} style={{width: '100%', height: '100%', objectFit: 'cover'}} referrerPolicy="no-referrer" />
-                  : <DefaultAvatarSvg size={44} color={txt} />
+                  : <DefaultAvatarSvg size={48} color={txt} />
                 }
               </div>
-              <div style={{display: 'flex', flexDirection: 'column', gap: 2}}>
-                <span style={{fontSize: 16, fontWeight: 700, color: txt}}>{name}</span>
-                <span style={{fontSize: 12, color: sub}}>{fullUser?.email || (username + '@gmail.com')}</span>
+              <div style={{display: 'flex', flexDirection: 'column', gap: 3}}>
+                <span style={{fontSize: 17, fontWeight: 800, color: txt}}>{name}</span>
+                <span style={{fontSize: 12, color: sub, fontWeight: 500}}>@{username} · {fullUser?.email || (username + '@connect.app')}</span>
               </div>
             </div>
 
-            {/* Settings Menu List */}
-            <div style={{display: 'flex', flexDirection: 'column'}}>
-              
-              {/* Manage Profile */}
-              <div 
-                onClick={() => setSubView('edit_profile')}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px 8px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
-                }}
-              >
-                <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                    </svg>
-                  </span>
-                  <span style={{fontSize: 14, fontWeight: 500, color: txt}}>Manage Profile</span>
-                </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                </svg>
-              </div>
-
-              {/* Saved Posts & Reels */}
-              <div 
-                onClick={() => {
-                  setSubView('saved');
-                  setLoadingSaved(true);
-                  getSavedPostsAction().then(res => {
-                    if (Array.isArray(res)) {
-                      setSavedPostsList(res.map((item: any) => item.post));
-                    }
-                    setLoadingSaved(false);
-                  }).catch(e => {
-                    console.error(e);
-                    setLoadingSaved(false);
-                  });
-                }}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px 8px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
-                }}
-              >
-                <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
-                    </svg>
-                  </span>
-                  <span style={{fontSize: 14, fontWeight: 500, color: txt}}>Saved Posts & Reels</span>
-                </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                </svg>
-              </div>
-
-              {/* Private Account Switch Row */}
-              <div 
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px 8px', borderBottom: `1px solid ${border}`
-                }}
-              >
-                <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                    </svg>
-                  </span>
-                  <span style={{fontSize: 14, fontWeight: 500, color: txt}}>Private Account</span>
-                </div>
-                <button 
-                  onClick={() => handleTogglePrivacy(!fullUser?.isPrivate)}
+            {/* Account Settings Section */}
+            <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
+              <p style={{fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub, paddingLeft: 4, margin: 0}}>Account & Privacy</p>
+              <div style={{
+                background: isDark ? 'rgba(255,255,255,0.02)' : '#fff',
+                border: `1px solid ${border}`, borderRadius: 20, overflow: 'hidden'
+              }}>
+                {/* Manage Profile */}
+                <div 
+                  onClick={() => setSubView('edit_profile')}
                   style={{
-                    width: 44, height: 24, borderRadius: 100, border: 'none',
-                    background: fullUser?.isPrivate ? (isDark ? '#fff' : '#111') : (isDark ? '#3a3a3c' : '#d1d5db'),
-                    position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s'
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '16px 18px', borderBottom: `1px solid ${border}`, cursor: 'pointer',
+                    transition: 'background 0.15s'
                   }}
                 >
-                  <div style={{
-                    width: 18, height: 18, borderRadius: '50%', 
-                    background: fullUser?.isPrivate && isDark ? '#000' : '#fff',
-                    position: 'absolute', top: 3, 
-                    left: fullUser?.isPrivate ? 23 : 3,
-                    transition: 'left 0.2s'
-                  }} />
-                </button>
-              </div>
-
-              {/* Password & Security */}
-              <div 
-                onClick={() => alert('Password & Security settings are synchronized with Prisma DB.')}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px 8px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
-                }}
-              >
-                <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                    </svg>
-                  </span>
-                  <span style={{fontSize: 14, fontWeight: 500, color: txt}}>Password & Security</span>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
+                    <span style={{color: txt, display: 'flex', alignItems: 'center'}}>
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                      </svg>
+                    </span>
+                    <span style={{fontSize: 14, fontWeight: 600, color: txt}}>Edit Profile</span>
+                  </div>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                  </svg>
                 </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                </svg>
-              </div>
 
-              {/* Notifications */}
-              <div 
-                onClick={() => setSubView('notifications')}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px 8px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
-                }}
-              >
-                <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                    </svg>
-                  </span>
-                  <span style={{fontSize: 14, fontWeight: 500, color: txt}}>Notifications</span>
+                {/* Private Account Switch Row */}
+                <div 
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '16px 18px', borderBottom: `1px solid ${border}`
+                  }}
+                >
+                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
+                    <span style={{color: txt, display: 'flex', alignItems: 'center'}}>
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                      </svg>
+                    </span>
+                    <span style={{fontSize: 14, fontWeight: 600, color: txt}}>Private Account</span>
+                  </div>
+                  <button 
+                    onClick={() => handleTogglePrivacy(!fullUser?.isPrivate)}
+                    style={{
+                      width: 44, height: 24, borderRadius: 100, border: 'none',
+                      background: fullUser?.isPrivate ? (isDark ? '#fff' : '#111') : (isDark ? '#3a3a3c' : '#d1d5db'),
+                      position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s'
+                    }}
+                  >
+                    <div style={{
+                      width: 18, height: 18, borderRadius: '50%', 
+                      background: fullUser?.isPrivate && isDark ? '#000' : '#fff',
+                      position: 'absolute', top: 3, 
+                      left: fullUser?.isPrivate ? 23 : 3,
+                      transition: 'left 0.2s'
+                    }} />
+                  </button>
                 </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                </svg>
-              </div>
 
-              {/* Language */}
-              <div 
-                onClick={() => alert('Language is set to English (US).')}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px 8px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
-                }}
-              >
-                <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h2m0 0l-1.5-1.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                  </span>
-                  <span style={{fontSize: 14, fontWeight: 500, color: txt}}>Language</span>
+                {/* Password & Security */}
+                <div 
+                  onClick={() => alert('Password & Security settings are synchronized with Prisma DB.')}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '16px 18px', cursor: 'pointer'
+                  }}
+                >
+                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
+                    <span style={{color: txt, display: 'flex', alignItems: 'center'}}>
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                      </svg>
+                    </span>
+                    <span style={{fontSize: 14, fontWeight: 600, color: txt}}>Password & Security</span>
+                  </div>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                  </svg>
                 </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                </svg>
               </div>
+            </div>
 
-              {/* About Us */}
-              <div 
-                onClick={() => alert('Connect is a premium next-gen social network.')}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px 8px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
-                }}
-              >
-                <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                  </span>
-                  <span style={{fontSize: 14, fontWeight: 500, color: txt}}>About Us</span>
+            {/* Content & Display Section */}
+            <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
+              <p style={{fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub, paddingLeft: 4, margin: 0}}>Content & Display</p>
+              <div style={{
+                background: isDark ? 'rgba(255,255,255,0.02)' : '#fff',
+                border: `1px solid ${border}`, borderRadius: 20, overflow: 'hidden'
+              }}>
+                {/* Saved Posts & Reels */}
+                <div 
+                  onClick={() => {
+                    setSubView('saved');
+                    setLoadingSaved(true);
+                    getSavedPostsAction().then(res => {
+                      if (Array.isArray(res)) {
+                        setSavedPostsList(res.map((item: any) => item.post));
+                      }
+                      setLoadingSaved(false);
+                    }).catch(e => {
+                      console.error(e);
+                      setLoadingSaved(false);
+                    });
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '16px 18px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
+                  }}
+                >
+                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
+                    <span style={{color: txt, display: 'flex', alignItems: 'center'}}>
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                      </svg>
+                    </span>
+                    <span style={{fontSize: 14, fontWeight: 600, color: txt}}>Saved Posts & Reels</span>
+                  </div>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                  </svg>
                 </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                </svg>
-              </div>
 
-              {/* Theme */}
-              <div 
-                onClick={toggleTheme}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px 8px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
-                }}
-              >
-                <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-                    </svg>
-                  </span>
-                  <span style={{fontSize: 14, fontWeight: 500, color: txt}}>Theme ({theme === 'dark' ? 'Dark' : 'Light'})</span>
+                {/* Dark Theme */}
+                <div 
+                  onClick={toggleTheme}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '16px 18px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
+                  }}
+                >
+                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
+                    <span style={{color: txt, display: 'flex', alignItems: 'center'}}>
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                      </svg>
+                    </span>
+                    <span style={{fontSize: 14, fontWeight: 600, color: txt}}>Dark Theme</span>
+                  </div>
+                  <span style={{fontSize: 12, fontWeight: 600, color: sub}}>{theme === 'dark' ? 'On' : 'Off'}</span>
                 </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                </svg>
-              </div>
 
-              {/* Appointments */}
-              <div 
-                onClick={() => alert('No active appointments scheduled.')}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px 8px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
-                }}
-              >
-                <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
-                  </span>
-                  <span style={{fontSize: 14, fontWeight: 500, color: txt}}>Appointments</span>
+                {/* Notifications */}
+                <div 
+                  onClick={() => setSubView('notifications')}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '16px 18px', cursor: 'pointer'
+                  }}
+                >
+                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
+                    <span style={{color: txt, display: 'flex', alignItems: 'center'}}>
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                      </svg>
+                    </span>
+                    <span style={{fontSize: 14, fontWeight: 600, color: txt}}>Notifications</span>
+                  </div>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                  </svg>
                 </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                </svg>
               </div>
+            </div>
 
-              {/* Help Center */}
-              <div 
-                onClick={() => alert('Welcome to Help Center! Contact support@connect.net for issues.')}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px 8px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
-                }}
-              >
-                <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                  </span>
-                  <span style={{fontSize: 14, fontWeight: 500, color: txt}}>Help Center</span>
+            {/* Support & Sign Out Section */}
+            <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
+              <p style={{fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub, paddingLeft: 4, margin: 0}}>Session</p>
+              <div style={{
+                background: isDark ? 'rgba(255,255,255,0.02)' : '#fff',
+                border: `1px solid ${border}`, borderRadius: 20, overflow: 'hidden'
+              }}>
+                {/* Sign Out Row */}
+                <div 
+                  onClick={() => signOut({ callbackUrl: '/accounts' })}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '16px 18px', cursor: 'pointer'
+                  }}
+                >
+                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
+                    <span style={{color: '#ef4444', display: 'flex', alignItems: 'center'}}>
+                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                      </svg>
+                    </span>
+                    <span style={{fontSize: 14, fontWeight: 700, color: '#ef4444'}}>Log Out</span>
+                  </div>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: '#ef4444'}}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                  </svg>
                 </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                </svg>
               </div>
-
-              {/* Contact Us */}
-              <div 
-                onClick={() => alert('Connect Support: +1 (800) 555-0199')}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px 8px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
-                }}
-              >
-                <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: sub, display: 'flex', alignItems: 'center'}}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                    </svg>
-                  </span>
-                  <span style={{fontSize: 14, fontWeight: 500, color: txt}}>Contact Us</span>
-                </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                </svg>
-              </div>
-
-              {/* Sign Out Row */}
-              <div 
-                onClick={() => signOut({ callbackUrl: '/accounts' })}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '20px 8px', cursor: 'pointer', marginTop: 8
-                }}
-              >
-                <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                  <span style={{color: '#ef4444', display: 'flex', alignItems: 'center'}}>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                    </svg>
-                  </span>
-                  <span style={{fontSize: 14, fontWeight: 600, color: '#ef4444'}}>Sign Out</span>
-                </div>
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: '#ef4444'}}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
-                </svg>
-              </div>
-
             </div>
 
             <div style={{height: 60}} />
