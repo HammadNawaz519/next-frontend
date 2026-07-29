@@ -75,7 +75,7 @@ export default function ReelsPlayer({ onBack, onOpenProfile, isDark }: ReelsPlay
 
   if (reels.length === 0) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-black text-white p-6 text-center">
+      <div className="fixed inset-0 z-[100] md:relative md:inset-auto md:w-full md:h-full flex flex-col items-center justify-center bg-black text-white p-6 text-center">
         {/* Back button top-left */}
         <button
           onClick={onBack}
@@ -481,8 +481,9 @@ function ReelItem({ reel, isActive, onOpenProfile, isDark }: {
             onClick={handleShare}
             className="w-10 h-10 flex items-center justify-center text-white active:scale-90 transition-transform drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]"
           >
-            <svg className="w-7 h-7 -rotate-12 translate-x-[1px] -translate-y-[1px]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 10.742l8.139-4.07M8.684 10.742l-2.085 9.02a.75.75 0 001.089.818l5.584-3.72M8.684 10.742L21 3m0 0l-5.38 18.062a.75.75 0 01-1.355-.008L9.88 12.06 21 3z" />
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
             </svg>
           </button>
           <span className="text-[12px] text-white font-medium drop-shadow-md select-none">Share</span>

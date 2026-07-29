@@ -1016,9 +1016,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const result = await saveCall(incomingCall.from.id, incomingCall.type, 'rejected');
     if (result?.message) {
       socket.emit('send_social_message', {
-        receiverEmail: incomingCall.from.email,
-        receiverId: incomingCall.from.id,
-        ...result.message
+        ...result.message,
+        receiverEmail: incomingCall.from.email
       });
       if (selectedUser?.id === incomingCall.from.id) {
         setMessages(prev => [...prev, result.message as any]);
@@ -1433,15 +1432,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         <div className="main-wrap">
           <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'}`}>
             <div className="search-wrap relative">
-              <div className="flex items-center justify-between mb-3 w-full">
-                <div className="flex items-center gap-3">
-                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', flexShrink: 0 }} onClick={() => onBack && onBack()}>
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                  </button>
-                  <h2 className="text-xl font-bold" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
-                </div>
-                </div>
-              )}
+              <div className="flex items-center gap-3 mb-3 w-full">
+                <button style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', flexShrink: 0 }} onClick={() => onBack && onBack()}>
+                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                </button>
+                <h2 className="text-xl font-bold" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
+              </div>
 
               <input
                 type="text"

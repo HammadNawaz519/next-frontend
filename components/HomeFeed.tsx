@@ -365,8 +365,9 @@ function ShareOverlay({ onClose, isDark, postUrl }: { onClose: () => void; isDar
             className="w-full py-4 rounded-2xl flex items-center gap-3 px-5 active:opacity-70 transition-opacity"
             style={{ background: isDark ? '#2c2c2e' : '#f3f4f6', color: isDark ? '#fff' : '#111' }}
           >
-            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 10.742l8.139-4.07M8.684 10.742l-2.085 9.02a.75.75 0 001.089.818l5.584-3.72M8.684 10.742L21 3m0 0l-5.38 18.062a.75.75 0 01-1.355-.008L9.88 12.06 21 3z" />
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
             </svg>
             <span className="font-semibold text-[14px]">{copied ? 'Link Copied!' : 'Share / Copy Link'}</span>
           </button>
