@@ -149,11 +149,11 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
       <div
         className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''}`}
         style={{
-          order: 1,
+          order: isSent ? 2 : 1,
           width: 'fit-content',
           maxWidth: '75%',
-          marginLeft: isSent ? 'auto' : '0',
-          marginRight: isSent ? '0' : 'auto',
+          marginLeft: isSent ? (msg.type !== 'deleted' && msg.type !== 'call' && !isInSelectionMode ? '0' : 'auto') : '0',
+          marginRight: isSent ? '0' : '0',
           transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s',
           transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
         }}
@@ -203,7 +203,13 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
       </div>
 
       {msg.type !== 'deleted' && msg.type !== 'call' && !isInSelectionMode && (
-        <div className={`msg-actions ${showActionsMobile ? 'show-mobile' : ''}`} style={{ order: 3 }}>
+        <div 
+          className={`msg-actions ${showActionsMobile ? 'show-mobile' : ''}`} 
+          style={{ 
+            order: isSent ? 1 : 2,
+            marginLeft: isSent ? 'auto' : undefined
+          }}
+        >
           <div className="msg-del-actions">
             <div className="quick-react-container">
               {QUICK_REACTIONS.map(emoji => (
