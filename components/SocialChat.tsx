@@ -258,6 +258,7 @@ interface SocialChatProps {
   onChatChange?: (user: any) => void;
   onBack?: () => void;
   onCallStateChange?: (isCallActive: boolean) => void;
+  initialUser?: any; // Pre-select a user when opened from another profile
 }
 
 // ── Custom PWA / HTML5 Local Notification Dispatcher ──
@@ -311,7 +312,7 @@ const triggerStunningNotification = (
   }
 };
 
-const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange }: SocialChatProps, ref) => {
+const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange, initialUser }: SocialChatProps, ref) => {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -319,6 +320,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [showActivityOverlay, setShowActivityOverlay] = useState(false);
+
+  // Auto-select the user passed from another profile's Message button
+  const initialUserRef = React.useRef<any>(null);
+  useEffect(() => {
+    if (initialUser && initialUser.id !== initialUserRef.current?.id) {
+      initialUserRef.current = initialUser;
+      setSelectedUser(initialUser);
+    }
+  }, [initialUser]);
 
   const [isSlidingOut, setIsSlidingOut] = useState(false);
   const transitionInProgress = React.useRef(false);

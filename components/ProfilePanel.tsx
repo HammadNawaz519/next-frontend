@@ -524,7 +524,7 @@ export default function ProfilePanel({
   return (
     <div
       style={{
-        position:'absolute', inset:0, zIndex:50, display:'flex',
+        position:'absolute', inset:0, zIndex:60, display:'flex',
         flexDirection:'column', overflow:'hidden',
         background: isDark ? '#0e0e11' : '#fff',
       }}

@@ -57,6 +57,7 @@ export default function DashboardPage() {
   const [isExploreLoading, setIsExploreLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [searchHistory, setSearchHistory] = useState<any[]>([]);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [selectedProfileUser, setSelectedProfileUser] = useState<any>(null);
@@ -176,14 +177,17 @@ export default function DashboardPage() {
   // Handle Search Input Changes
   useEffect(() => {
     if (searchQuery.trim().length > 0) {
+      setIsSearching(true);
       const delayDebounce = setTimeout(() => {
         searchUsers(searchQuery).then((res: any) => {
           setSearchResults(res || []);
-        });
-      }, 300);
+          setIsSearching(false);
+        }).catch(() => setIsSearching(false));
+      }, 250);
       return () => clearTimeout(delayDebounce);
     } else {
       setSearchResults([]);
+      setIsSearching(false);
     }
   }, [searchQuery]);
 
@@ -857,10 +861,21 @@ export default function DashboardPage() {
                   ) : (
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-zinc-500">Search Results</p>
-                      {searchResults.length === 0 ? (
-                        <p className="text-sm font-light text-zinc-500 py-4 text-center">No matching profiles found</p>
+                      {isSearching ? (
+                        <div className="flex items-center justify-center py-8 gap-3">
+                          <div className="w-5 h-5 rounded-full border-2 border-t-transparent border-orange-500 animate-spin" />
+                          <span className="text-sm text-zinc-500">Searching...</span>
+                        </div>
+                      ) : searchResults.length === 0 ? (
+                        <div className="flex flex-col items-center py-10 gap-3">
+                          <svg className="w-10 h-10 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                          <p className="text-sm font-medium text-zinc-500">No results for "{searchQuery}"</p>
+                          <p className="text-xs text-zinc-400">Try a different name, username, or email</p>
+                        </div>
                       ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           {searchResults.map((item: any) => (
                             <div
                               key={item.id}
@@ -869,19 +884,25 @@ export default function DashboardPage() {
                                 handleOpenOtherProfile(item.id, item, e);
                                 setIsSearchOverlayOpen(false);
                               }}
-                              className="flex items-center gap-3 p-3.5 rounded-xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
+                              className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors active:scale-[0.99]"
+                              style={{ background: 'transparent' }}
+                              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}
+                              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                             >
-                              <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'var(--dm-bg-active)' }}>
+                              <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
                                 {item.image ? (
-                                  <img src={item.image} alt="user" className="w-full h-full object-cover" />
+                                  <img src={item.image} alt="user" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                 ) : (
                                   <img src="/Avatar.avif" alt="user" className="w-full h-full object-cover" />
                                 )}
                               </div>
-                              <div>
-                                <p className="text-sm font-semibold" style={{ color: 'var(--dm-text-primary)' }}>{item.name || 'User'}</p>
-                                <p className="text-xs text-zinc-500">@{item.username || 'username'}</p>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold truncate" style={{ color: 'var(--dm-text-primary)' }}>{item.name || 'User'}</p>
+                                <p className="text-xs truncate" style={{ color: 'var(--dm-text-muted)' }}>@{item.username || 'username'}{item._count?.followers ? ` · ${item._count.followers} followers` : ''}</p>
                               </div>
+                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
                             </div>
                           ))}
                         </div>
@@ -900,6 +921,7 @@ export default function DashboardPage() {
           onChatChange={setSelectedChatUser}
           onBack={() => setActiveView('home')}
           onCallStateChange={setIsCallActive}
+          initialUser={selectedChatUser}
           ref={chatComponentRef as any}
         />
 
@@ -1080,11 +1102,7 @@ export default function DashboardPage() {
                   setUploadLoading(true);
                   try {
                     await createPostAction({ imageUrl: uploadUrl, caption: uploadCaption, postType: uploadType });
-                    if (activeView === 'home' || activeView === 'reels') {
-                      // Optionally refresh feeds here if logic was lifted, else the components handle their own cache.
-                      // For now, reload window to force refresh data everywhere just to be safe.
-                      window.location.reload();
-                    }
+                    refreshProfile();
                     setShowUploadModal(false);
                   } catch (e) {
                     console.error('Upload failed', e);

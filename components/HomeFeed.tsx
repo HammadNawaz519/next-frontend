@@ -331,15 +331,25 @@ function OptionsSheet({ onClose, isDark }: { onClose: () => void; isDark: boolea
 /* ─────────────────────────────────────────
    Share Overlay
    ───────────────────────────────────────── */
-function ShareOverlay({ onClose, isDark }: { onClose: () => void; isDark: boolean }) {
-  const friends = [
-    { name: 'alex_ray', hue: 28, image: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80' },
-    { name: 'sarah_k', hue: 145, image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80' },
-    { name: 'jay_p', hue: 268, image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80' },
-    { name: 'mia.ux', hue: 52, image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&h=150&q=80' },
-    { name: 'dev_dan', hue: 188, image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&h=150&q=80' },
-    { name: 'nina_m', hue: 318, image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&h=150&q=80' },
-  ];
+function ShareOverlay({ onClose, isDark, postUrl }: { onClose: () => void; isDark: boolean; postUrl?: string }) {
+  const [copied, setCopied] = React.useState(false);
+
+  const handleNativeShare = async () => {
+    const url = postUrl || (typeof window !== 'undefined' ? window.location.href : '');
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Check this post on Connect', url });
+        onClose();
+        return;
+      } catch {}
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => { setCopied(false); onClose(); }, 1500);
+    } catch {}
+  };
+
   return (
     <>
       <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm" onClick={onClose} />
@@ -348,16 +358,18 @@ function ShareOverlay({ onClose, isDark }: { onClose: () => void; isDark: boolea
         style={{ background: isDark ? '#1c1c1e' : '#fff', boxShadow: '0 -8px 40px rgba(0,0,0,0.25)', animation: 'hf-slideUp 0.35s cubic-bezier(0.25,1,0.5,1) forwards' }}
       >
         <div className="w-12 h-1.5 rounded-full mx-auto mt-3 mb-3" style={{ background: isDark ? '#3a3a3c' : '#e5e7eb' }} />
-        <p className="text-center font-semibold text-[15px] mb-4" style={{ color: isDark ? '#fff' : '#111' }}>Share to</p>
-        <div className="flex gap-4 px-5 overflow-x-auto pb-1 hide-hf-scrollbar">
-          {friends.map(f => (
-            <button key={f.name} onClick={onClose} className="flex flex-col items-center gap-1.5 flex-shrink-0 active:scale-90 transition-transform">
-              <Avatar image={f.image} hue={f.hue} size={52} />
-              <span className="text-[11px] font-medium" style={{ color: isDark ? '#a1a1aa' : '#52525b' }}>{f.name}</span>
-            </button>
-          ))}
-        </div>
-        <div className="px-5 mt-4">
+        <p className="text-center font-semibold text-[15px] mb-5" style={{ color: isDark ? '#fff' : '#111' }}>Share Post</p>
+        <div className="flex flex-col gap-3 px-5">
+          <button
+            onClick={handleNativeShare}
+            className="w-full py-4 rounded-2xl flex items-center gap-3 px-5 active:opacity-70 transition-opacity"
+            style={{ background: isDark ? '#2c2c2e' : '#f3f4f6', color: isDark ? '#fff' : '#111' }}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 10.742l8.139-4.07M8.684 10.742l-2.085 9.02a.75.75 0 001.089.818l5.584-3.72M8.684 10.742L21 3m0 0l-5.38 18.062a.75.75 0 01-1.355-.008L9.88 12.06 21 3z" />
+            </svg>
+            <span className="font-semibold text-[14px]">{copied ? 'Link Copied!' : 'Share / Copy Link'}</span>
+          </button>
           <button onClick={onClose} className="w-full py-3 rounded-2xl text-sm font-semibold transition-colors active:opacity-70" style={{ background: isDark ? '#2c2c2e' : '#f3f4f6', color: isDark ? '#fff' : '#111' }}>
             Cancel
           </button>
