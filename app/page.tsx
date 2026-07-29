@@ -159,7 +159,6 @@ export default function LoginPage() {
 
   // OTP handlers
   const handleOtpChange = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    // Strip non-digits; take the LAST character so replacing a filled box works
     const raw = e.target.value.replace(/\D/g, '');
     if (!raw) {
       const next = [...otp];
@@ -167,7 +166,19 @@ export default function LoginPage() {
       setOtp(next);
       return;
     }
-    const digit = raw[raw.length - 1]; // always 1 char
+    // Handle multi-digit input (Mobile SMS auto-fill or fast paste)
+    if (raw.length > 1) {
+      const digits = raw.slice(0, 6 - i).split('');
+      const next = [...otp];
+      digits.forEach((d, idx) => {
+        if (i + idx < 6) next[i + idx] = d;
+      });
+      setOtp(next);
+      const nextFocus = Math.min(i + digits.length, 5);
+      requestAnimationFrame(() => otpRefs.current[nextFocus]?.focus());
+      return;
+    }
+    const digit = raw;
     const next = [...otp];
     next[i] = digit;
     setOtp(next);

@@ -2191,14 +2191,31 @@ export default function ProfilePanel({
                 ref={el => { switchOtpRefs.current[i] = el; }}
                 type="text"
                 inputMode="numeric"
-                maxLength={1}
+                autoComplete={i === 0 ? 'one-time-code' : 'off'}
                 value={digit}
                 onChange={e => {
                   const raw = e.target.value.replace(/\D/g, '');
+                  if (!raw) {
+                    const next = [...switchOtp];
+                    next[i] = '';
+                    setSwitchOtp(next);
+                    return;
+                  }
+                  if (raw.length > 1) {
+                    const digits = raw.slice(0, 6 - i).split('');
+                    const next = [...switchOtp];
+                    digits.forEach((d, idx) => {
+                      if (i + idx < 6) next[i + idx] = d;
+                    });
+                    setSwitchOtp(next);
+                    const nextFocus = Math.min(i + digits.length, 5);
+                    requestAnimationFrame(() => switchOtpRefs.current[nextFocus]?.focus());
+                    return;
+                  }
                   const next = [...switchOtp];
                   next[i] = raw;
                   setSwitchOtp(next);
-                  if (raw && i < 5) switchOtpRefs.current[i + 1]?.focus();
+                  if (i < 5) requestAnimationFrame(() => switchOtpRefs.current[i + 1]?.focus());
                 }}
                 onKeyDown={e => {
                   if (e.key === 'Backspace' && !switchOtp[i] && i > 0) {

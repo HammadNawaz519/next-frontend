@@ -43,16 +43,36 @@ export default function AuthenticationCard() {
   }
 
   const handleOtpChange = (index: number, value: string) => {
-    if (value.length <= 1 && /^\d*$/.test(value)) {
+    const raw = value.replace(/\D/g, '');
+    if (!raw) {
       const newOtp = [...formData.otp]
-      newOtp[index] = value
+      newOtp[index] = ''
       setFormData((prev) => ({ ...prev, otp: newOtp }))
+      return
+    }
+    if (raw.length > 1) {
+      const digits = raw.slice(0, 6 - index).split('')
+      const newOtp = [...formData.otp]
+      digits.forEach((d, idx) => {
+        if (index + idx < 6) newOtp[index + idx] = d
+      })
+      setFormData((prev) => ({ ...prev, otp: newOtp }))
+      const nextFocus = Math.min(index + digits.length, 5)
+      requestAnimationFrame(() => {
+        const nextInput = document.getElementById(`otp-${nextFocus}`)
+        nextInput?.focus()
+      })
+      return
+    }
+    const newOtp = [...formData.otp]
+    newOtp[index] = raw
+    setFormData((prev) => ({ ...prev, otp: newOtp }))
 
-      // Auto-focus next input
-      if (value && index < 5) {
+    if (index < 5) {
+      requestAnimationFrame(() => {
         const nextInput = document.getElementById(`otp-${index + 1}`)
         nextInput?.focus()
-      }
+      })
     }
   }
 
@@ -530,10 +550,17 @@ export default function AuthenticationCard() {
                       key={index}
                       id={`otp-${index}`}
                       type="text"
+                      inputMode="numeric"
+                      autoComplete={index === 0 ? "one-time-code" : "off"}
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Backspace" && !digit && index > 0) {
+                          const nextInput = document.getElementById(`otp-${index - 1}`)
+                          nextInput?.focus()
+                        }
+                      }}
                       className="w-12 h-12 text-center text-lg font-semibold bg-white/10 border-white/20 text-white focus:border-white/40 focus:ring-white/20 rounded-xl"
-                      maxLength={1}
                     />
                   ))}
                 </div>
