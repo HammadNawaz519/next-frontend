@@ -687,7 +687,7 @@ export async function getExploreContent() {
     orderBy: { createdAt: 'desc' },
     take: 60,
     include: {
-      user: { select: { id: true, name: true, username: true, image: true, isPrivate: true } }
+      user: { select: { id: true, name: true, username: true, email: true, image: true, isPrivate: true } }
     }
   });
 }
@@ -713,7 +713,7 @@ export async function searchUsers(query: string) {
         { email: { contains: query.trim(), mode: 'insensitive' } },
       ]
     },
-    select: { id: true, name: true, username: true, image: true, bio: true, isPrivate: true },
+    select: { id: true, name: true, username: true, email: true, image: true, bio: true, isPrivate: true },
     take: 20,
   });
 }

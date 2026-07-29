@@ -340,6 +340,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     y: number,
     reverse = false
   ) => {
+    // On laptop/desktop view (> 768px), execute action directly with NO horizontal swipe or circle transition
+    if (typeof window !== 'undefined' && window.innerWidth > 768) {
+      action();
+      return;
+    }
+
     // If transition is already running, just execute action directly
     if (transitionInProgress.current || !(document as any).startViewTransition) {
       action();
@@ -676,8 +682,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         console.log('Socket connected');
         setIsConnected(true);
         if (onStatusChange) onStatusChange(true);
-        if (sessionRef.current?.user?.email) {
-          newSocket.emit('identify', { email: sessionRef.current.user.email.toLowerCase().trim() });
+        if (sessionRef.current?.user) {
+          const userObj = sessionRef.current.user as any;
+          newSocket.emit('identify', {
+            email: userObj.email ? userObj.email.toLowerCase().trim() : undefined,
+            userId: userObj.id
+          });
         }
       });
 

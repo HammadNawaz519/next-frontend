@@ -82,6 +82,10 @@ export default function DashboardPage() {
   const profileTransitionInProgress = useRef(false);
 
   const runProfileTransition = (action: () => void, x: number, y: number, reverse = false) => {
+    if (typeof window !== 'undefined' && window.innerWidth > 768) {
+      action();
+      return;
+    }
     if (profileTransitionInProgress.current || !(document as any).startViewTransition) {
       action();
       return;
