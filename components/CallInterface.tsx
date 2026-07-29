@@ -111,7 +111,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         if (signal.sdp.type === 'offer') {
           const answer = await pcRef.current.createAnswer();
           await pcRef.current.setLocalDescription(answer);
-          socket.emit('webrtc_signal', { to: peer.email, signal: { sdp: answer } });
+          socket.emit('webrtc_signal', { to: peer.email, toUserId: peer.id, signal: { sdp: answer } });
         }
       } else if (signal.candidate) {
         if (remoteDescriptionSetRef.current) {
@@ -263,8 +263,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         };
 
         pc.onicecandidate = (event) => {
-          if (event.candidate && target) {
-            socket.emit('webrtc_signal', { to: target, signal: { candidate: event.candidate } });
+          if (event.candidate) {
+            socket.emit('webrtc_signal', { to: target, toUserId: peer.id, signal: { candidate: event.candidate } });
           }
         };
 
@@ -303,7 +303,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             offerToReceiveVideo: type === 'video'
           });
           await pc.setLocalDescription(offer);
-          socket.emit('webrtc_signal', { to: target, signal: { sdp: offer } });
+          socket.emit('webrtc_signal', { to: target, toUserId: peer.id, signal: { sdp: offer } });
         } catch (e) { console.error("Offer creation error:", e); }
       };
       
@@ -364,8 +364,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const handleEnd = () => {
     if (hasEnded.current) return;
     hasEnded.current = true;
-    const target = peer.email?.toLowerCase().trim();
-    if (target) socket.emit('end_call', { to: target });
+    socket.emit('end_call', { to: peer.email?.toLowerCase().trim(), toUserId: peer.id });
     cleanup();
     onEnd(durationRef.current, callStatus === 'active' || durationRef.current > 0);
   };

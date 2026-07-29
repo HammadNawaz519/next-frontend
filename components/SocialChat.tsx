@@ -979,30 +979,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const handleCall = async (type: 'audio' | 'video') => {
     if (!selectedUser || !session?.user || !socket) return;
 
-    // 1. Emit call event IMMEDIATELY for low latency
-    const callTarget = selectedUser.email?.toLowerCase().trim();
-    if (!callTarget) return;
-
     socket.emit('call_user', {
-      to: callTarget,
+      to: selectedUser.email?.toLowerCase().trim(),
+      toUserId: selectedUser.id,
       from: session.user,
       type
     });
 
-    // 2. Set local active call state
     setActiveCall({ peer: selectedUser, type, isCaller: true });
-
-    // 3. Call is logged when it ends (onEnd) or is rejected (handleRejectCall)
   };
 
   const handleAcceptCall = () => {
     if (!incomingCall || !socket) return;
 
-    const target = incomingCall.from.email?.toLowerCase().trim();
-    if (!target) return;
-
     socket.emit('accept_call', {
-      to: target,
+      to: incomingCall.from.email?.toLowerCase().trim(),
+      toUserId: incomingCall.from.id,
       from: session?.user
     });
 
@@ -1017,13 +1009,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   const handleRejectCall = async () => {
     if (!incomingCall || !socket) return;
-    const target = incomingCall.from.email?.toLowerCase().trim();
-    if (target) socket.emit('reject_call', { to: target });
-    // Save as rejected call
+    socket.emit('reject_call', {
+      to: incomingCall.from.email?.toLowerCase().trim(),
+      toUserId: incomingCall.from.id
+    });
     const result = await saveCall(incomingCall.from.id, incomingCall.type, 'rejected');
     if (result?.message) {
-      socket.emit('send_social_message', { receiverEmail: target, ...result.message });
-      // If we are currently in that chat, add it
+      socket.emit('send_social_message', {
+        receiverEmail: incomingCall.from.email,
+        receiverId: incomingCall.from.id,
+        ...result.message
+      });
       if (selectedUser?.id === incomingCall.from.id) {
         setMessages(prev => [...prev, result.message as any]);
       }
@@ -1033,9 +1029,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   const handleEndCall = () => {
     if (!activeCall || !socket) return;
-    const target = activeCall.peer.email?.toLowerCase().trim();
-    if (target) socket.emit('end_call', { to: target });
-    // Note: The onEnd callback in CallInterface will handle the database save
+    socket.emit('end_call', {
+      to: activeCall.peer.email?.toLowerCase().trim(),
+      toUserId: activeCall.peer.id
+    });
   };
 
   // Search or Load Recent
