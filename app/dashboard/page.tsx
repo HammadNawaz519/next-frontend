@@ -682,8 +682,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Container */}
-      <div className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[40px] shadow-sm md:border" style={{ background: 'var(--dm-bg-main)', borderColor: 'var(--dm-border-main)' }}>
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.02\'/%3E%3C/svg%3E")', opacity: 0.4, pointerEvents: 'none' }} />
+      <div className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[40px] shadow-sm md:border" style={{ background: activeView === 'reels' ? '#000000' : 'var(--dm-bg-main)', borderColor: activeView === 'reels' ? '#000000' : 'var(--dm-border-main)' }}>
+        {activeView !== 'reels' && (
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.02\'/%3E%3C/svg%3E")', opacity: 0.4, pointerEvents: 'none' }} />
+        )}
 
         {/* Content Views */}
         {activeView === 'home' && (
@@ -699,7 +701,7 @@ export default function DashboardPage() {
         )}
 
         {activeView === 'reels' && (
-          <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden">
+          <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden bg-black" style={{ background: '#000000' }}>
             <ReelsPlayer 
               onBack={() => setActiveView('home')}
               onOpenProfile={(userId, fallbackUser, e) => handleOpenOtherProfile(userId, fallbackUser, e)}

@@ -51,28 +51,25 @@ export default function AuthenticationCard() {
       return
     }
     if (raw.length > 1) {
-      const digits = raw.slice(0, 6 - index).split('')
-      const newOtp = [...formData.otp]
+      const digits = raw.slice(0, 6).split('')
+      const newOtp = ['', '', '', '', '', '']
       digits.forEach((d, idx) => {
-        if (index + idx < 6) newOtp[index + idx] = d
+        if (idx < 6) newOtp[idx] = d
       })
       setFormData((prev) => ({ ...prev, otp: newOtp }))
-      const nextFocus = Math.min(index + digits.length, 5)
-      setTimeout(() => {
-        const nextInput = document.getElementById(`otp-${nextFocus}`)
-        nextInput?.focus()
-      }, 10)
+      const nextFocus = Math.min(digits.length, 5)
+      const nextInput = document.getElementById(`otp-${nextFocus}`)
+      nextInput?.focus()
       return
     }
+    const digit = raw.slice(-1)
     const newOtp = [...formData.otp]
-    newOtp[index] = raw
+    newOtp[index] = digit
     setFormData((prev) => ({ ...prev, otp: newOtp }))
 
-    if (index < 5) {
-      setTimeout(() => {
-        const nextInput = document.getElementById(`otp-${index + 1}`)
-        nextInput?.focus()
-      }, 10)
+    if (index < 5 && digit) {
+      const nextInput = document.getElementById(`otp-${index + 1}`)
+      nextInput?.focus()
     }
   }
 
@@ -551,8 +548,11 @@ export default function AuthenticationCard() {
                       id={`otp-${index}`}
                       type="text"
                       inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
                       autoComplete={index === 0 ? "one-time-code" : "off"}
                       value={digit}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Backspace" && !digit && index > 0) {

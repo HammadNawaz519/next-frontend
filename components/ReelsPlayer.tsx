@@ -66,7 +66,7 @@ export default function ReelsPlayer({ onBack, onOpenProfile, isDark }: ReelsPlay
 
   if (isLoading) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-black text-white">
+      <div className="w-full h-full flex flex-col items-center justify-center text-white" style={{ background: '#000000' }}>
         <div className="w-12 h-12 rounded-full border-4 border-t-orange-500 border-r-transparent border-b-transparent border-l-transparent animate-spin mb-4" />
         <p className="text-sm font-light text-zinc-400">Loading Reels...</p>
       </div>
@@ -75,7 +75,7 @@ export default function ReelsPlayer({ onBack, onOpenProfile, isDark }: ReelsPlay
 
   if (reels.length === 0) {
     return (
-      <div className="fixed inset-0 z-[100] md:relative md:inset-auto md:w-full md:h-full flex flex-col items-center justify-center bg-black text-white p-6 text-center">
+      <div className="fixed inset-0 z-[100] md:relative md:inset-auto md:w-full md:h-full flex flex-col items-center justify-center text-white p-6 text-center" style={{ background: '#000000' }}>
         {/* Back button top-left */}
         <button
           onClick={onBack}
@@ -123,8 +123,8 @@ export default function ReelsPlayer({ onBack, onOpenProfile, isDark }: ReelsPlay
     <div 
       ref={containerRef}
       onScroll={handleScroll}
-      className="w-full h-full bg-black relative snap-y snap-mandatory overflow-y-scroll scrollbar-none"
-      style={{ scrollBehavior: 'smooth' }}
+      className="w-full h-full relative snap-y snap-mandatory overflow-y-scroll scrollbar-none"
+      style={{ background: '#000000', scrollBehavior: 'smooth' }}
     >
       {/* Top Header Controls (Back and Camera) */}
       <div className="absolute top-[25px] left-0 right-0 flex items-center justify-between px-[35px] z-40 pointer-events-none">
@@ -146,16 +146,6 @@ export default function ReelsPlayer({ onBack, onOpenProfile, isDark }: ReelsPlay
           </svg>
         </button>
       </div>
-
-      {/* Centered Static title with 250px upper content boundary margin */}
-      <div className="absolute top-[250px] left-0 right-0 text-center z-30 pointer-events-none select-none">
-        <h1 className="text-white/80 text-xl font-bold tracking-widest uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-          Reels
-        </h1>
-      </div>
-
-      {/* Content Safe Zone (Central Dashed Box representing boundaries) */}
-      <div className="absolute inset-y-0 left-[35px] right-[35px] border-l border-r border-dashed border-white/10 pointer-events-none z-20" />
 
       {/* Feed list */}
       {reels.map((reel, idx) => (

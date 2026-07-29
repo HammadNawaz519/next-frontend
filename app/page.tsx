@@ -168,22 +168,24 @@ export default function LoginPage() {
     }
     // Handle multi-digit input (Mobile SMS auto-fill or fast paste)
     if (raw.length > 1) {
-      const digits = raw.slice(0, 6 - i).split('');
-      const next = [...otp];
+      const digits = raw.slice(0, 6).split('');
+      const next = ['', '', '', '', '', ''];
       digits.forEach((d, idx) => {
-        if (i + idx < 6) next[i + idx] = d;
+        if (idx < 6) next[idx] = d;
       });
       setOtp(next);
-      const nextFocus = Math.min(i + digits.length, 5);
-      setTimeout(() => otpRefs.current[nextFocus]?.focus(), 10);
+      const nextFocus = Math.min(digits.length, 5);
+      otpRefs.current[nextFocus]?.focus();
       return;
     }
-    const digit = raw;
+    const digit = raw.slice(-1);
     const next = [...otp];
     next[i] = digit;
     setOtp(next);
-    // Auto-advance to next box
-    if (i < 5) setTimeout(() => otpRefs.current[i + 1]?.focus(), 10);
+    // Auto-advance to next box synchronously
+    if (i < 5 && digit) {
+      otpRefs.current[i + 1]?.focus();
+    }
   };
 
   const handleOtpKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -198,24 +200,27 @@ export default function LoginPage() {
         const next = [...otp];
         next[i - 1] = '';
         setOtp(next);
-        requestAnimationFrame(() => otpRefs.current[i - 1]?.focus());
+        otpRefs.current[i - 1]?.focus();
       }
       e.preventDefault();
     } else if (e.key === 'ArrowLeft' && i > 0) {
-      requestAnimationFrame(() => otpRefs.current[i - 1]?.focus());
+      otpRefs.current[i - 1]?.focus();
+      e.preventDefault();
     } else if (e.key === 'ArrowRight' && i < 5) {
-      requestAnimationFrame(() => otpRefs.current[i + 1]?.focus());
+      otpRefs.current[i + 1]?.focus();
+      e.preventDefault();
     }
   };
 
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
     if (text.length > 0) {
+      const digits = text.split('');
       const next = ['', '', '', '', '', ''];
-      text.split('').forEach((d, idx) => { next[idx] = d; });
+      digits.forEach((d, idx) => { next[idx] = d; });
       setOtp(next);
-      const focusIdx = Math.min(text.length, 5);
-      requestAnimationFrame(() => otpRefs.current[focusIdx]?.focus());
+      const focusIdx = Math.min(digits.length, 5);
+      otpRefs.current[focusIdx]?.focus();
     }
     e.preventDefault();
   };
@@ -536,21 +541,27 @@ export default function LoginPage() {
             <form onSubmit={isReset ? handleVerifyResetCode : handleVerify} className="space-y-4">
               <div className="space-y-2">
                 <label className="text-[12px] lg:text-[13px] font-normal text-gray-700">Verification code</label>
-                <div className="flex gap-2.5 justify-center" onPaste={handleOtpPaste}>
-                  {otp.map((digit, i) => (
-                    <input
-                      key={i}
-                      ref={(el) => { otpRefs.current[i] = el; }}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleOtpChange(i, e)}
-                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                      onFocus={(e) => e.target.select()}
-                      className="w-[42px] h-[48px] lg:w-[46px] lg:h-[50px] text-center text-lg lg:text-xl font-medium border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white text-gray-900"
-                    />
-                  ))}
+                <div className="flex gap-2 justify-center">
+                  {otp.map((digit, i) => {
+                    const isActive = otp.join('').length === i || (otp.join('').length === 6 && i === 5);
+                    return (
+                      <input
+                        key={i}
+                        ref={(el) => { otpRefs.current[i] = el; }}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        autoComplete={i === 0 ? "one-time-code" : "off"}
+                        maxLength={6}
+                        value={digit}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => handleOtpChange(i, e)}
+                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                        onPaste={handleOtpPaste}
+                        className={`w-[42px] h-[48px] lg:w-[46px] lg:h-[50px] text-center text-lg lg:text-xl font-medium border rounded-2xl bg-white text-gray-900 focus:outline-none transition-colors ${isActive ? 'border-gray-400 ring-1 ring-gray-400' : 'border-gray-200'}`}
+                      />
+                    );
+                  })}
                 </div>
               </div>
               <button type="submit" disabled={loading || otp.join('').length < 6} className="w-full h-[44px] lg:h-[48px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
@@ -1055,22 +1066,27 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleVerifyResetCode} className="space-y-4">
-            <div className="flex gap-2 justify-center mb-4" onPaste={handleOtpPaste}>
-              {otp.map((digit, i) => (
-                <input
-                  key={i}
-                  ref={(el) => { otpRefs.current[i] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete={i === 0 ? 'one-time-code' : 'off'}
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleOtpChange(i, e)}
-                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                  onFocus={(e) => e.target.select()}
-                  className="w-10 h-10 text-center text-lg font-bold bg-[#1c1c1e] text-white border border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-500 transition-colors"
-                />
-              ))}
+            <div className="flex gap-2 justify-center mb-4">
+              {otp.map((digit, i) => {
+                const isActive = otp.join('').length === i || (otp.join('').length === 6 && i === 5);
+                return (
+                  <input
+                    key={i}
+                    ref={(el) => { otpRefs.current[i] = el; }}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete={i === 0 ? "one-time-code" : "off"}
+                    maxLength={6}
+                    value={digit}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => handleOtpChange(i, e)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    onPaste={handleOtpPaste}
+                    className={`w-10 h-10 text-center text-lg font-bold bg-[#1c1c1e] text-white border rounded-xl focus:outline-none transition-colors ${isActive ? 'border-zinc-500 ring-1 ring-zinc-500' : 'border-zinc-800'}`}
+                  />
+                );
+              })}
             </div>
 
             <button
@@ -1174,22 +1190,27 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleVerify} className="space-y-4">
-          <div className="flex gap-2 justify-center mb-4" onPaste={handleOtpPaste}>
-            {otp.map((digit, i) => (
-              <input
-                key={i}
-                ref={(el) => { otpRefs.current[i] = el; }}
-                type="text"
-                inputMode="numeric"
-                autoComplete={i === 0 ? 'one-time-code' : 'off'}
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handleOtpChange(i, e)}
-                onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                onFocus={(e) => e.target.select()}
-                className="w-10 h-10 text-center text-lg font-bold bg-[#1c1c1e] text-white border border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-500 transition-colors"
-              />
-            ))}
+          <div className="flex gap-2 justify-center mb-4">
+            {otp.map((digit, i) => {
+              const isActive = otp.join('').length === i || (otp.join('').length === 6 && i === 5);
+              return (
+                <input
+                  key={i}
+                  ref={(el) => { otpRefs.current[i] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete={i === 0 ? "one-time-code" : "off"}
+                  maxLength={6}
+                  value={digit}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => handleOtpChange(i, e)}
+                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                  onPaste={handleOtpPaste}
+                  className={`w-10 h-10 text-center text-lg font-bold bg-[#1c1c1e] text-white border rounded-xl focus:outline-none transition-colors ${isActive ? 'border-zinc-500 ring-1 ring-zinc-500' : 'border-zinc-800'}`}
+                />
+              );
+            })}
           </div>
 
           <button

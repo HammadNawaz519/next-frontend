@@ -1025,7 +1025,7 @@ export default function ProfilePanel({
               </svg>
             </button>
 
-            <span style={{fontWeight:800, fontSize:17, color:txt, tracking: '-0.02em'}}>Settings & Privacy</span>
+            <span style={{fontWeight:800, fontSize:17, color:txt, letterSpacing: '-0.02em'}}>Settings & Privacy</span>
 
             <div style={{width: 22}} />
           </div>
@@ -2191,8 +2191,11 @@ export default function ProfilePanel({
                 ref={el => { switchOtpRefs.current[i] = el; }}
                 type="text"
                 inputMode="numeric"
+                pattern="[0-9]*"
                 autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                maxLength={6}
                 value={digit}
+                onFocus={(e) => e.target.select()}
                 onChange={e => {
                   const raw = e.target.value.replace(/\D/g, '');
                   if (!raw) {
@@ -2202,24 +2205,41 @@ export default function ProfilePanel({
                     return;
                   }
                   if (raw.length > 1) {
-                    const digits = raw.slice(0, 6 - i).split('');
-                    const next = [...switchOtp];
+                    const digits = raw.slice(0, 6).split('');
+                    const next = ['', '', '', '', '', ''];
                     digits.forEach((d, idx) => {
-                      if (i + idx < 6) next[i + idx] = d;
+                      if (idx < 6) next[idx] = d;
                     });
                     setSwitchOtp(next);
-                    const nextFocus = Math.min(i + digits.length, 5);
-                    requestAnimationFrame(() => switchOtpRefs.current[nextFocus]?.focus());
+                    const nextFocus = Math.min(digits.length, 5);
+                    switchOtpRefs.current[nextFocus]?.focus();
                     return;
                   }
+                  const digit = raw.slice(-1);
                   const next = [...switchOtp];
-                  next[i] = raw;
+                  next[i] = digit;
                   setSwitchOtp(next);
-                  if (i < 5) requestAnimationFrame(() => switchOtpRefs.current[i + 1]?.focus());
+                  if (i < 5 && digit) switchOtpRefs.current[i + 1]?.focus();
                 }}
                 onKeyDown={e => {
-                  if (e.key === 'Backspace' && !switchOtp[i] && i > 0) {
+                  if (e.key === 'Backspace') {
+                    if (switchOtp[i]) {
+                      const next = [...switchOtp];
+                      next[i] = '';
+                      setSwitchOtp(next);
+                    } else if (i > 0) {
+                      const next = [...switchOtp];
+                      next[i - 1] = '';
+                      setSwitchOtp(next);
+                      switchOtpRefs.current[i - 1]?.focus();
+                    }
+                    e.preventDefault();
+                  } else if (e.key === 'ArrowLeft' && i > 0) {
                     switchOtpRefs.current[i - 1]?.focus();
+                    e.preventDefault();
+                  } else if (e.key === 'ArrowRight' && i < 5) {
+                    switchOtpRefs.current[i + 1]?.focus();
+                    e.preventDefault();
                   }
                 }}
                 style={{
