@@ -504,16 +504,23 @@
   border-color: #fca5a5;
 }
 
-/* Desktop Hover — relative inline positioning next to message bubble */
+/* Desktop Hover — absolute positioning to prevent pushing bubble and horizontal swipe */
 @media (min-width: 769px) {
   .social-chat-container .msg-actions {
-    position: relative;
-    top: auto;
-    left: auto;
-    right: auto;
-    transform: none;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
     margin: 0 8px;
     flex-shrink: 0;
+  }
+  
+  .social-chat-container .msg-wrapper.sent .msg-actions {
+    right: 100%;
+  }
+
+  .social-chat-container .msg-wrapper.received .msg-actions,
+  .social-chat-container .msg-wrapper.ai .msg-actions {
+    left: 100%;
   }
 
   .social-chat-container .msg-wrapper:hover .msg-actions {

@@ -175,7 +175,7 @@ export default function LoginPage() {
       });
       setOtp(next);
       const nextFocus = Math.min(i + digits.length, 5);
-      requestAnimationFrame(() => otpRefs.current[nextFocus]?.focus());
+      setTimeout(() => otpRefs.current[nextFocus]?.focus(), 10);
       return;
     }
     const digit = raw;
@@ -183,7 +183,7 @@ export default function LoginPage() {
     next[i] = digit;
     setOtp(next);
     // Auto-advance to next box
-    if (i < 5) requestAnimationFrame(() => otpRefs.current[i + 1]?.focus());
+    if (i < 5) setTimeout(() => otpRefs.current[i + 1]?.focus(), 10);
   };
 
   const handleOtpKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {

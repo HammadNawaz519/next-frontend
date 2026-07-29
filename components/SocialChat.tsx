@@ -671,7 +671,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (typeof window === 'undefined' || !session?.user) return;
 
     const initSocket = async () => {
-      const SOCKET_URL = 'https://server-production-2856.up.railway.app';
+      const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-production-2856.up.railway.app';
       const newSocket = io(SOCKET_URL, {
         reconnection: true,
         reconnectionAttempts: Infinity,

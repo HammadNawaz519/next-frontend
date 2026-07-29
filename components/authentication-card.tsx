@@ -58,10 +58,10 @@ export default function AuthenticationCard() {
       })
       setFormData((prev) => ({ ...prev, otp: newOtp }))
       const nextFocus = Math.min(index + digits.length, 5)
-      requestAnimationFrame(() => {
+      setTimeout(() => {
         const nextInput = document.getElementById(`otp-${nextFocus}`)
         nextInput?.focus()
-      })
+      }, 10)
       return
     }
     const newOtp = [...formData.otp]
@@ -69,10 +69,10 @@ export default function AuthenticationCard() {
     setFormData((prev) => ({ ...prev, otp: newOtp }))
 
     if (index < 5) {
-      requestAnimationFrame(() => {
+      setTimeout(() => {
         const nextInput = document.getElementById(`otp-${index + 1}`)
         nextInput?.focus()
-      })
+      }, 10)
     }
   }
 
