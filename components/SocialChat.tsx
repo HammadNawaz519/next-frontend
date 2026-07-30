@@ -131,7 +131,19 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
       onTouchStart={handlePointerDown}
       onTouchEnd={handlePointerUp}
       onTouchMove={handlePointerMove}
-      style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', cursor: isInSelectionMode ? 'pointer' : 'default', width: '100%', maxWidth: '100%', userSelect: 'none', WebkitUserSelect: 'none' }}
+      style={{
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: isSent ? 'flex-end' : 'flex-start',
+        marginLeft: isSent ? 'auto' : '0',
+        marginRight: isSent ? '0' : 'auto',
+        cursor: isInSelectionMode ? 'pointer' : 'default',
+        width: '100%',
+        maxWidth: '100%',
+        userSelect: 'none',
+        WebkitUserSelect: 'none'
+      }}
     >
       {isInSelectionMode && (
         <div
@@ -152,8 +164,8 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           order: isSent ? 2 : 1,
           width: 'fit-content',
           maxWidth: '75%',
-          marginLeft: isSent ? (msg.type !== 'deleted' && msg.type !== 'call' && !isInSelectionMode ? '0' : 'auto') : '0',
-          marginRight: isSent ? '0' : '0',
+          marginLeft: isSent ? 'auto' : '0',
+          marginRight: isSent ? '0' : 'auto',
           transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s',
           transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
         }}
@@ -207,7 +219,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           className={`msg-actions ${showActionsMobile ? 'show-mobile' : ''}`} 
           style={{ 
             order: isSent ? 1 : 2,
-            marginLeft: isSent ? 'auto' : undefined
+            margin: '0 4px'
           }}
         >
           <div className="msg-del-actions">
@@ -671,7 +683,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (typeof window === 'undefined' || !session?.user) return;
 
     const initSocket = async () => {
-      const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-production-2856.up.railway.app';
+      const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
       const newSocket = io(SOCKET_URL, {
         reconnection: true,
         reconnectionAttempts: Infinity,
@@ -952,14 +964,73 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
       });
 
+      newSocket.on('reconnect', () => {
+        console.log('Socket reconnected - re-identifying...');
+        setIsConnected(true);
+        if (onStatusChange) onStatusChange(true);
+        // Re-identify immediately so socket rooms are rebuilt after network change
+        const userObj = sessionRef.current?.user as any;
+        if (userObj) {
+          newSocket.emit('identify', {
+            email: userObj.email ? userObj.email.toLowerCase().trim() : undefined,
+            userId: userObj.id
+          });
+        }
+        // Fetch any missed messages for the active chat
+        const activeUser = selectedUserRef.current;
+        if (activeUser) {
+          getSocialMessages(activeUser.id).then((history: any) => {
+            setMessages(prev => {
+              const existingIds = new Set(prev.map(m => m.id));
+              const newMsgs = (history as any[]).filter(m => !existingIds.has(m.id));
+              if (newMsgs.length === 0) return prev;
+              return [...prev, ...newMsgs].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            });
+            setMessagesCache((prev: any) => ({ ...prev, [activeUser.id]: history }));
+          }).catch(() => {});
+        }
+      });
+
       return newSocket;
     };
 
     const socketInstancePromise = initSocket();
 
+    // Re-identify + sync messages when app tab comes back to foreground
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        socketInstancePromise.then(s => {
+          if (s && s.connected) {
+            const userObj = sessionRef.current?.user as any;
+            if (userObj) {
+              s.emit('identify', {
+                email: userObj.email ? userObj.email.toLowerCase().trim() : undefined,
+                userId: userObj.id
+              });
+            }
+          }
+          // Sync latest messages for active chat after returning to tab
+          const activeUser = selectedUserRef.current;
+          if (activeUser) {
+            getSocialMessages(activeUser.id).then((history: any) => {
+              setMessages(prev => {
+                const existingIds = new Set(prev.map(m => m.id));
+                const newMsgs = (history as any[]).filter(m => !existingIds.has(m.id));
+                if (newMsgs.length === 0) return prev;
+                return [...prev, ...newMsgs].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+              });
+              setMessagesCache((prev: any) => ({ ...prev, [activeUser.id]: history }));
+            }).catch(() => {});
+          }
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       console.log("Cleaning up socket...");
       socketInstancePromise.then(s => s?.disconnect());
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [session?.user?.email]); // Run when session loads
 

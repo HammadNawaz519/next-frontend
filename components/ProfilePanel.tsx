@@ -54,13 +54,9 @@ interface Props {
 }
 
 /* ─── Default data ─── */
-const mkPost = (i: number, type: Post['postType']): Post => ({
-  id: String(i), postType: type, hue: 220 + i * 18,
-});
-
-const DEFAULT_POSTS: Post[]   = [0,1,2,3,4,5].map(i => mkPost(i, i===1||i===4 ? 'carousel' : i===2 ? 'reel' : 'single_image'));
-const DEFAULT_REELS: Post[]   = [0,1,2].map(i => mkPost(i+10, 'reel'));
-const DEFAULT_TAGGED: Post[]  = [0,1,2].map(i => mkPost(i+20, 'single_image'));
+const DEFAULT_POSTS: Post[]   = [];
+const DEFAULT_REELS: Post[]   = [];
+const DEFAULT_TAGGED: Post[]  = [];
 
 /* ─── Icon helpers ─── */
 const CarouselIcon = () => (

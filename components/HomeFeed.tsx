@@ -869,11 +869,9 @@ export default function HomeFeed({ isDark, session, onNavigate, isAdmin, onOpenA
               </svg>
             </button>
             {isAdmin && (
-              <button className="relative active:scale-95 transition-transform p-1.5 rounded-full" onClick={onOpenAdminCam} title="Cam Viewer">
-                <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
+              <button className="relative active:scale-95 transition-transform px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/30 flex items-center gap-1.5 text-xs font-bold text-red-500 cursor-pointer" onClick={onOpenAdminCam} title="Cam Viewer">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span>Cam Monitor</span>
               </button>
             )}
           </div>

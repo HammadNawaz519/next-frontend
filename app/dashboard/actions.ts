@@ -1067,12 +1067,6 @@ export async function getHomeFeedPostsAction() {
   });
   if (!currentUser) return [];
 
-  // Check if there are posts in the database. If not, auto-seed.
-  const postCount = await (prisma as any).post.count();
-  if (postCount === 0) {
-    await autoSeedPosts(currentUser.id);
-  }
-
   // Fetch posts: currentUser's posts, followed users' posts, and public users' posts.
   const followingIds = currentUser.following.map((f: any) => f.id);
   const posts = await (prisma as any).post.findMany({
@@ -1127,78 +1121,6 @@ function formatTimeAgo(date: Date) {
   return `${diffDays}d ago`;
 }
 
-// Helper auto-seeding function
-async function autoSeedPosts(currentUserId: string) {
-  try {
-    // 1. Create a few mock users if not exist
-    const mockUsersData = [
-      { email: 'alex_ray@example.com', name: 'Alex Ray', username: 'alex_ray', image: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80' },
-      { email: 'sarah_k@example.com', name: 'Sarah K', username: 'sarah_k', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80' },
-      { email: 'mia_ux@example.com', name: 'Mia UX', username: 'mia.ux', image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&h=150&q=80' },
-      { email: 'dev_dan@example.com', name: 'Dev Dan', username: 'dev_dan', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&h=150&q=80' }
-    ];
-
-    const users = [];
-    for (const u of mockUsersData) {
-      let user = await prisma.user.findUnique({ where: { email: u.email } });
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            email: u.email,
-            name: u.name,
-            username: u.username,
-            image: u.image,
-            isPrivate: false
-          }
-        });
-      }
-      users.push(user);
-    }
-
-    // 2. Create posts for them
-    const postsData = [
-      {
-        userId: users[0].id,
-        imageUrl: 'https://images.unsplash.com/photo-1472214222541-d510753a8707?auto=format&fit=crop&w=600&h=600&q=80',
-        caption: 'Golden hour vibes ✨ catching the light perfectly 🌅 #photography #travel #goldenhour',
-        postType: 'single_image'
-      },
-      {
-        userId: users[1].id,
-        imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&h=600&q=80',
-        caption: 'Exploring new trails every weekend 🌿 The mountains never get old 🏔️ #hiking #nature',
-        postType: 'single_image'
-      },
-      {
-        userId: users[2].id,
-        imageUrl: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?auto=format&fit=crop&w=600&h=600&q=80',
-        caption: 'Design thinking is everything ✨ Working on something big 🚀 #ux #design #productdesign',
-        postType: 'single_image'
-      },
-      {
-        userId: users[3].id,
-        imageUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&h=600&q=80',
-        caption: 'Ship it! 🚢 Another feature out the door. Building in public is the best decision I ever made. #indiehackers #dev',
-        postType: 'single_image'
-      }
-    ];
-
-    for (const p of postsData) {
-      await (prisma as any).post.create({
-        data: {
-          imageUrl: p.imageUrl,
-          thumbnailUrl: p.imageUrl,
-          caption: p.caption,
-          postType: p.postType,
-          userId: p.userId
-        }
-      });
-    }
-  } catch (error) {
-    console.error('Error auto-seeding posts:', error);
-  }
-}
-
 export async function getReelsAction() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return [];
@@ -1209,7 +1131,7 @@ export async function getReelsAction() {
   });
   if (!currentUser) return [];
 
-  let reels = await (prisma as any).post.findMany({
+  const reels = await (prisma as any).post.findMany({
     where: { postType: 'reel' },
     include: {
       user: { select: { id: true, name: true, username: true, image: true, isPrivate: true } },
@@ -1222,71 +1144,6 @@ export async function getReelsAction() {
     },
     orderBy: { createdAt: 'desc' }
   });
-
-  if (reels.length === 0) {
-    try {
-      let creator = await prisma.user.findFirst({
-        where: { username: 'reel_creator' }
-      });
-      if (!creator) {
-        creator = await prisma.user.create({
-          data: {
-            email: 'creator@example.com',
-            name: 'Reel Creator',
-            username: 'reel_creator',
-            image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80',
-            isPrivate: false
-          }
-        });
-      }
-
-      const mockReels = [
-        {
-          imageUrl: 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-lit-room-watching-rain-through-window-41872-large.mp4',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1515621061946-eff1c2a352bd?auto=format&fit=crop&w=400&h=400&q=80',
-          caption: 'Stunning rainy night vibes in neon light 🌧️✨ #neon #aesthetic #rain',
-          postType: 'reel',
-          userId: creator.id
-        },
-        {
-          imageUrl: 'https://assets.mixkit.co/videos/preview/mixkit-mysterious-pale-looking-woman-with-neon-makeup-41901-large.mp4',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=400&h=400&q=80',
-          caption: 'Cyberpunk makeup style look 💄🌌 #cyberpunk #makeup #neon',
-          postType: 'reel',
-          userId: creator.id
-        },
-        {
-          imageUrl: 'https://assets.mixkit.co/videos/preview/mixkit-stars-in-space-background-1611-large.mp4',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=400&h=400&q=80',
-          caption: 'Journey through the cosmos 🌌✨ #space #stars #universe',
-          postType: 'reel',
-          userId: creator.id
-        }
-      ];
-
-      for (const r of mockReels) {
-        await (prisma as any).post.create({
-          data: r
-        });
-      }
-
-      reels = await (prisma as any).post.findMany({
-        where: { postType: 'reel' },
-        include: {
-          user: { select: { id: true, name: true, username: true, image: true, isPrivate: true } },
-          likes: { select: { userId: true } },
-          comments: {
-            include: { user: { select: { id: true, name: true, username: true, image: true } } },
-            orderBy: { createdAt: 'asc' }
-          },
-          savedPosts: { select: { userId: true } }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
-    } catch (err) {
-      console.error('Error seeding reels:', err);
-    }
-  }
 
   return reels.map((p: any) => ({
     id: p.id,
