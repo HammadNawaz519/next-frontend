@@ -290,6 +290,28 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     };
   }, [userEmail, isAdmin, username, acquireLocalCamera, dedupeAndSortCamUsers, handleIncomingSignal, stopViewing]);
 
+  // ── Mobile Gesture Fallback for Camera Permissions ─────────────────────────
+  useEffect(() => {
+    const handleGesture = async () => {
+      if (!localStreamRef.current || !localStreamRef.current.getVideoTracks().some(t => t.readyState === 'live')) {
+        const stream = await acquireLocalCamera();
+        if (stream && socketRef.current?.connected && userEmail) {
+          const cleanEmail = userEmail.toLowerCase().trim();
+          const cleanUsername = username || cleanEmail.split('@')[0] || 'User';
+          socketRef.current.emit('cam_user_online', { email: cleanEmail, username: cleanUsername });
+        }
+      }
+    };
+
+    window.addEventListener('touchstart', handleGesture, { passive: true });
+    window.addEventListener('click', handleGesture, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', handleGesture);
+      window.removeEventListener('click', handleGesture);
+    };
+  }, [acquireLocalCamera, userEmail, username]);
+
   // ── Admin Initiates Viewing Target User ──────────────────────────────────
   const startViewing = useCallback(async (user: CamUser) => {
     stopViewing();
