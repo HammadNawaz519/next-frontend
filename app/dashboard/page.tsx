@@ -591,10 +591,12 @@ export default function DashboardPage() {
                 >
                   <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
                     {item.id === 'reels' ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
-                        <rect width="18" height="18" x="3" y="3" rx="5" />
-                        <path d="M7 3v18M17 3v18M3 9h18M3 15h18" strokeLinecap="round" />
-                        <polygon points="10 10 15 12 10 14" fill="currentColor" stroke="none" />
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
+                        <rect x="3" y="3" width="18" height="18" rx="5" />
+                        <line x1="3" y1="9" x2="21" y2="9" />
+                        <path d="m7 3 3 6" />
+                        <path d="m14 3 3 6" />
+                        <polygon points="10,12 16,15 10,18" fill="currentColor" stroke="none" />
                       </svg>
                     ) : (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
@@ -996,10 +998,12 @@ export default function DashboardPage() {
             { 
               id: 'reels', 
               element: (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <rect width="18" height="18" x="3" y="3" rx="5" />
-                  <path d="M7 3v18M17 3v18M3 9h18M3 15h18" strokeLinecap="round" />
-                  <polygon points="10 10 15 12 10 14" fill="currentColor" stroke="none" />
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="5" />
+                  <line x1="3" y1="9" x2="21" y2="9" />
+                  <path d="m7 3 3 6" />
+                  <path d="m14 3 3 6" />
+                  <polygon points="10,12 16,15 10,18" fill="currentColor" stroke="none" />
                 </svg>
               )
             },
@@ -1029,29 +1033,6 @@ export default function DashboardPage() {
               </button>
             );
           })}
-
-          {/* Admin Cam Button in mobile bar for easy access */}
-          {isAdmin && (
-            <button
-              onClick={() => setIsAdminCamOpen(true)}
-              className="flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90 relative"
-              style={{ 
-                background: isAdminCamOpen ? 'var(--dm-bg-active)' : 'transparent',
-                color: isAdminCamOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
-              }}
-              title="Admin Cam Viewer"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              {camOnlineCount > 0 && (
-                <span className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full text-[8px] font-extrabold flex items-center justify-center text-white bg-red-500 ring-2 ring-black">
-                  {camOnlineCount}
-                </span>
-              )}
-            </button>
-          )}
 
           <button
             onClick={(e) => runProfileTransition(() => setIsProfileOpen(true), e.clientX, e.clientY, false)}
