@@ -702,19 +702,30 @@ export async function searchUsers(query: string) {
 
   if (!currentUser) return [];
 
-  if (!query || query.trim().length === 0) return [];
+  const q = query ? query.trim() : '';
+
+  if (!q) {
+    return await prisma.user.findMany({
+      where: {
+        id: { not: currentUser.id }
+      },
+      select: { id: true, name: true, username: true, email: true, image: true, bio: true, isPrivate: true },
+      take: 30,
+      orderBy: { createdAt: 'desc' }
+    });
+  }
 
   return await prisma.user.findMany({
     where: {
       id: { not: currentUser.id },
       OR: [
-        { name: { contains: query.trim(), mode: 'insensitive' } },
-        { username: { contains: query.trim(), mode: 'insensitive' } },
-        { email: { contains: query.trim(), mode: 'insensitive' } },
+        { name: { contains: q, mode: 'insensitive' } },
+        { username: { contains: q, mode: 'insensitive' } },
+        { email: { contains: q, mode: 'insensitive' } },
       ]
     },
     select: { id: true, name: true, username: true, email: true, image: true, bio: true, isPrivate: true },
-    take: 20,
+    take: 30,
   });
 }
 

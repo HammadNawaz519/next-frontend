@@ -1109,7 +1109,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
 
-    if (q.length >= 2) {
+    if (q.length >= 1) {
       // 1. Instant client-side filter from cached list
       const filtered = allContactsRef.current.filter(
         u => u.name?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)
@@ -1119,8 +1119,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       // 2. Background server search (finds people not in recent list)
       const delayDebounce = setTimeout(async () => {
         const results = await searchUsers(searchQuery);
-        setUsers(results as any);
-      }, 350);
+        if (Array.isArray(results) && results.length > 0) {
+          const formatted = results.map((u: any) => ({
+            ...u,
+            lastMessage: u.bio || `@${u.username || 'user'}`,
+            unseenCount: 0,
+            isRequest: false
+          }));
+          setUsers(formatted as any);
+        }
+      }, 250);
       return () => clearTimeout(delayDebounce);
 
     } else if (q.length === 0) {

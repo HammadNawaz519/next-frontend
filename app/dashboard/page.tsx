@@ -180,20 +180,17 @@ export default function DashboardPage() {
 
   // Handle Search Input Changes
   useEffect(() => {
-    if (searchQuery.trim().length > 0) {
+    if (activeView === 'search' || isSearchOverlayOpen) {
       setIsSearching(true);
       const delayDebounce = setTimeout(() => {
         searchUsers(searchQuery).then((res: any) => {
           setSearchResults(res || []);
           setIsSearching(false);
         }).catch(() => setIsSearching(false));
-      }, 250);
+      }, 200);
       return () => clearTimeout(delayDebounce);
-    } else {
-      setSearchResults([]);
-      setIsSearching(false);
     }
-  }, [searchQuery]);
+  }, [searchQuery, isSearchOverlayOpen, activeView]);
 
   const handleInstallApp = async () => {
     if (!deferredPrompt) {

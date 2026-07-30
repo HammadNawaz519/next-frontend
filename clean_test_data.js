@@ -1,6 +1,25 @@
+require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: '.env' });
 const { PrismaClient } = require('@prisma/client');
+const { Pool } = require('pg');
+const { PrismaPg } = require('@prisma/adapter-pg');
 
-const prisma = new PrismaClient();
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+let connectionString = process.env.DATABASE_URL || '';
+if (connectionString.includes('sslmode=require')) {
+  connectionString = connectionString.replace('sslmode=require', 'sslmode=no-verify');
+} else if (!connectionString.includes('sslmode=')) {
+  connectionString += (connectionString.includes('?') ? '&' : '?') + 'sslmode=no-verify';
+}
+
+const pool = new Pool({
+  connectionString,
+  ssl: { rejectUnauthorized: false }
+});
+
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function cleanTestData() {
   console.log('--- Cleaning Test & Mock Data from Database ---');
@@ -63,6 +82,7 @@ async function cleanTestData() {
     console.error('Error cleaning database test data:', err);
   } finally {
     await prisma.$disconnect();
+    await pool.end();
   }
 }
 

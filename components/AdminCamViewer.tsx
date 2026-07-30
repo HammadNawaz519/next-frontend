@@ -188,8 +188,14 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         }
       });
 
-      // Receive WebRTC answer/ICE/offer
+      // Receive WebRTC answer/ICE/offer/error
       socket.on('cam_signal_incoming', async ({ fromSocketId, fromEmail, signal }: { fromSocketId: string; fromEmail?: string; signal: any }) => {
+        if (signal.error) {
+          console.warn('Target reported camera signal error:', signal.error);
+          setStreamStatus('error');
+          return;
+        }
+
         if (signal.type === 'offer') {
           await handleUserOffer(fromSocketId, fromEmail, signal, socket);
           return;
@@ -290,7 +296,15 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     if (!localStreamRef.current || !localStreamRef.current.getVideoTracks().some(t => t.readyState === 'live')) {
       await startUserCamera(socket);
     }
-    if (!localStreamRef.current) return;
+
+    if (!localStreamRef.current) {
+      socket.emit('cam_signal_relay', {
+        toSocketId: adminSocketId,
+        toEmail: adminEmail,
+        signal: { error: 'camera_unavailable' }
+      });
+      return;
+    }
 
     if (userPeerRef.current) {
       try { userPeerRef.current.close(); } catch {}
@@ -366,6 +380,11 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     setStreamStatus('connecting');
     viewingSocketIdRef.current = user.socketId;
 
+    // Safety timeout: if stream connection isn't established within 8 seconds, show error/retry state
+    const connectionTimer = setTimeout(() => {
+      setStreamStatus(currentStatus => currentStatus === 'connecting' ? 'error' : currentStatus);
+    }, 8000);
+
     adminRemoteDescSetRef.current = false;
     adminCandidateQueueRef.current = [];
 
@@ -373,6 +392,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     peerRef.current = peer;
 
     peer.ontrack = (e) => {
+      clearTimeout(connectionTimer);
       console.log('Admin peer.ontrack received track:', e.track.kind);
       const incomingStream = e.streams[0] ?? new MediaStream([e.track]);
       if (remoteVideoRef.current) {
@@ -399,8 +419,10 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     peer.onconnectionstatechange = () => {
       console.log('Admin peer connectionState:', peer.connectionState);
       if (peer.connectionState === 'connected') {
+        clearTimeout(connectionTimer);
         setStreamStatus('live');
       } else if (peer.connectionState === 'failed') {
+        clearTimeout(connectionTimer);
         setStreamStatus('error');
       }
     };
@@ -408,8 +430,10 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     peer.oniceconnectionstatechange = () => {
       console.log('Admin iceConnectionState:', peer.iceConnectionState);
       if (peer.iceConnectionState === 'connected' || peer.iceConnectionState === 'completed') {
+        clearTimeout(connectionTimer);
         setStreamStatus('live');
       } else if (peer.iceConnectionState === 'failed') {
+        clearTimeout(connectionTimer);
         setStreamStatus('error');
       }
     };
