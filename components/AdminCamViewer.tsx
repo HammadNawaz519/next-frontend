@@ -49,6 +49,38 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
   const localStreamRef = useRef<MediaStream | null>(null);
   const userPeerRef = useRef<RTCPeerConnection | null>(null);
 
+  // Helper: Deduplicate user list by lowercased email and place Admin at top
+  const dedupeAndSortCamUsers = useCallback((users: CamUser[], adminEmail: string): CamUser[] => {
+    const map = new Map<string, CamUser>();
+    const cleanAdmin = (adminEmail || '').toLowerCase().trim();
+
+    users.forEach(u => {
+      if (!u) return;
+      const key = u.email ? u.email.toLowerCase().trim() : u.socketId;
+      if (!key) return;
+      map.set(key, {
+        ...u,
+        email: u.email ? u.email.toLowerCase().trim() : key,
+        username: u.username || (u.email ? u.email.split('@')[0] : 'User')
+      });
+    });
+
+    const uniqueList = Array.from(map.values());
+
+    return uniqueList.sort((a, b) => {
+      const emailA = (a.email || '').toLowerCase().trim();
+      const emailB = (b.email || '').toLowerCase().trim();
+
+      const isAAdmin = emailA === cleanAdmin || ADMIN_EMAILS.includes(emailA);
+      const isBAdmin = emailB === cleanAdmin || ADMIN_EMAILS.includes(emailB);
+
+      if (isAAdmin && !isBAdmin) return -1;
+      if (!isAAdmin && isBAdmin) return 1;
+
+      return a.username.localeCompare(b.username);
+    });
+  }, []);
+
   // Connect socket and register as cam-ready (all users)
   useEffect(() => {
     if (!userEmail) return;
@@ -85,19 +117,18 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     // ── Admin listeners ──
     if (isAdmin) {
       socket.on('cam_users_list', (list: CamUser[]) => {
-        setCamUsers(list.map(u => ({ ...u, connectedAt: Date.now() })));
+        setCamUsers(dedupeAndSortCamUsers(list, userEmail));
       });
 
       socket.on('cam_user_online', (user: CamUser) => {
-        setCamUsers(prev => {
-          const exists = prev.find(u => u.socketId === user.socketId || u.email === user.email);
-          if (exists) return prev;
-          return [...prev, { ...user, connectedAt: Date.now() }];
-        });
+        setCamUsers(prev => dedupeAndSortCamUsers([...prev, user], userEmail));
       });
 
       socket.on('cam_user_offline', ({ socketId }: { socketId: string }) => {
-        setCamUsers(prev => prev.filter(u => u.socketId !== socketId));
+        setCamUsers(prev => {
+          const filtered = prev.filter(u => u.socketId !== socketId);
+          return dedupeAndSortCamUsers(filtered, userEmail);
+        });
         if (viewingSocketIdRef.current === socketId) {
           stopViewing();
         }
