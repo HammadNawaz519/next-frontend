@@ -418,47 +418,37 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                   className="absolute left-4 right-4 z-30 flex items-center justify-between pointer-events-none"
                   style={{ top: 'calc(18px + env(safe-area-inset-top, 12px))' }}
                 >
-                  {/* Left: Back / Users button */}
+                  {/* Left: Round Back Arrow button */}
                   <button
                     onClick={stopViewing}
-                    className="pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold text-white transition-all active:scale-90 shadow-xl cursor-pointer"
-                    style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.2)' }}
+                    className="pointer-events-auto w-11 h-11 rounded-full flex items-center justify-center text-white transition-all active:scale-90 shadow-2xl cursor-pointer"
+                    style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.2)' }}
+                    title="Back to User List"
                   >
-                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                     </svg>
-                    <span>User List</span>
                   </button>
 
-                  {/* Center: Live status badge */}
+                  {/* Center: Clean Username Badge */}
                   <div
-                    className="flex items-center gap-2 px-4 py-2 rounded-full"
-                    style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.15)' }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full shadow-xl"
+                    style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.15)' }}
                   >
-                    <div
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{
-                        background: streamStatus === 'live' ? '#ef4444' : streamStatus === 'connecting' ? '#f59e0b' : '#6b7280',
-                        animation: streamStatus === 'live' ? 'pulse 1.5s infinite' : 'none',
-                      }}
-                    />
-                    <span className="text-xs font-bold tracking-wider text-white">
-                      {streamStatus === 'live' ? 'LIVE' : streamStatus === 'connecting' ? 'CONNECTING...' : 'OFFLINE'}
-                    </span>
-                    <span className="text-xs text-white/40">·</span>
-                    <span className="text-xs font-medium text-white/90 truncate max-w-[100px]">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+                    <span className="text-xs font-bold text-white tracking-wide truncate max-w-[150px]">
                       {viewingUser.username || viewingUser.email?.split('@')[0]}
                     </span>
                   </div>
 
-                  {/* Right: Close button */}
+                  {/* Right: Round Close X Button */}
                   <button
                     onClick={() => { stopViewing(); onOpenChange(false); }}
-                    className="pointer-events-auto flex items-center justify-center w-10 h-10 rounded-full text-white transition-all active:scale-90 shadow-xl cursor-pointer"
-                    style={{ background: 'rgba(239,68,68,0.9)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.2)' }}
+                    className="pointer-events-auto w-11 h-11 rounded-full flex items-center justify-center text-white transition-all active:scale-90 shadow-2xl cursor-pointer"
+                    style={{ background: 'rgba(239,68,68,0.9)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.25)' }}
                     title="Close Cam Monitor"
                   >
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -476,13 +466,13 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                   />
 
                   {streamStatus === 'connecting' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/90 z-10">
-                      <div className="flex flex-col items-center gap-4">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
+                      <div className="flex flex-col items-center gap-3">
                         <div
-                          className="w-12 h-12 border-3 rounded-full animate-spin"
+                          className="w-10 h-10 border-3 rounded-full animate-spin"
                           style={{ borderColor: 'rgba(255,255,255,0.15)', borderTopColor: '#ef4444' }}
                         />
-                        <p className="text-sm font-semibold text-white/70">Connecting to client camera...</p>
+                        <p className="text-xs font-medium text-white/60">Connecting stream...</p>
                       </div>
                     </div>
                   )}
