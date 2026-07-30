@@ -18,9 +18,7 @@ const RTC_CONFIG: RTCConfiguration = {
       ],
     },
     { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:80?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
     { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
   ],
   iceCandidatePoolSize: 10,
 };
@@ -45,6 +43,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
   const [camUsers, setCamUsers] = useState<CamUser[]>([]);
   const [viewingUser, setViewingUser] = useState<CamUser | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [streamStatus, setStreamStatus] = useState<'idle' | 'connecting' | 'live' | 'error'>('idle');
 
   useEffect(() => {
@@ -57,10 +56,22 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const viewingSocketIdRef = useRef<string | null>(null);
 
-  // ICE Candidate Queue state
-  const remoteDescSetRef = useRef<boolean>(false);
-  const iceQueueRef = useRef<any[]>([]);
+  // Queues & Remote Description Flags for WebRTC Stability
+  const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
 
+  // ── Sync Remote Stream to Video Element ─────────────────────────────────────
+  useEffect(() => {
+    if (remoteVideoRef.current) {
+      if (remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(err => console.warn('Autoplay error:', err));
+      } else {
+        remoteVideoRef.current.srcObject = null;
+      }
+    }
+  }, [remoteStream]);
+
+  // ── Deduplicate User List ──────────────────────────────────────────────────
   const dedupeAndSortCamUsers = useCallback((users: CamUser[], adminEmail: string, adminUsername: string, currentSocketId: string): CamUser[] => {
     const map = new Map<string, CamUser>();
     const cleanAdmin = (adminEmail || '').toLowerCase().trim();
@@ -104,6 +115,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     });
   }, []);
 
+  // ── Acquire Local Camera Feed ──────────────────────────────────────────────
   const acquireLocalCamera = useCallback(async (): Promise<MediaStream | null> => {
     if (localStreamRef.current && localStreamRef.current.getVideoTracks().some(t => t.readyState === 'live')) {
       return localStreamRef.current;
@@ -112,7 +124,10 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
       if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
         let stream: MediaStream | null = null;
         try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+          });
         } catch {
           try {
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
@@ -129,38 +144,40 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     return null;
   }, []);
 
+  // ── Stop Viewing / Reset Connection State ─────────────────────────────────
   const stopViewing = useCallback(() => {
     if (pcRef.current) {
-      try { pcRef.current.close(); } catch {}
+      try {
+        pcRef.current.onicecandidate = null;
+        pcRef.current.ontrack = null;
+        pcRef.current.close();
+      } catch {}
       pcRef.current = null;
     }
-    remoteDescSetRef.current = false;
-    iceQueueRef.current = [];
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = null;
-    }
+    iceCandidateQueue.current = [];
+    setRemoteStream(null);
     setViewingUser(null);
     setStreamStatus('idle');
     viewingSocketIdRef.current = null;
   }, []);
 
+  // ── Handle Incoming Signaling Events ─────────────────────────────────────
   const handleIncomingSignal = useCallback(async (fromSocketId: string, fromEmail: string | undefined, signal: any) => {
     if (!socketRef.current) return;
     const socket = socketRef.current;
 
     try {
-      // TARGET receiving Offer from Admin
+      // 1. TARGET RECEIVES OFFER FROM ADMIN
       if (signal.type === 'offer') {
         const stream = await acquireLocalCamera();
-        const pc = new RTCPeerConnection(RTC_CONFIG);
         
         if (pcRef.current) {
           try { pcRef.current.close(); } catch {}
         }
         
+        const pc = new RTCPeerConnection(RTC_CONFIG);
         pcRef.current = pc;
-        remoteDescSetRef.current = false;
-        iceQueueRef.current = [];
+        iceCandidateQueue.current = [];
 
         if (stream) {
           stream.getTracks().forEach(track => pc.addTrack(track, stream));
@@ -177,12 +194,11 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         };
 
         await pc.setRemoteDescription(new RTCSessionDescription(signal));
-        remoteDescSetRef.current = true;
-        
-        // Drain ICE candidate queue
-        while (iceQueueRef.current.length > 0) {
-          const c = iceQueueRef.current.shift();
-          if (c) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+
+        // Process queued ICE candidates
+        while (iceCandidateQueue.current.length > 0) {
+          const candidate = iceCandidateQueue.current.shift();
+          if (candidate) await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
         }
 
         const answer = await pc.createAnswer();
@@ -196,31 +212,34 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         return;
       }
 
-      // ADMIN (or Target) receiving Answer / ICE Candidate
-      if (pcRef.current) {
-        if (signal.type === 'answer') {
+      // 2. ADMIN RECEIVES ANSWER FROM TARGET
+      if (signal.type === 'answer') {
+        if (pcRef.current) {
           await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
-          remoteDescSetRef.current = true;
-          
-          // Drain ICE candidate queue
-          while (iceQueueRef.current.length > 0) {
-            const c = iceQueueRef.current.shift();
-            if (c) await pcRef.current.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+          // Process queued ICE candidates
+          while (iceCandidateQueue.current.length > 0) {
+            const candidate = iceCandidateQueue.current.shift();
+            if (candidate) await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
           }
-        } else if (signal.candidate || signal.sdpMid !== undefined) {
-          const candidate = signal.candidate ? signal.candidate : signal;
-          if (remoteDescSetRef.current) {
-            await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.warn('ICE add error:', e));
-          } else {
-            iceQueueRef.current.push(candidate);
-          }
+        }
+        return;
+      }
+
+      // 3. ICE CANDIDATE SIGNAL
+      if (signal.candidate || signal.sdpMid !== undefined) {
+        const candidateInit: RTCIceCandidateInit = signal.candidate ? signal : signal;
+        if (pcRef.current && pcRef.current.remoteDescription) {
+          await pcRef.current.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(e => console.warn('ICE Candidate add error:', e));
+        } else {
+          iceCandidateQueue.current.push(candidateInit);
         }
       }
     } catch (err) {
-      console.warn('WebRTC signal processing error:', err);
+      console.warn('WebRTC signal handling error:', err);
     }
   }, [acquireLocalCamera]);
 
+  // ── Socket Connection & Lifecycle ─────────────────────────────────────────
   useEffect(() => {
     if (!userEmail) return;
 
@@ -271,6 +290,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     };
   }, [userEmail, isAdmin, username, acquireLocalCamera, dedupeAndSortCamUsers, handleIncomingSignal, stopViewing]);
 
+  // ── Admin Initiates Viewing Target User ──────────────────────────────────
   const startViewing = useCallback(async (user: CamUser) => {
     stopViewing();
     setViewingUser(user);
@@ -279,22 +299,21 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
     const pc = new RTCPeerConnection(RTC_CONFIG);
     pcRef.current = pc;
-    remoteDescSetRef.current = false;
-    iceQueueRef.current = [];
+    iceCandidateQueue.current = [];
 
-    // Timeout safety guard
+    // Modern WebRTC Transceiver for video reception
+    pc.addTransceiver('video', { direction: 'recvonly' });
+
+    // Connection Timeout Guard
     const timeoutId = setTimeout(() => {
       setStreamStatus(current => current === 'connecting' ? 'error' : current);
-    }, 10000);
+    }, 12000);
 
     pc.ontrack = (e) => {
       clearTimeout(timeoutId);
-      console.log('ontrack triggered:', e.track.kind);
-      const incomingStream = e.streams[0] ?? new MediaStream([e.track]);
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = incomingStream;
-        remoteVideoRef.current.play().catch(err => console.warn('Video play error:', err));
-      }
+      console.log('ontrack received:', e.track.kind);
+      const stream = e.streams[0] || new MediaStream([e.track]);
+      setRemoteStream(stream);
       setStreamStatus('live');
     };
 
@@ -332,7 +351,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     };
 
     try {
-      const offer = await pc.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: false });
+      const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
       const targetSid = (user.socketId === 'admin-self-socket' && socketRef.current) ? socketRef.current.id : user.socketId;
@@ -359,6 +378,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
           className="fixed inset-0 z-[9999] flex flex-col md:flex-row bg-black select-none"
           style={{ background: '#000000', fontFamily: 'system-ui, -apple-system, sans-serif' }}
         >
+          {/* LEFT USER LIST PANEL */}
           <div
             className={`w-full md:w-[320px] flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r overflow-hidden h-full ${
               viewingUser ? 'hidden md:flex' : 'flex'
@@ -469,6 +489,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
             </div>
           </div>
 
+          {/* RIGHT VIDEO DISPLAY SCREEN — PURE BLACK NO ICON */}
           <div
             className={`flex-1 flex flex-col items-center justify-center relative w-full h-full bg-black ${
               !viewingUser ? 'hidden md:flex' : 'flex'
@@ -483,6 +504,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
               </div>
             ) : (
               <>
+                {/* TOP CONTROL OVERLAY */}
                 <div
                   className="absolute left-4 right-4 z-30 flex items-center justify-between pointer-events-none"
                   style={{ top: 'calc(18px + env(safe-area-inset-top, 12px))' }}
@@ -520,6 +542,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                   </button>
                 </div>
 
+                {/* MAIN VIDEO STREAM CONTAINER */}
                 <div className="w-full h-full flex items-center justify-center bg-black overflow-hidden relative">
                   <video
                     ref={remoteVideoRef}
@@ -562,6 +585,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                   )}
                 </div>
 
+                {/* BOTTOM FLOATING BAR — ONLY RECONNECT STREAM BUTTON */}
                 <div
                   className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center justify-center px-5 py-3 rounded-full shadow-2xl"
                   style={{
