@@ -569,10 +569,10 @@ export default function AuthenticationCard() {
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      maxLength={6}
+                      maxLength={index === 0 ? 6 : 1}
                       autoComplete={index === 0 ? "one-time-code" : "off"}
                       value={digit}
-                      onFocus={(e) => e.target.select()}
+                      onFocus={(e) => { if (e.target.value) e.target.select(); }}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Backspace" && !digit && index > 0) {

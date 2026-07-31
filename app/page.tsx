@@ -175,7 +175,7 @@ export default function LoginPage() {
         if (idx < 6) next[idx] = d;
       });
       setOtp(next);
-      otpRefs.current[5]?.focus();
+      requestAnimationFrame(() => otpRefs.current[5]?.focus());
       return;
     }
 
@@ -190,7 +190,7 @@ export default function LoginPage() {
         });
         setOtp(next);
         const nextFocus = Math.min(i + remaining.length, 5);
-        otpRefs.current[nextFocus]?.focus();
+        requestAnimationFrame(() => otpRefs.current[nextFocus]?.focus());
         return;
       }
     }
@@ -204,7 +204,7 @@ export default function LoginPage() {
       });
       setOtp(next);
       const nextFocus = Math.min(i + digits.length, 5);
-      otpRefs.current[nextFocus]?.focus();
+      requestAnimationFrame(() => otpRefs.current[nextFocus]?.focus());
       return;
     }
 
@@ -214,7 +214,7 @@ export default function LoginPage() {
     next[i] = digit;
     setOtp(next);
     if (i < 5 && digit) {
-      otpRefs.current[i + 1]?.focus();
+      requestAnimationFrame(() => otpRefs.current[i + 1]?.focus());
     }
   };
 
@@ -582,9 +582,9 @@ export default function LoginPage() {
                         inputMode="numeric"
                         pattern="[0-9]*"
                         autoComplete={i === 0 ? "one-time-code" : "off"}
-                        maxLength={6}
+                        maxLength={i === 0 ? 6 : 1}
                         value={digit}
-                        onFocus={(e) => e.target.select()}
+                        onFocus={(e) => { if (e.target.value) e.target.select(); }}
                         onChange={(e) => handleOtpChange(i, e)}
                         onKeyDown={(e) => handleOtpKeyDown(i, e)}
                         onPaste={handleOtpPaste}
@@ -1107,9 +1107,9 @@ export default function LoginPage() {
                     inputMode="numeric"
                     pattern="[0-9]*"
                     autoComplete={i === 0 ? "one-time-code" : "off"}
-                    maxLength={6}
+                    maxLength={i === 0 ? 6 : 1}
                     value={digit}
-                    onFocus={(e) => e.target.select()}
+                    onFocus={(e) => { if (e.target.value) e.target.select(); }}
                     onChange={(e) => handleOtpChange(i, e)}
                     onKeyDown={(e) => handleOtpKeyDown(i, e)}
                     onPaste={handleOtpPaste}
@@ -1231,9 +1231,9 @@ export default function LoginPage() {
                   inputMode="numeric"
                   pattern="[0-9]*"
                   autoComplete={i === 0 ? "one-time-code" : "off"}
-                  maxLength={6}
+                  maxLength={i === 0 ? 6 : 1}
                   value={digit}
-                  onFocus={(e) => e.target.select()}
+                  onFocus={(e) => { if (e.target.value) e.target.select(); }}
                   onChange={(e) => handleOtpChange(i, e)}
                   onKeyDown={(e) => handleOtpKeyDown(i, e)}
                   onPaste={handleOtpPaste}
