@@ -11,7 +11,7 @@ export const NextAuthProvider = ({ children }: { children: React.ReactNode }) =>
     window.location.protocol === 'file:' ||
     (window.location.hostname === 'localhost' && !window.location.port)
   )
-    ? 'https://the-dev-core.vercel.app/api/auth'
+    ? 'https://myconnectapp.vercel.app/api/auth'
     : undefined;
 
   return <SessionProvider basePath={basePath}>{children}</SessionProvider>;

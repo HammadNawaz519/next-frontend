@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'public',
   server: {
     // Redirects the native app to stream your hosted production web application on Vercel
-    url: 'https://the-dev-core.vercel.app',
+    url: 'https://myconnectapp.vercel.app',
     cleartext: true
   },
   overrideUserAgent: 'Mozilla/5.0 (Android 13; Mobile; rv:125.0) Gecko/125.0 Firefox/125.0',

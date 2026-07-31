@@ -31,7 +31,7 @@ const getApiUrl = (path: string): string => {
       window.location.protocol === 'file:' ||
       (window.location.hostname === 'localhost' && !window.location.port);
     if (isNative) {
-      return `https://the-dev-core.vercel.app${path}`;
+      return `https://myconnectapp.vercel.app${path}`;
     }
   }
   return path;
