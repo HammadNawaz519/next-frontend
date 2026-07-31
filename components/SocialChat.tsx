@@ -499,42 +499,31 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const [view, setView] = useState<'recent' | 'requests'>('recent');
-  const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem('social_messages_cache');
-      return saved ? JSON.parse(saved) : {};
-    }
-    return {};
-  });
-
-  // Pinned chats: persisted in localStorage
-  const [pinnedChats, setPinnedChats] = useState<Set<string>>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('social_pinned_chats');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    }
-    return new Set<string>();
-  });
-
-  // Deleted message IDs: persisted in localStorage so they don't reappear after refresh
-  const [deletedMessageIds, setDeletedMessageIds] = useState<Set<string>>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('social_deleted_msg_ids');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    }
-    return new Set<string>();
-  });
-
-  // Deleted conversation/chat IDs: persisted in localStorage so deleted chats NEVER reappear on refresh
-  const [deletedChatIds, setDeletedChatIds] = useState<Set<string>>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('social_deleted_chats');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    }
-    return new Set<string>();
-  });
-
+  const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>({});
+  const [pinnedChats, setPinnedChats] = useState<Set<string>>(new Set());
+  const [deletedMessageIds, setDeletedMessageIds] = useState<Set<string>>(new Set());
+  const [deletedChatIds, setDeletedChatIds] = useState<Set<string>>(new Set());
   const [selectedChatForOptions, setSelectedChatForOptions] = useState<User | null>(null);
+
+  // Load storage states safely after mount to prevent React hydration mismatch errors on Vercel
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const cachedMsgs = sessionStorage.getItem('social_messages_cache');
+      if (cachedMsgs) setMessagesCache(JSON.parse(cachedMsgs));
+
+      const pinned = localStorage.getItem('social_pinned_chats');
+      if (pinned) setPinnedChats(new Set(JSON.parse(pinned)));
+
+      const deletedMsgs = localStorage.getItem('social_deleted_msg_ids');
+      if (deletedMsgs) setDeletedMessageIds(new Set(JSON.parse(deletedMsgs)));
+
+      const deletedChats = localStorage.getItem('social_deleted_chats');
+      if (deletedChats) setDeletedChatIds(new Set(JSON.parse(deletedChats)));
+    } catch (e) {
+      console.warn('Storage init error:', e);
+    }
+  }, []);
 
   // Sync deleted chat IDs to localStorage
   useEffect(() => {
