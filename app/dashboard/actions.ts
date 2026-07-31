@@ -276,24 +276,39 @@ export async function getRecentChats() {
 
   if (!currentUser) return [];
 
+  const hiddenChats = await prisma.hiddenSocialChat.findMany({
+    where: { userId: currentUser.id },
+    select: { hiddenUserId: true }
+  });
+  const hiddenUserIds = hiddenChats.map(chat => chat.hiddenUserId);
+
   // 1. Get all receiverIds this user has EVER sent a message to.
   // Anyone in this list is an active contact (isRequest = false).
   const sentMessages = await prisma.socialMessage.findMany({
-    where: { senderId: currentUser.id },
+    where: {
+      senderId: currentUser.id,
+      receiverId: { notIn: hiddenUserIds }
+    },
     select: { receiverId: true },
     distinct: ['receiverId']
   });
   const contactIdsSet = new Set(sentMessages.map(m => m.receiverId));
 
   const sent = await prisma.socialMessage.findMany({
-    where: { senderId: currentUser.id },
+    where: {
+      senderId: currentUser.id,
+      receiverId: { notIn: hiddenUserIds }
+    },
     distinct: ['receiverId'],
     orderBy: { createdAt: 'desc' },
     include: { receiver: { select: { id: true, name: true, username: true, email: true, image: true } } }
   });
 
   const received = await prisma.socialMessage.findMany({
-    where: { receiverId: currentUser.id },
+    where: {
+      receiverId: currentUser.id,
+      senderId: { notIn: hiddenUserIds }
+    },
     distinct: ['senderId'],
     orderBy: { createdAt: 'desc' },
     include: { sender: { select: { id: true, name: true, username: true, email: true, image: true } } }
@@ -351,6 +366,31 @@ export async function getRecentChats() {
   });
 
   return Array.from(partners.values()).sort((a, b) => (b.lastTime as any) - (a.lastTime as any));
+}
+
+export async function hideSocialChat(hiddenUserId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return null;
+
+  const currentUser = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  });
+
+  if (!currentUser) return null;
+
+  return await prisma.hiddenSocialChat.upsert({
+    where: {
+      userId_hiddenUserId: {
+        userId: currentUser.id,
+        hiddenUserId
+      }
+    },
+    create: {
+      userId: currentUser.id,
+      hiddenUserId
+    },
+    update: {}
+  });
 }
 
 

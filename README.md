@@ -16,7 +16,7 @@
     <strong>A next-generation platform for Real-Time ASL Translation, Seamless Communication, and AI-Powered Accessibility.</strong>
   </p>
   
-  <h3>🌍 Live Demo: <a href="https://the-dev-core.vercel.app/">https://the-dev-core.vercel.app/</a></h3>
+  <h3>🌍 Live Demo: <a href="https://myconnectapp.vercel.app/">https://myconnectapp.vercel.app/</a></h3>
 </div>
 
 <hr />

@@ -9,6 +9,7 @@ import {
   getSocialUser,
   saveSocialMessage,
   deleteSocialMessage,
+  hideSocialChat,
   reactToSocialMessage,
   getRecentChats,
   markMessagesAsSeen,
@@ -2076,14 +2077,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </button>
 
               <button
-                onClick={() => {
+                onClick={async () => {
                   const targetId = selectedChatForOptions.id;
-                  setDeletedChatIds(prev => new Set(prev).add(targetId));
-                  setUsers(prev => prev.filter(u => u.id !== targetId));
-                  allContactsRef.current = allContactsRef.current.filter(u => u.id !== targetId);
-                  setPinnedChats(prev => { const n = new Set(prev); n.delete(targetId); return n; });
-                  if (selectedUser?.id === targetId) setSelectedUser(null);
-                  setSelectedChatForOptions(null);
+                  try {
+                    await hideSocialChat(targetId);
+                    setDeletedChatIds(prev => new Set(prev).add(targetId));
+                    setUsers(prev => prev.filter(u => u.id !== targetId));
+                    allContactsRef.current = allContactsRef.current.filter(u => u.id !== targetId);
+                    setRequests(prev => prev.filter(u => u.id !== targetId));
+                    allRequestsRef.current = allRequestsRef.current.filter(u => u.id !== targetId);
+                    setPinnedChats(prev => { const n = new Set(prev); n.delete(targetId); return n; });
+                    if (selectedUser?.id === targetId) setSelectedUser(null);
+                    setSelectedChatForOptions(null);
+                  } catch (error) {
+                    console.error('Failed to hide chat:', error);
+                    alert('Failed to delete chat. Please try again.');
+                  }
                 }}
                 className="w-full py-3.5 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer text-red-500 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 shadow-sm"
               >

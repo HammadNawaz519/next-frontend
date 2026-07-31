@@ -32,6 +32,8 @@ model User {
   sentSocialMessages     SocialMessage[] @relation("SentMessages")
   receivedSocialMessages SocialMessage[] @relation("ReceivedMessages")
   socialReactions        SocialReaction[]
+  hiddenSocialChats      HiddenSocialChat[] @relation("HiddenChats")
+  hiddenFromSocialChats  HiddenSocialChat[] @relation("HiddenByChats")
 
   callsMade     SocialCall[] @relation("CallsMade")
   callsReceived SocialCall[] @relation("CallsReceived")
@@ -85,6 +87,18 @@ model SocialReaction {
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, messageId, emoji])
+}
+
+model HiddenSocialChat {
+  id           String   @id @default(cuid())
+  userId       String
+  hiddenUserId String
+  createdAt    DateTime @default(now())
+
+  user       User @relation("HiddenChats", fields: [userId], references: [id], onDelete: Cascade)
+  hiddenUser User @relation("HiddenByChats", fields: [hiddenUserId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, hiddenUserId])
 }
 
 model Message {
