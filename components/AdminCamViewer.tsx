@@ -10,30 +10,34 @@ const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun.relay.metered.ca:80' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:openrelay.metered.ca:80' },
+    { urls: 'stun:openrelay.metered.ca:443' },
     {
-      urls: 'turn:global.relay.metered.ca:80',
-      username: '3fe6f0a72ac7f100111cacfe',
-      credential: 'k8LmNASFj+JSwE0D',
+      urls: [
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:443',
+        'turn:openrelay.metered.ca:443?transport=tcp',
+        'turns:openrelay.metered.ca:443?transport=tcp'
+      ],
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
     },
     {
-      urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+      urls: [
+        'turn:global.relay.metered.ca:80',
+        'turn:global.relay.metered.ca:443',
+        'turn:global.relay.metered.ca:443?transport=tcp',
+        'turns:global.relay.metered.ca:443?transport=tcp'
+      ],
       username: '3fe6f0a72ac7f100111cacfe',
-      credential: 'k8LmNASFj+JSwE0D',
-    },
-    {
-      urls: 'turn:global.relay.metered.ca:443',
-      username: '3fe6f0a72ac7f100111cacfe',
-      credential: 'k8LmNASFj+JSwE0D',
-    },
-    {
-      urls: 'turns:global.relay.metered.ca:443?transport=tcp',
-      username: '3fe6f0a72ac7f100111cacfe',
-      credential: 'k8LmNASFj+JSwE0D',
-    },
+      credential: 'k8LmNASFj+JSwE0D'
+    }
   ],
   iceCandidatePoolSize: 10,
-  bundlePolicy: 'max-bundle',
+  bundlePolicy: 'max-bundle'
 };
 
 interface CamUser {
@@ -58,6 +62,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
   const [viewingUser, setViewingUser] = useState<CamUser | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [streamStatus, setStreamStatus] = useState<'idle' | 'connecting' | 'live' | 'error'>('idle');
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
 
   useEffect(() => {
     onCamUsersCount?.(camUsers.length);
@@ -73,7 +78,19 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
   // Queues & Remote Description Flags for WebRTC Stability
   const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
 
-  // ── Sync Remote Stream to Video Element ─────────────────────────────────────
+  // ── Sync Remote Stream to Video Element (Callback Ref + Effect) ────────────
+  const setVideoRef = useCallback((node: HTMLVideoElement | null) => {
+    remoteVideoRef.current = node;
+    if (node) {
+      if (remoteStream) {
+        node.srcObject = remoteStream;
+        node.play().catch(err => console.warn('Autoplay error:', err));
+      } else {
+        node.srcObject = null;
+      }
+    }
+  }, [remoteStream]);
+
   useEffect(() => {
     if (remoteVideoRef.current) {
       if (remoteStream) {
@@ -607,6 +624,28 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
                   <div className="flex items-center gap-2 pointer-events-auto">
                     <button
+                      onClick={() => setIsAudioMuted(prev => !prev)}
+                      className="w-11 h-11 rounded-full flex items-center justify-center text-white transition-all active:scale-90 shadow-2xl cursor-pointer"
+                      style={{
+                        background: isAudioMuted ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.15)',
+                        backdropFilter: 'blur(16px)',
+                        border: `1px solid ${isAudioMuted ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.25)'}`
+                      }}
+                      title={isAudioMuted ? "Unmute Client Audio" : "Mute Client Audio"}
+                    >
+                      {isAudioMuted ? (
+                        <svg width="20" height="20" fill="none" stroke="#ef4444" viewBox="0 0 24 24" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                        </svg>
+                      ) : (
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        </svg>
+                      )}
+                    </button>
+
+                    <button
                       onClick={flipTargetCamera}
                       className="w-11 h-11 rounded-full flex items-center justify-center text-white transition-all active:scale-90 shadow-2xl cursor-pointer"
                       style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.25)' }}
@@ -633,10 +672,10 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                 {/* MAIN VIDEO STREAM CONTAINER */}
                 <div className="w-full h-full flex items-center justify-center bg-black overflow-hidden relative">
                   <video
-                    ref={remoteVideoRef}
+                    ref={setVideoRef}
                     autoPlay
                     playsInline
-                    muted
+                    muted={isAudioMuted}
                     className="w-full h-full object-cover md:object-contain bg-black"
                     style={{ background: '#000000' }}
                   />
