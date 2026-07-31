@@ -462,15 +462,15 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         {/* Action Bar */}
         <div className="absolute bottom-4 md:bottom-5 left-1/2 -translate-x-1/2 w-fit min-w-[290px] md:min-w-[340px] max-w-[90vw] z-40">
-          <div className="w-full flex items-center justify-between px-5 md:px-7 py-3 md:py-4 rounded-[2rem] md:rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.5)] border border-[rgba(255,255,255,0.12)]" style={{ background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(30px) saturate(200%)', WebkitBackdropFilter: 'blur(30px) saturate(200%)' }}>
+          <div className="w-full flex items-center justify-between px-5 md:px-7 py-3 md:py-4 rounded-[2rem] md:rounded-full shadow-2xl border" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
 
             <button
               onClick={toggleSpeaker}
               className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
               style={{
-                background: isSpeakerOn ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)',
-                color: isSpeakerOn ? '#10b981' : 'rgba(255,255,255,0.7)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: isSpeakerOn ? 'rgba(34,197,94,0.2)' : 'var(--dm-bg-input)',
+                color: isSpeakerOn ? '#10b981' : 'var(--dm-text-primary)',
+                border: '1px solid var(--dm-border)',
                 cursor: 'pointer'
               }}
             >
@@ -489,9 +489,9 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
               onClick={toggleMute}
               className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
               style={{
-                background: isMuted ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.06)',
-                color: isMuted ? '#ef4444' : 'rgba(255,255,255,0.7)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: isMuted ? 'rgba(239,68,68,0.2)' : 'var(--dm-bg-input)',
+                color: isMuted ? '#ef4444' : 'var(--dm-text-primary)',
+                border: '1px solid var(--dm-border)',
                 cursor: 'pointer'
               }}
             >
@@ -505,9 +505,9 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
                 onClick={toggleCamera}
                 className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
                 style={{
-                  background: isCamOff ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.06)',
-                  color: isCamOff ? '#ef4444' : 'rgba(255,255,255,0.7)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: isCamOff ? 'rgba(239,68,68,0.2)' : 'var(--dm-bg-input)',
+                  color: isCamOff ? '#ef4444' : 'var(--dm-text-primary)',
+                  border: '1px solid var(--dm-border)',
                   cursor: 'pointer'
                 }}
               >

@@ -525,6 +525,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     return new Set<string>();
   });
 
+  // Deleted conversation/chat IDs: persisted in localStorage so deleted chats NEVER reappear on refresh
+  const [deletedChatIds, setDeletedChatIds] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('social_deleted_chats');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    }
+    return new Set<string>();
+  });
+
+  const [selectedChatForOptions, setSelectedChatForOptions] = useState<User | null>(null);
+
+  // Sync deleted chat IDs to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('social_deleted_chats', JSON.stringify(Array.from(deletedChatIds)));
+    }
+  }, [deletedChatIds]);
+
   // Sync pinned chats to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1539,32 +1557,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             <div className="list">
               {/* Sort: pinned first, then by recent */}
               {(view === 'recent'
-                ? [...users].sort((a, b) => {
+                ? [...users].filter(u => !deletedChatIds.has(u.id)).sort((a, b) => {
                     const ap = pinnedChats.has(a.id) ? 0 : 1;
                     const bp = pinnedChats.has(b.id) ? 0 : 1;
                     return ap - bp;
                   })
-                : requests
+                : requests.filter(u => !deletedChatIds.has(u.id))
               ).map((user) => {
                 const isOnline = onlineUsers.has((user.email || '').toLowerCase().trim());
                 const isPinned = pinnedChats.has(user.id);
                 let chatLongPressTimer: ReturnType<typeof setTimeout> | null = null;
                 const handleChatLongPress = () => {
-                  const action = isPinned
-                    ? window.confirm(`"${user.name}" is pinned.\nOK = UNPIN | Cancel = DELETE chat`)
-                    : window.confirm(`"${user.name}"\nOK = PIN to top | Cancel = DELETE chat`);
-                  if (action) {
-                    setPinnedChats(prev => {
-                      const next = new Set(prev);
-                      if (isPinned) next.delete(user.id); else next.add(user.id);
-                      return next;
-                    });
-                  } else {
-                    setUsers(prev => prev.filter(u => u.id !== user.id));
-                    allContactsRef.current = allContactsRef.current.filter(u => u.id !== user.id);
-                    setPinnedChats(prev => { const n = new Set(prev); n.delete(user.id); return n; });
-                    if (selectedUser?.id === user.id) setSelectedUser(null);
-                  }
+                  setSelectedChatForOptions(user);
                 };
                 return (
                   <div
@@ -2041,6 +2045,71 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             }
           }}
         />
+      )}
+
+      {/* CHAT OPTIONS MODAL (PIN / DELETE) */}
+      {selectedChatForOptions && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setSelectedChatForOptions(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-[2rem] p-6 shadow-2xl space-y-4 border animate-in zoom-in-95 duration-200"
+            style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', color: 'var(--dm-text-primary)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border" style={{ borderColor: 'var(--dm-border)' }}>
+                <img src={selectedChatForOptions.image || '/Avatar.avif'} className="w-full h-full object-cover" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-extrabold text-base truncate">{selectedChatForOptions.name}</h3>
+                <p className="text-xs truncate opacity-60">{selectedChatForOptions.email}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <button
+                onClick={() => {
+                  const isPinned = pinnedChats.has(selectedChatForOptions.id);
+                  setPinnedChats(prev => {
+                    const next = new Set(prev);
+                    if (isPinned) next.delete(selectedChatForOptions.id);
+                    else next.add(selectedChatForOptions.id);
+                    return next;
+                  });
+                  setSelectedChatForOptions(null);
+                }}
+                className="w-full py-3.5 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer shadow-sm"
+                style={{ background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}
+              >
+                {pinnedChats.has(selectedChatForOptions.id) ? '📌 Unpin Chat' : '📌 Pin Chat to Top'}
+              </button>
+
+              <button
+                onClick={() => {
+                  const targetId = selectedChatForOptions.id;
+                  setDeletedChatIds(prev => new Set(prev).add(targetId));
+                  setUsers(prev => prev.filter(u => u.id !== targetId));
+                  allContactsRef.current = allContactsRef.current.filter(u => u.id !== targetId);
+                  setPinnedChats(prev => { const n = new Set(prev); n.delete(targetId); return n; });
+                  if (selectedUser?.id === targetId) setSelectedUser(null);
+                  setSelectedChatForOptions(null);
+                }}
+                className="w-full py-3.5 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer text-red-500 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 shadow-sm"
+              >
+                🗑️ Delete Chat
+              </button>
+
+              <button
+                onClick={() => setSelectedChatForOptions(null)}
+                className="w-full py-2 text-xs font-medium text-center opacity-60 hover:opacity-100 transition-opacity cursor-pointer mt-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* DELETE CONFIRMATION MODAL */}
