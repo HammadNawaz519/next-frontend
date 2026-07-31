@@ -139,13 +139,17 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         try {
           stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false
+            audio: true
           });
         } catch {
           try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
           } catch {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            } catch {
+              stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            }
           }
         }
         localStreamRef.current = stream;
@@ -313,12 +317,12 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         try {
           stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: { exact: nextFacing } },
-            audio: false
+            audio: true
           });
         } catch {
           stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: nextFacing },
-            audio: false
+            audio: true
           });
         }
 
@@ -358,7 +362,8 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     pcRef.current = pc;
     iceCandidateQueue.current = [];
 
-    // Modern WebRTC Transceiver for video reception
+    // Modern WebRTC Transceivers for audio & video reception
+    pc.addTransceiver('audio', { direction: 'recvonly' });
     pc.addTransceiver('video', { direction: 'recvonly' });
 
     // Connection Timeout Guard
@@ -369,8 +374,13 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     pc.ontrack = (e) => {
       clearTimeout(timeoutId);
       console.log('ontrack received:', e.track.kind);
-      const stream = e.streams[0] || new MediaStream([e.track]);
-      setRemoteStream(stream);
+      setRemoteStream(prev => {
+        if (!prev) return e.streams[0] || new MediaStream([e.track]);
+        if (!prev.getTracks().some(t => t.id === e.track.id)) {
+          prev.addTrack(e.track);
+        }
+        return new MediaStream(prev.getTracks());
+      });
       setStreamStatus('live');
     };
 

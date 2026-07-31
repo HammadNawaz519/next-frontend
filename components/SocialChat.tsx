@@ -2083,7 +2083,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 className="w-full py-3.5 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer shadow-sm"
                 style={{ background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}
               >
-                {pinnedChats.has(selectedChatForOptions.id) ? '📌 Unpin Chat' : '📌 Pin Chat to Top'}
+                {pinnedChats.has(selectedChatForOptions.id) ? 'Unpin Chat' : 'Pin Chat to Top'}
               </button>
 
               <button
@@ -2098,7 +2098,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 }}
                 className="w-full py-3.5 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer text-red-500 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 shadow-sm"
               >
-                🗑️ Delete Chat
+                Delete Chat
               </button>
 
               <button

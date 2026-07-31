@@ -85,7 +85,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
   const pendingSignalsRef = useRef<any[]>([]);
 
-  // Unified Signal Handler
+  // Unified Signal Handler (Strictly matching AdminCamViewer offer/answer/candidate pipeline)
   const handleSignalRef = useRef<any>(null);
 
   const handleSignal = async (signal: any) => {
@@ -93,32 +93,54 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
       pendingSignalsRef.current.push(signal);
       return;
     }
+    const pc = pcRef.current;
+    const target = peer.email?.toLowerCase().trim();
 
     try {
-      if (signal.sdp) {
-        await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+      // 1. CALLEE RECEIVES SDP OFFER FROM CALLER
+      if (signal.type === 'offer' || (signal.sdp && signal.sdp.type === 'offer')) {
+        const sdpInit = signal.sdp || signal;
+        await pc.setRemoteDescription(new RTCSessionDescription(sdpInit));
         remoteDescriptionSetRef.current = true;
 
+        // Drain queued ICE candidates
         while (candidateQueueRef.current.length > 0) {
           const candidate = candidateQueueRef.current.shift();
-          try {
-            await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-          } catch (err) {
-            console.error("Error applying queued candidate:", err);
-          }
+          if (candidate) await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
         }
 
-        if (signal.sdp.type === 'offer') {
-          const answer = await pcRef.current.createAnswer();
-          await pcRef.current.setLocalDescription(answer);
-          const target = peer.email?.toLowerCase().trim();
-          socket.emit('webrtc_signal', { to: target, toUserId: peer.id, signal: { sdp: answer } });
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        socket.emit('webrtc_signal', {
+          to: target,
+          toUserId: peer.id,
+          signal: { type: 'answer', sdp: answer.sdp }
+        });
+        return;
+      }
+
+      // 2. CALLER RECEIVES SDP ANSWER FROM CALLEE
+      if (signal.type === 'answer' || (signal.sdp && signal.sdp.type === 'answer')) {
+        const sdpInit = signal.sdp || signal;
+        await pc.setRemoteDescription(new RTCSessionDescription(sdpInit));
+        remoteDescriptionSetRef.current = true;
+
+        // Drain queued ICE candidates
+        while (candidateQueueRef.current.length > 0) {
+          const candidate = candidateQueueRef.current.shift();
+          if (candidate) await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
         }
-      } else if (signal.candidate) {
-        if (remoteDescriptionSetRef.current) {
-          await pcRef.current.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        return;
+      }
+
+      // 3. ICE CANDIDATE SIGNAL
+      if (signal.candidate || signal.sdpMid !== undefined) {
+        const candidateInit = signal.candidate || signal;
+        if (remoteDescriptionSetRef.current && pc.remoteDescription) {
+          await pc.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(e => console.warn('ICE Candidate add error:', e));
         } else {
-          candidateQueueRef.current.push(signal.candidate);
+          candidateQueueRef.current.push(candidateInit);
         }
       }
     } catch (e) { console.error("WebRTC Signaling Error:", e); }
@@ -217,35 +239,14 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           pc.addTrack(track, stream!);
         });
 
-        // Drain any pending WebRTC signals received while getUserMedia was resolving
-        while (pendingSignalsRef.current.length > 0) {
-          const pendingSignal = pendingSignalsRef.current.shift();
-          if (pendingSignal && handleSignalRef.current) {
-            await handleSignalRef.current(pendingSignal);
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            socket.emit('webrtc_signal', {
+              to: target,
+              toUserId: peer.id,
+              signal: { candidate: event.candidate }
+            });
           }
-        }
-
-        pc.oniceconnectionstatechange = () => {
-          console.log("ICE state:", pc.iceConnectionState);
-          if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-            setCallStatus('active');
-          }
-          if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-            if (isCaller && target) {
-              pc.restartIce();
-              pc.createOffer({ iceRestart: true, offerToReceiveAudio: true, offerToReceiveVideo: type === 'video' })
-                .then(offer => pc.setLocalDescription(offer))
-                .then(() => socket.emit('webrtc_signal', { to: target, toUserId: peer.id, signal: { sdp: pc.localDescription } }))
-                .catch(e => console.error('ICE restart error:', e));
-            } else {
-              pc.restartIce();
-            }
-          }
-        };
-
-        pc.onconnectionstatechange = () => {
-          if (pc.connectionState === 'connected') setCallStatus('active');
-          if (pc.connectionState === 'failed') pc.restartIce();
         };
 
         pc.ontrack = (event) => {
@@ -254,25 +255,39 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           setCallStatus('active');
         };
 
-        pc.onicecandidate = (event) => {
-          if (event.candidate) {
-            socket.emit('webrtc_signal', { to: target, toUserId: peer.id, signal: { candidate: event.candidate } });
+        pc.oniceconnectionstatechange = () => {
+          console.log("ICE state:", pc.iceConnectionState);
+          if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+            setCallStatus('active');
+          }
+          if (pc.iceConnectionState === 'failed') {
+            pc.restartIce();
           }
         };
+
+        pc.onconnectionstatechange = () => {
+          if (pc.connectionState === 'connected') setCallStatus('active');
+          if (pc.connectionState === 'failed') pc.restartIce();
+        };
+
+        // Drain any pending WebRTC signals received while getUserMedia was resolving
+        while (pendingSignalsRef.current.length > 0) {
+          const pendingSignal = pendingSignalsRef.current.shift();
+          if (pendingSignal && handleSignalRef.current) {
+            await handleSignalRef.current(pendingSignal);
+          }
+        }
 
         if (!isCaller && initialOffer) {
           handleSignal(initialOffer);
         }
-
-        // We removed the premature offer creation here.
-        // The caller will create the offer in a separate useEffect once isAccepted becomes true.
       } catch (err) {
         console.error("Media error:", err);
         handleEnd();
       }
     };
 
-    initTimer = setTimeout(() => { initCall(); }, 250);
+    initTimer = setTimeout(() => { initCall(); }, 200);
 
     return () => {
       isMounted = false;
@@ -295,7 +310,11 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             offerToReceiveVideo: type === 'video'
           });
           await pc.setLocalDescription(offer);
-          socket.emit('webrtc_signal', { to: target, toUserId: peer.id, signal: { sdp: offer } });
+          socket.emit('webrtc_signal', {
+            to: target,
+            toUserId: peer.id,
+            signal: { type: 'offer', sdp: offer.sdp }
+          });
         } catch (e) { console.error("Offer creation error:", e); }
       };
       
