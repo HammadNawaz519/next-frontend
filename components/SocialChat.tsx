@@ -1038,26 +1038,29 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   useEffect(() => {
     const identify = () => {
       if (socket && socket.connected && session?.user?.email) {
-        socket.emit('identify', { email: session.user.email.toLowerCase().trim() });
+        const email = session.user.email.toLowerCase().trim();
+        const username = session.user.name || email.split('@')[0];
+        socket.emit('identify', { email, userId: (session.user as any).id, username });
       }
     };
     identify();
     const interval = setInterval(identify, 15000); // Re-identify every 15s to keep room alive
     return () => clearInterval(interval);
   }, [socket, session]);
-  // Socket identity is handled in the connect event above
 
   const handleCall = async (type: 'audio' | 'video') => {
     if (!selectedUser || !session?.user || !socket) return;
 
+    const targetEmail = selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined;
+
     socket.emit('call_user', {
-      to: selectedUser.email?.toLowerCase().trim(),
+      to: targetEmail,
       toUserId: selectedUser.id,
       from: session.user,
       type
     });
 
-    setActiveCall({ peer: selectedUser, type, isCaller: true });
+    setActiveCall({ peer: { ...selectedUser, email: targetEmail }, type, isCaller: true });
   };
 
   const handleAcceptCall = () => {
