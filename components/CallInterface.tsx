@@ -83,14 +83,14 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     return () => clearInterval(timer);
   }, [callStatus]);
 
+  const pendingSignalsRef = useRef<any[]>([]);
+
   // Unified Signal Handler
   const handleSignalRef = useRef<any>(null);
 
   const handleSignal = async (signal: any) => {
     if (!pcRef.current) {
-      setTimeout(() => {
-        if (handleSignalRef.current) handleSignalRef.current(signal);
-      }, 100);
+      pendingSignalsRef.current.push(signal);
       return;
     }
 
@@ -111,7 +111,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         if (signal.sdp.type === 'offer') {
           const answer = await pcRef.current.createAnswer();
           await pcRef.current.setLocalDescription(answer);
-          socket.emit('webrtc_signal', { to: peer.email, toUserId: peer.id, signal: { sdp: answer } });
+          const target = peer.email?.toLowerCase().trim();
+          socket.emit('webrtc_signal', { to: target, toUserId: peer.id, signal: { sdp: answer } });
         }
       } else if (signal.candidate) {
         if (remoteDescriptionSetRef.current) {
@@ -180,6 +181,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         const rtcConfig: RTCConfiguration = {
           iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun.relay.metered.ca:80' },
             {
               urls: 'turn:global.relay.metered.ca:80',
@@ -214,6 +217,14 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           pc.addTrack(track, stream!);
         });
 
+        // Drain any pending WebRTC signals received while getUserMedia was resolving
+        while (pendingSignalsRef.current.length > 0) {
+          const pendingSignal = pendingSignalsRef.current.shift();
+          if (pendingSignal && handleSignalRef.current) {
+            await handleSignalRef.current(pendingSignal);
+          }
+        }
+
         pc.oniceconnectionstatechange = () => {
           console.log("ICE state:", pc.iceConnectionState);
           if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
@@ -224,7 +235,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
               pc.restartIce();
               pc.createOffer({ iceRestart: true, offerToReceiveAudio: true, offerToReceiveVideo: type === 'video' })
                 .then(offer => pc.setLocalDescription(offer))
-                .then(() => socket.emit('webrtc_signal', { to: target, signal: { sdp: pc.localDescription } }))
+                .then(() => socket.emit('webrtc_signal', { to: target, toUserId: peer.id, signal: { sdp: pc.localDescription } }))
                 .catch(e => console.error('ICE restart error:', e));
             } else {
               pc.restartIce();
