@@ -159,6 +159,10 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
   // ── Stop Viewing / Reset Connection State ─────────────────────────────────
   const stopViewing = useCallback(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(t => t.stop());
+      localStreamRef.current = null;
+    }
     if (pcRef.current) {
       try {
         pcRef.current.onicecandidate = null;
@@ -263,12 +267,11 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     });
     socketRef.current = socket;
 
-    socket.on('connect', async () => {
+    socket.on('connect', () => {
       const cleanEmail = userEmail.toLowerCase().trim();
       const cleanUsername = username || cleanEmail.split('@')[0] || 'User';
 
       socket.emit('identify', { email: cleanEmail });
-      await acquireLocalCamera();
       socket.emit('cam_user_online', { email: cleanEmail, username: cleanUsername });
 
       if (isAdmin) {
@@ -296,9 +299,12 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     });
 
     return () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(t => t.stop());
+        localStreamRef.current = null;
+      }
       if (refreshInterval) clearInterval(refreshInterval);
       socket.disconnect();
-      localStreamRef.current?.getTracks().forEach(t => t.stop());
       stopViewing();
     };
   }, [userEmail, isAdmin, username, acquireLocalCamera, dedupeAndSortCamUsers, handleIncomingSignal, stopViewing]);
