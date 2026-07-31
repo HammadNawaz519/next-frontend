@@ -68,6 +68,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const viewingSocketIdRef = useRef<string | null>(null);
+  const facingModeRef = useRef<'user' | 'environment'>('user');
 
   // Queues & Remote Description Flags for WebRTC Stability
   const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
@@ -301,8 +302,6 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     socket.on('cam_signal', ({ fromSocketId, fromEmail, signal }) => {
       handleIncomingSignal(fromSocketId, fromEmail, signal);
     });
-
-    const facingModeRef = useRef<'user' | 'environment'>('user');
 
     socket.on('cam_flip_camera', async () => {
       try {
