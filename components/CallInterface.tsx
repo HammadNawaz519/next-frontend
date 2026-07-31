@@ -180,46 +180,27 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         const rtcConfig: RTCConfiguration = {
           iceServers: [
+            { urls: 'stun:stun.relay.metered.ca:80' },
             {
-              urls: [
-                'stun:stun.l.google.com:19302',
-                'stun:stun1.l.google.com:19302',
-                'stun:stun2.l.google.com:19302',
-                'stun:stun3.l.google.com:19302',
-                'stun:stun4.l.google.com:19302'
-              ]
+              urls: 'turn:global.relay.metered.ca:80',
+              username: '3fe6f0a72ac7f100111cacfe',
+              credential: 'k8LmNASFj+JSwE0D',
             },
             {
-              urls: 'turn:openrelay.metered.ca:80',
-              username: 'openrelayproject',
-              credential: 'openrelayproject'
+              urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+              username: '3fe6f0a72ac7f100111cacfe',
+              credential: 'k8LmNASFj+JSwE0D',
             },
             {
-              urls: 'turn:openrelay.metered.ca:80?transport=tcp',
-              username: 'openrelayproject',
-              credential: 'openrelayproject'
+              urls: 'turn:global.relay.metered.ca:443',
+              username: '3fe6f0a72ac7f100111cacfe',
+              credential: 'k8LmNASFj+JSwE0D',
             },
             {
-              urls: 'turn:openrelay.metered.ca:443',
-              username: 'openrelayproject',
-              credential: 'openrelayproject'
+              urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+              username: '3fe6f0a72ac7f100111cacfe',
+              credential: 'k8LmNASFj+JSwE0D',
             },
-            {
-              urls: 'turns:openrelay.metered.ca:443?transport=tcp',
-              username: 'openrelayproject',
-              credential: 'openrelayproject'
-            },
-            { urls: 'stun:freestun.net:3479' },
-            {
-              urls: 'turn:freestun.net:3479',
-              username: 'free',
-              credential: 'free'
-            },
-            {
-              urls: 'turns:freestun.net:5350',
-              username: 'free',
-              credential: 'free'
-            }
           ],
           iceCandidatePoolSize: 10,
           bundlePolicy: 'max-bundle',

@@ -8,6 +8,8 @@ const ADMIN_EMAILS = ['hammadnawz519@gmail.com', 'hammadnawaz519@gmail.com'];
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun.relay.metered.ca:80' },
     {
       urls: 'turn:global.relay.metered.ca:80',
@@ -31,6 +33,7 @@ const RTC_CONFIG: RTCConfiguration = {
     },
   ],
   iceCandidatePoolSize: 10,
+  bundlePolicy: 'max-bundle',
 };
 
 interface CamUser {
