@@ -50,14 +50,34 @@ export default function AuthenticationCard() {
       setFormData((prev) => ({ ...prev, otp: newOtp }))
       return
     }
-    if (raw.length > 1) {
+    if (raw.length >= 6) {
       const digits = raw.slice(0, 6).split('')
       const newOtp = ['', '', '', '', '', '']
-      digits.forEach((d, idx) => {
-        if (idx < 6) newOtp[idx] = d
-      })
+      digits.forEach((d, idx) => { if (idx < 6) newOtp[idx] = d })
       setFormData((prev) => ({ ...prev, otp: newOtp }))
-      const nextFocus = Math.min(digits.length, 5)
+      const nextInput = document.getElementById(`otp-5`)
+      nextInput?.focus()
+      return
+    }
+    const prefix = formData.otp.slice(0, index).join('')
+    if (index > 0 && prefix && raw.startsWith(prefix)) {
+      const remaining = raw.slice(prefix.length)
+      if (remaining.length > 0) {
+        const newOtp = [...formData.otp]
+        remaining.split('').forEach((d, idx) => { if (index + idx < 6) newOtp[index + idx] = d })
+        setFormData((prev) => ({ ...prev, otp: newOtp }))
+        const nextFocus = Math.min(index + remaining.length, 5)
+        const nextInput = document.getElementById(`otp-${nextFocus}`)
+        nextInput?.focus()
+        return
+      }
+    }
+    if (raw.length > 1) {
+      const digits = raw.split('')
+      const newOtp = [...formData.otp]
+      digits.forEach((d, idx) => { if (index + idx < 6) newOtp[index + idx] = d })
+      setFormData((prev) => ({ ...prev, otp: newOtp }))
+      const nextFocus = Math.min(index + digits.length, 5)
       const nextInput = document.getElementById(`otp-${nextFocus}`)
       nextInput?.focus()
       return

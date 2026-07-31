@@ -166,23 +166,53 @@ export default function LoginPage() {
       setOtp(next);
       return;
     }
-    // Handle multi-digit input (Mobile SMS auto-fill or fast paste)
-    if (raw.length > 1) {
+
+    // 1. Handle full 6-digit paste or SMS auto-fill
+    if (raw.length >= 6) {
       const digits = raw.slice(0, 6).split('');
       const next = ['', '', '', '', '', ''];
       digits.forEach((d, idx) => {
         if (idx < 6) next[idx] = d;
       });
       setOtp(next);
-      const nextFocus = Math.min(digits.length, 5);
+      otpRefs.current[5]?.focus();
+      return;
+    }
+
+    // 2. Handle mobile keyboard accumulated buffer (e.g. box 2 gets "123" when box0='1', box1='2')
+    const prefix = otp.slice(0, i).join('');
+    if (i > 0 && prefix && raw.startsWith(prefix)) {
+      const remaining = raw.slice(prefix.length);
+      if (remaining.length > 0) {
+        const next = [...otp];
+        remaining.split('').forEach((d, idx) => {
+          if (i + idx < 6) next[i + idx] = d;
+        });
+        setOtp(next);
+        const nextFocus = Math.min(i + remaining.length, 5);
+        otpRefs.current[nextFocus]?.focus();
+        return;
+      }
+    }
+
+    // 3. Multi-digit input starting at box i
+    if (raw.length > 1) {
+      const digits = raw.split('');
+      const next = [...otp];
+      digits.forEach((d, idx) => {
+        if (i + idx < 6) next[i + idx] = d;
+      });
+      setOtp(next);
+      const nextFocus = Math.min(i + digits.length, 5);
       otpRefs.current[nextFocus]?.focus();
       return;
     }
+
+    // 4. Standard single digit entry
     const digit = raw.slice(-1);
     const next = [...otp];
     next[i] = digit;
     setOtp(next);
-    // Auto-advance to next box synchronously
     if (i < 5 && digit) {
       otpRefs.current[i + 1]?.focus();
     }

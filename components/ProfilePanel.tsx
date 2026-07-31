@@ -2200,14 +2200,32 @@ export default function ProfilePanel({
                     setSwitchOtp(next);
                     return;
                   }
-                  if (raw.length > 1) {
+                  if (raw.length >= 6) {
                     const digits = raw.slice(0, 6).split('');
                     const next = ['', '', '', '', '', ''];
-                    digits.forEach((d, idx) => {
-                      if (idx < 6) next[idx] = d;
-                    });
+                    digits.forEach((d, idx) => { if (idx < 6) next[idx] = d; });
                     setSwitchOtp(next);
-                    const nextFocus = Math.min(digits.length, 5);
+                    switchOtpRefs.current[5]?.focus();
+                    return;
+                  }
+                  const prefix = switchOtp.slice(0, i).join('');
+                  if (i > 0 && prefix && raw.startsWith(prefix)) {
+                    const remaining = raw.slice(prefix.length);
+                    if (remaining.length > 0) {
+                      const next = [...switchOtp];
+                      remaining.split('').forEach((d, idx) => { if (i + idx < 6) next[i + idx] = d; });
+                      setSwitchOtp(next);
+                      const nextFocus = Math.min(i + remaining.length, 5);
+                      switchOtpRefs.current[nextFocus]?.focus();
+                      return;
+                    }
+                  }
+                  if (raw.length > 1) {
+                    const digits = raw.split('');
+                    const next = [...switchOtp];
+                    digits.forEach((d, idx) => { if (i + idx < 6) next[i + idx] = d; });
+                    setSwitchOtp(next);
+                    const nextFocus = Math.min(i + digits.length, 5);
                     switchOtpRefs.current[nextFocus]?.focus();
                     return;
                   }
