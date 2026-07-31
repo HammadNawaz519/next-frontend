@@ -707,18 +707,18 @@ export default function LoginPage() {
     );
   };
 
-  const isLikelyLoggedIn = typeof window !== 'undefined' && (() => {
-    try {
-      const stored = localStorage.getItem('connected_accounts');
-      return stored && JSON.parse(stored).length > 0;
-    } catch { return false; }
-  })();
-
   // Render the real DashboardPage instantly to avoid any route transition lag or jitter.
   // The DashboardPage itself will handle its own graceful loading state or display instantly.
   if (!hasMounted) {
     return null;
   }
+
+  const isLikelyLoggedIn = (() => {
+    try {
+      const stored = localStorage.getItem('connected_accounts');
+      return stored && JSON.parse(stored).length > 0;
+    } catch { return false; }
+  })();
 
   if (sessStatus === 'authenticated' || (initialLoading && isLikelyLoggedIn)) {
     return <DashboardPage />;
