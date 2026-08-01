@@ -199,10 +199,10 @@ export default function AccountsPage() {
 
   const renderAccountCenterContent = () => {
     return (
-      <div className="w-full h-full flex flex-col p-6 md:p-10 justify-between relative overflow-hidden">
+      <div className="w-full h-full flex flex-col p-6 md:p-10 pt-[calc(1.25rem+0.15in+env(safe-area-inset-top,0px))] md:pt-12 justify-between relative overflow-hidden">
         
-        {/* ── HEADER ── */}
-        <div className="flex items-center justify-between mb-6 relative z-20">
+        {/* ── HEADER (Shifted ~0.15in down to avoid touching nav/status bar) ── */}
+        <div className="flex items-center justify-between mb-6 relative z-20 pt-2">
           {viewMode === 'remove' ? (
             <div className="flex items-center gap-3">
               <button
@@ -215,14 +215,14 @@ export default function AccountsPage() {
                 <ArrowLeft className="w-4 h-4" />
               </button>
               <div>
-                <h1 className={`text-xl font-semibold tracking-tight ${isDark ? 'text-white' : 'text-gray-950'}`}>Remove Accounts</h1>
+                <h1 className={`text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-950'}`}>Remove Accounts</h1>
                 <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>Remove saved logins from this device</p>
               </div>
             </div>
           ) : (
             <div className="flex items-center gap-3">
               <div>
-                <h1 className={`text-xl font-semibold tracking-tight ${isDark ? 'text-white' : 'text-gray-950'}`}>Account Center</h1>
+                <h1 className={`text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-950'}`}>Account Center</h1>
                 <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>Manage saved accounts on this device</p>
               </div>
             </div>
@@ -262,11 +262,11 @@ export default function AccountsPage() {
                     }}
                     className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-2.5 cursor-pointer ${
                       isDark 
-                        ? 'hover:bg-red-500/15 text-red-400 hover:text-red-300' 
-                        : 'hover:bg-red-50 text-red-600'
+                        ? 'hover:bg-rose-500/10 text-rose-400/90 hover:text-rose-300' 
+                        : 'hover:bg-rose-50 text-rose-600/90'
                     }`}
                   >
-                    <Trash2 className="w-4 h-4 text-red-500" />
+                    <Trash2 className="w-4 h-4 text-rose-400/80" />
                     Remove an account
                   </button>
                 </div>
@@ -299,10 +299,10 @@ export default function AccountsPage() {
                     <div
                       key={acc.email}
                       onClick={() => handleAccountClick(acc)}
-                      className={`group flex items-center justify-between p-4 rounded-2xl border backdrop-blur-xl transition-all duration-300 ${
+                      className={`group flex items-center justify-between p-4 rounded-[1.75rem] border backdrop-blur-xl transition-all duration-300 ${
                         isDark
-                          ? 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 cursor-pointer active:scale-[0.98]'
-                          : 'border-black/5 bg-white/70 hover:bg-white hover:border-black/10 shadow-sm cursor-pointer active:scale-[0.98]'
+                          ? 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 shadow-[0_4px_25px_rgba(0,0,0,0.3)] cursor-pointer active:scale-[0.98]'
+                          : 'border-gray-200/80 bg-white/80 hover:bg-white hover:border-gray-300 shadow-[0_4px_20px_rgba(0,0,0,0.03)] cursor-pointer active:scale-[0.98]'
                       }`}
                     >
                       <div className="flex items-center gap-3.5 min-w-0">
@@ -310,12 +310,12 @@ export default function AccountsPage() {
                           <img
                             src={acc.image}
                             alt={accountName}
-                            className={`w-11 h-11 rounded-full border object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${
-                              isDark ? 'border-zinc-800' : 'border-gray-200'
+                            className={`w-12 h-12 rounded-full border object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${
+                              isDark ? 'border-zinc-700' : 'border-gray-200'
                             }`}
                           />
                         ) : (
-                          <div className={`w-11 h-11 rounded-full border flex items-center justify-center font-bold text-sm flex-shrink-0 uppercase transition-transform duration-300 group-hover:scale-105 ${
+                          <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-bold text-sm flex-shrink-0 uppercase transition-transform duration-300 group-hover:scale-105 ${
                             isDark 
                               ? 'bg-zinc-800 border-zinc-700 text-zinc-300' 
                               : 'bg-gray-100 border-gray-200 text-gray-700'
@@ -324,13 +324,13 @@ export default function AccountsPage() {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className={`text-sm font-semibold truncate transition-colors ${
-                            isDark ? 'text-zinc-200 group-hover:text-white' : 'text-gray-900 group-hover:text-gray-950'
+                          <p className={`text-sm font-bold truncate transition-colors ${
+                            isDark ? 'text-zinc-100 group-hover:text-white' : 'text-gray-900 group-hover:text-gray-950'
                           }`}>
                             {accountName}
                           </p>
                           <p className={`text-xs truncate mt-0.5 font-medium ${
-                            isDark ? 'text-zinc-500' : 'text-gray-500'
+                            isDark ? 'text-zinc-400' : 'text-gray-500'
                           }`}>{displayUsername}</p>
                         </div>
                       </div>
@@ -390,10 +390,10 @@ export default function AccountsPage() {
                   return (
                     <div
                       key={acc.email}
-                      className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                      className={`flex items-center justify-between p-4 rounded-[1.75rem] border transition-all ${
                         isDark 
-                          ? 'border-zinc-800/80 bg-zinc-900/40' 
-                          : 'border-gray-200 bg-white shadow-sm'
+                          ? 'border-zinc-800/80 bg-zinc-900/40 shadow-[0_4px_25px_rgba(0,0,0,0.3)]' 
+                          : 'border-gray-200/80 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
                       }`}
                     >
                       <div className="flex items-center gap-3.5 min-w-0">
@@ -401,12 +401,12 @@ export default function AccountsPage() {
                           <img
                             src={acc.image}
                             alt={accountName}
-                            className={`w-11 h-11 rounded-full border object-cover flex-shrink-0 ${
-                              isDark ? 'border-zinc-800' : 'border-gray-200'
+                            className={`w-12 h-12 rounded-full border object-cover flex-shrink-0 ${
+                              isDark ? 'border-zinc-700' : 'border-gray-200'
                             }`}
                           />
                         ) : (
-                          <div className={`w-11 h-11 rounded-full border flex items-center justify-center font-bold text-sm flex-shrink-0 uppercase ${
+                          <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-bold text-sm flex-shrink-0 uppercase ${
                             isDark 
                               ? 'bg-zinc-800 border-zinc-700 text-zinc-300' 
                               : 'bg-gray-100 border-gray-200 text-gray-700'
@@ -415,24 +415,24 @@ export default function AccountsPage() {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className={`text-sm font-semibold truncate ${
-                            isDark ? 'text-zinc-200' : 'text-gray-900'
+                          <p className={`text-sm font-bold truncate ${
+                            isDark ? 'text-zinc-100' : 'text-gray-900'
                           }`}>
                             {accountName}
                           </p>
                           <p className={`text-xs truncate mt-0.5 font-medium ${
-                            isDark ? 'text-zinc-500' : 'text-gray-500'
+                            isDark ? 'text-zinc-400' : 'text-gray-500'
                           }`}>{displayUsername}</p>
                         </div>
                       </div>
 
-                      {/* Right "Remove" button */}
+                      {/* Right "Remove" button with subtle, natural rose styling */}
                       <button
                         onClick={() => handleRemoveAccount(acc.email)}
-                        className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+                        className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-500/90 dark:text-rose-400/90 dark:bg-rose-500/15 border border-rose-500/20 dark:border-rose-500/30 transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 flex-shrink-0"
                         title="Remove from device"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3.5 h-3.5 text-rose-400/80" />
                         Remove
                       </button>
                     </div>
@@ -526,7 +526,7 @@ export default function AccountsPage() {
 
             {error && (
               <div className={`text-xs border rounded-2xl px-4 py-3.5 mb-4 animate-in shake duration-300 ${
-                isDark ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-red-600 bg-red-50 border-red-200'
+                isDark ? 'text-rose-400 bg-rose-500/10 border-rose-500/20' : 'text-rose-600 bg-rose-50 border-rose-200'
               }`}>
                 {error}
               </div>
