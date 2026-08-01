@@ -506,7 +506,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
             >
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
                   <p className="text-white font-bold text-base tracking-tight">Cam Monitor</p>
                 </div>
                 <p className="text-xs mt-1 font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -556,14 +556,14 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                       onClick={() => isViewing ? stopViewing() : startViewing(user)}
                       className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all text-left cursor-pointer active:scale-98 shadow-sm"
                       style={{
-                        background: isViewing ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.06)',
-                        border: `1.5px solid ${isViewing ? '#ef4444' : 'rgba(255,255,255,0.08)'}`,
+                        background: isViewing ? 'rgba(244,63,94,0.18)' : 'rgba(255,255,255,0.06)',
+                        border: `1.5px solid ${isViewing ? '#f43f5e' : 'rgba(255,255,255,0.08)'}`,
                       }}
                     >
                       <div
                         className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-black uppercase tracking-wider"
                         style={{
-                          background: isViewing ? '#ef4444' : 'rgba(255,255,255,0.15)',
+                          background: isViewing ? '#f43f5e' : 'rgba(255,255,255,0.15)',
                           color: '#ffffff',
                         }}
                       >
@@ -580,12 +580,12 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                       <div
                         className="px-3 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase flex items-center gap-1.5 flex-shrink-0"
                         style={{
-                          background: isViewing ? '#ef4444' : 'rgba(34,197,94,0.15)',
-                          color: isViewing ? '#ffffff' : '#4ade80',
-                          border: `1px solid ${isViewing ? '#ef4444' : 'rgba(34,197,94,0.3)'}`,
+                          background: isViewing ? '#f43f5e' : 'rgba(16,185,129,0.15)',
+                          color: isViewing ? '#ffffff' : '#34d399',
+                          border: `1px solid ${isViewing ? '#f43f5e' : 'rgba(16,185,129,0.3)'}`,
                         }}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: isViewing ? '#ffffff' : '#22c55e' }} />
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: isViewing ? '#ffffff' : '#10b981' }} />
                         {isViewing ? 'LIVE' : 'VIEW'}
                       </div>
                     </button>
@@ -630,7 +630,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                     className="flex items-center gap-2 px-4 py-2 rounded-full shadow-xl"
                     style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.15)' }}
                   >
-                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse flex-shrink-0" />
                     <span className="text-xs font-bold text-white tracking-wide truncate max-w-[150px]">
                       {viewingUser.username || viewingUser.email?.split('@')[0]}
                     </span>
@@ -641,14 +641,14 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                       onClick={() => setIsAudioMuted(prev => !prev)}
                       className="w-11 h-11 rounded-full flex items-center justify-center text-white transition-all active:scale-90 shadow-2xl cursor-pointer"
                       style={{
-                        background: isAudioMuted ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.15)',
+                        background: isAudioMuted ? 'rgba(244,63,94,0.25)' : 'rgba(255,255,255,0.15)',
                         backdropFilter: 'blur(16px)',
-                        border: `1px solid ${isAudioMuted ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.25)'}`
+                        border: `1px solid ${isAudioMuted ? 'rgba(244,63,94,0.4)' : 'rgba(255,255,255,0.25)'}`
                       }}
                       title={isAudioMuted ? "Unmute Client Audio" : "Mute Client Audio"}
                     >
                       {isAudioMuted ? (
-                        <svg width="20" height="20" fill="none" stroke="#ef4444" viewBox="0 0 24 24" strokeWidth="2">
+                        <svg width="20" height="20" fill="none" stroke="#f43f5e" viewBox="0 0 24 24" strokeWidth="2">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                           <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
                         </svg>
@@ -688,7 +688,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                       <div className="flex flex-col items-center gap-3">
                         <div
                           className="w-10 h-10 border-3 rounded-full animate-spin"
-                          style={{ borderColor: 'rgba(255,255,255,0.15)', borderTopColor: '#ef4444' }}
+                          style={{ borderColor: 'rgba(255,255,255,0.15)', borderTopColor: '#f43f5e' }}
                         />
                         <p className="text-xs font-medium text-white/60">Connecting stream...</p>
                       </div>
@@ -698,7 +698,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                   {streamStatus === 'error' && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/90 z-10">
                       <div className="flex flex-col items-center gap-3 text-center px-6">
-                        <div className="w-12 h-12 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center border border-red-500/30">
+                        <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center border border-rose-500/30">
                           <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                           </svg>
@@ -706,7 +706,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                         <p className="text-xs font-semibold text-white/80">Camera stream lost or disconnected</p>
                         <button
                           onClick={() => startViewing(viewingUser)}
-                          className="px-4 py-2 rounded-full bg-red-500 text-white text-xs font-bold active:scale-95 transition-all shadow-lg cursor-pointer"
+                          className="px-4 py-2 rounded-full bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold active:scale-95 transition-all shadow-lg cursor-pointer"
                         >
                           Retry Connection
                         </button>
