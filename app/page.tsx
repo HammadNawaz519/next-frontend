@@ -157,9 +157,12 @@ export default function LoginPage() {
     }, 350);
   };
 
-  // OTP handlers
+  // OTP handlers — clean, reliable single-digit auto-advance
   const handleOtpChange = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    // Strip everything except digits
     const raw = e.target.value.replace(/\D/g, '');
+
+    // If empty (e.g. delete key on mobile), clear and stay
     if (!raw) {
       const next = [...otp];
       next[i] = '';
@@ -167,53 +170,14 @@ export default function LoginPage() {
       return;
     }
 
-    // 1. Handle full 6-digit paste or SMS auto-fill
-    if (raw.length >= 6) {
-      const digits = raw.slice(0, 6).split('');
-      const next = ['', '', '', '', '', ''];
-      digits.forEach((d, idx) => {
-        if (idx < 6) next[idx] = d;
-      });
-      setOtp(next);
-      requestAnimationFrame(() => otpRefs.current[5]?.focus());
-      return;
-    }
-
-    // 2. Handle mobile keyboard accumulated buffer (e.g. box 2 gets "123" when box0='1', box1='2')
-    const prefix = otp.slice(0, i).join('');
-    if (i > 0 && prefix && raw.startsWith(prefix)) {
-      const remaining = raw.slice(prefix.length);
-      if (remaining.length > 0) {
-        const next = [...otp];
-        remaining.split('').forEach((d, idx) => {
-          if (i + idx < 6) next[i + idx] = d;
-        });
-        setOtp(next);
-        const nextFocus = Math.min(i + remaining.length, 5);
-        requestAnimationFrame(() => otpRefs.current[nextFocus]?.focus());
-        return;
-      }
-    }
-
-    // 3. Multi-digit input starting at box i
-    if (raw.length > 1) {
-      const digits = raw.split('');
-      const next = [...otp];
-      digits.forEach((d, idx) => {
-        if (i + idx < 6) next[i + idx] = d;
-      });
-      setOtp(next);
-      const nextFocus = Math.min(i + digits.length, 5);
-      requestAnimationFrame(() => otpRefs.current[nextFocus]?.focus());
-      return;
-    }
-
-    // 4. Standard single digit entry
-    const digit = raw.slice(-1);
+    // Take only the last digit typed (handles keyboards that buffer)
+    const digit = raw[raw.length - 1];
     const next = [...otp];
     next[i] = digit;
     setOtp(next);
-    if (i < 5 && digit) {
+
+    // Auto-advance to the next box
+    if (i < 5) {
       requestAnimationFrame(() => otpRefs.current[i + 1]?.focus());
     }
   };
@@ -221,12 +185,10 @@ export default function LoginPage() {
   const handleOtpKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace') {
       if (otp[i]) {
-        // Clear current box
         const next = [...otp];
         next[i] = '';
         setOtp(next);
       } else if (i > 0) {
-        // Already empty — move back and clear previous
         const next = [...otp];
         next[i - 1] = '';
         setOtp(next);
@@ -246,13 +208,26 @@ export default function LoginPage() {
     const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
     if (text.length > 0) {
       const digits = text.split('');
-      const next = ['', '', '', '', '', ''];
+      const next: string[] = ['', '', '', '', '', ''];
       digits.forEach((d, idx) => { next[idx] = d; });
       setOtp(next);
       const focusIdx = Math.min(digits.length, 5);
-      otpRefs.current[focusIdx]?.focus();
+      requestAnimationFrame(() => otpRefs.current[focusIdx]?.focus());
     }
     e.preventDefault();
+  };
+
+  // SMS one-time-code autofill (Capacitor / Android)
+  const handleOtpAutoFill = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    if (raw.length >= 6) {
+      const digits = raw.slice(0, 6).split('');
+      const next: string[] = ['', '', '', '', '', ''];
+      digits.forEach((d, idx) => { next[idx] = d; });
+      setOtp(next);
+      requestAnimationFrame(() => otpRefs.current[5]?.focus());
+      e.preventDefault();
+    }
   };
 
   // ── Sign In ───────────────────────────────────────────────────────────────
@@ -1096,27 +1071,34 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleVerifyResetCode} className="space-y-4">
-            <div className="flex gap-2 justify-center mb-4">
-              {otp.map((digit, i) => {
-                const isActive = otp.join('').length === i || (otp.join('').length === 6 && i === 5);
-                return (
-                  <input
-                    key={i}
-                    ref={(el) => { otpRefs.current[i] = el; }}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    autoComplete={i === 0 ? "one-time-code" : "off"}
-                    maxLength={i === 0 ? 6 : 1}
-                    value={digit}
-                    onFocus={(e) => { if (e.target.value) e.target.select(); }}
-                    onChange={(e) => handleOtpChange(i, e)}
-                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                    onPaste={handleOtpPaste}
-                    className={`w-10 h-10 text-center text-lg font-bold bg-[#1c1c1e] text-white border rounded-xl focus:outline-none transition-colors ${isActive ? 'border-zinc-500 ring-1 ring-zinc-500' : 'border-zinc-800'}`}
-                  />
-                );
-              })}
+            <div className="flex gap-3 justify-center mb-4">
+              {otp.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={(el) => { otpRefs.current[i] = el; }}
+                  id={`otp-reset-${i}`}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                  maxLength={1}
+                  value={digit}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => {
+                    // Handle SMS autofill on box 0 which may get all 6 digits at once
+                    if (i === 0 && e.target.value.replace(/\D/g, '').length >= 6) {
+                      handleOtpAutoFill(e);
+                      return;
+                    }
+                    handleOtpChange(i, e);
+                  }}
+                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                  onPaste={handleOtpPaste}
+                  className={`w-11 h-14 text-center text-xl font-bold bg-[#1c1c1e] text-white border rounded-2xl focus:outline-none transition-all ${
+                    digit ? 'border-zinc-400 ring-1 ring-zinc-500 scale-105' : 'border-zinc-800'
+                  }`}
+                />
+              ))}
             </div>
 
             <button
@@ -1220,27 +1202,34 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleVerify} className="space-y-4">
-          <div className="flex gap-2 justify-center mb-4">
-            {otp.map((digit, i) => {
-              const isActive = otp.join('').length === i || (otp.join('').length === 6 && i === 5);
-              return (
-                <input
-                  key={i}
-                  ref={(el) => { otpRefs.current[i] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  autoComplete={i === 0 ? "one-time-code" : "off"}
-                  maxLength={i === 0 ? 6 : 1}
-                  value={digit}
-                  onFocus={(e) => { if (e.target.value) e.target.select(); }}
-                  onChange={(e) => handleOtpChange(i, e)}
-                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                  onPaste={handleOtpPaste}
-                  className={`w-10 h-10 text-center text-lg font-bold bg-[#1c1c1e] text-white border rounded-xl focus:outline-none transition-colors ${isActive ? 'border-zinc-500 ring-1 ring-zinc-500' : 'border-zinc-800'}`}
-                />
-              );
-            })}
+          <div className="flex gap-3 justify-center mb-4">
+            {otp.map((digit, i) => (
+              <input
+                key={i}
+                ref={(el) => { otpRefs.current[i] = el; }}
+                id={`otp-verify-${i}`}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                maxLength={1}
+                value={digit}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  // Handle SMS autofill on box 0 which may get all 6 digits at once
+                  if (i === 0 && e.target.value.replace(/\D/g, '').length >= 6) {
+                    handleOtpAutoFill(e);
+                    return;
+                  }
+                  handleOtpChange(i, e);
+                }}
+                onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                onPaste={handleOtpPaste}
+                className={`w-11 h-14 text-center text-xl font-bold bg-[#1c1c1e] text-white border rounded-2xl focus:outline-none transition-all ${
+                  digit ? 'border-zinc-400 ring-1 ring-zinc-500 scale-105' : 'border-zinc-800'
+                }`}
+              />
+            ))}
           </div>
 
           <button

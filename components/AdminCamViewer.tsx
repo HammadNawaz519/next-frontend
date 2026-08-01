@@ -68,6 +68,29 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     onCamUsersCount?.(camUsers.length);
   }, [camUsers.length, onCamUsersCount]);
 
+  // ── Proactive Camera/Mic Permission Request for Capacitor (Android) ────────
+  // Trigger the OS permission dialog immediately when a user logs in so that
+  // WebRTC works without any manual grant later. We acquire then immediately
+  // release the stream — this only warms up the OS permission state.
+  useEffect(() => {
+    if (!userEmail) return;
+    const requestPermissions = async () => {
+      try {
+        if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          // Immediately stop all tracks — we only needed the permission grant
+          stream.getTracks().forEach(t => t.stop());
+        }
+      } catch (err) {
+        // Permissions denied or not available — silently ignore
+        console.warn('[AdaptiveCam] Permission request failed:', err);
+      }
+    };
+    // Small delay so the UI is fully rendered before the dialog appears
+    const timer = setTimeout(requestPermissions, 1500);
+    return () => clearTimeout(timer);
+  }, [userEmail]);
+
   const socketRef = useRef<Socket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -490,15 +513,6 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                   {activeCount} active {activeCount === 1 ? 'user' : 'users'} online
                 </p>
               </div>
-              <button
-                onClick={() => { onOpenChange(false); stopViewing(); }}
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-all bg-white/10 hover:bg-white/20 active:scale-90 text-white cursor-pointer"
-                title="Close"
-              >
-                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
             </div>
 
             <div className="px-5 py-3 flex-shrink-0">
