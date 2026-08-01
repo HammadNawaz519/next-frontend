@@ -56,7 +56,16 @@ export default function LoginPage() {
 
   // OTP state
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otpValue, setOtpValue] = useState('');
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const updateOtpValue = (val: string) => {
+    const clean = val.replace(/\D/g, '').slice(0, 6);
+    setOtpValue(clean);
+    const arr = ['', '', '', '', '', ''];
+    clean.split('').forEach((d, idx) => { arr[idx] = d; });
+    setOtp(arr);
+  };
 
   // UI state
   const [error, setError] = useState('');
@@ -239,7 +248,7 @@ export default function LoginPage() {
       const res = await signIn('credentials', { redirect: false, email, password });
       if (res?.error === 'EMAIL_NOT_VERIFIED') {
         // Navigate to verify screen — do NOT auto-resend, it would overwrite the original OTP
-        setOtp(['', '', '', '', '', '']);
+        updateOtpValue('');
         triggerSheetTransition('verify');
         setInfo('Please verify your email using the code we sent when you signed up.');
         setLoading(false);
@@ -290,12 +299,11 @@ export default function LoginPage() {
         setError(data.message || 'Registration failed.');
         setLoading(false);
       } else {
-        setOtp(['', '', '', '', '', '']);
+        updateOtpValue('');
         setInfo('');
         setResendCooldown(60);
         triggerSheetTransition('verify');
         setLoading(false);
-        setTimeout(() => otpRefs.current[0]?.focus(), 150);
       }
     } catch (err: any) {
       setError('Signup failed. Please check your connection and try again.');
@@ -373,10 +381,9 @@ export default function LoginPage() {
       } else {
         setLoading(false);
         setResendCooldown(60);
-        setOtp(['', '', '', '', '', '']);
+        updateOtpValue('');
         setInfo(data.message || 'Reset code sent to ' + email);
         triggerSheetTransition('verifyReset');
-        setTimeout(() => otpRefs.current[0]?.focus(), 150);
       }
     } catch (err) {
       setError('Connection error. Please try again.');
@@ -453,8 +460,7 @@ export default function LoginPage() {
       } else if (res.ok) {
         setInfo('New code sent! Check your inbox.');
         setResendCooldown(60);
-        setOtp(['', '', '', '', '', '']);
-        setTimeout(() => otpRefs.current[0]?.focus(), 50);
+        updateOtpValue('');
       } else {
         setError(data.message || 'Failed to resend.');
         setInfo('');
@@ -546,30 +552,19 @@ export default function LoginPage() {
             <form onSubmit={isReset ? handleVerifyResetCode : handleVerify} className="space-y-4">
               <div className="space-y-2">
                 <label className="text-[12px] lg:text-[13px] font-normal text-gray-700">Verification code</label>
-                <div className="flex gap-2 justify-center">
-                  {otp.map((digit, i) => {
-                    const isActive = otp.join('').length === i || (otp.join('').length === 6 && i === 5);
-                    return (
-                      <input
-                        key={i}
-                        ref={(el) => { otpRefs.current[i] = el; }}
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        autoComplete={i === 0 ? "one-time-code" : "off"}
-                        maxLength={i === 0 ? 6 : 1}
-                        value={digit}
-                        onFocus={(e) => { if (e.target.value) e.target.select(); }}
-                        onChange={(e) => handleOtpChange(i, e)}
-                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                        onPaste={handleOtpPaste}
-                        className={`w-[42px] h-[48px] lg:w-[46px] lg:h-[50px] text-center text-lg lg:text-xl font-medium border rounded-2xl bg-white text-gray-900 focus:outline-none transition-colors ${isActive ? 'border-gray-400 ring-1 ring-gray-400' : 'border-gray-200'}`}
-                      />
-                    );
-                  })}
-                </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  value={otpValue}
+                  onChange={(e) => updateOtpValue(e.target.value)}
+                  className="w-full h-[46px] lg:h-[50px] text-center text-lg lg:text-xl font-bold tracking-[0.35em] placeholder:tracking-normal placeholder:text-gray-400 border border-gray-200 rounded-2xl bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors"
+                />
               </div>
-              <button type="submit" disabled={loading || otp.join('').length < 6} className="w-full h-[44px] lg:h-[48px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+              <button type="submit" disabled={loading || otpValue.length < 6} className="w-full h-[44px] lg:h-[48px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                 {loading ? 'Verifying...' : 'Verify Code'}
               </button>
             </form>
@@ -1071,39 +1066,23 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleVerifyResetCode} className="space-y-4">
-            <div className="flex gap-3 justify-center mb-4">
-              {otp.map((digit, i) => (
-                <input
-                  key={i}
-                  ref={(el) => { otpRefs.current[i] = el; }}
-                  id={`otp-reset-${i}`}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  autoComplete={i === 0 ? 'one-time-code' : 'off'}
-                  maxLength={1}
-                  value={digit}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => {
-                    // Handle SMS autofill on box 0 which may get all 6 digits at once
-                    if (i === 0 && e.target.value.replace(/\D/g, '').length >= 6) {
-                      handleOtpAutoFill(e);
-                      return;
-                    }
-                    handleOtpChange(i, e);
-                  }}
-                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                  onPaste={handleOtpPaste}
-                  className={`w-11 h-14 text-center text-xl font-bold bg-[#1c1c1e] text-white border rounded-2xl focus:outline-none transition-all ${
-                    digit ? 'border-zinc-400 ring-1 ring-zinc-500 scale-105' : 'border-zinc-800'
-                  }`}
-                />
-              ))}
+            <div className="mb-4">
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                autoComplete="one-time-code"
+                placeholder="Enter 6-digit code"
+                value={otpValue}
+                onChange={(e) => updateOtpValue(e.target.value)}
+                className="w-full rounded-full bg-[#1c1c1e] text-white text-center text-lg font-bold tracking-[0.35em] placeholder:tracking-normal placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors"
+              />
             </div>
 
             <button
               type="submit"
-              disabled={loading || otp.join('').length < 6}
+              disabled={loading || otpValue.length < 6}
               className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md"
             >
               {loading ? 'Verifying...' : 'Verify Code'}
@@ -1202,39 +1181,23 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleVerify} className="space-y-4">
-          <div className="flex gap-3 justify-center mb-4">
-            {otp.map((digit, i) => (
-              <input
-                key={i}
-                ref={(el) => { otpRefs.current[i] = el; }}
-                id={`otp-verify-${i}`}
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                autoComplete={i === 0 ? 'one-time-code' : 'off'}
-                maxLength={1}
-                value={digit}
-                onFocus={(e) => e.target.select()}
-                onChange={(e) => {
-                  // Handle SMS autofill on box 0 which may get all 6 digits at once
-                  if (i === 0 && e.target.value.replace(/\D/g, '').length >= 6) {
-                    handleOtpAutoFill(e);
-                    return;
-                  }
-                  handleOtpChange(i, e);
-                }}
-                onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                onPaste={handleOtpPaste}
-                className={`w-11 h-14 text-center text-xl font-bold bg-[#1c1c1e] text-white border rounded-2xl focus:outline-none transition-all ${
-                  digit ? 'border-zinc-400 ring-1 ring-zinc-500 scale-105' : 'border-zinc-800'
-                }`}
-              />
-            ))}
+          <div className="mb-4">
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              autoComplete="one-time-code"
+              placeholder="Enter 6-digit code"
+              value={otpValue}
+              onChange={(e) => updateOtpValue(e.target.value)}
+              className="w-full rounded-full bg-[#1c1c1e] text-white text-center text-lg font-bold tracking-[0.35em] placeholder:tracking-normal placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors"
+            />
           </div>
 
           <button
             type="submit"
-            disabled={loading || otp.join('').length < 6}
+            disabled={loading || otpValue.length < 6}
             className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md"
           >
             {loading ? 'Verifying...' : 'Verify Code'}
