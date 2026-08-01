@@ -513,6 +513,15 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                   {activeCount} active {activeCount === 1 ? 'user' : 'users'} online
                 </p>
               </div>
+              <button
+                onClick={() => { onOpenChange(false); stopViewing(); }}
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all bg-white/10 hover:bg-white/20 active:scale-90 text-white cursor-pointer"
+                title="Close Cam Monitor"
+              >
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
             <div className="px-5 py-3 flex-shrink-0">
