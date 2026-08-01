@@ -3,10 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { MoreVertical, Trash2, Plus, UserPlus, LogIn, Lock, Eye, EyeOff, X, ArrowLeft, ChevronRight } from 'lucide-react';
+import { MoreVertical, Trash2, UserPlus, LogIn, Lock, Eye, EyeOff, X, ArrowLeft, ChevronRight } from 'lucide-react';
 import { GrainGradient } from '@paper-design/shaders-react';
 import { useTheme } from '@/app/components/ThemeProvider';
-import ThemeToggle from '@/components/ThemeToggle';
 
 interface SavedAccount {
   email: string;
@@ -23,7 +22,7 @@ export default function AccountsPage() {
   
   const [mounted, setMounted] = useState(false);
   const [accounts, setAccounts] = useState<SavedAccount[]>([]);
-  const [removeMode, setRemoveMode] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'remove'>('list');
   const [showDropdown, setShowDropdown] = useState(false);
   
   // Password modal state
@@ -35,7 +34,7 @@ export default function AccountsPage() {
   
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Hydration safety and loading from localStorage
+  // Hydration safety and loading from device-local storage
   useEffect(() => {
     setMounted(true);
     try {
@@ -43,7 +42,13 @@ export default function AccountsPage() {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          setAccounts(parsed);
+          // Filter out any locally removed emails
+          const removedStr = localStorage.getItem('removed_accounts');
+          const removedList: string[] = removedStr ? JSON.parse(removedStr) : [];
+          const cleanAccounts = parsed.filter(
+            (acc: SavedAccount) => acc?.email && !removedList.includes(acc.email.toLowerCase().trim())
+          );
+          setAccounts(cleanAccounts);
         }
       }
     } catch (e) {
@@ -74,27 +79,38 @@ export default function AccountsPage() {
     );
   }
 
+  // Remove account permanently from device cache/memory
   const handleRemoveAccount = (email: string) => {
     try {
-      const updated = accounts.filter(acc => acc.email !== email);
+      const targetEmail = email.toLowerCase().trim();
+      const updated = accounts.filter(acc => acc.email.toLowerCase().trim() !== targetEmail);
       setAccounts(updated);
-      localStorage.setItem('connected_accounts', JSON.stringify(updated));
-      
-      // If we ran out of accounts, exit remove mode
+
+      if (updated.length > 0) {
+        localStorage.setItem('connected_accounts', JSON.stringify(updated));
+      } else {
+        localStorage.removeItem('connected_accounts');
+      }
+
+      // Add to device removed_accounts blacklist so it never reappears on refresh
+      const removedStr = localStorage.getItem('removed_accounts');
+      let removedList: string[] = removedStr ? JSON.parse(removedStr) : [];
+      if (!Array.isArray(removedList)) removedList = [];
+      if (!removedList.includes(targetEmail)) {
+        removedList.push(targetEmail);
+        localStorage.setItem('removed_accounts', JSON.stringify(removedList));
+      }
+
+      // If no accounts remain, exit remove view
       if (updated.length === 0) {
-        setRemoveMode(false);
+        setViewMode('list');
       }
     } catch (e) {
-      console.error(e);
+      console.error('Failed to remove account:', e);
     }
   };
 
   const handleAccountClick = async (acc: SavedAccount) => {
-    if (removeMode) {
-      handleRemoveAccount(acc.email);
-      return;
-    }
-    
     if (acc.provider === 'google') {
       setLoading(true);
       setError('');
@@ -183,200 +199,260 @@ export default function AccountsPage() {
 
   const renderAccountCenterContent = () => {
     return (
-      <div className="w-full h-full flex flex-col p-8 md:p-10 justify-between relative overflow-hidden">
-        <div className="flex items-center justify-between mb-6 relative z-10">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className={`text-xl font-semibold tracking-tight ${isDark ? 'text-white' : 'text-gray-950'}`}>Account Center</h1>
+      <div className="w-full h-full flex flex-col p-6 md:p-10 justify-between relative overflow-hidden">
+        
+        {/* ── HEADER ── */}
+        <div className="flex items-center justify-between mb-6 relative z-20">
+          {viewMode === 'remove' ? (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
+                  isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white' : 'bg-gray-100 border-gray-200 text-gray-700 hover:text-gray-950'
+                }`}
+                title="Back to Account Center"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div>
+                <h1 className={`text-xl font-semibold tracking-tight ${isDark ? 'text-white' : 'text-gray-950'}`}>Remove Accounts</h1>
+                <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>Remove saved logins from this device</p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className={`text-xl font-semibold tracking-tight ${isDark ? 'text-white' : 'text-gray-950'}`}>Account Center</h1>
+                <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>Manage saved accounts on this device</p>
+              </div>
+            </div>
+          )}
 
-          <div className="flex items-center gap-3">
-            
-            {accounts.length > 0 && (
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setShowDropdown(!showDropdown)}
-                  className={`w-9 h-9 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${
+          {/* 3-Dots Dropdown Menu (Top Right) */}
+          {viewMode === 'list' && accounts.length > 0 && (
+            <div className="relative z-[100]" ref={dropdownRef}>
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
+                  isDark 
+                    ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300' 
+                    : 'bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-700'
+                }`}
+                title="Options"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {/* High Z-Index Smooth Animated Dropdown Panel */}
+              {showDropdown && (
+                <div 
+                  className={`absolute right-0 mt-2 w-52 border rounded-2xl p-1.5 shadow-2xl z-[100] transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200 ${
                     isDark 
-                      ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-850' 
-                      : 'bg-gray-100 border-gray-200 hover:bg-gray-150'
+                      ? 'bg-[#16161a]/95 border-zinc-800 text-white backdrop-blur-xl' 
+                      : 'bg-white/95 border-gray-200 text-gray-900 backdrop-blur-xl shadow-xl'
                   }`}
                 >
-                  <MoreVertical className={`w-5 h-5 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`} />
-                </button>
-
-                {showDropdown && (
-                  <div className={`absolute right-0 mt-2 w-48 border rounded-2xl py-2 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200 ${
-                    isDark ? 'bg-[#121214] border-zinc-800' : 'bg-white border-gray-200'
-                  }`}>
-                    <button
-                      onClick={() => {
-                        setRemoveMode(!removeMode);
-                        setShowDropdown(false);
-                      }}
-                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2 cursor-pointer ${
-                        isDark 
-                          ? 'hover:bg-zinc-900 text-zinc-200 hover:text-white' 
-                          : 'hover:bg-gray-100 text-gray-750 hover:text-gray-950'
-                      }`}
-                    >
-                      <Trash2 className="w-4 h-4 text-red-400" />
-                      {removeMode ? 'Exit Remove Mode' : 'Remove an account'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+                  <p className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
+                    Account Options
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowDropdown(false);
+                      setViewMode('remove');
+                    }}
+                    className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-2.5 cursor-pointer ${
+                      isDark 
+                        ? 'hover:bg-red-500/15 text-red-400 hover:text-red-300' 
+                        : 'hover:bg-red-50 text-red-600'
+                    }`}
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                    Remove an account
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Remove mode active banner */}
-        {removeMode && (
-          <div className={`flex items-center justify-between border rounded-2xl px-4 py-2.5 mb-4 animate-in slide-in-from-top duration-300 z-10 ${
-            isDark 
-              ? 'bg-red-950/20 border-red-900/30' 
-              : 'bg-red-50 border-red-200'
-          }`}>
-            <span className="text-xs text-red-400 font-medium">Remove Mode Active</span>
+        {/* ── VIEW 1: NORMAL SAVED ACCOUNTS LIST ── */}
+        {viewMode === 'list' && (
+          <>
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 mb-6 relative z-10 min-h-[180px] flex flex-col justify-start">
+              {accounts.length === 0 ? (
+                <div className="text-center py-10 my-auto">
+                  <div className={`w-14 h-14 rounded-full border flex items-center justify-center mx-auto mb-4 ${
+                    isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-100 border-gray-200'
+                  }`}>
+                    <Lock className={`w-6 h-6 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`} />
+                  </div>
+                  <p className={`text-sm font-semibold ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>No saved accounts on this device</p>
+                  <p className={`text-xs mt-1 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>Sign in below to save your profile to Account Center</p>
+                </div>
+              ) : (
+                accounts.map((acc) => {
+                  const accountName = acc.name || acc.username || acc.email.split('@')[0];
+                  const rawUsername = acc.username || acc.email.split('@')[0];
+                  const displayUsername = rawUsername.startsWith('@') ? rawUsername : `@${rawUsername}`;
+
+                  return (
+                    <div
+                      key={acc.email}
+                      onClick={() => handleAccountClick(acc)}
+                      className={`group flex items-center justify-between p-4 rounded-2xl border backdrop-blur-xl transition-all duration-300 ${
+                        isDark
+                          ? 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 cursor-pointer active:scale-[0.98]'
+                          : 'border-black/5 bg-white/70 hover:bg-white hover:border-black/10 shadow-sm cursor-pointer active:scale-[0.98]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        {acc.image ? (
+                          <img
+                            src={acc.image}
+                            alt={accountName}
+                            className={`w-11 h-11 rounded-full border object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${
+                              isDark ? 'border-zinc-800' : 'border-gray-200'
+                            }`}
+                          />
+                        ) : (
+                          <div className={`w-11 h-11 rounded-full border flex items-center justify-center font-bold text-sm flex-shrink-0 uppercase transition-transform duration-300 group-hover:scale-105 ${
+                            isDark 
+                              ? 'bg-zinc-800 border-zinc-700 text-zinc-300' 
+                              : 'bg-gray-100 border-gray-200 text-gray-700'
+                          }`}>
+                            {getInitials(acc)}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className={`text-sm font-semibold truncate transition-colors ${
+                            isDark ? 'text-zinc-200 group-hover:text-white' : 'text-gray-900 group-hover:text-gray-950'
+                          }`}>
+                            {accountName}
+                          </p>
+                          <p className={`text-xs truncate mt-0.5 font-medium ${
+                            isDark ? 'text-zinc-500' : 'text-gray-500'
+                          }`}>{displayUsername}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0 pl-2">
+                        <ChevronRight className={`w-4 h-4 transition-colors ${isDark ? 'text-zinc-600 group-hover:text-zinc-400' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Bottom Actions */}
+            <div className={`space-y-3 pt-4 border-t z-10 ${isDark ? 'border-zinc-900' : 'border-gray-200'}`}>
+              <button
+                onClick={() => router.push('/?sheet=signUp')}
+                className={`w-full flex items-center justify-center gap-2 transition-all active:scale-98 rounded-full py-3.5 font-semibold text-sm shadow-md cursor-pointer ${
+                  isDark 
+                    ? 'bg-white text-black hover:bg-zinc-200' 
+                    : 'bg-zinc-900 text-white hover:bg-zinc-800'
+                }`}
+              >
+                <UserPlus className="w-4 h-4" />
+                Create an Account
+              </button>
+              
+              <button
+                onClick={() => router.push('/?sheet=signIn')}
+                className={`w-full flex items-center justify-center gap-2 border rounded-full py-3.5 font-semibold text-sm transition-all active:scale-98 cursor-pointer ${
+                  isDark 
+                    ? 'bg-zinc-950 hover:bg-zinc-900 text-zinc-300 hover:text-white border-zinc-800' 
+                    : 'bg-white hover:bg-gray-50 text-gray-750 hover:text-gray-950 border-gray-200'
+                }`}
+              >
+                <LogIn className="w-4 h-4" />
+                Sign In to Existing Account
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── VIEW 2: DEDICATED REMOVE ACCOUNTS VIEW PAGE ── */}
+        {viewMode === 'remove' && (
+          <div className="flex-1 flex flex-col justify-between relative z-10 animate-in fade-in slide-in-from-right-4 duration-250">
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 mb-6">
+              {accounts.length === 0 ? (
+                <div className="text-center py-10 my-auto">
+                  <p className={`text-sm font-semibold ${isDark ? 'text-zinc-400' : 'text-gray-600'}`}>All accounts removed</p>
+                </div>
+              ) : (
+                accounts.map((acc) => {
+                  const accountName = acc.name || acc.username || acc.email.split('@')[0];
+                  const rawUsername = acc.username || acc.email.split('@')[0];
+                  const displayUsername = rawUsername.startsWith('@') ? rawUsername : `@${rawUsername}`;
+
+                  return (
+                    <div
+                      key={acc.email}
+                      className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                        isDark 
+                          ? 'border-zinc-800/80 bg-zinc-900/40' 
+                          : 'border-gray-200 bg-white shadow-sm'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        {acc.image ? (
+                          <img
+                            src={acc.image}
+                            alt={accountName}
+                            className={`w-11 h-11 rounded-full border object-cover flex-shrink-0 ${
+                              isDark ? 'border-zinc-800' : 'border-gray-200'
+                            }`}
+                          />
+                        ) : (
+                          <div className={`w-11 h-11 rounded-full border flex items-center justify-center font-bold text-sm flex-shrink-0 uppercase ${
+                            isDark 
+                              ? 'bg-zinc-800 border-zinc-700 text-zinc-300' 
+                              : 'bg-gray-100 border-gray-200 text-gray-700'
+                          }`}>
+                            {getInitials(acc)}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className={`text-sm font-semibold truncate ${
+                            isDark ? 'text-zinc-200' : 'text-gray-900'
+                          }`}>
+                            {accountName}
+                          </p>
+                          <p className={`text-xs truncate mt-0.5 font-medium ${
+                            isDark ? 'text-zinc-500' : 'text-gray-500'
+                          }`}>{displayUsername}</p>
+                        </div>
+                      </div>
+
+                      {/* Right "Remove" button */}
+                      <button
+                        onClick={() => handleRemoveAccount(acc.email)}
+                        className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+                        title="Remove from device"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
             <button
-              onClick={() => setRemoveMode(false)}
-              className="text-xs text-zinc-400 hover:text-zinc-650 dark:hover:text-white transition-colors cursor-pointer"
+              onClick={() => setViewMode('list')}
+              className={`w-full py-3.5 rounded-full text-sm font-semibold border transition-all active:scale-98 cursor-pointer ${
+                isDark 
+                  ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white' 
+                  : 'bg-gray-100 border-gray-200 text-gray-700 hover:text-gray-950'
+              }`}
             >
               Done
             </button>
           </div>
         )}
-
-        {/* Saved Accounts List */}
-        <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 mb-4 relative z-10 min-h-[160px] flex flex-col justify-start">
-          {accounts.length === 0 ? (
-            <div className="text-center py-8 my-auto">
-              <div className={`w-12 h-12 rounded-full border flex items-center justify-center mx-auto mb-4 ${
-                isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-100 border-gray-200'
-              }`}>
-                <Lock className={`w-5 h-5 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`} />
-              </div>
-              <p className={`text-sm font-medium ${isDark ? 'text-zinc-400' : 'text-gray-600'}`}>No saved accounts found</p>
-              <p className={`text-xs mt-1 ${isDark ? 'text-zinc-600' : 'text-gray-400'}`}>Sign in below to save your credentials</p>
-            </div>
-          ) : (
-            accounts.map((acc) => {
-              const accountName = acc.name || acc.username || acc.email.split('@')[0];
-              const rawUsername = acc.username || acc.email.split('@')[0];
-              const displayUsername = rawUsername.startsWith('@') ? rawUsername : `@${rawUsername}`;
-
-              return (
-                <div
-                  key={acc.email}
-                  onClick={() => handleAccountClick(acc)}
-                  className={`group flex items-center justify-between p-4 rounded-2xl border backdrop-blur-xl transition-all duration-300 ${
-                    removeMode
-                      ? isDark 
-                        ? 'border-red-500/30 bg-red-900/10 cursor-default' 
-                        : 'border-red-300 bg-red-50/60 cursor-default'
-                      : isDark
-                        ? 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 cursor-pointer active:scale-[0.98]'
-                        : 'border-black/5 bg-white/60 hover:bg-white/80 hover:border-black/10 shadow-sm cursor-pointer active:scale-[0.98]'
-                  }`}
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    {acc.image ? (
-                      <img
-                        src={acc.image}
-                        alt={accountName}
-                        className={`w-11 h-11 rounded-full border object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${
-                          isDark ? 'border-zinc-800' : 'border-gray-200'
-                        }`}
-                      />
-                    ) : (
-                      <div className={`w-11 h-11 rounded-full border flex items-center justify-center font-bold text-sm flex-shrink-0 uppercase transition-transform duration-300 group-hover:scale-105 ${
-                        isDark 
-                          ? 'bg-zinc-800 border-zinc-700 text-zinc-300' 
-                          : 'bg-gray-100 border-gray-200 text-gray-700'
-                      }`}>
-                        {getInitials(acc)}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className={`text-sm font-semibold truncate transition-colors ${
-                        isDark ? 'text-zinc-200 group-hover:text-white' : 'text-gray-900 group-hover:text-gray-950'
-                      }`}>
-                        {accountName}
-                      </p>
-                      <p className={`text-xs truncate mt-0.5 font-medium ${
-                        isDark ? 'text-zinc-500' : 'text-gray-500'
-                      }`}>{displayUsername}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-shrink-0 pl-2">
-                    {removeMode ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveAccount(acc.email);
-                        }}
-                        className="p-2 bg-red-500/10 hover:bg-red-500/25 border border-red-500/20 text-red-400 hover:text-red-300 rounded-xl transition-all active:scale-95 cursor-pointer"
-                        title="Remove from Account Center"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <ChevronRight className={`w-4 h-4 transition-colors ${isDark ? 'text-zinc-600 group-hover:text-zinc-400' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Remove Account Action Button (placed below accounts list) */}
-        {accounts.length > 0 && (
-          <div className="mb-4 z-10">
-            <button
-              onClick={() => setRemoveMode(!removeMode)}
-              className={`w-full flex items-center justify-center gap-2 border rounded-xl py-2.5 px-4 text-xs font-semibold transition-all active:scale-98 cursor-pointer ${
-                removeMode
-                  ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
-                  : isDark
-                    ? 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
-                    : 'bg-gray-100 border-gray-200 text-gray-600 hover:text-gray-950 hover:bg-gray-200'
-              }`}
-            >
-              <Trash2 className="w-3.5 h-3.5 text-red-400" />
-              {removeMode ? 'Done Removing Accounts' : 'Remove an Account'}
-            </button>
-          </div>
-        )}
-
-        {/* Bottom Options */}
-        <div className={`space-y-3 pt-4 border-t z-10 ${isDark ? 'border-zinc-900' : 'border-gray-200'}`}>
-          <button
-            onClick={() => router.push('/?sheet=signUp')}
-            className={`w-full flex items-center justify-center gap-2 transition-all active:scale-98 rounded-full py-3 font-semibold text-sm shadow-md cursor-pointer ${
-              isDark 
-                ? 'bg-white text-black hover:bg-zinc-200' 
-                : 'bg-zinc-900 text-white hover:bg-zinc-800'
-            }`}
-          >
-            <UserPlus className="w-4 h-4" />
-            Create an Account
-          </button>
-          
-          <button
-            onClick={() => router.push('/?sheet=signIn')}
-            className={`w-full flex items-center justify-center gap-2 border rounded-full py-3 font-semibold text-sm transition-all active:scale-98 cursor-pointer ${
-              isDark 
-                ? 'bg-zinc-950 hover:bg-zinc-900 text-zinc-300 hover:text-white border-zinc-800' 
-                : 'bg-white hover:bg-gray-50 text-gray-750 hover:text-gray-950 border-gray-200'
-            }`}
-          >
-            <LogIn className="w-4 h-4" />
-            Sign In to Existing Account
-          </button>
-        </div>
       </div>
     );
   };
@@ -415,13 +491,11 @@ export default function AccountsPage() {
       {/* ── PASSWORD DIALOG MODAL ── */}
       {selectedAccount && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300">
-          {/* Backdrop overlay listener to close */}
           <div className="absolute inset-0" onClick={() => !loading && setSelectedAccount(null)} />
           
           <div className={`relative w-full max-w-md border-t sm:border rounded-t-[2.5rem] sm:rounded-[2rem] p-8 pb-12 sm:pb-8 shadow-2xl z-10 transform animate-in slide-in-from-bottom sm:zoom-in-95 duration-300 ${
             isDark ? 'bg-[#121214] border-zinc-800/80' : 'bg-white border-gray-200'
           }`}>
-            {/* Grab Bar for mobile feel */}
             <div className={`w-12 h-1 rounded-full mx-auto mb-6 sm:hidden ${isDark ? 'bg-zinc-800' : 'bg-gray-200'}`} />
             
             <button

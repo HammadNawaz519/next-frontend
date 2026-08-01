@@ -117,23 +117,35 @@ export default function ProfilePanel({
   useEffect(() => {
     if (typeof window !== 'undefined' && (fullUser || session?.user)) {
       const curUsername = fullUser?.username || session?.user?.username || (fullUser?.email || session?.user?.email || '').split('@')[0] || 'user';
-      const curEmail = fullUser?.email || session?.user?.email || '';
+      const curEmail = (fullUser?.email || session?.user?.email || '').toLowerCase().trim();
       const curImage = fullUser?.image || session?.user?.image || '';
       const curName = fullUser?.name || session?.user?.name || 'User';
       const curProvider = session?.user?.provider || 'credentials';
 
       try {
+        const removedStr = localStorage.getItem('removed_accounts');
+        let removedList: string[] = removedStr ? JSON.parse(removedStr) : [];
+        if (!Array.isArray(removedList)) removedList = [];
+
         const stored = localStorage.getItem('connected_accounts');
         let list = stored ? JSON.parse(stored) : [];
         if (!Array.isArray(list)) list = [];
         
-        const idx = list.findIndex((acc: any) => acc.email === curEmail);
+        // Filter out any blacklisted removed emails
+        list = list.filter((a: any) => a?.email && !removedList.includes(a.email.toLowerCase().trim()));
+
+        const idx = list.findIndex((acc: any) => acc.email.toLowerCase().trim() === curEmail);
         const accInfo = { username: curUsername, email: curEmail, image: curImage, name: curName, provider: curProvider };
-        if (idx === -1) {
-          if (curEmail) list.push(accInfo);
-        } else {
-          list[idx] = { ...list[idx], ...accInfo };
+
+        // Only add if not blacklisted as removed
+        if (!removedList.includes(curEmail)) {
+          if (idx === -1) {
+            if (curEmail) list.push(accInfo);
+          } else {
+            list[idx] = { ...list[idx], ...accInfo };
+          }
         }
+
         localStorage.setItem('connected_accounts', JSON.stringify(list));
         setSavedAccounts(list);
       } catch (e) {
