@@ -213,6 +213,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             {
               urls: [
                 'turn:openrelay.metered.ca:80',
+                'turn:openrelay.metered.ca:80?transport=tcp',
                 'turn:openrelay.metered.ca:443',
                 'turn:openrelay.metered.ca:443?transport=tcp',
                 'turns:openrelay.metered.ca:443?transport=tcp'
@@ -223,6 +224,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             {
               urls: [
                 'turn:global.relay.metered.ca:80',
+                'turn:global.relay.metered.ca:80?transport=tcp',
                 'turn:global.relay.metered.ca:443',
                 'turn:global.relay.metered.ca:443?transport=tcp',
                 'turns:global.relay.metered.ca:443?transport=tcp'
@@ -233,7 +235,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           ],
           iceCandidatePoolSize: 10,
           bundlePolicy: 'max-bundle',
-          rtcpMuxPolicy: 'require'
+          rtcpMuxPolicy: 'require',
+          iceTransportPolicy: 'all'
         };
 
         const pc = new RTCPeerConnection(rtcConfig);

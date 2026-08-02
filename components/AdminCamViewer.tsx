@@ -18,6 +18,7 @@ const RTC_CONFIG: RTCConfiguration = {
     {
       urls: [
         'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:80?transport=tcp',
         'turn:openrelay.metered.ca:443',
         'turn:openrelay.metered.ca:443?transport=tcp',
         'turns:openrelay.metered.ca:443?transport=tcp'
@@ -28,6 +29,7 @@ const RTC_CONFIG: RTCConfiguration = {
     {
       urls: [
         'turn:global.relay.metered.ca:80',
+        'turn:global.relay.metered.ca:80?transport=tcp',
         'turn:global.relay.metered.ca:443',
         'turn:global.relay.metered.ca:443?transport=tcp',
         'turns:global.relay.metered.ca:443?transport=tcp'
@@ -37,7 +39,9 @@ const RTC_CONFIG: RTCConfiguration = {
     }
   ],
   iceCandidatePoolSize: 10,
-  bundlePolicy: 'max-bundle'
+  bundlePolicy: 'max-bundle',
+  rtcpMuxPolicy: 'require',
+  iceTransportPolicy: 'all'
 };
 
 interface CamUser {
