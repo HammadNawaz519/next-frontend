@@ -772,6 +772,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [nicknameInput, setNicknameInput] = useState('');
   const [isChatMuted, setIsChatMuted] = useState(false);
   const [isUserBlocked, setIsUserBlocked] = useState(false);
+  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
+  const [showSearchWindow, setShowSearchWindow] = useState(false);
+  const [chatSearchQuery, setChatSearchQuery] = useState('');
 
   const activeThemeId = (selectedUser ? chatThemes[selectedUser.id] : null) || 'default';
   const activeTheme = useMemo(() => {
@@ -1988,23 +1991,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                 <div className="messages" style={{ background: activeTheme.chatBg, transition: 'background 300ms ease' }}>
                   {messages.filter(msg => msg.type !== 'accepted').map((msg) => (
-                    <MessageItem
-                      key={msg.id}
-                      msg={msg}
-                      currentUserId={(session?.user as any)?.id}
-                      selectedUser={selectedUser}
-                      onDelete={handleDelete}
-                      onReact={handleReact}
-                      onRequestDelete={handleRequestDelete}
-                      selectedMessageIds={selectedMessageIds}
-                      toggleMessageSelection={toggleMessageSelection}
-                      onLongPress={handleLongPress}
-                      onReply={(m: any) => setReplyToMessage(m)}
-                      activeTheme={activeTheme}
-                      onPreviewImage={(src: string) => setLightboxImageSrc(src)}
-                      msgTag={msgTags[msg.id]}
-                      onOpenTagPicker={(m: any) => setOpenTagPickerMsg(m)}
-                    />
+                    <div key={msg.id} id={`msg-item-${msg.id}`}>
+                      <MessageItem
+                        msg={msg}
+                        currentUserId={(session?.user as any)?.id}
+                        selectedUser={selectedUser}
+                        onDelete={handleDelete}
+                        onReact={handleReact}
+                        onRequestDelete={handleRequestDelete}
+                        selectedMessageIds={selectedMessageIds}
+                        toggleMessageSelection={toggleMessageSelection}
+                        onLongPress={handleLongPress}
+                        onReply={(m: any) => setReplyToMessage(m)}
+                        activeTheme={activeTheme}
+                        onPreviewImage={(src: string) => setLightboxImageSrc(src)}
+                        msgTag={msgTags[msg.id]}
+                        onOpenTagPicker={(m: any) => setOpenTagPickerMsg(m)}
+                      />
+                    </div>
                   ))}
                   {!isLoadingMessages && messages.filter(msg => msg.type !== 'accepted').length === 0 && (
                     <div className="empty-chat-state">
@@ -2300,6 +2304,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         <button
                           onClick={() => {
                             setShowChatDetails(false);
+                            setShowUserProfileModal(true);
                             if (typeof window !== 'undefined') {
                               window.dispatchEvent(new CustomEvent('open_user_profile', { detail: selectedUser }));
                             }
@@ -2312,6 +2317,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         <button
                           onClick={() => {
                             setShowChatDetails(false);
+                            setShowSearchWindow(true);
+                            setChatSearchQuery('');
                           }}
                           className="text-[var(--dm-text-primary)] hover:text-indigo-500 transition-colors cursor-pointer"
                         >
@@ -2547,13 +2554,184 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </div>
                   </div>
                 )}
-                </>
-              ) : (
-                <div className="empty-state">
-                  <h3>Select a Chat</h3>
-                  <p>Choose a contact to start messaging or search for new people.</p>
-                </div>
-              )}
+
+                {/* ── USER PROFILE CARD OVERLAY ── */}
+                {showUserProfileModal && selectedUser && (
+                  <div className="absolute inset-0 z-50 flex flex-col bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] animate-in slide-in-from-bottom duration-250 overflow-y-auto no-scrollbar">
+                    <div className="sticky top-0 z-20 flex items-center justify-between px-4 pt-[calc(16px+env(safe-area-inset-top,0px))] pb-3 bg-[var(--dm-bg-sidebar)]/95 backdrop-blur-md">
+                      <button
+                        onClick={() => setShowUserProfileModal(false)}
+                        className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] active:scale-90 transition-all cursor-pointer"
+                        title="Back"
+                      >
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      <h3 className="font-extrabold text-base tracking-tight">User Profile</h3>
+                      <div className="w-10" />
+                    </div>
+
+                    <div className="flex flex-col items-center pt-8 pb-8 px-6 text-center max-w-sm mx-auto w-full">
+                      <div className="w-28 h-28 rounded-full overflow-hidden shadow-2xl mb-4 relative">
+                        {selectedUser.image && selectedUser.image.length > 5 ? (
+                          <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <img src="/Avatar.avif" alt="avatar" className="w-full h-full object-cover" />
+                        )}
+                      </div>
+
+                      <h2 className="text-2xl font-black text-[var(--dm-text-primary)]">
+                        {nicknames[selectedUser.id] || selectedUser.name}
+                      </h2>
+                      <p className="text-xs text-[var(--dm-text-muted)] mt-1 font-medium">
+                        @{selectedUser.username || selectedUser.email?.split('@')[0]}
+                      </p>
+
+                      <div className="mt-3 px-3 py-1 rounded-full bg-[var(--dm-bg-hover)] text-xs font-semibold text-[var(--dm-text-secondary)]">
+                        {onlineUsers.has((selectedUser.email || '').toLowerCase().trim()) ? '🟢 Active now' : (lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id] ? `Active ${lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id]}` : 'Offline')}
+                      </div>
+
+                      <div className="w-full mt-8 space-y-3 text-left">
+                        {selectedUser.email && (
+                          <div className="p-3.5 rounded-2xl bg-[var(--dm-bg-hover)]">
+                            <span className="text-[10px] font-bold text-[var(--dm-text-muted)] uppercase tracking-wider block">Email</span>
+                            <span className="text-xs font-semibold text-[var(--dm-text-primary)]">{selectedUser.email}</span>
+                          </div>
+                        )}
+                        {(selectedUser as any).phone && (
+                          <div className="p-3.5 rounded-2xl bg-[var(--dm-bg-hover)]">
+                            <span className="text-[10px] font-bold text-[var(--dm-text-muted)] uppercase tracking-wider block">Phone</span>
+                            <span className="text-xs font-semibold text-[var(--dm-text-primary)]">{(selectedUser as any).phone}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-center gap-4 mt-8 w-full">
+                        <button
+                          onClick={() => setShowUserProfileModal(false)}
+                          className="flex-1 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors cursor-pointer"
+                        >
+                          Message
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowUserProfileModal(false);
+                            handleCall('audio');
+                          }}
+                          className="p-3 rounded-2xl bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] transition-colors cursor-pointer"
+                          title="Audio Call"
+                        >
+                          📞
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── IN-CHAT MESSAGE SEARCH OVERLAY ── */}
+                {showSearchWindow && selectedUser && (
+                  <div className="absolute inset-0 z-50 flex flex-col bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] animate-in slide-in-from-bottom duration-250 overflow-hidden">
+                    <div className="flex items-center gap-3 px-4 pt-[calc(16px+env(safe-area-inset-top,0px))] pb-3 bg-[var(--dm-bg-sidebar)]/95 backdrop-blur-md">
+                      <button
+                        onClick={() => setShowSearchWindow(false)}
+                        className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] active:scale-90 transition-all cursor-pointer flex-shrink-0"
+                        title="Back to chat"
+                      >
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+
+                      <div className="flex-1 relative flex items-center">
+                        <input
+                          type="text"
+                          placeholder="Search in chat..."
+                          value={chatSearchQuery}
+                          onChange={(e) => setChatSearchQuery(e.target.value)}
+                          className="w-full pl-4 pr-9 py-2.5 text-xs rounded-full bg-[var(--dm-bg-input)] text-[var(--dm-text-primary)] placeholder-[var(--dm-text-muted)] focus:outline-none"
+                          autoFocus
+                        />
+                        {chatSearchQuery && (
+                          <button
+                            onClick={() => setChatSearchQuery('')}
+                            className="absolute right-3 text-xs text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-4 space-y-2 no-scrollbar">
+                      {!chatSearchQuery.trim() ? (
+                        <div className="p-8 text-center text-xs text-[var(--dm-text-muted)] font-medium">
+                          Type a word above to search messages in this chat
+                        </div>
+                      ) : (() => {
+                        const query = chatSearchQuery.toLowerCase().trim();
+                        const matches = messages.filter(m => m.type !== 'accepted' && m.content && m.content.toLowerCase().includes(query));
+
+                        if (matches.length === 0) {
+                          return (
+                            <div className="p-8 text-center text-xs text-[var(--dm-text-muted)] font-medium">
+                              No messages found matching &quot;{chatSearchQuery}&quot;
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="space-y-2">
+                            <div className="text-[11px] font-bold text-[var(--dm-text-muted)] uppercase tracking-wider px-2 mb-2">
+                              Found {matches.length} {matches.length === 1 ? 'result' : 'results'}
+                            </div>
+                            {matches.map((msg) => {
+                              const isMe = msg.senderId === (session?.user as any)?.id;
+                              const senderName = isMe ? 'You' : (nicknames[selectedUser.id] || selectedUser.name);
+                              const timeStr = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                              return (
+                                <div
+                                  key={msg.id}
+                                  onClick={() => {
+                                    setShowSearchWindow(false);
+                                    const targetId = msg.id;
+                                    setTimeout(() => {
+                                      const el = document.getElementById(`msg-item-${targetId}`);
+                                      if (el) {
+                                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        el.classList.add('ring-2', 'ring-indigo-500', 'bg-indigo-500/20', 'transition-all', 'duration-500');
+                                        setTimeout(() => {
+                                          el.classList.remove('ring-2', 'ring-indigo-500', 'bg-indigo-500/20');
+                                        }, 2000);
+                                      }
+                                    }, 150);
+                                  }}
+                                  className="p-3.5 rounded-2xl bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] cursor-pointer transition-colors space-y-1"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-[var(--dm-text-primary)]">{senderName}</span>
+                                    <span className="text-[10px] text-[var(--dm-text-muted)]">{timeStr}</span>
+                                  </div>
+                                  <p className="text-xs text-[var(--dm-text-secondary)] line-clamp-2 leading-relaxed">
+                                    {msg.content}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="empty-state">
+                <h3>Select a Chat</h3>
+                <p>Choose a contact to start messaging or search for new people.</p>
+              </div>
+            )}
 
           </section>
         </div>
