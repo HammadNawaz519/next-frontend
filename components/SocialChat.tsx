@@ -75,19 +75,37 @@ export const INSTAGRAM_THEMES: ChatTheme[] = [
   { id: 'lavender', name: 'Lavender', outgoingGradient: 'linear-gradient(135deg, #c084fc 0%, #9333ea 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(192, 132, 252, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top right, rgba(192,132,252,0.15) 0%, rgba(10,8,16,1) 85%)', accentColor: '#c084fc', inputBorderColor: 'rgba(192,132,252,0.3)', reactionAccent: '#e879f9', previewWallpaper: 'linear-gradient(135deg, #a855f7 0%, #581c87 100%)' },
   { id: 'monochrome', name: 'Monochrome', outgoingGradient: 'linear-gradient(135deg, #4b5563 0%, #1f2937 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(156, 163, 175, 0.18)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#9ca3af', inputBorderColor: 'var(--dm-border)', reactionAccent: '#d1d5db', previewWallpaper: 'linear-gradient(135deg, #374151 0%, #111827 100%)' },
   { id: 'sakura', name: 'Sakura', outgoingGradient: 'linear-gradient(135deg, #f472b6 0%, #db2777 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(244, 114, 182, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at bottom center, rgba(244,114,182,0.18) 0%, rgba(16,8,12,1) 85%)', accentColor: '#f472b6', inputBorderColor: 'rgba(244,114,182,0.3)', reactionAccent: '#f472b6', previewWallpaper: 'linear-gradient(135deg, #ec4899 0%, #831843 100%)' }
+export interface MessageTag {
+  id: string;
+  emoji: string;
+  label: string;
+  color: string;
+}
+
+export const PRESET_TAGS: MessageTag[] = [
+  { id: 'important', emoji: '⭐', label: 'Important', color: '#f59e0b' },
+  { id: 'followup', emoji: '📌', label: 'Follow Up', color: '#3b82f6' },
+  { id: 'favorite', emoji: '❤️', label: 'Favorite', color: '#ec4899' },
+  { id: 'todo', emoji: '📝', label: 'To Do', color: '#10b981' },
 ];
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onLongPress, onReply, activeTheme, onPreviewImage }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onLongPress, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker }: any) => {
   const isAI = msg.senderId === 'ai';
   // A message is "Sent" if the sender is the current user
   const isSent = !isAI && String(msg.senderId) === String(currentUserId);
   const [showActionsMobile, setShowActionsMobile] = useState(false);
 
+  // Swipe-to-tag gesture state & physics
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
+  const isSwipingHorizontally = useRef<boolean | null>(null);
+
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
   const isMoving = useRef(false);
 
   const handlePointerDown = (e: any) => {
-    // If we are already in selection mode, ignore long press checks
     if (selectedMessageIds && selectedMessageIds.size > 0) return;
     isMoving.current = false;
     longPressTimeout.current = setTimeout(() => {
@@ -111,6 +129,56 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
       clearTimeout(longPressTimeout.current);
       longPressTimeout.current = null;
     }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isSwipingHorizontally.current = null;
+    handlePointerDown(e);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const diffX = currentX - touchStartX.current;
+    const diffY = currentY - touchStartY.current;
+
+    if (isSwipingHorizontally.current === null) {
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 8) {
+        isSwipingHorizontally.current = true;
+      } else if (Math.abs(diffY) > Math.abs(diffX) && Math.abs(diffY) > 8) {
+        isSwipingHorizontally.current = false;
+      }
+    }
+
+    if (isSwipingHorizontally.current) {
+      if (diffX > 0) {
+        setIsSwiping(true);
+        const clampedOffset = Math.min(diffX * 0.65, 100);
+        setSwipeOffset(clampedOffset);
+
+        if (clampedOffset > 50 && (e.currentTarget as any)._hapticsTriggered !== true) {
+          if (navigator.vibrate) navigator.vibrate(30);
+          (e.currentTarget as any)._hapticsTriggered = true;
+        }
+      }
+    } else {
+      handlePointerMove();
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    handlePointerUp();
+    (e.currentTarget as any)._hapticsTriggered = false;
+
+    if (swipeOffset > 50) {
+      if (onOpenTagPicker) onOpenTagPicker(msg);
+    }
+
+    setIsSwiping(false);
+    setSwipeOffset(0);
+    isSwipingHorizontally.current = null;
   };
 
   const toggleActions = (e: React.MouseEvent) => {
@@ -156,19 +224,18 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
 
   return (
     <div
-      className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${isSelected ? 'selected-item' : ''} animate-in slide-in-from-bottom-2 duration-300`}
+      className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${isSelected ? 'selected-item' : ''} animate-in slide-in-from-bottom-2 duration-300 relative`}
       onClick={handleMessageClick}
       onMouseDown={handlePointerDown}
       onMouseUp={handlePointerUp}
       onMouseMove={handlePointerMove}
-      onTouchStart={handlePointerDown}
-      onTouchEnd={handlePointerUp}
-      onTouchMove={handlePointerMove}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
       style={{
         display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: isSent ? 'flex-end' : 'flex-start',
+        flexDirection: 'column',
+        alignItems: isSent ? 'flex-end' : 'flex-start',
         marginLeft: isSent ? 'auto' : '0',
         marginRight: isSent ? '0' : 'auto',
         cursor: isInSelectionMode ? 'pointer' : 'default',
@@ -178,15 +245,17 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         WebkitUserSelect: 'none'
       }}
     >
-      {isInSelectionMode && (
+      {/* Swipe Reveal Tag Indicator */}
+      {swipeOffset > 0 && (
         <div
-          className={`sel-check ${isSelected ? 'sel-check--on' : ''}`}
-          style={{ order: isSent ? 2 : -1 }}
+          className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-sm font-bold transition-opacity z-10"
+          style={{ opacity: Math.min(swipeOffset / 50, 1) }}
         >
-          {isSelected && (
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-              <path d="M1.5 5.5L4.5 8.5L9.5 2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+          <span className="text-base animate-bounce">🏷️</span>
+          {swipeOffset > 50 && (
+            <span className="text-[10px] uppercase tracking-wider font-extrabold text-indigo-500 animate-in zoom-in-50 duration-150">
+              Tag
+            </span>
           )}
         </div>
       )}
@@ -199,8 +268,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           maxWidth: '75%',
           marginLeft: isSent ? 'auto' : '0',
           marginRight: isSent ? '0' : 'auto',
-          transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s, background 0.3s ease, color 0.3s ease',
-          transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
+          transition: isSwiping ? 'none' : 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.18s, background 0.3s ease, color 0.3s ease',
+          transform: swipeOffset > 0 
+            ? `translateX(${swipeOffset}px)` 
+            : isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
           background: isSent ? (activeTheme?.outgoingGradient || 'linear-gradient(135deg, #18181b 0%, #000000 100%)') : (activeTheme?.incomingBubbleColor || undefined),
           color: isSent ? (activeTheme?.outgoingTextColor || '#ffffff') : (activeTheme?.incomingTextColor || undefined)
         }}
@@ -255,13 +326,19 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           )}
         </div>
 
-        {Object.keys(reactionCounts).length > 0 && (
-          <div className="msg-reactions">
-            {Object.entries(reactionCounts).map(([emoji, count]) => (
-              <span key={emoji} className="reaction-badge" onClick={(e) => { e.stopPropagation(); onReact(msg.id, emoji); setShowActionsMobile(false); }}>
-                {emoji} {count > 1 && <span className="react-count">{count}</span>}
-              </span>
-            ))}
+        {msgTag && (
+          <div
+            onClick={(e) => { e.stopPropagation(); onOpenTagPicker(msg); }}
+            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-md cursor-pointer transition-all hover:scale-105 active:scale-95 animate-in zoom-in-75 duration-200 mt-1.5"
+            style={{
+              background: `${msgTag.color}25`,
+              border: `1px solid ${msgTag.color}50`,
+              color: msgTag.color
+            }}
+          >
+            <span>{msgTag.emoji}</span>
+            <span>{msgTag.label}</span>
+            <span className="text-[9px] opacity-60 ml-0.5">✕</span>
           </div>
         )}
       </div>
@@ -283,8 +360,11 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
               ))}
             </div>
             <div className="del-btn-wrap">
-              <span className="msg-action-btn" title="Reply / Tag" onClick={(e) => { e.stopPropagation(); onReply(msg); setShowActionsMobile(false); }}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg> Tag
+              <span className="msg-action-btn" title="Tag Message" onClick={(e) => { e.stopPropagation(); onOpenTagPicker(msg); setShowActionsMobile(false); }}>
+                🏷️ Tag
+              </span>
+              <span className="msg-action-btn" title="Reply / Quote" onClick={(e) => { e.stopPropagation(); onReply(msg); setShowActionsMobile(false); }}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg> Reply
               </span>
               <span className="msg-action-btn" title="Delete for me" onClick={(e) => { e.stopPropagation(); handleDeleteClick('me'); }}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z" /></svg> Me
@@ -693,6 +773,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [nicknameInput, setNicknameInput] = useState('');
   const [isChatMuted, setIsChatMuted] = useState(false);
   const [isUserBlocked, setIsUserBlocked] = useState(false);
+
+  // Message Tagging System State
+  const [msgTags, setMsgTags] = useState<Record<string, MessageTag>>({});
+  const [openTagPickerMsg, setOpenTagPickerMsg] = useState<any | null>(null);
+  const [customTagLabel, setCustomTagLabel] = useState('');
+  const [customTagEmoji, setCustomTagEmoji] = useState('🏷️');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('message_tags');
+      if (saved) {
+        try { setMsgTags(JSON.parse(saved)); } catch (e) {}
+      }
+    }
+  }, []);
 
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const selectedUserRef = useRef<User | null>(null);
@@ -1816,6 +1911,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       onReply={(m: any) => setReplyToMessage(m)}
                       activeTheme={activeTheme}
                       onPreviewImage={(src: string) => setLightboxImageSrc(src)}
+                      msgTag={msgTags[msg.id]}
+                      onOpenTagPicker={(m: any) => setOpenTagPickerMsg(m)}
                     />
                   ))}
                   {!isLoadingMessages && messages.filter(msg => msg.type !== 'accepted').length === 0 && (
@@ -2757,6 +2854,129 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               >
                 Apply Theme
               </button>
+            </div>
+          </div>
+      {/* --- MESSAGE TAG PICKER BOTTOM SHEET MODAL --- */}
+      {openTagPickerMsg && (
+        <div
+          className="fixed inset-0 z-[1700] flex items-end justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300"
+          onClick={() => setOpenTagPickerMsg(null)}
+        >
+          <div
+            className="w-full max-w-md bg-[var(--dm-bg-sidebar)] border-t border-x border-[var(--dm-border)] rounded-t-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300 font-sans"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Sheet Handle */}
+            <div className="w-full pt-3 pb-1 flex items-center justify-center">
+              <div className="w-12 h-1.5 rounded-full bg-[var(--dm-border)]" />
+            </div>
+
+            {/* Header */}
+            <div className="px-6 py-3.5 flex items-center justify-between border-b border-[var(--dm-border)]">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🏷️</span>
+                <h3 className="text-lg font-extrabold text-[var(--dm-text-primary)] tracking-tight">Tag Message</h3>
+              </div>
+              <button
+                onClick={() => setOpenTagPickerMsg(null)}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Message Snippet Preview */}
+            <div className="mx-6 mt-4 p-3 rounded-2xl bg-[var(--dm-bg-hover)] border border-[var(--dm-border)] text-xs text-[var(--dm-text-secondary)] italic truncate">
+              "{openTagPickerMsg.content}"
+            </div>
+
+            {/* Tag Selection Grid */}
+            <div className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dm-text-muted)]">Preset Tags</p>
+              <div className="grid grid-cols-2 gap-3">
+                {PRESET_TAGS.map(tag => {
+                  const isCurrent = msgTags[openTagPickerMsg.id]?.id === tag.id;
+                  return (
+                    <button
+                      key={tag.id}
+                      onClick={() => {
+                        const updated = { ...msgTags, [openTagPickerMsg.id]: tag };
+                        setMsgTags(updated);
+                        if (typeof window !== 'undefined') {
+                          localStorage.setItem('message_tags', JSON.stringify(updated));
+                        }
+                        setOpenTagPickerMsg(null);
+                      }}
+                      className={`p-3.5 rounded-2xl border-2 flex items-center gap-3 transition-all cursor-pointer ${
+                        isCurrent 
+                          ? 'scale-105 shadow-md font-bold' 
+                          : 'border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:border-zinc-500/50'
+                      }`}
+                      style={{
+                        borderColor: isCurrent ? tag.color : undefined,
+                        background: isCurrent ? `${tag.color}15` : undefined
+                      }}
+                    >
+                      <span className="text-xl">{tag.emoji}</span>
+                      <span className="text-xs font-bold text-[var(--dm-text-primary)]">{tag.label}</span>
+                      {isCurrent && <span className="ml-auto text-xs font-extrabold" style={{ color: tag.color }}>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Custom Tag Input Creator */}
+              <div className="pt-3 border-t border-[var(--dm-border)]">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dm-text-muted)] mb-2.5">+ Create Custom Tag</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Tag name (e.g. Urgent)"
+                    value={customTagLabel}
+                    onChange={(e) => setCustomTagLabel(e.target.value)}
+                    className="flex-1 px-4 py-2.5 text-xs rounded-full border border-[var(--dm-border)] bg-[var(--dm-bg-input)] text-[var(--dm-text-primary)] focus:outline-none"
+                  />
+                  <button
+                    onClick={() => {
+                      if (!customTagLabel.trim()) return;
+                      const customTag: MessageTag = {
+                        id: 'custom-' + Date.now(),
+                        emoji: customTagEmoji || '🏷️',
+                        label: customTagLabel.trim(),
+                        color: '#8b5cf6'
+                      };
+                      const updated = { ...msgTags, [openTagPickerMsg.id]: customTag };
+                      setMsgTags(updated);
+                      if (typeof window !== 'undefined') {
+                        localStorage.setItem('message_tags', JSON.stringify(updated));
+                      }
+                      setCustomTagLabel('');
+                      setOpenTagPickerMsg(null);
+                    }}
+                    className="px-4 py-2.5 text-xs font-bold rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md cursor-pointer transition-all active:scale-95"
+                  >
+                    Add Tag
+                  </button>
+                </div>
+              </div>
+
+              {/* Remove Tag Option if currently tagged */}
+              {msgTags[openTagPickerMsg.id] && (
+                <button
+                  onClick={() => {
+                    const updated = { ...msgTags };
+                    delete updated[openTagPickerMsg.id];
+                    setMsgTags(updated);
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('message_tags', JSON.stringify(updated));
+                    }
+                    setOpenTagPickerMsg(null);
+                  }}
+                  className="w-full mt-2 py-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-xs font-bold text-rose-500 transition-all cursor-pointer"
+                >
+                  ✕ Remove Tag
+                </button>
+              )}
             </div>
           </div>
         </div>
