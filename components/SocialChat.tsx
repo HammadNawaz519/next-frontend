@@ -39,13 +39,27 @@ interface Message {
   createdAt: Date;
   isSeen?: boolean;
   reactions?: any[];
+  replyTo?: {
+    id: string;
+    content: string;
+    senderName?: string;
+  };
 }
 
 const EMOJI_CATEGORIES = {
   smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿']
 };
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onLongPress }: any) => {
+const AESTHETIC_THEMES = [
+  { id: 'default', name: 'Charcoal', gradient: 'linear-gradient(135deg, #18181b 0%, #000000 100%)', bg: 'transparent' },
+  { id: 'violet', name: 'Cyber Violet', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', bg: 'rgba(139,92,246,0.04)' },
+  { id: 'rose', name: 'Sunset Rose', gradient: 'linear-gradient(135deg, #f43f5e 0%, #be123c 100%)', bg: 'rgba(244,63,94,0.04)' },
+  { id: 'emerald', name: 'Emerald Dream', gradient: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', bg: 'rgba(16,185,129,0.04)' },
+  { id: 'ocean', name: 'Ocean Blue', gradient: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', bg: 'rgba(2,132,199,0.04)' },
+  { id: 'indigo', name: 'Electric Indigo', gradient: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)', bg: 'rgba(99,102,241,0.04)' },
+];
+
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onLongPress, onReply, themeGradient }: any) => {
   const isAI = msg.senderId === 'ai';
   // A message is "Sent" if the sender is the current user
   const isSent = !isAI && String(msg.senderId) === String(currentUserId);
@@ -169,8 +183,15 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           marginRight: isSent ? '0' : 'auto',
           transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s',
           transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
+          background: isSent && themeGradient ? themeGradient : undefined,
         }}
       >
+        {msg.replyTo && (
+          <div className="mb-2 p-2 rounded-xl border-l-4 border-white/60 bg-black/20 dark:bg-white/10 text-xs flex flex-col gap-0.5">
+            <span className="font-bold opacity-90">{msg.replyTo.senderName || 'Quoted Message'}</span>
+            <span className="truncate opacity-75">{msg.replyTo.content}</span>
+          </div>
+        )}
         {isAI && <div className="system-sender">AI Assistant</div>}
         {msg.type === 'image' && <img src={msg.content} alt="media" onClick={() => window.open(msg.content, '_blank')} />}
         {msg.type === 'video' && <video src={msg.content} controls />}
@@ -232,6 +253,9 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
               ))}
             </div>
             <div className="del-btn-wrap">
+              <span className="msg-action-btn" title="Reply / Tag" onClick={(e) => { e.stopPropagation(); onReply(msg); setShowActionsMobile(false); }}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg> Tag
+              </span>
               <span className="msg-action-btn" title="Delete for me" onClick={(e) => { e.stopPropagation(); handleDeleteClick('me'); }}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z" /></svg> Me
               </span>
@@ -524,6 +548,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       const savedNicknames = localStorage.getItem('chat_nicknames');
       if (savedNicknames) setNicknames(JSON.parse(savedNicknames));
+
+      const savedThemes = localStorage.getItem('chat_themes');
+      if (savedThemes) setChatThemes(JSON.parse(savedThemes));
+
+      const savedLastSeen = localStorage.getItem('chat_last_seen');
+      if (savedLastSeen) setLastSeenMap(JSON.parse(savedLastSeen));
     } catch (e) {
       console.warn('Storage init error:', e);
     }
@@ -618,10 +648,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
-  // Instagram-style Chat Details & Nickname State
+  // Instagram-style Chat Details, Theme & Tagging State
   const [showChatDetails, setShowChatDetails] = useState(false);
   const [detailsTab, setDetailsTab] = useState<'photos' | 'reels' | 'files'>('photos');
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
+  const [chatThemes, setChatThemes] = useState<Record<string, string>>({});
+  const [lastSeenMap, setLastSeenMap] = useState<Record<string, string>>({});
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const [editingNickname, setEditingNickname] = useState(false);
   const [nicknameInput, setNicknameInput] = useState('');
   const [isChatMuted, setIsChatMuted] = useState(false);
@@ -1244,6 +1277,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     setInputValue('');
     setShowAIMention(false);
 
+    const currentReplyTo = replyToMessage ? {
+      id: replyToMessage.id,
+      content: replyToMessage.type === 'voice' ? '🎙️ Voice Clip' : replyToMessage.type === 'image' ? '📷 Photo' : replyToMessage.content,
+      senderName: replyToMessage.senderId === senderId ? 'You' : selectedUser.name
+    } : undefined;
+
+    setReplyToMessage(null);
+
     if (currentContent.toLowerCase().startsWith('/ai ') || currentContent.toLowerCase().startsWith('@ai ')) {
       const prompt = currentContent.toLowerCase().startsWith('/ai ') ? currentContent.substring(4) : currentContent.substring(4);
       const userMsg: any = { id: 'ai-user-' + Date.now(), content: currentContent, senderId, createdAt: new Date(), type: 'text' };
@@ -1264,7 +1305,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       content: currentContent,
       type: 'text',
       createdAt: new Date(),
-      isSeen: false
+      isSeen: false,
+      replyTo: currentReplyTo
     };
 
     setMessages(prev => [...prev, optimisticMsg]);
@@ -1667,14 +1709,23 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       </div>
                       <div className="status-text">
                         {typingUsers.has(selectedUser.email) ? (
-                          <span className="typing-indicator">typing...</span>
+                          <span style={{ fontSize: '11px', color: 'var(--dm-text-secondary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            typing
+                            <span className="inline-flex gap-0.5 items-center ml-0.5">
+                              <span className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.3s]" />
+                              <span className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.15s]" />
+                              <span className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce" />
+                            </span>
+                          </span>
                         ) : onlineUsers.has((selectedUser.email || '').toLowerCase().trim()) ? (
                           <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
                             Online
                           </span>
                         ) : (
-                          <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>Tap for details</span>
+                          <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>
+                            {lastSeenMap[selectedUser.id] ? `Last seen ${lastSeenMap[selectedUser.id]}` : 'Tap for details'}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -1719,7 +1770,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                 </div>
 
-                <div className="messages">
+                <div className="messages" style={{ background: (AESTHETIC_THEMES.find(t => t.id === (chatThemes[selectedUser.id] || 'default')) || AESTHETIC_THEMES[0]).bg !== 'transparent' ? (AESTHETIC_THEMES.find(t => t.id === (chatThemes[selectedUser.id] || 'default')) || AESTHETIC_THEMES[0]).bg : undefined }}>
                   {messages.filter(msg => msg.type !== 'accepted').map((msg) => (
                     <MessageItem
                       key={msg.id}
@@ -1732,6 +1783,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       selectedMessageIds={selectedMessageIds}
                       toggleMessageSelection={toggleMessageSelection}
                       onLongPress={handleLongPress}
+                      onReply={(m: any) => setReplyToMessage(m)}
+                      themeGradient={msg.senderId === (session?.user as any)?.id ? (AESTHETIC_THEMES.find(t => t.id === (chatThemes[selectedUser.id] || 'default')) || AESTHETIC_THEMES[0]).gradient : undefined}
                     />
                   ))}
                   {!isLoadingMessages && messages.filter(msg => msg.type !== 'accepted').length === 0 && (
@@ -1752,6 +1805,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   )}
                   <div ref={messagesEndRef} />
                 </div>
+
+                {replyToMessage && (
+                  <div className="mx-4 mb-2 p-2.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] flex items-center justify-between animate-in slide-in-from-bottom-2 duration-200">
+                    <div className="flex flex-col min-w-0 pr-2">
+                      <span className="text-[11px] font-bold text-[var(--dm-text-primary)] flex items-center gap-1">
+                        <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
+                        Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : selectedUser?.name}
+                      </span>
+                      <span className="text-xs text-[var(--dm-text-secondary)] truncate mt-0.5">
+                        {replyToMessage.type === 'voice' ? '🎙️ Voice Clip' : replyToMessage.type === 'image' ? '📷 Photo' : replyToMessage.content}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setReplyToMessage(null)}
+                      className="w-6 h-6 rounded-full flex items-center justify-center bg-[var(--dm-bg-active)] text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
 
                 {selectedMessageIds.size === 0 ? (
                   <footer className="footer">
@@ -2042,6 +2115,36 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           {nicknames[selectedUser.id] ? 'Edit Nickname' : '+ Set Nickname'}
                         </button>
                       )}
+
+                      {/* Aesthetic Chat Themes Picker */}
+                      <div className="w-full max-w-xs mt-4 pt-3.5 border-t border-[var(--dm-border)]">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dm-text-muted)] mb-2 text-center">Chat Theme</p>
+                        <div className="flex items-center justify-center gap-2.5">
+                          {AESTHETIC_THEMES.map(theme => (
+                            <button
+                              key={theme.id}
+                              onClick={() => {
+                                const updated = { ...chatThemes, [selectedUser.id]: theme.id };
+                                setChatThemes(updated);
+                                if (typeof window !== 'undefined') {
+                                  localStorage.setItem('chat_themes', JSON.stringify(updated));
+                                }
+                              }}
+                              className={`w-8 h-8 rounded-full cursor-pointer transition-all border-2 flex items-center justify-center ${
+                                (chatThemes[selectedUser.id] || 'default') === theme.id 
+                                  ? 'border-white scale-110 shadow-lg ring-2 ring-white/40' 
+                                  : 'border-transparent opacity-80 hover:opacity-100 hover:scale-105'
+                              }`}
+                              style={{ background: theme.gradient }}
+                              title={theme.name}
+                            >
+                              {(chatThemes[selectedUser.id] || 'default') === theme.id && (
+                                <span className="text-[10px] text-white font-bold">✓</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
                       {/* Quick Action Icons */}
                       <div className="flex items-center justify-center gap-6 mt-6 w-full max-w-sm">
