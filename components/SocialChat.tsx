@@ -59,7 +59,7 @@ const AESTHETIC_THEMES = [
   { id: 'indigo', name: 'Electric Indigo', gradient: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)', bg: 'rgba(99,102,241,0.04)' },
 ];
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onLongPress, onReply, themeGradient }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onLongPress, onReply, themeGradient, onPreviewImage }: any) => {
   const isAI = msg.senderId === 'ai';
   // A message is "Sent" if the sender is the current user
   const isSent = !isAI && String(msg.senderId) === String(currentUserId);
@@ -193,7 +193,18 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           </div>
         )}
         {isAI && <div className="system-sender">AI Assistant</div>}
-        {msg.type === 'image' && <img src={msg.content} alt="media" onClick={() => window.open(msg.content, '_blank')} />}
+        {msg.type === 'image' && (
+          <img
+            src={msg.content}
+            alt="media"
+            className="cursor-pointer hover:opacity-95 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onPreviewImage) onPreviewImage(msg.content);
+              else window.open(msg.content, '_blank');
+            }}
+          />
+        )}
         {msg.type === 'video' && <video src={msg.content} controls />}
         {msg.type === 'voice' && <audio src={msg.content} controls />}
         {msg.type === 'call' && (
@@ -648,8 +659,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
-  // Instagram-style Chat Details, Theme & Tagging State
+  // Instagram-style Chat Details, Theme, Tagging & Lightbox State
   const [showChatDetails, setShowChatDetails] = useState(false);
+  const [lightboxImageSrc, setLightboxImageSrc] = useState<string | null>(null);
   const [detailsTab, setDetailsTab] = useState<'photos' | 'reels' | 'files'>('photos');
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
   const [chatThemes, setChatThemes] = useState<Record<string, string>>({});
@@ -1697,15 +1709,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       )}
                     </div>
                     <div className="info">
-                      <div className="name font-bold text-sm flex items-center gap-1.5">
-                        {nicknames[selectedUser.id] ? (
-                          <>
-                            <span>{nicknames[selectedUser.id]}</span>
-                            <span className="text-[10px] text-zinc-400 font-normal">({selectedUser.name})</span>
-                          </>
-                        ) : (
-                          <span>{selectedUser.name}</span>
-                        )}
+                      <div className="name font-bold text-sm">
+                        {nicknames[selectedUser.id] || selectedUser.name}
                       </div>
                       <div className="status-text">
                         {typingUsers.has(selectedUser.email) ? (
@@ -1785,6 +1790,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       onLongPress={handleLongPress}
                       onReply={(m: any) => setReplyToMessage(m)}
                       themeGradient={msg.senderId === (session?.user as any)?.id ? (AESTHETIC_THEMES.find(t => t.id === (chatThemes[selectedUser.id] || 'default')) || AESTHETIC_THEMES[0]).gradient : undefined}
+                      onPreviewImage={(src: string) => setLightboxImageSrc(src)}
                     />
                   ))}
                   {!isLoadingMessages && messages.filter(msg => msg.type !== 'accepted').length === 0 && (
@@ -2538,6 +2544,25 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </button>
             </div>
           </div>
+      {/* --- IMAGE LIGHTBOX PREVIEW OVERLAY --- */}
+      {lightboxImageSrc && (
+        <div
+          className="fixed inset-0 z-[2000] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setLightboxImageSrc(null)}
+        >
+          <button
+            onClick={() => setLightboxImageSrc(null)}
+            className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-lg font-bold cursor-pointer transition-all active:scale-90"
+            title="Close image"
+          >
+            ✕
+          </button>
+          <img
+            src={lightboxImageSrc}
+            alt="Full preview"
+            className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </>
