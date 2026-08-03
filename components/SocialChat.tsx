@@ -2262,13 +2262,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 {showChatDetails && selectedUser && (
                   <div className="absolute inset-0 z-40 flex flex-col bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] animate-in slide-in-from-right-full duration-300 overflow-y-auto no-scrollbar">
                     {/* Sticky Top Nav Bar */}
-                    <div className="sticky top-0 z-20 flex items-center justify-between px-4 pt-[calc(16px+env(safe-area-inset-top,0px))] pb-3 border-b border-[var(--dm-border)] bg-[var(--dm-bg-sidebar)]/95 backdrop-blur-md">
+                    <div className="sticky top-0 z-20 flex items-center justify-between px-4 pt-[calc(16px+env(safe-area-inset-top,0px))] pb-3 bg-[var(--dm-bg-sidebar)]/95 backdrop-blur-md">
                       <button
                         onClick={() => {
                           setEditingNickname(false);
                           setShowChatDetails(false);
                         }}
-                        className="w-10 h-10 rounded-full border flex items-center justify-center border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] active:scale-90 transition-all cursor-pointer shadow-sm"
+                        className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] active:scale-90 transition-all cursor-pointer"
                         title="Back to chat"
                       >
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
@@ -2280,8 +2280,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </div>
 
                     {/* Centered Profile Avatar & Name */}
-                    <div className="flex flex-col items-center pt-6 pb-4 px-4 text-center">
-                      <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[var(--dm-border)] shadow-xl mb-3 relative">
+                    <div className="flex flex-col items-center pt-4 pb-2 px-4 text-center">
+                      <div className="w-24 h-24 rounded-full overflow-hidden mb-3 relative">
                         {selectedUser.image && selectedUser.image.length > 5 ? (
                           <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover" />
                         ) : (
@@ -2334,7 +2334,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             placeholder="Enter nickname..."
                             value={nicknameInput}
                             onChange={(e) => setNicknameInput(e.target.value)}
-                            className="flex-1 px-4 py-2 text-xs rounded-full border border-[var(--dm-border)] bg-[var(--dm-bg-input)] text-[var(--dm-text-primary)] focus:outline-none"
+                            className="flex-1 px-4 py-2 text-xs rounded-full bg-[var(--dm-bg-input)] text-[var(--dm-text-primary)] focus:outline-none"
                             autoFocus
                           />
                           <button
@@ -2353,15 +2353,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </div>
                       )}
 
-                      {/* Simple Unboxed Action List (No boxes, no icons, no boundaries) */}
-                      <div className="w-full max-w-sm mt-6 divide-y divide-[var(--dm-border)]/40 text-left">
+                      {/* All Options Above Media Section — Unboxed, No borders, No outlines */}
+                      <div className="w-full max-w-sm mt-6 text-left space-y-1">
                         {/* Theme Selection Row */}
                         <button
                           onClick={() => {
                             setLiveThemeId(chatThemes[selectedUser.id] || 'default');
                             setShowThemePicker(true);
                           }}
-                          className="w-full py-3.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] cursor-pointer"
+                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
                         >
                           <span className="font-semibold text-[var(--dm-text-primary)]">Chat Theme</span>
                           <span className="text-xs text-[var(--dm-text-secondary)]">
@@ -2372,7 +2372,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         {/* Mute Notifications Row */}
                         <button
                           onClick={() => setIsChatMuted(!isChatMuted)}
-                          className="w-full py-3.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] cursor-pointer"
+                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
                         >
                           <span className="font-semibold text-[var(--dm-text-primary)]">Mute Notifications</span>
                           <span className={`text-xs font-semibold ${isChatMuted ? 'text-rose-500' : 'text-[var(--dm-text-muted)]'}`}>
@@ -2386,7 +2386,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             setNicknameInput(nicknames[selectedUser.id] || '');
                             setEditingNickname(!editingNickname);
                           }}
-                          className="w-full py-3.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] cursor-pointer"
+                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
                         >
                           <span className="font-semibold text-[var(--dm-text-primary)]">Set Nickname</span>
                           <span className="text-xs text-[var(--dm-text-secondary)]">
@@ -2401,7 +2401,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               alert("Report submitted.");
                             }
                           }}
-                          className="w-full py-3.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] cursor-pointer"
+                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
                         >
                           <span className="font-semibold text-amber-500">Report Conversation</span>
                         </button>
@@ -2420,21 +2420,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               setShowChatDetails(false);
                             }
                           }}
-                          className="w-full py-3.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] cursor-pointer"
+                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
                         >
                           <span className="font-semibold text-rose-500">Clear Chat History</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Shared Content Tab Navigation (Simple Text Tabs) */}
-                    <div className="px-4 pt-3 max-w-lg mx-auto w-full">
-                      <div className="flex items-center justify-around border-b border-[var(--dm-border)]/40 pb-2 text-center">
+                    {/* Shared Content Tab Navigation (Simple Text Tabs, No outlines) */}
+                    <div className="px-4 pt-4 max-w-lg mx-auto w-full">
+                      <div className="flex items-center justify-around pb-2 text-center">
                         <button
                           onClick={() => setDetailsTab('photos')}
                           className={`text-xs font-bold transition-all cursor-pointer ${
                             detailsTab === 'photos'
-                              ? 'text-[var(--dm-text-primary)] border-b-2 border-[var(--dm-text-primary)] pb-1'
+                              ? 'text-[var(--dm-text-primary)] font-extrabold'
                               : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
                           }`}
                         >
@@ -2444,7 +2444,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           onClick={() => setDetailsTab('reels')}
                           className={`text-xs font-bold transition-all cursor-pointer ${
                             detailsTab === 'reels'
-                              ? 'text-[var(--dm-text-primary)] border-b-2 border-[var(--dm-text-primary)] pb-1'
+                              ? 'text-[var(--dm-text-primary)] font-extrabold'
                               : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
                           }`}
                         >
@@ -2454,7 +2454,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           onClick={() => setDetailsTab('files')}
                           className={`text-xs font-bold transition-all cursor-pointer ${
                             detailsTab === 'files'
-                              ? 'text-[var(--dm-text-primary)] border-b-2 border-[var(--dm-text-primary)] pb-1'
+                              ? 'text-[var(--dm-text-primary)] font-extrabold'
                               : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
                           }`}
                         >
@@ -2462,13 +2462,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </button>
                       </div>
                     </div>
-                    {/* Shared Content Display Panel */}
+
+                    {/* Shared Content Display Panel (No outlines on items) */}
                     <div className="px-4 py-4 space-y-6 max-w-lg mx-auto w-full flex-1">
                       {/* Tab 1: Photos & Images */}
                       {detailsTab === 'photos' && (
                         <div>
                           {messages.filter(m => m.type === 'image').length === 0 ? (
-                            <div className="p-8 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
+                            <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
                               No photos shared in this chat yet
                             </div>
                           ) : (
@@ -2476,7 +2477,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               {messages.filter(m => m.type === 'image').map(m => (
                                 <div
                                   key={m.id}
-                                  className="aspect-square rounded-2xl overflow-hidden bg-black/10 border border-[var(--dm-border)] cursor-pointer group relative"
+                                  className="aspect-square rounded-2xl overflow-hidden bg-black/10 cursor-pointer group relative"
                                   onClick={() => window.open(m.content, '_blank')}
                                 >
                                   <img src={m.content} alt="photo" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
@@ -2491,7 +2492,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       {detailsTab === 'reels' && (
                         <div>
                           {messages.filter(m => m.type === 'video').length === 0 ? (
-                            <div className="p-8 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
+                            <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
                               No video reels shared in this chat yet
                             </div>
                           ) : (
@@ -2499,7 +2500,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               {messages.filter(m => m.type === 'video').map(m => (
                                 <div
                                   key={m.id}
-                                  className="aspect-[9/16] rounded-2xl overflow-hidden bg-black border border-[var(--dm-border)] cursor-pointer group relative"
+                                  className="aspect-[9/16] rounded-2xl overflow-hidden bg-black cursor-pointer group relative"
                                   onClick={() => window.open(m.content, '_blank')}
                                 >
                                   <video src={m.content} controls className="w-full h-full object-cover" />
@@ -2514,13 +2515,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       {detailsTab === 'files' && (
                         <div>
                           {messages.filter(m => m.type === 'voice' || m.type === 'file').length === 0 ? (
-                            <div className="p-8 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
+                            <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
                               No audio clips or documents shared yet
                             </div>
                           ) : (
                             <div className="space-y-3">
                               {messages.filter(m => m.type === 'voice' || m.type === 'file').map(m => (
-                                <div key={m.id} className="p-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] flex flex-col gap-2">
+                                <div key={m.id} className="p-3.5 rounded-2xl bg-[var(--dm-bg-hover)] flex flex-col gap-2">
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2.5 min-w-0">
                                       <div className="w-8 h-8 rounded-full bg-[var(--dm-bg-active)] flex items-center justify-center text-xs font-bold">
@@ -2543,46 +2544,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           )}
                         </div>
                       )}
-
-                      {/* Privacy & Actions */}
-                      <div className="pt-4 pb-8 space-y-2.5 border-t border-[var(--dm-border)]">
-                        <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--dm-text-muted)] mb-2">Options</h4>
-                        
-                        <button
-                          onClick={() => {
-                            if (confirm("Report this conversation to moderation?")) {
-                              alert("Report submitted.");
-                            }
-                          }}
-                          className="w-full p-4 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold text-rose-500/90 transition-all cursor-pointer"
-                        >
-                          <span>Report Conversation</span>
-                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                          </svg>
-                        </button>
-
-                        <button
-                          onClick={async () => {
-                            if (confirm("Clear chat history with " + selectedUser.name + "?")) {
-                              await hideSocialChat(selectedUser.id);
-                              setMessages([]);
-                              setMessagesCache(prev => {
-                                const next = { ...prev };
-                                delete next[selectedUser.id];
-                                return next;
-                              });
-                              setShowChatDetails(false);
-                            }
-                          }}
-                          className="w-full p-4 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold text-rose-500/90 transition-all cursor-pointer"
-                        >
-                          <span>Clear Chat History</span>
-                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
                     </div>
                   </div>
                 )}
