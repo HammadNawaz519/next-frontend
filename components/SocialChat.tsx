@@ -50,16 +50,34 @@ const EMOJI_CATEGORIES = {
   smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿']
 };
 
-const AESTHETIC_THEMES = [
-  { id: 'default', name: 'Charcoal', gradient: 'linear-gradient(135deg, #18181b 0%, #000000 100%)', bg: 'transparent' },
-  { id: 'violet', name: 'Cyber Violet', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', bg: 'rgba(139,92,246,0.04)' },
-  { id: 'rose', name: 'Sunset Rose', gradient: 'linear-gradient(135deg, #f43f5e 0%, #be123c 100%)', bg: 'rgba(244,63,94,0.04)' },
-  { id: 'emerald', name: 'Emerald Dream', gradient: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', bg: 'rgba(16,185,129,0.04)' },
-  { id: 'ocean', name: 'Ocean Blue', gradient: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', bg: 'rgba(2,132,199,0.04)' },
-  { id: 'indigo', name: 'Electric Indigo', gradient: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)', bg: 'rgba(99,102,241,0.04)' },
+export interface ChatTheme {
+  id: string;
+  name: string;
+  outgoingGradient: string;
+  outgoingTextColor: string;
+  incomingBubbleColor: string;
+  incomingTextColor: string;
+  chatBg: string;
+  accentColor: string;
+  inputBorderColor: string;
+  reactionAccent: string;
+  previewWallpaper: string;
+}
+
+export const INSTAGRAM_THEMES: ChatTheme[] = [
+  { id: 'default', name: 'Default', outgoingGradient: 'linear-gradient(135deg, #18181b 0%, #000000 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'var(--dm-bg-hover)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#6366f1', inputBorderColor: 'var(--dm-border)', reactionAccent: '#6366f1', previewWallpaper: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' },
+  { id: 'love', name: 'Love', outgoingGradient: 'linear-gradient(135deg, #ff4b72 0%, #ff2a55 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 75, 114, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top right, rgba(255,42,85,0.18) 0%, rgba(10,8,12,1) 85%)', accentColor: '#ff2a55', inputBorderColor: 'rgba(255,42,85,0.3)', reactionAccent: '#ff4b72', previewWallpaper: 'linear-gradient(135deg, #ff4b72 0%, #7d102a 100%)' },
+  { id: 'galaxy', name: 'Galaxy', outgoingGradient: 'linear-gradient(135deg, #a855f7 0%, #06b6d4 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(168, 85, 247, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at bottom left, rgba(6,182,212,0.18) 0%, rgba(168,85,247,0.12) 50%, rgba(8,8,18,1) 100%)', accentColor: '#a855f7', inputBorderColor: 'rgba(168,85,247,0.3)', reactionAccent: '#06b6d4', previewWallpaper: 'linear-gradient(135deg, #4c1d95 0%, #0891b2 100%)' },
+  { id: 'sunset', name: 'Sunset', outgoingGradient: 'linear-gradient(135deg, #f97316 0%, #e11d48 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(249, 115, 22, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top center, rgba(249,115,22,0.18) 0%, rgba(12,8,10,1) 85%)', accentColor: '#f97316', inputBorderColor: 'rgba(249,115,22,0.3)', reactionAccent: '#e11d48', previewWallpaper: 'linear-gradient(135deg, #f97316 0%, #9f1239 100%)' },
+  { id: 'ocean', name: 'Ocean', outgoingGradient: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(14, 165, 233, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at bottom right, rgba(14,165,233,0.18) 0%, rgba(6,14,24,1) 85%)', accentColor: '#0ea5e9', inputBorderColor: 'rgba(14,165,233,0.3)', reactionAccent: '#38bdf8', previewWallpaper: 'linear-gradient(135deg, #0284c7 0%, #0c4a6e 100%)' },
+  { id: 'midnight', name: 'Midnight', outgoingGradient: 'linear-gradient(135deg, #6366f1 0%, #312e81 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(99, 102, 241, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top left, rgba(99,102,241,0.15) 0%, rgba(5,6,15,1) 90%)', accentColor: '#6366f1', inputBorderColor: 'rgba(99,102,241,0.3)', reactionAccent: '#818cf8', previewWallpaper: 'linear-gradient(135deg, #3730a3 0%, #0f172a 100%)' },
+  { id: 'neon', name: 'Neon', outgoingGradient: 'linear-gradient(135deg, #10b981 0%, #84cc16 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(16, 185, 129, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at center, rgba(132,204,22,0.12) 0%, rgba(6,15,12,1) 85%)', accentColor: '#10b981', inputBorderColor: 'rgba(16,185,129,0.3)', reactionAccent: '#34d399', previewWallpaper: 'linear-gradient(135deg, #059669 0%, #3f6212 100%)' },
+  { id: 'lavender', name: 'Lavender', outgoingGradient: 'linear-gradient(135deg, #c084fc 0%, #9333ea 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(192, 132, 252, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top right, rgba(192,132,252,0.15) 0%, rgba(10,8,16,1) 85%)', accentColor: '#c084fc', inputBorderColor: 'rgba(192,132,252,0.3)', reactionAccent: '#e879f9', previewWallpaper: 'linear-gradient(135deg, #a855f7 0%, #581c87 100%)' },
+  { id: 'monochrome', name: 'Monochrome', outgoingGradient: 'linear-gradient(135deg, #4b5563 0%, #1f2937 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(156, 163, 175, 0.18)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#9ca3af', inputBorderColor: 'var(--dm-border)', reactionAccent: '#d1d5db', previewWallpaper: 'linear-gradient(135deg, #374151 0%, #111827 100%)' },
+  { id: 'sakura', name: 'Sakura', outgoingGradient: 'linear-gradient(135deg, #f472b6 0%, #db2777 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(244, 114, 182, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at bottom center, rgba(244,114,182,0.18) 0%, rgba(16,8,12,1) 85%)', accentColor: '#f472b6', inputBorderColor: 'rgba(244,114,182,0.3)', reactionAccent: '#f472b6', previewWallpaper: 'linear-gradient(135deg, #ec4899 0%, #831843 100%)' }
 ];
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onLongPress, onReply, themeGradient, onPreviewImage }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onLongPress, onReply, activeTheme, onPreviewImage }: any) => {
   const isAI = msg.senderId === 'ai';
   // A message is "Sent" if the sender is the current user
   const isSent = !isAI && String(msg.senderId) === String(currentUserId);
@@ -181,9 +199,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           maxWidth: '75%',
           marginLeft: isSent ? 'auto' : '0',
           marginRight: isSent ? '0' : 'auto',
-          transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s',
+          transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s, background 0.3s ease, color 0.3s ease',
           transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
-          background: isSent && themeGradient ? themeGradient : undefined,
+          background: isSent ? (activeTheme?.outgoingGradient || 'linear-gradient(135deg, #18181b 0%, #000000 100%)') : (activeTheme?.incomingBubbleColor || undefined),
+          color: isSent ? (activeTheme?.outgoingTextColor || '#ffffff') : (activeTheme?.incomingTextColor || undefined)
         }}
       >
         {msg.replyTo && (
@@ -661,6 +680,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   // Instagram-style Chat Details, Theme, Tagging & Lightbox State
   const [showChatDetails, setShowChatDetails] = useState(false);
+  const [showThemePicker, setShowThemePicker] = useState(false);
+  const [liveThemeId, setLiveThemeId] = useState<string | null>(null);
+  const [themeSearchQuery, setThemeSearchQuery] = useState('');
   const [lightboxImageSrc, setLightboxImageSrc] = useState<string | null>(null);
   const [detailsTab, setDetailsTab] = useState<'photos' | 'reels' | 'files'>('photos');
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
@@ -1682,7 +1704,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           </aside>
 
           <section className={`chat-area ${selectedUser ? 'active' : ''} ${selectedUser ? 'show-on-mobile' : 'hide-on-mobile'}`}>
-            {selectedUser ? (
+            {selectedUser ? (() => {
+              const activeThemeId = liveThemeId || chatThemes[selectedUser.id] || 'default';
+              const activeTheme = INSTAGRAM_THEMES.find(t => t.id === activeThemeId) || INSTAGRAM_THEMES[0];
+              return (
               <>
                 <div className="chat-header">
                   <div
@@ -1775,7 +1800,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                 </div>
 
-                <div className="messages" style={{ background: (AESTHETIC_THEMES.find(t => t.id === (chatThemes[selectedUser.id] || 'default')) || AESTHETIC_THEMES[0]).bg !== 'transparent' ? (AESTHETIC_THEMES.find(t => t.id === (chatThemes[selectedUser.id] || 'default')) || AESTHETIC_THEMES[0]).bg : undefined }}>
+                <div className="messages" style={{ background: activeTheme.chatBg, transition: 'background 300ms ease' }}>
                   {messages.filter(msg => msg.type !== 'accepted').map((msg) => (
                     <MessageItem
                       key={msg.id}
@@ -1789,7 +1814,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       toggleMessageSelection={toggleMessageSelection}
                       onLongPress={handleLongPress}
                       onReply={(m: any) => setReplyToMessage(m)}
-                      themeGradient={msg.senderId === (session?.user as any)?.id ? (AESTHETIC_THEMES.find(t => t.id === (chatThemes[selectedUser.id] || 'default')) || AESTHETIC_THEMES[0]).gradient : undefined}
+                      activeTheme={activeTheme}
                       onPreviewImage={(src: string) => setLightboxImageSrc(src)}
                     />
                   ))}
@@ -2122,34 +2147,81 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </button>
                       )}
 
-                      {/* Aesthetic Chat Themes Picker */}
-                      <div className="w-full max-w-xs mt-4 pt-3.5 border-t border-[var(--dm-border)]">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dm-text-muted)] mb-2 text-center">Chat Theme</p>
-                        <div className="flex items-center justify-center gap-2.5">
-                          {AESTHETIC_THEMES.map(theme => (
-                            <button
-                              key={theme.id}
-                              onClick={() => {
-                                const updated = { ...chatThemes, [selectedUser.id]: theme.id };
-                                setChatThemes(updated);
-                                if (typeof window !== 'undefined') {
-                                  localStorage.setItem('chat_themes', JSON.stringify(updated));
-                                }
-                              }}
-                              className={`w-8 h-8 rounded-full cursor-pointer transition-all border-2 flex items-center justify-center ${
-                                (chatThemes[selectedUser.id] || 'default') === theme.id 
-                                  ? 'border-white scale-110 shadow-lg ring-2 ring-white/40' 
-                                  : 'border-transparent opacity-80 hover:opacity-100 hover:scale-105'
-                              }`}
-                              style={{ background: theme.gradient }}
-                              title={theme.name}
-                            >
-                              {(chatThemes[selectedUser.id] || 'default') === theme.id && (
-                                <span className="text-[10px] text-white font-bold">✓</span>
-                              )}
-                            </button>
-                          ))}
-                        </div>
+                      {/* Instagram Chat Options List */}
+                      <div className="w-full max-w-sm mt-5 space-y-1 text-left">
+                        {/* Theme Selection Row */}
+                        <button
+                          onClick={() => {
+                            setLiveThemeId(chatThemes[selectedUser.id] || 'default');
+                            setShowThemePicker(true);
+                          }}
+                          className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold transition-all cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="w-7 h-7 rounded-full flex items-center justify-center bg-indigo-500/15 text-indigo-400">
+                              🎨
+                            </span>
+                            <span>Theme</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-[var(--dm-text-secondary)]">
+                              {(INSTAGRAM_THEMES.find(t => t.id === (chatThemes[selectedUser.id] || 'default')) || INSTAGRAM_THEMES[0]).name}
+                            </span>
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" className="text-[var(--dm-text-muted)] group-hover:translate-x-0.5 transition-transform">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </button>
+
+                        {/* Mute Notifications Row */}
+                        <button
+                          onClick={() => setIsChatMuted(!isChatMuted)}
+                          className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold transition-all cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="w-7 h-7 rounded-full flex items-center justify-center bg-emerald-500/15 text-emerald-400">
+                              🔔
+                            </span>
+                            <span>Mute Notifications</span>
+                          </div>
+                          <span className={`text-xs font-bold ${isChatMuted ? 'text-rose-500' : 'text-[var(--dm-text-muted)]'}`}>
+                            {isChatMuted ? 'Muted' : 'Off'}
+                          </span>
+                        </button>
+
+                        {/* Nicknames Row */}
+                        <button
+                          onClick={() => setEditingNickname(true)}
+                          className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold transition-all cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="w-7 h-7 rounded-full flex items-center justify-center bg-purple-500/15 text-purple-400">
+                              ✏️
+                            </span>
+                            <span>Nicknames</span>
+                          </div>
+                          <span className="text-xs font-bold text-[var(--dm-text-secondary)]">
+                            {nicknames[selectedUser.id] || 'Set'}
+                          </span>
+                        </button>
+
+                        {/* Search Row */}
+                        <button
+                          onClick={() => {
+                            setShowChatDetails(false);
+                          }}
+                          className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold transition-all cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="w-7 h-7 rounded-full flex items-center justify-center bg-cyan-500/15 text-cyan-400">
+                              🔍
+                            </span>
+                            <span>Search in Conversation</span>
+                          </div>
+                          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" className="text-[var(--dm-text-muted)]">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
                       </div>
 
                       {/* Quick Action Icons */}
@@ -2345,9 +2417,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       </div>
                     </div>
                   </div>
-                )}
-              </>
-            ) : (
+                );
+              })() : (
+                <div className="empty-state">
+                  <h3>Select a Chat</h3>
+                  <p>Choose a contact to start messaging or search for new people.</p>
+                </div>
+              )}
               <div className="empty-state">
                 <h3>Select a Chat</h3>
                 <p>Choose a contact to start messaging or search for new people.</p>
@@ -2563,6 +2639,126 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           />
+      {/* --- INSTAGRAM THEME PICKER BOTTOM SHEET MODAL --- */}
+      {showThemePicker && selectedUser && (
+        <div
+          className="fixed inset-0 z-[1600] flex items-end justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300"
+          onClick={() => {
+            setLiveThemeId(null);
+            setShowThemePicker(false);
+          }}
+        >
+          <div
+            className="w-full max-w-lg bg-[var(--dm-bg-sidebar)] border-t border-x border-[var(--dm-border)] rounded-t-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300 font-sans"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Sheet Handle Bar */}
+            <div className="w-full pt-3 pb-1 flex items-center justify-center">
+              <div className="w-12 h-1.5 rounded-full bg-[var(--dm-border)]" />
+            </div>
+
+            {/* Header */}
+            <div className="px-6 py-3.5 flex items-center justify-between border-b border-[var(--dm-border)]">
+              <h3 className="text-lg font-extrabold text-[var(--dm-text-primary)] tracking-tight">Themes</h3>
+              <button
+                onClick={() => {
+                  setLiveThemeId(null);
+                  setShowThemePicker(false);
+                }}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Search Filter */}
+            <div className="px-5 pt-3 pb-1 flex-shrink-0">
+              <input
+                type="text"
+                placeholder="Search themes..."
+                value={themeSearchQuery}
+                onChange={(e) => setThemeSearchQuery(e.target.value)}
+                className="w-full px-4 py-2.5 text-xs rounded-full border border-[var(--dm-border)] bg-[var(--dm-bg-input)] text-[var(--dm-text-primary)] focus:outline-none"
+              />
+            </div>
+
+            {/* Themes Grid */}
+            <div className="p-5 overflow-y-auto grid grid-cols-2 gap-4 max-h-[55vh] no-scrollbar">
+              {INSTAGRAM_THEMES.filter(t => t.name.toLowerCase().includes(themeSearchQuery.toLowerCase())).map(theme => {
+                const isSelected = (liveThemeId || chatThemes[selectedUser.id] || 'default') === theme.id;
+                return (
+                  <div
+                    key={theme.id}
+                    onClick={() => setLiveThemeId(theme.id)}
+                    className={`relative p-3 rounded-2xl border-2 cursor-pointer transition-all ${
+                      isSelected 
+                        ? 'border-indigo-500 scale-[1.02] shadow-xl ring-2 ring-indigo-500/30 bg-[var(--dm-bg-hover)]' 
+                        : 'border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:border-zinc-500/50'
+                    }`}
+                  >
+                    {/* Live Preview Card Box */}
+                    <div
+                      className="w-full aspect-[4/3] rounded-xl p-2.5 flex flex-col justify-between overflow-hidden shadow-inner relative transition-all duration-300"
+                      style={{ background: theme.previewWallpaper }}
+                    >
+                      {/* Sample Incoming Bubble */}
+                      <div
+                        className="self-start max-w-[85%] px-2.5 py-1.5 rounded-xl text-[10px] font-medium shadow-sm truncate"
+                        style={{ background: theme.incomingBubbleColor, color: theme.incomingTextColor }}
+                      >
+                        Hey! 👋
+                      </div>
+                      {/* Sample Outgoing Bubble */}
+                      <div
+                        className="self-end max-w-[85%] px-2.5 py-1.5 rounded-xl text-[10px] font-medium shadow-sm truncate"
+                        style={{ background: theme.outgoingGradient, color: theme.outgoingTextColor }}
+                      >
+                        Loving this theme! ✨
+                      </div>
+                    </div>
+
+                    {/* Footer Name & Animated Checkmark */}
+                    <div className="mt-2.5 flex items-center justify-between px-1">
+                      <span className="text-xs font-bold text-[var(--dm-text-primary)]">{theme.name}</span>
+                      {isSelected && (
+                        <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-extrabold animate-in zoom-in-75 duration-200 shadow-md">
+                          ✓
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="p-4 border-t border-[var(--dm-border)] bg-[var(--dm-bg-sidebar)] flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setLiveThemeId(null);
+                  setShowThemePicker(false);
+                }}
+                className="flex-1 py-3 px-4 rounded-full text-xs font-bold text-[var(--dm-text-secondary)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const targetThemeId = liveThemeId || chatThemes[selectedUser.id] || 'default';
+                  const updated = { ...chatThemes, [selectedUser.id]: targetThemeId };
+                  setChatThemes(updated);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('chat_themes', JSON.stringify(updated));
+                  }
+                  setLiveThemeId(null);
+                  setShowThemePicker(false);
+                }}
+                className="flex-1 py-3 px-4 rounded-full text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+              >
+                Apply Theme
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>
