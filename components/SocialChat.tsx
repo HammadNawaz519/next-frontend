@@ -66,12 +66,15 @@ export interface ChatTheme {
 
 export const INSTAGRAM_THEMES: ChatTheme[] = [
   { id: 'love', name: 'Love ❤️', outgoingGradient: 'linear-gradient(135deg, #ff3366 0%, #ff6b8b 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 51, 102, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(ellipse at top, rgba(255, 51, 102, 0.22) 0%, rgba(255, 107, 139, 0.1) 45%, rgba(15, 8, 12, 1) 100%)', accentColor: '#ff3366', inputBorderColor: 'rgba(255, 51, 102, 0.3)', reactionAccent: '#ff3366', previewWallpaper: 'linear-gradient(135deg, #ff3366 0%, #ff758c 100%)' },
-  { id: 'sakura', name: 'Rose Quartz 🌸', outgoingGradient: 'linear-gradient(135deg, #ec4899 0%, #f472b6 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(244, 114, 182, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at bottom left, rgba(244, 114, 182, 0.2) 0%, rgba(251, 207, 232, 0.08) 50%, rgba(16, 8, 14, 1) 100%)', accentColor: '#f472b6', inputBorderColor: 'rgba(244, 114, 182, 0.3)', reactionAccent: '#f472b6', previewWallpaper: 'linear-gradient(135deg, #ec4899 0%, #831843 100%)' },
+  { id: 'rosegold', name: 'Rose Gold 🌸', outgoingGradient: 'linear-gradient(135deg, #f472b6 0%, #fb7185 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(244, 114, 182, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top right, rgba(244, 114, 182, 0.2) 0%, rgba(251, 113, 133, 0.1) 50%, rgba(15, 8, 12, 1) 100%)', accentColor: '#f472b6', inputBorderColor: 'rgba(244, 114, 182, 0.3)', reactionAccent: '#f472b6', previewWallpaper: 'linear-gradient(135deg, #f472b6 0%, #fb7185 100%)' },
+  { id: 'astral', name: 'Astral Glow 🌟', outgoingGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(245, 158, 11, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top left, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.08) 50%, rgba(12, 10, 6, 1) 100%)', accentColor: '#f59e0b', inputBorderColor: 'rgba(245, 158, 11, 0.3)', reactionAccent: '#f59e0b', previewWallpaper: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)' },
   { id: 'sunset', name: 'Sunset Horizon 🌅', outgoingGradient: 'linear-gradient(135deg, #f97316 0%, #e11d48 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(249, 115, 22, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top center, rgba(249, 115, 22, 0.22) 0%, rgba(225, 29, 72, 0.12) 60%, rgba(14, 8, 10, 1) 100%)', accentColor: '#f97316', inputBorderColor: 'rgba(249, 115, 22, 0.3)', reactionAccent: '#e11d48', previewWallpaper: 'linear-gradient(135deg, #f97316 0%, #9f1239 100%)' },
   { id: 'ocean', name: 'Ocean Breeze 🌊', outgoingGradient: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(14, 165, 233, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top right, rgba(14, 165, 233, 0.22) 0%, rgba(2, 132, 199, 0.1) 60%, rgba(5, 12, 20, 1) 100%)', accentColor: '#0ea5e9', inputBorderColor: 'rgba(14, 165, 233, 0.3)', reactionAccent: '#38bdf8', previewWallpaper: 'linear-gradient(135deg, #0284c7 0%, #0c4a6e 100%)' },
   { id: 'neon', name: 'Cyberpunk ⚡', outgoingGradient: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(16, 185, 129, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at center, rgba(16, 185, 129, 0.18) 0%, rgba(6, 182, 212, 0.12) 50%, rgba(4, 12, 10, 1) 100%)', accentColor: '#10b981', inputBorderColor: 'rgba(16, 185, 129, 0.3)', reactionAccent: '#34d399', previewWallpaper: 'linear-gradient(135deg, #059669 0%, #3f6212 100%)' },
   { id: 'galaxy', name: 'Cosmic Nebula 🌌', outgoingGradient: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(168, 85, 247, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.22) 0%, rgba(147, 51, 234, 0.1) 60%, rgba(8, 6, 18, 1) 100%)', accentColor: '#a855f7', inputBorderColor: 'rgba(168, 85, 247, 0.3)', reactionAccent: '#06b6d4', previewWallpaper: 'linear-gradient(135deg, #4c1d95 0%, #0891b2 100%)' },
   { id: 'lavender', name: 'Lavender Dream 💜', outgoingGradient: 'linear-gradient(135deg, #c084fc 0%, #9333ea 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(192, 132, 252, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top right, rgba(192, 132, 252, 0.18) 0%, rgba(10, 8, 16, 1) 85%)', accentColor: '#c084fc', inputBorderColor: 'rgba(192, 132, 252, 0.3)', reactionAccent: '#e879f9', previewWallpaper: 'linear-gradient(135deg, #a855f7 0%, #581c87 100%)' },
+  { id: 'emerald', name: 'Emerald Mint 🌿', outgoingGradient: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(16, 185, 129, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top left, rgba(5, 150, 105, 0.2) 0%, rgba(16, 185, 129, 0.08) 50%, rgba(4, 14, 10, 1) 100%)', accentColor: '#10b981', inputBorderColor: 'rgba(16, 185, 129, 0.3)', reactionAccent: '#34d399', previewWallpaper: 'linear-gradient(135deg, #059669 0%, #047857 100%)' },
+  { id: 'nordic', name: 'Nordic Ice ❄️', outgoingGradient: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(56, 189, 248, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at bottom center, rgba(56, 189, 248, 0.2) 0%, rgba(129, 140, 248, 0.08) 50%, rgba(6, 10, 18, 1) 100%)', accentColor: '#38bdf8', inputBorderColor: 'rgba(56, 189, 248, 0.3)', reactionAccent: '#38bdf8', previewWallpaper: 'linear-gradient(135deg, #38bdf8 0%, #4338ca 100%)' },
   { id: 'monochrome', name: 'Monochrome 🖤', outgoingGradient: 'linear-gradient(135deg, #4b5563 0%, #1f2937 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(156, 163, 175, 0.18)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#9ca3af', inputBorderColor: 'var(--dm-border)', reactionAccent: '#d1d5db', previewWallpaper: 'linear-gradient(135deg, #374151 0%, #111827 100%)' },
   { id: 'default', name: 'Classic Dark 🔮', outgoingGradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'var(--dm-bg-hover)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#6366f1', inputBorderColor: 'var(--dm-border)', reactionAccent: '#6366f1', previewWallpaper: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' }
 ];
@@ -2726,21 +2729,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   </div>
                 )}
 
-                {/* ── INSTAGRAM THEME PICKER MODAL (NO OUTLINES) ── */}
+                {/* ── INSTAGRAM THEME PICKER MODAL (BORDERLESS & UNBOXED) ── */}
                 {showThemePicker && selectedUser && (
                   <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="w-full max-w-md mx-auto bg-[var(--dm-bg-sidebar)] text-[var(--dm-text-primary)] rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[80vh] flex flex-col">
-                      <div className="flex items-center justify-between pb-4 border-b border-[var(--dm-border)]/30">
-                        <h3 className="font-extrabold text-base tracking-tight">Chat Themes</h3>
+                    <div className="w-full max-w-md mx-auto bg-[var(--dm-bg-sidebar)] text-[var(--dm-text-primary)] rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[85vh] flex flex-col">
+                      <div className="flex items-center justify-between pb-3">
+                        <h3 className="font-extrabold text-base tracking-tight">Themes</h3>
                         <button
                           onClick={() => setShowThemePicker(false)}
-                          className="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] text-xs text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] cursor-pointer"
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] cursor-pointer"
                         >
                           ✕
                         </button>
                       </div>
 
-                      <div className="flex-1 overflow-y-auto py-4 space-y-3 no-scrollbar">
+                      <div className="flex-1 overflow-y-auto py-2 space-y-1 no-scrollbar">
                         {INSTAGRAM_THEMES.map((theme) => {
                           const isSelected = (chatThemes[selectedUser.id] || 'default') === theme.id;
                           return (
@@ -2754,27 +2757,33 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                 }
                                 setShowThemePicker(false);
                               }}
-                              className={`flex items-center justify-between p-3.5 rounded-2xl cursor-pointer transition-all ${
-                                isSelected ? 'bg-[var(--dm-bg-active)]' : 'bg-[var(--dm-bg-hover)]/60 hover:bg-[var(--dm-bg-hover)]'
+                              className={`flex items-center justify-between py-3 px-3 rounded-2xl cursor-pointer transition-all ${
+                                isSelected ? 'bg-[var(--dm-bg-hover)]/80' : 'hover:bg-[var(--dm-bg-hover)]/40'
                               }`}
                             >
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3.5">
                                 <div
-                                  className="w-10 h-10 rounded-full shadow-md flex items-center justify-center text-xs"
+                                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm shadow-sm transition-transform active:scale-95 flex-shrink-0"
                                   style={{ background: theme.previewWallpaper }}
                                 >
                                   {theme.id === 'love' && '❤️'}
-                                  {theme.id === 'sakura' && '🌸'}
+                                  {theme.id === 'rosegold' && '🌸'}
+                                  {theme.id === 'astral' && '🌟'}
                                   {theme.id === 'neon' && '⚡'}
                                   {theme.id === 'ocean' && '🌊'}
                                   {theme.id === 'sunset' && '🌅'}
                                   {theme.id === 'galaxy' && '🌌'}
+                                  {theme.id === 'lavender' && '💜'}
+                                  {theme.id === 'emerald' && '🌿'}
+                                  {theme.id === 'nordic' && '❄️'}
+                                  {theme.id === 'monochrome' && '🖤'}
+                                  {theme.id === 'default' && '🔮'}
                                 </div>
-                                <span className="text-xs font-bold text-[var(--dm-text-primary)]">{theme.name}</span>
+                                <span className="text-xs font-semibold text-[var(--dm-text-primary)]">{theme.name}</span>
                               </div>
 
                               {isSelected && (
-                                <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">
+                                <span className="text-indigo-500 font-extrabold text-sm pr-1">
                                   ✓
                                 </span>
                               )}
