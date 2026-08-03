@@ -75,6 +75,8 @@ export const INSTAGRAM_THEMES: ChatTheme[] = [
   { id: 'lavender', name: 'Lavender', outgoingGradient: 'linear-gradient(135deg, #c084fc 0%, #9333ea 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(192, 132, 252, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top right, rgba(192,132,252,0.15) 0%, rgba(10,8,16,1) 85%)', accentColor: '#c084fc', inputBorderColor: 'rgba(192,132,252,0.3)', reactionAccent: '#e879f9', previewWallpaper: 'linear-gradient(135deg, #a855f7 0%, #581c87 100%)' },
   { id: 'monochrome', name: 'Monochrome', outgoingGradient: 'linear-gradient(135deg, #4b5563 0%, #1f2937 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(156, 163, 175, 0.18)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#9ca3af', inputBorderColor: 'var(--dm-border)', reactionAccent: '#d1d5db', previewWallpaper: 'linear-gradient(135deg, #374151 0%, #111827 100%)' },
   { id: 'sakura', name: 'Sakura', outgoingGradient: 'linear-gradient(135deg, #f472b6 0%, #db2777 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(244, 114, 182, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at bottom center, rgba(244,114,182,0.18) 0%, rgba(16,8,12,1) 85%)', accentColor: '#f472b6', inputBorderColor: 'rgba(244,114,182,0.3)', reactionAccent: '#f472b6', previewWallpaper: 'linear-gradient(135deg, #ec4899 0%, #831843 100%)' }
+];
+
 export interface MessageTag {
   id: string;
   emoji: string;
@@ -2521,11 +2523,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   <p>Choose a contact to start messaging or search for new people.</p>
                 </div>
               )}
-              <div className="empty-state">
-                <h3>Select a Chat</h3>
-                <p>Choose a contact to start messaging or search for new people.</p>
-              </div>
-            )}
 
           </section>
         </div>
