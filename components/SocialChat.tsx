@@ -1938,16 +1938,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               <span className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce" />
                             </span>
                           </span>
-                        ) : onlineUsers.has((selectedUser.email || '').toLowerCase().trim()) ? (
-                          <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                            Online
-                          </span>
                         ) : (
                           <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>
-                            {lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id] 
-                              ? `Last active ${lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id]}` 
-                              : 'Offline'}
+                            {onlineUsers.has((selectedUser.email || '').toLowerCase().trim()) ? 'Active' : (lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id] ? `Active ${lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id]}` : 'Offline')}
                           </span>
                         )}
                       </div>
@@ -2124,12 +2117,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           placeholder="Write a message..."
                           value={inputValue}
                           rows={1}
-                          ref={(el) => {
-                            if (el) {
-                              el.style.height = 'auto';
-                              el.style.height = Math.min(el.scrollHeight, 128) + 'px';
-                            }
-                          }}
                           onChange={(e) => {
                             const val = e.target.value;
                             setInputValue(val);

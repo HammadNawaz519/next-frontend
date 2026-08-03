@@ -131,16 +131,16 @@ export default function ProfilePanel({
         let list = stored ? JSON.parse(stored) : [];
         if (!Array.isArray(list)) list = [];
         
-        // Filter out any blacklisted removed emails
-        list = list.filter((a: any) => a?.email && !removedList.includes(a.email.toLowerCase().trim()));
+        // Filter out any blacklisted removed emails safely
+        list = list.filter((a: any) => a && a.email && typeof a.email === 'string' && !removedList.includes(a.email.toLowerCase().trim()));
 
-        const idx = list.findIndex((acc: any) => acc.email.toLowerCase().trim() === curEmail);
+        const idx = list.findIndex((acc: any) => acc && acc.email && typeof acc.email === 'string' && acc.email.toLowerCase().trim() === curEmail);
         const accInfo = { username: curUsername, email: curEmail, image: curImage, name: curName, provider: curProvider };
 
         // Only add if not blacklisted as removed
-        if (!removedList.includes(curEmail)) {
+        if (curEmail && !removedList.includes(curEmail)) {
           if (idx === -1) {
-            if (curEmail) list.push(accInfo);
+            list.push(accInfo);
           } else {
             list[idx] = { ...list[idx], ...accInfo };
           }

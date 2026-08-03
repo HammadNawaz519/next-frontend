@@ -258,14 +258,15 @@ export default function LoginPage() {
       } else if (res?.ok) {
         // Save password to connected accounts for seamless switching
         try {
+          const cleanEmail = email.toLowerCase().trim();
           const stored = localStorage.getItem('connected_accounts');
           let list = stored ? JSON.parse(stored) : [];
           if (!Array.isArray(list)) list = [];
-          const idx = list.findIndex((acc: any) => acc.email === email);
+          const idx = list.findIndex((acc: any) => acc && acc.email && typeof acc.email === 'string' && acc.email.toLowerCase().trim() === cleanEmail);
           if (idx !== -1) {
-            list[idx].password = password;
+            list[idx] = { ...list[idx], email: cleanEmail, password };
           } else {
-            list.push({ email, password, provider: 'credentials' });
+            list.push({ email: cleanEmail, password, provider: 'credentials' });
           }
           localStorage.setItem('connected_accounts', JSON.stringify(list));
         } catch (e) {}

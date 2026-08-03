@@ -46,7 +46,7 @@ export default function AccountsPage() {
           const removedStr = localStorage.getItem('removed_accounts');
           const removedList: string[] = removedStr ? JSON.parse(removedStr) : [];
           const cleanAccounts = parsed.filter(
-            (acc: SavedAccount) => acc?.email && !removedList.includes(acc.email.toLowerCase().trim())
+            (acc: SavedAccount) => acc && acc.email && typeof acc.email === 'string' && !removedList.includes(acc.email.toLowerCase().trim())
           );
           setAccounts(cleanAccounts);
         }
