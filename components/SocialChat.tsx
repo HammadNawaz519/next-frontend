@@ -1681,7 +1681,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     <div className="meta">
                       <b>
                         {isPinned && <span style={{ marginRight: '4px', fontSize: '11px' }}>📌</span>}
-                        {user.name}
+                        {nicknames[user.id] || user.name}
                         {(user as any).unseenCount > 0 && (
                           <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 700, background: '#6366f1', color: '#fff', borderRadius: '20px', padding: '1px 6px' }}>
                             {(user as any).unseenCount}
