@@ -561,7 +561,7 @@ export default function LoginPage() {
                   placeholder="000000"
                   value={otpValue}
                   onChange={(e) => updateOtpValue(e.target.value)}
-                  className="w-full h-[46px] lg:h-[50px] text-center text-lg lg:text-xl font-bold tracking-[0.35em] placeholder:tracking-normal placeholder:text-gray-400 border border-gray-200 rounded-2xl bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors"
+                  className="w-full h-[48px] lg:h-[52px] text-center font-mono text-lg lg:text-xl font-bold tracking-[0.2em] pl-[0.2em] leading-none placeholder:tracking-normal placeholder:font-sans placeholder:text-gray-400 border border-gray-200 rounded-2xl bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-all flex items-center justify-center"
                 />
               </div>
               <button type="submit" disabled={loading || otpValue.length < 6} className="w-full h-[44px] lg:h-[48px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
@@ -1076,7 +1076,7 @@ export default function LoginPage() {
                 placeholder="Enter 6-digit code"
                 value={otpValue}
                 onChange={(e) => updateOtpValue(e.target.value)}
-                className="w-full rounded-full bg-[#1c1c1e] text-white text-center text-lg font-bold tracking-[0.35em] placeholder:tracking-normal placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors"
+                className="w-full h-[50px] rounded-full bg-[#1c1c1e] text-white text-center font-mono text-lg font-bold tracking-[0.2em] pl-[0.2em] leading-none placeholder:tracking-normal placeholder:font-sans placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 focus:outline-none transition-all flex items-center justify-center"
               />
             </div>
 
@@ -1191,7 +1191,7 @@ export default function LoginPage() {
               placeholder="Enter 6-digit code"
               value={otpValue}
               onChange={(e) => updateOtpValue(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white text-center text-lg font-bold tracking-[0.35em] placeholder:tracking-normal placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors"
+              className="w-full h-[50px] rounded-full bg-[#1c1c1e] text-white text-center font-mono text-lg font-bold tracking-[0.2em] pl-[0.2em] leading-none placeholder:tracking-normal placeholder:font-sans placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 focus:outline-none transition-all flex items-center justify-center"
             />
           </div>
 
