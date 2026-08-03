@@ -65,16 +65,15 @@ export interface ChatTheme {
 }
 
 export const INSTAGRAM_THEMES: ChatTheme[] = [
-  { id: 'default', name: 'Default', outgoingGradient: 'linear-gradient(135deg, #18181b 0%, #000000 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'var(--dm-bg-hover)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#6366f1', inputBorderColor: 'var(--dm-border)', reactionAccent: '#6366f1', previewWallpaper: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' },
-  { id: 'love', name: 'Love', outgoingGradient: 'linear-gradient(135deg, #ff4b72 0%, #ff2a55 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 75, 114, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top right, rgba(255,42,85,0.18) 0%, rgba(10,8,12,1) 85%)', accentColor: '#ff2a55', inputBorderColor: 'rgba(255,42,85,0.3)', reactionAccent: '#ff4b72', previewWallpaper: 'linear-gradient(135deg, #ff4b72 0%, #7d102a 100%)' },
-  { id: 'galaxy', name: 'Galaxy', outgoingGradient: 'linear-gradient(135deg, #a855f7 0%, #06b6d4 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(168, 85, 247, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at bottom left, rgba(6,182,212,0.18) 0%, rgba(168,85,247,0.12) 50%, rgba(8,8,18,1) 100%)', accentColor: '#a855f7', inputBorderColor: 'rgba(168,85,247,0.3)', reactionAccent: '#06b6d4', previewWallpaper: 'linear-gradient(135deg, #4c1d95 0%, #0891b2 100%)' },
-  { id: 'sunset', name: 'Sunset', outgoingGradient: 'linear-gradient(135deg, #f97316 0%, #e11d48 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(249, 115, 22, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top center, rgba(249,115,22,0.18) 0%, rgba(12,8,10,1) 85%)', accentColor: '#f97316', inputBorderColor: 'rgba(249,115,22,0.3)', reactionAccent: '#e11d48', previewWallpaper: 'linear-gradient(135deg, #f97316 0%, #9f1239 100%)' },
-  { id: 'ocean', name: 'Ocean', outgoingGradient: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(14, 165, 233, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at bottom right, rgba(14,165,233,0.18) 0%, rgba(6,14,24,1) 85%)', accentColor: '#0ea5e9', inputBorderColor: 'rgba(14,165,233,0.3)', reactionAccent: '#38bdf8', previewWallpaper: 'linear-gradient(135deg, #0284c7 0%, #0c4a6e 100%)' },
-  { id: 'midnight', name: 'Midnight', outgoingGradient: 'linear-gradient(135deg, #6366f1 0%, #312e81 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(99, 102, 241, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top left, rgba(99,102,241,0.15) 0%, rgba(5,6,15,1) 90%)', accentColor: '#6366f1', inputBorderColor: 'rgba(99,102,241,0.3)', reactionAccent: '#818cf8', previewWallpaper: 'linear-gradient(135deg, #3730a3 0%, #0f172a 100%)' },
-  { id: 'neon', name: 'Neon', outgoingGradient: 'linear-gradient(135deg, #10b981 0%, #84cc16 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(16, 185, 129, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at center, rgba(132,204,22,0.12) 0%, rgba(6,15,12,1) 85%)', accentColor: '#10b981', inputBorderColor: 'rgba(16,185,129,0.3)', reactionAccent: '#34d399', previewWallpaper: 'linear-gradient(135deg, #059669 0%, #3f6212 100%)' },
-  { id: 'lavender', name: 'Lavender', outgoingGradient: 'linear-gradient(135deg, #c084fc 0%, #9333ea 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(192, 132, 252, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top right, rgba(192,132,252,0.15) 0%, rgba(10,8,16,1) 85%)', accentColor: '#c084fc', inputBorderColor: 'rgba(192,132,252,0.3)', reactionAccent: '#e879f9', previewWallpaper: 'linear-gradient(135deg, #a855f7 0%, #581c87 100%)' },
-  { id: 'monochrome', name: 'Monochrome', outgoingGradient: 'linear-gradient(135deg, #4b5563 0%, #1f2937 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(156, 163, 175, 0.18)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#9ca3af', inputBorderColor: 'var(--dm-border)', reactionAccent: '#d1d5db', previewWallpaper: 'linear-gradient(135deg, #374151 0%, #111827 100%)' },
-  { id: 'sakura', name: 'Sakura', outgoingGradient: 'linear-gradient(135deg, #f472b6 0%, #db2777 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(244, 114, 182, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at bottom center, rgba(244,114,182,0.18) 0%, rgba(16,8,12,1) 85%)', accentColor: '#f472b6', inputBorderColor: 'rgba(244,114,182,0.3)', reactionAccent: '#f472b6', previewWallpaper: 'linear-gradient(135deg, #ec4899 0%, #831843 100%)' }
+  { id: 'love', name: 'Love ❤️', outgoingGradient: 'linear-gradient(135deg, #ff3366 0%, #ff6b8b 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 51, 102, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(ellipse at top, rgba(255, 51, 102, 0.22) 0%, rgba(255, 107, 139, 0.1) 45%, rgba(15, 8, 12, 1) 100%)', accentColor: '#ff3366', inputBorderColor: 'rgba(255, 51, 102, 0.3)', reactionAccent: '#ff3366', previewWallpaper: 'linear-gradient(135deg, #ff3366 0%, #ff758c 100%)' },
+  { id: 'sakura', name: 'Rose Quartz 🌸', outgoingGradient: 'linear-gradient(135deg, #ec4899 0%, #f472b6 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(244, 114, 182, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at bottom left, rgba(244, 114, 182, 0.2) 0%, rgba(251, 207, 232, 0.08) 50%, rgba(16, 8, 14, 1) 100%)', accentColor: '#f472b6', inputBorderColor: 'rgba(244, 114, 182, 0.3)', reactionAccent: '#f472b6', previewWallpaper: 'linear-gradient(135deg, #ec4899 0%, #831843 100%)' },
+  { id: 'sunset', name: 'Sunset Horizon 🌅', outgoingGradient: 'linear-gradient(135deg, #f97316 0%, #e11d48 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(249, 115, 22, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top center, rgba(249, 115, 22, 0.22) 0%, rgba(225, 29, 72, 0.12) 60%, rgba(14, 8, 10, 1) 100%)', accentColor: '#f97316', inputBorderColor: 'rgba(249, 115, 22, 0.3)', reactionAccent: '#e11d48', previewWallpaper: 'linear-gradient(135deg, #f97316 0%, #9f1239 100%)' },
+  { id: 'ocean', name: 'Ocean Breeze 🌊', outgoingGradient: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(14, 165, 233, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top right, rgba(14, 165, 233, 0.22) 0%, rgba(2, 132, 199, 0.1) 60%, rgba(5, 12, 20, 1) 100%)', accentColor: '#0ea5e9', inputBorderColor: 'rgba(14, 165, 233, 0.3)', reactionAccent: '#38bdf8', previewWallpaper: 'linear-gradient(135deg, #0284c7 0%, #0c4a6e 100%)' },
+  { id: 'neon', name: 'Cyberpunk ⚡', outgoingGradient: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(16, 185, 129, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at center, rgba(16, 185, 129, 0.18) 0%, rgba(6, 182, 212, 0.12) 50%, rgba(4, 12, 10, 1) 100%)', accentColor: '#10b981', inputBorderColor: 'rgba(16, 185, 129, 0.3)', reactionAccent: '#34d399', previewWallpaper: 'linear-gradient(135deg, #059669 0%, #3f6212 100%)' },
+  { id: 'galaxy', name: 'Cosmic Nebula 🌌', outgoingGradient: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(168, 85, 247, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.22) 0%, rgba(147, 51, 234, 0.1) 60%, rgba(8, 6, 18, 1) 100%)', accentColor: '#a855f7', inputBorderColor: 'rgba(168, 85, 247, 0.3)', reactionAccent: '#06b6d4', previewWallpaper: 'linear-gradient(135deg, #4c1d95 0%, #0891b2 100%)' },
+  { id: 'lavender', name: 'Lavender Dream 💜', outgoingGradient: 'linear-gradient(135deg, #c084fc 0%, #9333ea 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(192, 132, 252, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(circle at top right, rgba(192, 132, 252, 0.18) 0%, rgba(10, 8, 16, 1) 85%)', accentColor: '#c084fc', inputBorderColor: 'rgba(192, 132, 252, 0.3)', reactionAccent: '#e879f9', previewWallpaper: 'linear-gradient(135deg, #a855f7 0%, #581c87 100%)' },
+  { id: 'monochrome', name: 'Monochrome 🖤', outgoingGradient: 'linear-gradient(135deg, #4b5563 0%, #1f2937 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(156, 163, 175, 0.18)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#9ca3af', inputBorderColor: 'var(--dm-border)', reactionAccent: '#d1d5db', previewWallpaper: 'linear-gradient(135deg, #374151 0%, #111827 100%)' },
+  { id: 'default', name: 'Classic Dark 🔮', outgoingGradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'var(--dm-bg-hover)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#6366f1', inputBorderColor: 'var(--dm-border)', reactionAccent: '#6366f1', previewWallpaper: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' }
 ];
 
 export interface MessageTag {
@@ -776,6 +775,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [showSearchWindow, setShowSearchWindow] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
+  const [reportSubmitted, setReportSubmitted] = useState(false);
 
   const activeThemeId = (selectedUser ? chatThemes[selectedUser.id] : null) || 'default';
   const activeTheme = useMemo(() => {
@@ -2407,9 +2409,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         {/* Report Conversation Row */}
                         <button
                           onClick={() => {
-                            if (confirm("Report this conversation to moderation?")) {
-                              alert("Report submitted.");
-                            }
+                            setReportSubmitted(false);
+                            setShowReportModal(true);
                           }}
                           className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
                         >
@@ -2418,18 +2419,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                         {/* Clear History Row */}
                         <button
-                          onClick={async () => {
-                            if (confirm("Clear chat history with " + (nicknames[selectedUser.id] || selectedUser.name) + "?")) {
-                              await hideSocialChat(selectedUser.id);
-                              setMessages([]);
-                              setMessagesCache(prev => {
-                                const next = { ...prev };
-                                delete next[selectedUser.id];
-                                return next;
-                              });
-                              setShowChatDetails(false);
-                            }
-                          }}
+                          onClick={() => setShowClearConfirmModal(true)}
                           className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
                         >
                           <span className="font-semibold text-rose-500">Clear Chat History</span>
@@ -2651,6 +2641,147 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           </div>
                         );
                       })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── SIMPLE CUSTOM REPORT MODAL ── */}
+                {showReportModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-xs rounded-3xl bg-[var(--dm-bg-sidebar)] text-[var(--dm-text-primary)] p-6 text-center shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+                      {reportSubmitted ? (
+                        <div className="space-y-3 py-2">
+                          <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-500 mx-auto flex items-center justify-center text-xl font-bold">✓</div>
+                          <h3 className="text-base font-extrabold">Report Submitted</h3>
+                          <p className="text-xs text-[var(--dm-text-secondary)]">Thank you. Our moderation team will review this conversation.</p>
+                          <button
+                            onClick={() => {
+                              setShowReportModal(false);
+                              setReportSubmitted(false);
+                            }}
+                            className="w-full py-2.5 rounded-full bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] text-xs font-bold transition-colors cursor-pointer"
+                          >
+                            Done
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <h3 className="text-base font-extrabold">Report Conversation</h3>
+                          <p className="text-xs text-[var(--dm-text-secondary)] leading-relaxed">
+                            Are you sure you want to report this conversation to moderation?
+                          </p>
+                          <div className="flex items-center gap-3 pt-2">
+                            <button
+                              onClick={() => setShowReportModal(false)}
+                              className="flex-1 py-2.5 rounded-full bg-[var(--dm-bg-hover)] text-xs font-bold text-[var(--dm-text-secondary)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => setReportSubmitted(true)}
+                              className="flex-1 py-2.5 rounded-full bg-amber-500 hover:bg-amber-600 text-xs font-bold text-white transition-colors cursor-pointer"
+                            >
+                              Report
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── SIMPLE CUSTOM CLEAR CHAT HISTORY MODAL ── */}
+                {showClearConfirmModal && selectedUser && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-xs rounded-3xl bg-[var(--dm-bg-sidebar)] text-[var(--dm-text-primary)] p-6 text-center shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+                      <h3 className="text-base font-extrabold">Clear Chat History</h3>
+                      <p className="text-xs text-[var(--dm-text-secondary)] leading-relaxed">
+                        This will clear all messages in your conversation with <span className="font-bold text-[var(--dm-text-primary)]">{nicknames[selectedUser.id] || selectedUser.name}</span>.
+                      </p>
+                      <div className="flex items-center gap-3 pt-2">
+                        <button
+                          onClick={() => setShowClearConfirmModal(false)}
+                          className="flex-1 py-2.5 rounded-full bg-[var(--dm-bg-hover)] text-xs font-bold text-[var(--dm-text-secondary)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={async () => {
+                            setShowClearConfirmModal(false);
+                            await hideSocialChat(selectedUser.id);
+                            setMessages([]);
+                            setMessagesCache(prev => {
+                              const next = { ...prev };
+                              delete next[selectedUser.id];
+                              return next;
+                            });
+                            setShowChatDetails(false);
+                          }}
+                          className="flex-1 py-2.5 rounded-full bg-rose-500 hover:bg-rose-600 text-xs font-bold text-white transition-colors cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── INSTAGRAM THEME PICKER MODAL (NO OUTLINES) ── */}
+                {showThemePicker && selectedUser && (
+                  <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-md mx-auto bg-[var(--dm-bg-sidebar)] text-[var(--dm-text-primary)] rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[80vh] flex flex-col">
+                      <div className="flex items-center justify-between pb-4 border-b border-[var(--dm-border)]/30">
+                        <h3 className="font-extrabold text-base tracking-tight">Chat Themes</h3>
+                        <button
+                          onClick={() => setShowThemePicker(false)}
+                          className="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] text-xs text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto py-4 space-y-3 no-scrollbar">
+                        {INSTAGRAM_THEMES.map((theme) => {
+                          const isSelected = (chatThemes[selectedUser.id] || 'default') === theme.id;
+                          return (
+                            <div
+                              key={theme.id}
+                              onClick={() => {
+                                const updated = { ...chatThemes, [selectedUser.id]: theme.id };
+                                setChatThemes(updated);
+                                if (typeof window !== 'undefined') {
+                                  localStorage.setItem('chat_themes', JSON.stringify(updated));
+                                }
+                                setShowThemePicker(false);
+                              }}
+                              className={`flex items-center justify-between p-3.5 rounded-2xl cursor-pointer transition-all ${
+                                isSelected ? 'bg-[var(--dm-bg-active)]' : 'bg-[var(--dm-bg-hover)]/60 hover:bg-[var(--dm-bg-hover)]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className="w-10 h-10 rounded-full shadow-md flex items-center justify-center text-xs"
+                                  style={{ background: theme.previewWallpaper }}
+                                >
+                                  {theme.id === 'love' && '❤️'}
+                                  {theme.id === 'sakura' && '🌸'}
+                                  {theme.id === 'neon' && '⚡'}
+                                  {theme.id === 'ocean' && '🌊'}
+                                  {theme.id === 'sunset' && '🌅'}
+                                  {theme.id === 'galaxy' && '🌌'}
+                                </div>
+                                <span className="text-xs font-bold text-[var(--dm-text-primary)]">{theme.name}</span>
+                              </div>
+
+                              {isSelected && (
+                                <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">
+                                  ✓
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
