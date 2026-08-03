@@ -1166,9 +1166,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       newSocket.on('user_last_seen', ({ email, lastSeen }: { email: string; lastSeen: string }) => {
         if (email) {
           const cleanEmail = email.toLowerCase().trim();
-          const timeStr = lastSeen === 'online'
-            ? 'Online'
-            : new Date(lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+          let timeStr = 'recently';
+          if (lastSeen === 'online') {
+            timeStr = 'Online';
+          } else if (lastSeen) {
+            const d = new Date(lastSeen);
+            if (!isNaN(d.getTime())) {
+              const now = new Date();
+              const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+              if (diffSec < 60) timeStr = 'just now';
+              else if (diffSec < 3600) timeStr = `${Math.floor(diffSec / 60)}m ago`;
+              else if (diffSec < 86400) timeStr = `${Math.floor(diffSec / 3600)}h ago`;
+              else timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            } else {
+              timeStr = lastSeen;
+            }
+          }
           setLastSeenMap(prev => {
             const updated = { ...prev, [cleanEmail]: timeStr };
             if (typeof window !== 'undefined') {
@@ -1933,7 +1946,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         ) : (
                           <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>
                             {lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id] 
-                              ? `Last seen at ${lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id]}` 
+                              ? `Last active ${lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id]}` 
                               : 'Offline'}
                           </span>
                         )}
@@ -2329,50 +2342,29 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </button>
                       )}
 
-                      {/* Clean Modern Action Card (No inline emojis) */}
-                      <div className="w-full max-w-sm mt-6 space-y-2 text-left">
+                      {/* Simple Unboxed Action List (No boxes, no icons) */}
+                      <div className="w-full max-w-sm mt-6 divide-y divide-[var(--dm-border)]/40 text-left">
                         {/* Theme Selection Row */}
                         <button
                           onClick={() => {
                             setLiveThemeId(chatThemes[selectedUser.id] || 'default');
                             setShowThemePicker(true);
                           }}
-                          className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold transition-all cursor-pointer group"
+                          className="w-full py-3.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] cursor-pointer"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-indigo-500/10 text-indigo-500">
-                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
-                            </div>
-                            <span>Chat Theme</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-[var(--dm-text-secondary)]">
-                              {(INSTAGRAM_THEMES.find(t => t.id === (chatThemes[selectedUser.id] || 'default')) || INSTAGRAM_THEMES[0]).name}
-                            </span>
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" className="text-[var(--dm-text-muted)] group-hover:translate-x-0.5 transition-transform">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
-                          </div>
+                          <span className="font-semibold text-[var(--dm-text-primary)]">Chat Theme</span>
+                          <span className="text-xs text-[var(--dm-text-secondary)]">
+                            {(INSTAGRAM_THEMES.find(t => t.id === (chatThemes[selectedUser.id] || 'default')) || INSTAGRAM_THEMES[0]).name}
+                          </span>
                         </button>
 
                         {/* Mute Notifications Row */}
                         <button
                           onClick={() => setIsChatMuted(!isChatMuted)}
-                          className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold transition-all cursor-pointer"
+                          className="w-full py-3.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] cursor-pointer"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-emerald-500/10 text-emerald-500">
-                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                                {isChatMuted ? (
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                                ) : (
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                                )}
-                              </svg>
-                            </div>
-                            <span>Mute Notifications</span>
-                          </div>
-                          <span className={`text-xs font-bold ${isChatMuted ? 'text-rose-500' : 'text-[var(--dm-text-muted)]'}`}>
+                          <span className="font-semibold text-[var(--dm-text-primary)]">Mute Notifications</span>
+                          <span className={`text-xs font-semibold ${isChatMuted ? 'text-rose-500' : 'text-[var(--dm-text-muted)]'}`}>
                             {isChatMuted ? 'Muted' : 'Off'}
                           </span>
                         </button>
@@ -2380,15 +2372,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         {/* Nickname Row */}
                         <button
                           onClick={() => setEditingNickname(true)}
-                          className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold transition-all cursor-pointer"
+                          className="w-full py-3.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] cursor-pointer"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-purple-500/10 text-purple-500">
-                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                            </div>
-                            <span>Set Nickname</span>
-                          </div>
-                          <span className="text-xs font-bold text-[var(--dm-text-secondary)]">
+                          <span className="font-semibold text-[var(--dm-text-primary)]">Set Nickname</span>
+                          <span className="text-xs text-[var(--dm-text-secondary)]">
                             {nicknames[selectedUser.id] || 'None'}
                           </span>
                         </button>
@@ -2396,15 +2383,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         {/* Block User Row */}
                         <button
                           onClick={() => setIsUserBlocked(!isUserBlocked)}
-                          className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold transition-all cursor-pointer"
+                          className="w-full py-3.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] cursor-pointer"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-rose-500/10 text-rose-500">
-                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-                            </div>
-                            <span>Block User</span>
-                          </div>
-                          <span className={`text-xs font-bold ${isUserBlocked ? 'text-rose-500' : 'text-[var(--dm-text-muted)]'}`}>
+                          <span className="font-semibold text-[var(--dm-text-primary)]">Block User</span>
+                          <span className={`text-xs font-semibold ${isUserBlocked ? 'text-rose-500' : 'text-[var(--dm-text-muted)]'}`}>
                             {isUserBlocked ? 'Blocked' : 'Block'}
                           </span>
                         </button>
@@ -2416,17 +2398,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               alert("Report submitted.");
                             }
                           }}
-                          className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold text-amber-500 transition-all cursor-pointer"
+                          className="w-full py-3.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] cursor-pointer"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-amber-500/10 text-amber-500">
-                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                            </div>
-                            <span>Report Conversation</span>
-                          </div>
-                          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" className="text-amber-500/60">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                          </svg>
+                          <span className="font-semibold text-amber-500">Report Conversation</span>
                         </button>
 
                         {/* Clear History Row */}
@@ -2443,14 +2417,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               setShowChatDetails(false);
                             }
                           }}
-                          className="w-full px-4 py-3.5 rounded-2xl border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 flex items-center justify-between text-xs font-semibold text-rose-500 transition-all cursor-pointer"
+                          className="w-full py-3.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] cursor-pointer"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-rose-500/15 text-rose-500">
-                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </div>
-                            <span>Clear Chat History</span>
-                          </div>
+                          <span className="font-semibold text-rose-500">Clear Chat History</span>
                         </button>
                       </div>
                     </div>
