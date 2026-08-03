@@ -620,6 +620,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   // Instagram-style Chat Details & Nickname State
   const [showChatDetails, setShowChatDetails] = useState(false);
+  const [detailsTab, setDetailsTab] = useState<'photos' | 'reels' | 'files'>('photos');
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
   const [editingNickname, setEditingNickname] = useState(false);
   const [nicknameInput, setNicknameInput] = useState('');
@@ -1974,26 +1975,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 {/* ── INSTAGRAM-STYLE CHAT DETAILS VIEW OVERLAY ── */}
                 {showChatDetails && selectedUser && (
                   <div className="absolute inset-0 z-40 flex flex-col bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] animate-in slide-in-from-right-full duration-300 overflow-y-auto no-scrollbar">
-                    {/* Sticky Top Nav Bar */}
-                    <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 border-b border-[var(--dm-border)] bg-[var(--dm-bg-sidebar)]/95 backdrop-blur-md">
+                    {/* Sticky Top Nav Bar (Lowered with safe-area spacing) */}
+                    <div className="sticky top-0 z-20 flex items-center justify-between px-4 pt-[calc(16px+env(safe-area-inset-top,0px))] pb-3 border-b border-[var(--dm-border)] bg-[var(--dm-bg-sidebar)]/95 backdrop-blur-md">
                       <button
                         onClick={() => {
                           setEditingNickname(false);
                           setShowChatDetails(false);
                         }}
-                        className="w-9 h-9 rounded-full border flex items-center justify-center border-[var(--dm-border)] bg-[var(--dm-bg-input)] text-[var(--dm-text-primary)] active:scale-90 transition-all cursor-pointer"
+                        className="w-10 h-10 rounded-full border flex items-center justify-center border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] active:scale-90 transition-all cursor-pointer shadow-sm"
                         title="Back to chat"
                       >
-                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                         </svg>
                       </button>
                       <h3 className="font-extrabold text-base tracking-tight">Details</h3>
-                      <div className="w-9" />
+                      <div className="w-10" />
                     </div>
 
                     {/* Centered Profile Avatar & Name */}
-                    <div className="flex flex-col items-center pt-8 pb-6 px-4 text-center">
+                    <div className="flex flex-col items-center pt-6 pb-6 px-4 text-center">
                       <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[var(--dm-border)] shadow-xl mb-3 relative">
                         {selectedUser.image && selectedUser.image.length > 5 ? (
                           <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover" />
@@ -2028,7 +2029,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               }
                               setEditingNickname(false);
                             }}
-                            className="px-3 py-2 text-xs font-bold rounded-full bg-[var(--dm-text-primary)] text-[var(--dm-bg-main)] cursor-pointer"
+                            className="px-3.5 py-2 text-xs font-bold rounded-full bg-[var(--dm-text-primary)] text-[var(--dm-bg-main)] cursor-pointer"
                           >
                             Save
                           </button>
@@ -2036,18 +2037,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       ) : (
                         <button
                           onClick={() => setEditingNickname(true)}
-                          className="mt-2.5 px-3 py-1 rounded-full border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-xs font-semibold text-[var(--dm-text-secondary)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer"
+                          className="mt-2.5 px-3.5 py-1.5 rounded-full border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-xs font-semibold text-[var(--dm-text-secondary)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer"
                         >
                           {nicknames[selectedUser.id] ? 'Edit Nickname' : '+ Set Nickname'}
                         </button>
                       )}
 
-                      {/* Instagram Quick Action Icons */}
+                      {/* Quick Action Icons */}
                       <div className="flex items-center justify-center gap-6 mt-6 w-full max-w-sm">
                         <button
-                          onClick={() => {
-                            setIsChatMuted(!isChatMuted);
-                          }}
+                          onClick={() => setIsChatMuted(!isChatMuted)}
                           className="flex flex-col items-center gap-1.5 cursor-pointer group"
                         >
                           <div className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all active:scale-90 ${
@@ -2067,9 +2066,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </button>
 
                         <button
-                          onClick={() => {
-                            setIsUserBlocked(!isUserBlocked);
-                          }}
+                          onClick={() => setIsUserBlocked(!isUserBlocked)}
                           className="flex flex-col items-center gap-1.5 cursor-pointer group"
                         >
                           <div className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all active:scale-90 ${
@@ -2086,70 +2083,132 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       </div>
                     </div>
 
-                    {/* Shared Content Section */}
-                    <div className="px-4 py-4 space-y-6 max-w-lg mx-auto w-full">
-                      {/* Shared Media */}
-                      <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--dm-text-muted)]">Shared Photos & Media</h4>
-                          <span className="text-xs font-semibold text-[var(--dm-text-secondary)]">{messages.filter(m => m.type === 'image' || m.type === 'video').length}</span>
-                        </div>
-                        {messages.filter(m => m.type === 'image' || m.type === 'video').length === 0 ? (
-                          <div className="p-6 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
-                            No photos or videos shared yet
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-3 gap-1.5">
-                            {messages.filter(m => m.type === 'image' || m.type === 'video').map(m => (
-                              <div key={m.id} className="aspect-square rounded-xl overflow-hidden bg-black/10 border border-[var(--dm-border)] cursor-pointer" onClick={() => window.open(m.content, '_blank')}>
-                                {m.type === 'video' ? (
-                                  <video src={m.content} className="w-full h-full object-cover" />
-                                ) : (
-                                  <img src={m.content} alt="media" className="w-full h-full object-cover" />
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                    {/* Shared Content Tab Navigation (3 Horizontal Buttons) */}
+                    <div className="px-4 pt-2 max-w-lg mx-auto w-full">
+                      <div className="grid grid-cols-3 p-1 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-center">
+                        <button
+                          onClick={() => setDetailsTab('photos')}
+                          className={`py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            detailsTab === 'photos'
+                              ? 'bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] shadow-sm border border-[var(--dm-border)]'
+                              : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
+                          }`}
+                        >
+                          Photos
+                        </button>
+                        <button
+                          onClick={() => setDetailsTab('reels')}
+                          className={`py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            detailsTab === 'reels'
+                              ? 'bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] shadow-sm border border-[var(--dm-border)]'
+                              : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
+                          }`}
+                        >
+                          Reels
+                        </button>
+                        <button
+                          onClick={() => setDetailsTab('files')}
+                          className={`py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            detailsTab === 'files'
+                              ? 'bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] shadow-sm border border-[var(--dm-border)]'
+                              : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
+                          }`}
+                        >
+                          Voice & Files
+                        </button>
                       </div>
+                    </div>
 
-                      {/* Shared Files & Voice */}
-                      <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--dm-text-muted)]">Shared Voice Clips</h4>
-                          <span className="text-xs font-semibold text-[var(--dm-text-secondary)]">{messages.filter(m => m.type === 'voice').length}</span>
-                        </div>
-                        {messages.filter(m => m.type === 'voice').length === 0 ? (
-                          <div className="p-6 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
-                            No voice messages shared yet
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {messages.filter(m => m.type === 'voice').map(m => (
-                              <div key={m.id} className="p-3 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] flex items-center justify-between">
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <div className="w-8 h-8 rounded-full bg-[var(--dm-bg-active)] flex items-center justify-center text-xs font-bold">
-                                    🎙️
-                                  </div>
-                                  <span className="text-xs font-medium truncate text-[var(--dm-text-primary)]">Voice Recording</span>
+                    {/* Shared Content Display Panel */}
+                    <div className="px-4 py-4 space-y-6 max-w-lg mx-auto w-full flex-1">
+                      {/* Tab 1: Photos & Images */}
+                      {detailsTab === 'photos' && (
+                        <div>
+                          {messages.filter(m => m.type === 'image').length === 0 ? (
+                            <div className="p-8 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
+                              No photos shared in this chat yet
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-3 gap-2">
+                              {messages.filter(m => m.type === 'image').map(m => (
+                                <div
+                                  key={m.id}
+                                  className="aspect-square rounded-2xl overflow-hidden bg-black/10 border border-[var(--dm-border)] cursor-pointer group relative"
+                                  onClick={() => window.open(m.content, '_blank')}
+                                >
+                                  <img src={m.content} alt="photo" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                                 </div>
-                                <span className="text-[10px] text-[var(--dm-text-muted)]">
-                                  {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-                      {/* Privacy & Support Actions */}
-                      <div className="pt-2 pb-8 space-y-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--dm-text-muted)] mb-3">Privacy & Actions</h4>
+                      {/* Tab 2: Reels & Videos */}
+                      {detailsTab === 'reels' && (
+                        <div>
+                          {messages.filter(m => m.type === 'video').length === 0 ? (
+                            <div className="p-8 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
+                              No video reels shared in this chat yet
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-3">
+                              {messages.filter(m => m.type === 'video').map(m => (
+                                <div
+                                  key={m.id}
+                                  className="aspect-[9/16] rounded-2xl overflow-hidden bg-black border border-[var(--dm-border)] cursor-pointer group relative"
+                                  onClick={() => window.open(m.content, '_blank')}
+                                >
+                                  <video src={m.content} controls className="w-full h-full object-cover" />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Tab 3: Voice Clips & Files */}
+                      {detailsTab === 'files' && (
+                        <div>
+                          {messages.filter(m => m.type === 'voice' || m.type === 'file').length === 0 ? (
+                            <div className="p-8 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
+                              No audio clips or documents shared yet
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {messages.filter(m => m.type === 'voice' || m.type === 'file').map(m => (
+                                <div key={m.id} className="p-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] flex flex-col gap-2">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <div className="w-8 h-8 rounded-full bg-[var(--dm-bg-active)] flex items-center justify-center text-xs font-bold">
+                                        {m.type === 'voice' ? '🎙️' : '📄'}
+                                      </div>
+                                      <span className="text-xs font-semibold truncate text-[var(--dm-text-primary)]">
+                                        {m.type === 'voice' ? 'Voice Clip' : m.content}
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] text-[var(--dm-text-muted)]">
+                                      {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  </div>
+                                  {m.type === 'voice' && (
+                                    <audio src={m.content} controls className="w-full h-8 mt-1" />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Privacy & Actions */}
+                      <div className="pt-4 pb-8 space-y-2.5 border-t border-[var(--dm-border)]">
+                        <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--dm-text-muted)] mb-2">Options</h4>
                         
                         <button
                           onClick={() => {
-                            if (confirm("Report this chat for review?")) {
-                              alert("Report submitted to moderation.");
+                            if (confirm("Report this conversation to moderation?")) {
+                              alert("Report submitted.");
                             }
                           }}
                           className="w-full p-4 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold text-rose-500/90 transition-all cursor-pointer"
