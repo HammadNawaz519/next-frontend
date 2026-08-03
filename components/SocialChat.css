@@ -230,10 +230,12 @@
 }
 
 .social-chat-container .call-btn {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  border: none;
+  background: var(--dm-bg-hover);
+  color: var(--dm-text-primary);
+  border: 1px solid var(--dm-border);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -242,32 +244,11 @@
   flex-shrink: 0;
 }
 
-/* Audio call button — always green */
-.social-chat-container .call-btn[title="Audio Call"] {
-  background: rgba(34, 197, 94, 0.15);
-  color: #16a34a;
-  border: 1.5px solid rgba(34, 197, 94, 0.35);
-}
-
-.social-chat-container .call-btn[title="Audio Call"]:hover {
-  background: rgba(34, 197, 94, 0.25);
-  color: #15803d;
-  transform: scale(1.08);
-  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
-}
-
-/* Video call button — always blue */
-.social-chat-container .call-btn[title="Video Call"] {
-  background: rgba(59, 130, 246, 0.15);
-  color: #2563eb;
-  border: 1.5px solid rgba(59, 130, 246, 0.35);
-}
-
-.social-chat-container .call-btn[title="Video Call"]:hover {
-  background: rgba(59, 130, 246, 0.25);
-  color: #1d4ed8;
-  transform: scale(1.08);
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+.social-chat-container .call-btn:hover {
+  background: var(--dm-bg-active);
+  color: var(--dm-text-primary);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 /* MESSAGES */

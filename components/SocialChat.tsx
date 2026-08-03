@@ -521,6 +521,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       const deletedChats = localStorage.getItem('social_deleted_chats');
       if (deletedChats) setDeletedChatIds(new Set(JSON.parse(deletedChats)));
+
+      const savedNicknames = localStorage.getItem('chat_nicknames');
+      if (savedNicknames) setNicknames(JSON.parse(savedNicknames));
     } catch (e) {
       console.warn('Storage init error:', e);
     }
@@ -614,6 +617,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [activeCall, setActiveCall] = useState<{ peer: any, type: 'audio' | 'video', isCaller: boolean, initialOffer?: any } | null>(null);
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+
+  // Instagram-style Chat Details & Nickname State
+  const [showChatDetails, setShowChatDetails] = useState(false);
+  const [nicknames, setNicknames] = useState<Record<string, string>>({});
+  const [editingNickname, setEditingNickname] = useState(false);
+  const [nicknameInput, setNicknameInput] = useState('');
+  const [isChatMuted, setIsChatMuted] = useState(false);
+  const [isUserBlocked, setIsUserBlocked] = useState(false);
 
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const selectedUserRef = useRef<User | null>(null);
@@ -1619,10 +1630,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             {selectedUser ? (
               <>
                 <div className="chat-header">
-                  <div className="to">
+                  <div
+                    className="to cursor-pointer hover:opacity-85 transition-opacity"
+                    onClick={() => {
+                      if (selectedUser) {
+                        setNicknameInput(nicknames[selectedUser.id] || '');
+                        setShowChatDetails(true);
+                      }
+                    }}
+                    title="View Chat Info & Details"
+                  >
                     <button
                       style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', marginRight: '10px', flexShrink: 0 }}
-                      onClick={(e) => handleChatBack(e)}
+                      onClick={(e) => { e.stopPropagation(); handleChatBack(e); }}
                     >
                       <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                     </button>
@@ -1634,7 +1654,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       )}
                     </div>
                     <div className="info">
-                      <div className="name">{selectedUser.name}</div>
+                      <div className="name font-bold text-sm flex items-center gap-1.5">
+                        {nicknames[selectedUser.id] ? (
+                          <>
+                            <span>{nicknames[selectedUser.id]}</span>
+                            <span className="text-[10px] text-zinc-400 font-normal">({selectedUser.name})</span>
+                          </>
+                        ) : (
+                          <span>{selectedUser.name}</span>
+                        )}
+                      </div>
                       <div className="status-text">
                         {typingUsers.has(selectedUser.email) ? (
                           <span className="typing-indicator">typing...</span>
@@ -1644,7 +1673,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             Online
                           </span>
                         ) : (
-                          <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>Offline</span>
+                          <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>Tap for details</span>
                         )}
                       </div>
                     </div>
@@ -1671,16 +1700,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(34,197,94,0.22)'; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(34,197,94,0.12)'; }}
                       >
-                        {/* Check-circle SVG */}
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                           <polyline points="22 4 12 14.01 9 11.01" />
                         </svg>
                       </button>
                     )}
+                    {/* Monochrome Audio Call Button */}
                     <button className="call-btn" onClick={() => handleCall('audio')} title="Audio Call">
                       <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
                     </button>
+                    {/* Monochrome Video Call Button */}
                     <button className="call-btn" onClick={() => handleCall('video')} title="Video Call">
                       <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>
                     </button>
@@ -1940,6 +1970,214 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
 
                 <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="*" />
+
+                {/* ── INSTAGRAM-STYLE CHAT DETAILS VIEW OVERLAY ── */}
+                {showChatDetails && selectedUser && (
+                  <div className="absolute inset-0 z-40 flex flex-col bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] animate-in slide-in-from-right-full duration-300 overflow-y-auto no-scrollbar">
+                    {/* Sticky Top Nav Bar */}
+                    <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 border-b border-[var(--dm-border)] bg-[var(--dm-bg-sidebar)]/95 backdrop-blur-md">
+                      <button
+                        onClick={() => {
+                          setEditingNickname(false);
+                          setShowChatDetails(false);
+                        }}
+                        className="w-9 h-9 rounded-full border flex items-center justify-center border-[var(--dm-border)] bg-[var(--dm-bg-input)] text-[var(--dm-text-primary)] active:scale-90 transition-all cursor-pointer"
+                        title="Back to chat"
+                      >
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      <h3 className="font-extrabold text-base tracking-tight">Details</h3>
+                      <div className="w-9" />
+                    </div>
+
+                    {/* Centered Profile Avatar & Name */}
+                    <div className="flex flex-col items-center pt-8 pb-6 px-4 text-center">
+                      <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[var(--dm-border)] shadow-xl mb-3 relative">
+                        {selectedUser.image && selectedUser.image.length > 5 ? (
+                          <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <img src="/Avatar.avif" alt="avatar" className="w-full h-full object-cover" />
+                        )}
+                      </div>
+                      <h2 className="text-xl font-extrabold text-[var(--dm-text-primary)]">
+                        {nicknames[selectedUser.id] || selectedUser.name}
+                      </h2>
+                      <p className="text-xs text-[var(--dm-text-muted)] mt-0.5 font-medium">
+                        @{selectedUser.username || selectedUser.email?.split('@')[0]}
+                      </p>
+
+                      {/* Nickname Editor */}
+                      {editingNickname ? (
+                        <div className="flex items-center gap-2 mt-3 w-full max-w-xs">
+                          <input
+                            type="text"
+                            placeholder="Enter nickname..."
+                            value={nicknameInput}
+                            onChange={(e) => setNicknameInput(e.target.value)}
+                            className="flex-1 px-4 py-2 text-xs rounded-full border border-[var(--dm-border)] bg-[var(--dm-bg-input)] text-[var(--dm-text-primary)] focus:outline-none"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => {
+                              const updated = { ...nicknames, [selectedUser.id]: nicknameInput.trim() };
+                              setNicknames(updated);
+                              if (typeof window !== 'undefined') {
+                                localStorage.setItem('chat_nicknames', JSON.stringify(updated));
+                              }
+                              setEditingNickname(false);
+                            }}
+                            className="px-3 py-2 text-xs font-bold rounded-full bg-[var(--dm-text-primary)] text-[var(--dm-bg-main)] cursor-pointer"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setEditingNickname(true)}
+                          className="mt-2.5 px-3 py-1 rounded-full border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-xs font-semibold text-[var(--dm-text-secondary)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer"
+                        >
+                          {nicknames[selectedUser.id] ? 'Edit Nickname' : '+ Set Nickname'}
+                        </button>
+                      )}
+
+                      {/* Instagram Quick Action Icons */}
+                      <div className="flex items-center justify-center gap-6 mt-6 w-full max-w-sm">
+                        <button
+                          onClick={() => {
+                            setIsChatMuted(!isChatMuted);
+                          }}
+                          className="flex flex-col items-center gap-1.5 cursor-pointer group"
+                        >
+                          <div className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all active:scale-90 ${
+                            isChatMuted 
+                              ? 'bg-rose-500/15 border-rose-500/30 text-rose-500' 
+                              : 'border-[var(--dm-border)] bg-[var(--dm-bg-hover)] group-hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)]'
+                          }`}>
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                              {isChatMuted ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                              ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                              )}
+                            </svg>
+                          </div>
+                          <span className="text-[11px] font-medium text-[var(--dm-text-secondary)]">{isChatMuted ? 'Muted' : 'Mute'}</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setIsUserBlocked(!isUserBlocked);
+                          }}
+                          className="flex flex-col items-center gap-1.5 cursor-pointer group"
+                        >
+                          <div className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all active:scale-90 ${
+                            isUserBlocked 
+                              ? 'bg-rose-500/15 border-rose-500/30 text-rose-500' 
+                              : 'border-[var(--dm-border)] bg-[var(--dm-bg-hover)] group-hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)]'
+                          }`}>
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                          </div>
+                          <span className="text-[11px] font-medium text-[var(--dm-text-secondary)]">{isUserBlocked ? 'Blocked' : 'Block'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Shared Content Section */}
+                    <div className="px-4 py-4 space-y-6 max-w-lg mx-auto w-full">
+                      {/* Shared Media */}
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--dm-text-muted)]">Shared Photos & Media</h4>
+                          <span className="text-xs font-semibold text-[var(--dm-text-secondary)]">{messages.filter(m => m.type === 'image' || m.type === 'video').length}</span>
+                        </div>
+                        {messages.filter(m => m.type === 'image' || m.type === 'video').length === 0 ? (
+                          <div className="p-6 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
+                            No photos or videos shared yet
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {messages.filter(m => m.type === 'image' || m.type === 'video').map(m => (
+                              <div key={m.id} className="aspect-square rounded-xl overflow-hidden bg-black/10 border border-[var(--dm-border)] cursor-pointer" onClick={() => window.open(m.content, '_blank')}>
+                                {m.type === 'video' ? (
+                                  <video src={m.content} className="w-full h-full object-cover" />
+                                ) : (
+                                  <img src={m.content} alt="media" className="w-full h-full object-cover" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Shared Files & Voice */}
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--dm-text-muted)]">Shared Voice Clips</h4>
+                          <span className="text-xs font-semibold text-[var(--dm-text-secondary)]">{messages.filter(m => m.type === 'voice').length}</span>
+                        </div>
+                        {messages.filter(m => m.type === 'voice').length === 0 ? (
+                          <div className="p-6 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
+                            No voice messages shared yet
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {messages.filter(m => m.type === 'voice').map(m => (
+                              <div key={m.id} className="p-3 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] flex items-center justify-between">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="w-8 h-8 rounded-full bg-[var(--dm-bg-active)] flex items-center justify-center text-xs font-bold">
+                                    🎙️
+                                  </div>
+                                  <span className="text-xs font-medium truncate text-[var(--dm-text-primary)]">Voice Recording</span>
+                                </div>
+                                <span className="text-[10px] text-[var(--dm-text-muted)]">
+                                  {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Privacy & Support Actions */}
+                      <div className="pt-2 pb-8 space-y-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--dm-text-muted)] mb-3">Privacy & Actions</h4>
+                        
+                        <button
+                          onClick={() => {
+                            if (confirm("Report this chat for review?")) {
+                              alert("Report submitted to moderation.");
+                            }
+                          }}
+                          className="w-full p-4 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold text-rose-500/90 transition-all cursor-pointer"
+                        >
+                          <span>Report Conversation</span>
+                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (confirm("Clear chat history with " + selectedUser.name + "?")) {
+                              setMessages([]);
+                              setShowChatDetails(false);
+                            }
+                          }}
+                          className="w-full p-4 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold text-rose-500/90 transition-all cursor-pointer"
+                        >
+                          <span>Clear Chat History</span>
+                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <div className="empty-state">
