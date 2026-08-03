@@ -411,6 +411,7 @@ interface SocialChatProps {
   onBack?: () => void;
   onCallStateChange?: (isCallActive: boolean) => void;
   initialUser?: any; // Pre-select a user when opened from another profile
+  onOpenProfile?: (user: any) => void;
 }
 
 // ── Custom PWA / HTML5 Local Notification Dispatcher ──
@@ -464,7 +465,7 @@ const triggerStunningNotification = (
   }
 };
 
-const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange, initialUser }: SocialChatProps, ref) => {
+const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange, initialUser, onOpenProfile }: SocialChatProps, ref) => {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -2304,7 +2305,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         <button
                           onClick={() => {
                             setShowChatDetails(false);
-                            setShowUserProfileModal(true);
+                            if (onOpenProfile) {
+                              onOpenProfile(selectedUser);
+                            }
                             if (typeof window !== 'undefined') {
                               window.dispatchEvent(new CustomEvent('open_user_profile', { detail: selectedUser }));
                             }
@@ -2551,80 +2554,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           )}
                         </div>
                       )}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── USER PROFILE CARD OVERLAY ── */}
-                {showUserProfileModal && selectedUser && (
-                  <div className="absolute inset-0 z-50 flex flex-col bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] animate-in slide-in-from-bottom duration-250 overflow-y-auto no-scrollbar">
-                    <div className="sticky top-0 z-20 flex items-center justify-between px-4 pt-[calc(16px+env(safe-area-inset-top,0px))] pb-3 bg-[var(--dm-bg-sidebar)]/95 backdrop-blur-md">
-                      <button
-                        onClick={() => setShowUserProfileModal(false)}
-                        className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] active:scale-90 transition-all cursor-pointer"
-                        title="Back"
-                      >
-                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-                      <h3 className="font-extrabold text-base tracking-tight">User Profile</h3>
-                      <div className="w-10" />
-                    </div>
-
-                    <div className="flex flex-col items-center pt-8 pb-8 px-6 text-center max-w-sm mx-auto w-full">
-                      <div className="w-28 h-28 rounded-full overflow-hidden shadow-2xl mb-4 relative">
-                        {selectedUser.image && selectedUser.image.length > 5 ? (
-                          <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <img src="/Avatar.avif" alt="avatar" className="w-full h-full object-cover" />
-                        )}
-                      </div>
-
-                      <h2 className="text-2xl font-black text-[var(--dm-text-primary)]">
-                        {nicknames[selectedUser.id] || selectedUser.name}
-                      </h2>
-                      <p className="text-xs text-[var(--dm-text-muted)] mt-1 font-medium">
-                        @{selectedUser.username || selectedUser.email?.split('@')[0]}
-                      </p>
-
-                      <div className="mt-3 px-3 py-1 rounded-full bg-[var(--dm-bg-hover)] text-xs font-semibold text-[var(--dm-text-secondary)]">
-                        {onlineUsers.has((selectedUser.email || '').toLowerCase().trim()) ? '🟢 Active now' : (lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id] ? `Active ${lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id]}` : 'Offline')}
-                      </div>
-
-                      <div className="w-full mt-8 space-y-3 text-left">
-                        {selectedUser.email && (
-                          <div className="p-3.5 rounded-2xl bg-[var(--dm-bg-hover)]">
-                            <span className="text-[10px] font-bold text-[var(--dm-text-muted)] uppercase tracking-wider block">Email</span>
-                            <span className="text-xs font-semibold text-[var(--dm-text-primary)]">{selectedUser.email}</span>
-                          </div>
-                        )}
-                        {(selectedUser as any).phone && (
-                          <div className="p-3.5 rounded-2xl bg-[var(--dm-bg-hover)]">
-                            <span className="text-[10px] font-bold text-[var(--dm-text-muted)] uppercase tracking-wider block">Phone</span>
-                            <span className="text-xs font-semibold text-[var(--dm-text-primary)]">{(selectedUser as any).phone}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-center gap-4 mt-8 w-full">
-                        <button
-                          onClick={() => setShowUserProfileModal(false)}
-                          className="flex-1 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors cursor-pointer"
-                        >
-                          Message
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowUserProfileModal(false);
-                            handleCall('audio');
-                          }}
-                          className="p-3 rounded-2xl bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] transition-colors cursor-pointer"
-                          title="Audio Call"
-                        >
-                          📞
-                        </button>
-                      </div>
                     </div>
                   </div>
                 )}

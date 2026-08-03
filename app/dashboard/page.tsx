@@ -229,6 +229,17 @@ export default function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView, selectedChatUser]);
 
+  useEffect(() => {
+    const handleOpenProfile = (e: any) => {
+      if (e.detail) {
+        setSelectedProfileUser(e.detail);
+        setIsProfileOpen(true);
+      }
+    };
+    window.addEventListener('open_user_profile', handleOpenProfile as any);
+    return () => window.removeEventListener('open_user_profile', handleOpenProfile as any);
+  }, []);
+
   // Load History
   useEffect(() => {
     async function loadHistory() {
@@ -926,6 +937,10 @@ export default function DashboardPage() {
           onCallStateChange={setIsCallActive}
           initialUser={selectedChatUser}
           ref={chatComponentRef as any}
+          onOpenProfile={(targetUser) => {
+            setSelectedProfileUser(targetUser);
+            setIsProfileOpen(true);
+          }}
         />
 
         {/* Instagram-style Profile Panel */}
