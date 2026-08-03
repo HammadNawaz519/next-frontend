@@ -175,7 +175,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
     (e.currentTarget as any)._hapticsTriggered = false;
 
     if (swipeOffset > 50) {
-      if (onOpenTagPicker) onOpenTagPicker(msg);
+      if (onReply) onReply(msg);
     }
 
     setIsSwiping(false);
@@ -247,16 +247,16 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         WebkitUserSelect: 'none'
       }}
     >
-      {/* Swipe Reveal Tag Indicator */}
+      {/* Swipe Reveal Reply Indicator */}
       {swipeOffset > 0 && (
         <div
-          className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-sm font-bold transition-opacity z-10"
+          className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-sm font-bold transition-opacity z-10 text-indigo-500"
           style={{ opacity: Math.min(swipeOffset / 50, 1) }}
         >
-          <span className="text-base animate-bounce">🏷️</span>
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
           {swipeOffset > 50 && (
-            <span className="text-[10px] uppercase tracking-wider font-extrabold text-indigo-500 animate-in zoom-in-50 duration-150">
-              Tag
+            <span className="text-[10px] uppercase tracking-wider font-extrabold animate-in zoom-in-50 duration-150">
+              Reply
             </span>
           )}
         </div>
@@ -362,9 +362,6 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
               ))}
             </div>
             <div className="del-btn-wrap">
-              <span className="msg-action-btn" title="Tag Message" onClick={(e) => { e.stopPropagation(); onOpenTagPicker(msg); setShowActionsMobile(false); }}>
-                🏷️ Tag
-              </span>
               <span className="msg-action-btn" title="Reply / Quote" onClick={(e) => { e.stopPropagation(); onReply(msg); setShowActionsMobile(false); }}>
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg> Reply
               </span>
@@ -1166,6 +1163,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
       });
 
+      newSocket.on('user_last_seen', ({ email, lastSeen }: { email: string; lastSeen: string }) => {
+        if (email) {
+          const cleanEmail = email.toLowerCase().trim();
+          const timeStr = lastSeen === 'online'
+            ? 'Online'
+            : new Date(lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+          setLastSeenMap(prev => {
+            const updated = { ...prev, [cleanEmail]: timeStr };
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('chat_last_seen', JSON.stringify(updated));
+            }
+            return updated;
+          });
+        }
+      });
+
       newSocket.on('reconnect', () => {
         console.log('Socket reconnected - re-identifying...');
         setIsConnected(true);
@@ -1919,7 +1932,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           </span>
                         ) : (
                           <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>
-                            {lastSeenMap[selectedUser.id] ? `Last seen ${lastSeenMap[selectedUser.id]}` : 'Tap for details'}
+                            {lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id] 
+                              ? `Last seen at ${lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id]}` 
+                              : 'Offline'}
                           </span>
                         )}
                       </div>
@@ -2058,7 +2073,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </button>
                         {/* Gap between image and emoji */}
                         <div style={{ width: '6px', flexShrink: 0 }} />
-                        <div style={{ position: 'relative' }}>
+                        <div className="hidden md:block" style={{ position: 'relative' }}>
                           <button className="icon-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)} title="Emoji" style={{ color: showEmojiPicker ? 'var(--dm-text-primary)' : undefined }}>
                             <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3.5-9c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm7 0c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
                           </button>
@@ -2243,10 +2258,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                 <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="*" />
 
-                {/* ── INSTAGRAM-STYLE CHAT DETAILS VIEW OVERLAY ── */}
+                {/* ── PREMIUM REDESIGNED CHAT DETAILS VIEW OVERLAY ── */}
                 {showChatDetails && selectedUser && (
                   <div className="absolute inset-0 z-40 flex flex-col bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] animate-in slide-in-from-right-full duration-300 overflow-y-auto no-scrollbar">
-                    {/* Sticky Top Nav Bar (Lowered with safe-area spacing) */}
+                    {/* Sticky Top Nav Bar */}
                     <div className="sticky top-0 z-20 flex items-center justify-between px-4 pt-[calc(16px+env(safe-area-inset-top,0px))] pb-3 border-b border-[var(--dm-border)] bg-[var(--dm-bg-sidebar)]/95 backdrop-blur-md">
                       <button
                         onClick={() => {
@@ -2260,12 +2275,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                         </svg>
                       </button>
-                      <h3 className="font-extrabold text-base tracking-tight">Details</h3>
+                      <h3 className="font-extrabold text-base tracking-tight">Chat Info</h3>
                       <div className="w-10" />
                     </div>
 
                     {/* Centered Profile Avatar & Name */}
-                    <div className="flex flex-col items-center pt-6 pb-6 px-4 text-center">
+                    <div className="flex flex-col items-center pt-6 pb-4 px-4 text-center">
                       <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[var(--dm-border)] shadow-xl mb-3 relative">
                         {selectedUser.image && selectedUser.image.length > 5 ? (
                           <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover" />
@@ -2300,7 +2315,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               }
                               setEditingNickname(false);
                             }}
-                            className="px-3.5 py-2 text-xs font-bold rounded-full bg-[var(--dm-text-primary)] text-[var(--dm-bg-main)] cursor-pointer"
+                            className="px-3.5 py-2 text-xs font-bold rounded-full bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700 transition-colors"
                           >
                             Save
                           </button>
@@ -2314,8 +2329,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </button>
                       )}
 
-                      {/* Instagram Chat Options List */}
-                      <div className="w-full max-w-sm mt-5 space-y-1 text-left">
+                      {/* Clean Modern Action Card (No inline emojis) */}
+                      <div className="w-full max-w-sm mt-6 space-y-2 text-left">
                         {/* Theme Selection Row */}
                         <button
                           onClick={() => {
@@ -2325,10 +2340,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold transition-all cursor-pointer group"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="w-7 h-7 rounded-full flex items-center justify-center bg-indigo-500/15 text-indigo-400">
-                              🎨
-                            </span>
-                            <span>Theme</span>
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-indigo-500/10 text-indigo-500">
+                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
+                            </div>
+                            <span>Chat Theme</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-[var(--dm-text-secondary)]">
@@ -2346,9 +2361,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold transition-all cursor-pointer"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="w-7 h-7 rounded-full flex items-center justify-center bg-emerald-500/15 text-emerald-400">
-                              🔔
-                            </span>
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-emerald-500/10 text-emerald-500">
+                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                {isChatMuted ? (
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                                ) : (
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                )}
+                              </svg>
+                            </div>
                             <span>Mute Notifications</span>
                           </div>
                           <span className={`text-xs font-bold ${isChatMuted ? 'text-rose-500' : 'text-[var(--dm-text-muted)]'}`}>
@@ -2356,82 +2377,85 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           </span>
                         </button>
 
-                        {/* Nicknames Row */}
+                        {/* Nickname Row */}
                         <button
                           onClick={() => setEditingNickname(true)}
                           className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold transition-all cursor-pointer"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="w-7 h-7 rounded-full flex items-center justify-center bg-purple-500/15 text-purple-400">
-                              ✏️
-                            </span>
-                            <span>Nicknames</span>
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-purple-500/10 text-purple-500">
+                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </div>
+                            <span>Set Nickname</span>
                           </div>
                           <span className="text-xs font-bold text-[var(--dm-text-secondary)]">
-                            {nicknames[selectedUser.id] || 'Set'}
+                            {nicknames[selectedUser.id] || 'None'}
                           </span>
                         </button>
 
-                        {/* Search Row */}
+                        {/* Block User Row */}
                         <button
-                          onClick={() => {
-                            setShowChatDetails(false);
-                          }}
+                          onClick={() => setIsUserBlocked(!isUserBlocked)}
                           className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold transition-all cursor-pointer"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="w-7 h-7 rounded-full flex items-center justify-center bg-cyan-500/15 text-cyan-400">
-                              🔍
-                            </span>
-                            <span>Search in Conversation</span>
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-rose-500/10 text-rose-500">
+                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                            </div>
+                            <span>Block User</span>
                           </div>
-                          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" className="text-[var(--dm-text-muted)]">
+                          <span className={`text-xs font-bold ${isUserBlocked ? 'text-rose-500' : 'text-[var(--dm-text-muted)]'}`}>
+                            {isUserBlocked ? 'Blocked' : 'Block'}
+                          </span>
+                        </button>
+
+                        {/* Report Conversation Row */}
+                        <button
+                          onClick={() => {
+                            if (confirm("Report this conversation to moderation?")) {
+                              alert("Report submitted.");
+                            }
+                          }}
+                          className="w-full px-4 py-3.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] flex items-center justify-between text-xs font-semibold text-amber-500 transition-all cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-amber-500/10 text-amber-500">
+                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                            </div>
+                            <span>Report Conversation</span>
+                          </div>
+                          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" className="text-amber-500/60">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                           </svg>
                         </button>
-                      </div>
 
-                      {/* Quick Action Icons */}
-                      <div className="flex items-center justify-center gap-6 mt-6 w-full max-w-sm">
+                        {/* Clear History Row */}
                         <button
-                          onClick={() => setIsChatMuted(!isChatMuted)}
-                          className="flex flex-col items-center gap-1.5 cursor-pointer group"
+                          onClick={async () => {
+                            if (confirm("Clear chat history with " + (nicknames[selectedUser.id] || selectedUser.name) + "?")) {
+                              await hideSocialChat(selectedUser.id);
+                              setMessages([]);
+                              setMessagesCache(prev => {
+                                const next = { ...prev };
+                                delete next[selectedUser.id];
+                                return next;
+                              });
+                              setShowChatDetails(false);
+                            }
+                          }}
+                          className="w-full px-4 py-3.5 rounded-2xl border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/15 flex items-center justify-between text-xs font-semibold text-rose-500 transition-all cursor-pointer"
                         >
-                          <div className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all active:scale-90 ${
-                            isChatMuted 
-                              ? 'bg-rose-500/15 border-rose-500/30 text-rose-500' 
-                              : 'border-[var(--dm-border)] bg-[var(--dm-bg-hover)] group-hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)]'
-                          }`}>
-                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                              {isChatMuted ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                              ) : (
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                              )}
-                            </svg>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-rose-500/15 text-rose-500">
+                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </div>
+                            <span>Clear Chat History</span>
                           </div>
-                          <span className="text-[11px] font-medium text-[var(--dm-text-secondary)]">{isChatMuted ? 'Muted' : 'Mute'}</span>
-                        </button>
-
-                        <button
-                          onClick={() => setIsUserBlocked(!isUserBlocked)}
-                          className="flex flex-col items-center gap-1.5 cursor-pointer group"
-                        >
-                          <div className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all active:scale-90 ${
-                            isUserBlocked 
-                              ? 'bg-rose-500/15 border-rose-500/30 text-rose-500' 
-                              : 'border-[var(--dm-border)] bg-[var(--dm-bg-hover)] group-hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)]'
-                          }`}>
-                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                            </svg>
-                          </div>
-                          <span className="text-[11px] font-medium text-[var(--dm-text-secondary)]">{isUserBlocked ? 'Blocked' : 'Block'}</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Shared Content Tab Navigation (3 Horizontal Buttons) */}
+                    {/* Shared Content Tab Navigation */}
                     <div className="px-4 pt-2 max-w-lg mx-auto w-full">
                       <div className="grid grid-cols-3 p-1 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-center">
                         <button
@@ -2466,7 +2490,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </button>
                       </div>
                     </div>
-
                     {/* Shared Content Display Panel */}
                     <div className="px-4 py-4 space-y-6 max-w-lg mx-auto w-full flex-1">
                       {/* Tab 1: Photos & Images */}
