@@ -1183,10 +1183,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         if (activeUser) {
           getSocialMessages(activeUser.id).then((history: any) => {
             setMessages(prev => {
-              const existingIds = new Set(prev.map(m => m.id));
-              const newMsgs = (history as any[]).filter(m => !existingIds.has(m.id));
-              if (newMsgs.length === 0) return prev;
-              return [...prev, ...newMsgs].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+              const deletedRef = deletedMessageIds;
+              const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id));
+              const now = Date.now();
+              const inFlight = prev.filter(m =>
+                !dbMsgs.some(dbM => dbM.id === m.id || (dbM.content === m.content && String(dbM.senderId) === String(m.senderId))) &&
+                (now - new Date(m.createdAt).getTime() < 30000)
+              );
+              return [...dbMsgs, ...inFlight].sort(
+                (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+              );
             });
             setMessagesCache((prev: any) => ({ ...prev, [activeUser.id]: history }));
           }).catch(() => {});
@@ -1216,10 +1222,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           if (activeUser) {
             getSocialMessages(activeUser.id).then((history: any) => {
               setMessages(prev => {
-                const existingIds = new Set(prev.map(m => m.id));
-                const newMsgs = (history as any[]).filter(m => !existingIds.has(m.id));
-                if (newMsgs.length === 0) return prev;
-                return [...prev, ...newMsgs].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                const deletedRef = deletedMessageIds;
+                const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id));
+                const now = Date.now();
+                const inFlight = prev.filter(m =>
+                  !dbMsgs.some(dbM => dbM.id === m.id || (dbM.content === m.content && String(dbM.senderId) === String(m.senderId))) &&
+                  (now - new Date(m.createdAt).getTime() < 30000)
+                );
+                return [...dbMsgs, ...inFlight].sort(
+                  (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                );
               });
               setMessagesCache((prev: any) => ({ ...prev, [activeUser.id]: history }));
             }).catch(() => {});
@@ -1475,18 +1487,25 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     };
 
     setMessages(prev => [...prev, optimisticMsg]);
+    setMessagesCache(prev => {
+      const current = prev[selectedUser.id] || [];
+      return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
+    });
     socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...optimisticMsg });
 
     try {
       // Background DB Save
       const savedMsg = await saveSocialMessage(selectedUser.id, currentContent);
       if (savedMsg) {
-        // Sync the ID if the backend assigned a different one (usually we'd want to keep the client ID if possible)
-        setMessages(prev => prev.map(m => m.id === stableId ? { ...(savedMsg as any), id: (savedMsg as any).id || stableId } : m));
+        const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
+        setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
+        setMessagesCache(prev => {
+          const current = prev[selectedUser.id] || [];
+          return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m) };
+        });
       }
     } catch (err) {
       console.error("Failed to persist message:", err);
-      // Optionally show a "failed" icon next to the message instead of removing it
     }
   };
 
@@ -1522,12 +1541,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               isSeen: false
             };
             setMessages(prev => [...prev, optimisticMsg]);
+            setMessagesCache(prev => {
+              const current = prev[selectedUser.id] || [];
+              return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
+            });
             socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...optimisticMsg });
 
             try {
               const savedMsg = await saveSocialMessage(selectedUser.id, base64Audio, 'voice');
               if (savedMsg) {
-                setMessages(prev => prev.map(m => m.id === stableId ? (savedMsg as any) : m));
+                const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
+                setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
+                setMessagesCache(prev => {
+                  const current = prev[selectedUser.id] || [];
+                  return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m) };
+                });
               }
             } catch (err) {
               console.error("Failed to save voice message:", err);
@@ -1627,12 +1655,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         isSeen: false
       };
       setMessages(prev => [...prev, optimisticMsg]);
+      setMessagesCache(prev => {
+        const current = prev[selectedUser.id] || [];
+        return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
+      });
       socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...optimisticMsg });
 
       try {
         const savedMsg = await saveSocialMessage(selectedUser.id, base64, type);
         if (savedMsg) {
-          setMessages(prev => prev.map(m => m.id === stableId ? (savedMsg as any) : m));
+          const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
+          setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
+          setMessagesCache(prev => {
+            const current = prev[selectedUser.id] || [];
+            return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m) };
+          });
         }
       } catch (err) {
         console.error("Failed to save file:", err);
