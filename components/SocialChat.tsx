@@ -776,6 +776,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [isChatMuted, setIsChatMuted] = useState(false);
   const [isUserBlocked, setIsUserBlocked] = useState(false);
 
+  const activeThemeId = (selectedUser ? chatThemes[selectedUser.id] : null) || 'default';
+  const activeTheme = useMemo(() => {
+    return INSTAGRAM_THEMES.find(t => t.id === activeThemeId) || INSTAGRAM_THEMES[0];
+  }, [activeThemeId, selectedUser, chatThemes]);
+
   // Message Tagging System State
   const [msgTags, setMsgTags] = useState<Record<string, MessageTag>>({});
   const [openTagPickerMsg, setOpenTagPickerMsg] = useState<any | null>(null);
@@ -906,6 +911,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       newSocket.on('receive_social_message', async (msg: Message) => {
         const partnerId = msg.senderId === (sessionRef.current?.user as any)?.id ? msg.receiverId : msg.senderId;
+
+        // Automatically un-hide chat if previously deleted
+        setDeletedChatIds(prev => {
+          if (prev.has(partnerId)) {
+            const next = new Set(prev);
+            next.delete(partnerId);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('social_deleted_chats', JSON.stringify(Array.from(next)));
+            }
+            return next;
+          }
+          return prev;
+        });
 
         // 1. Update Message Stream
         setMessages((prev) => {
@@ -1336,15 +1354,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           allRequestsRef.current = reqs.filter(r => !contacts.some(c => c.id === r.id));
           setUsers(allContactsRef.current);
           setRequests(allRequestsRef.current);
-
-          // Eager prefetch messages
-          contacts.forEach(u => {
-            if (!messagesCache[u.id]) {
-              getSocialMessages(u.id).then(history => {
-                setMessagesCache(prev => ({ ...prev, [u.id]: history as any }));
-              }).catch(() => {});
-            }
-          });
         });
       }
     }
@@ -1374,11 +1383,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         const deletedRef = deletedMessageIds;
         const fresh = (history as any[]).filter(m => !deletedRef.has(m.id));
 
-        // Always apply fresh data to ensure edits, deletions, reactions are fully updated!
         setMessages(fresh);
         setMessagesCache(prev => ({ ...prev, [selectedUser.id]: fresh }));
 
-        await markMessagesAsSeen(selectedUser.id);
+        markMessagesAsSeen(selectedUser.id);
         socket?.emit('mark_as_seen', { senderEmail: selectedUser.email });
       } catch (err) {
         console.error("Failed to load messages:", err);
@@ -1407,6 +1415,32 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const senderId = (session.user as any).id;
     setInputValue('');
     setShowAIMention(false);
+
+    // Un-hide user locally and update sidebar list
+    if (selectedUser) {
+      if (deletedChatIds.has(selectedUser.id)) {
+        setDeletedChatIds(prev => {
+          const next = new Set(prev);
+          next.delete(selectedUser.id);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('social_deleted_chats', JSON.stringify(Array.from(next)));
+          }
+          return next;
+        });
+      }
+      setUsers(prev => {
+        const existing = prev.find(u => u.id === selectedUser.id);
+        const updatedUser = {
+          ...(existing || selectedUser),
+          lastMessage: currentContent.length > 30 ? currentContent.substring(0, 30) + '...' : currentContent,
+          unseenCount: 0
+        };
+        const filtered = prev.filter(u => u.id !== selectedUser.id);
+        const nextList = [updatedUser, ...filtered];
+        allContactsRef.current = nextList;
+        return nextList;
+      });
+    }
 
     const currentReplyTo = replyToMessage ? {
       id: replyToMessage.id,
@@ -1801,10 +1835,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           </aside>
 
           <section className={`chat-area ${selectedUser ? 'active' : ''} ${selectedUser ? 'show-on-mobile' : 'hide-on-mobile'}`}>
-            {selectedUser ? (() => {
-              const activeThemeId = liveThemeId || chatThemes[selectedUser.id] || 'default';
-              const activeTheme = INSTAGRAM_THEMES.find(t => t.id === activeThemeId) || INSTAGRAM_THEMES[0];
-              return (
+            {selectedUser ? (
               <>
                 <div className="chat-header">
                   <div
@@ -2500,9 +2531,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </button>
 
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             if (confirm("Clear chat history with " + selectedUser.name + "?")) {
+                              await hideSocialChat(selectedUser.id);
                               setMessages([]);
+                              setMessagesCache(prev => {
+                                const next = { ...prev };
+                                delete next[selectedUser.id];
+                                return next;
+                              });
                               setShowChatDetails(false);
                             }
                           }}
@@ -2516,8 +2553,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       </div>
                     </div>
                   </div>
-                );
-              })() : (
+                )}
+                </>
+              ) : (
                 <div className="empty-state">
                   <h3>Select a Chat</h3>
                   <p>Choose a contact to start messaging or search for new people.</p>
@@ -2657,13 +2695,27 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   const targetId = selectedChatForOptions.id;
                   try {
                     await hideSocialChat(targetId);
-                    setDeletedChatIds(prev => new Set(prev).add(targetId));
+                    setDeletedChatIds(prev => {
+                      const next = new Set(prev).add(targetId);
+                      if (typeof window !== 'undefined') {
+                        localStorage.setItem('social_deleted_chats', JSON.stringify(Array.from(next)));
+                      }
+                      return next;
+                    });
+                    setMessagesCache(prev => {
+                      const next = { ...prev };
+                      delete next[targetId];
+                      return next;
+                    });
                     setUsers(prev => prev.filter(u => u.id !== targetId));
                     allContactsRef.current = allContactsRef.current.filter(u => u.id !== targetId);
                     setRequests(prev => prev.filter(u => u.id !== targetId));
                     allRequestsRef.current = allRequestsRef.current.filter(u => u.id !== targetId);
                     setPinnedChats(prev => { const n = new Set(prev); n.delete(targetId); return n; });
-                    if (selectedUser?.id === targetId) setSelectedUser(null);
+                    if (selectedUser?.id === targetId) {
+                      setSelectedUser(null);
+                      setMessages([]);
+                    }
                     setSelectedChatForOptions(null);
                   } catch (error) {
                     console.error('Failed to hide chat:', error);
@@ -2714,6 +2766,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </button>
             </div>
           </div>
+        </div>
+      )}
       {/* --- IMAGE LIGHTBOX PREVIEW OVERLAY --- */}
       {lightboxImageSrc && (
         <div
@@ -2733,6 +2787,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      )}
       {/* --- INSTAGRAM THEME PICKER BOTTOM SHEET MODAL --- */}
       {showThemePicker && selectedUser && (
         <div
@@ -2853,6 +2909,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </button>
             </div>
           </div>
+        </div>
+      )}
       {/* --- MESSAGE TAG PICKER BOTTOM SHEET MODAL --- */}
       {openTagPickerMsg && (
         <div

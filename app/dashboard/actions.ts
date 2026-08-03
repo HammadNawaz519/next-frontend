@@ -116,23 +116,26 @@ export async function getUserDetails() {
 
 
 
-export async function getSocialMessages(otherUserId: string) {
+export async function getSocialMessages(otherUserId: string, limit: number = 150) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return [];
 
   const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email }
+    where: { email: session.user.email },
+    select: { id: true }
   });
 
   if (!currentUser) return [];
 
-  return await prisma.socialMessage.findMany({
+  const messages = await prisma.socialMessage.findMany({
     where: {
       OR: [
         { senderId: currentUser.id, receiverId: otherUserId, deletedBySender: false },
         { senderId: otherUserId, receiverId: currentUser.id, deletedByReceiver: false }
       ]
     },
+    take: limit,
+    orderBy: { createdAt: 'desc' },
     include: {
       reactions: {
         include: {
@@ -141,9 +144,10 @@ export async function getSocialMessages(otherUserId: string) {
           }
         }
       }
-    },
-    orderBy: { createdAt: 'asc' }
+    }
   });
+
+  return messages.reverse();
 }
 
 export async function markMessagesAsSeen(senderId: string) {
@@ -174,10 +178,21 @@ export async function saveSocialMessage(receiverId: string, content: string, typ
   if (!session?.user?.email) return null;
 
   const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email }
+    where: { email: session.user.email },
+    select: { id: true }
   });
 
   if (!currentUser) return null;
+
+  // Un-hide the chat for both users if it was previously hidden
+  await prisma.hiddenSocialChat.deleteMany({
+    where: {
+      OR: [
+        { userId: currentUser.id, hiddenUserId: receiverId },
+        { userId: receiverId, hiddenUserId: currentUser.id }
+      ]
+    }
+  });
 
   return await prisma.socialMessage.create({
     data: {
@@ -190,6 +205,46 @@ export async function saveSocialMessage(receiverId: string, content: string, typ
       reactions: true
     }
   });
+}
+
+export async function hideSocialChat(hiddenUserId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return null;
+
+  const currentUser = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true }
+  });
+
+  if (!currentUser) return null;
+
+  // 1. Mark chat as hidden in HiddenSocialChat table
+  await prisma.hiddenSocialChat.upsert({
+    where: {
+      userId_hiddenUserId: {
+        userId: currentUser.id,
+        hiddenUserId
+      }
+    },
+    create: {
+      userId: currentUser.id,
+      hiddenUserId
+    },
+    update: {}
+  });
+
+  // 2. Mark messages as deleted for currentUser in database
+  await prisma.socialMessage.updateMany({
+    where: { senderId: currentUser.id, receiverId: hiddenUserId },
+    data: { deletedBySender: true }
+  });
+
+  await prisma.socialMessage.updateMany({
+    where: { senderId: hiddenUserId, receiverId: currentUser.id },
+    data: { deletedByReceiver: true }
+  });
+
+  return { success: true };
 }
 
 export async function deleteSocialMessage(messageId: string, deleteFor: 'me' | 'everyone') {
@@ -282,12 +337,12 @@ export async function getRecentChats() {
   });
   const hiddenUserIds = hiddenChats.map(chat => chat.hiddenUserId);
 
-  // 1. Get all receiverIds this user has EVER sent a message to.
-  // Anyone in this list is an active contact (isRequest = false).
+  // 1. Get all receiverIds this user has EVER sent a message to (excluding deleted messages).
   const sentMessages = await prisma.socialMessage.findMany({
     where: {
       senderId: currentUser.id,
-      receiverId: { notIn: hiddenUserIds }
+      receiverId: { notIn: hiddenUserIds },
+      deletedBySender: false
     },
     select: { receiverId: true },
     distinct: ['receiverId']
@@ -297,7 +352,8 @@ export async function getRecentChats() {
   const sent = await prisma.socialMessage.findMany({
     where: {
       senderId: currentUser.id,
-      receiverId: { notIn: hiddenUserIds }
+      receiverId: { notIn: hiddenUserIds },
+      deletedBySender: false
     },
     distinct: ['receiverId'],
     orderBy: { createdAt: 'desc' },
@@ -307,7 +363,8 @@ export async function getRecentChats() {
   const received = await prisma.socialMessage.findMany({
     where: {
       receiverId: currentUser.id,
-      senderId: { notIn: hiddenUserIds }
+      senderId: { notIn: hiddenUserIds },
+      deletedByReceiver: false
     },
     distinct: ['senderId'],
     orderBy: { createdAt: 'desc' },
@@ -332,7 +389,8 @@ export async function getRecentChats() {
     by: ['senderId'],
     where: {
       receiverId: currentUser.id,
-      isSeen: false
+      isSeen: false,
+      deletedByReceiver: false
     },
     _count: true
   });
@@ -350,8 +408,6 @@ export async function getRecentChats() {
 
   received.forEach(m => {
     const existing = partners.get(m.senderId);
-    // If the sender has ever received a message from us, they are a contact (isRequest = false)
-    // If we have only received messages from them and never sent any, they are a request (isRequest = true)
     const isRequest = !contactIdsSet.has(m.senderId);
     
     if (!existing || m.createdAt > existing.lastTime) {
@@ -366,31 +422,6 @@ export async function getRecentChats() {
   });
 
   return Array.from(partners.values()).sort((a, b) => (b.lastTime as any) - (a.lastTime as any));
-}
-
-export async function hideSocialChat(hiddenUserId: string) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) return null;
-
-  const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email }
-  });
-
-  if (!currentUser) return null;
-
-  return await prisma.hiddenSocialChat.upsert({
-    where: {
-      userId_hiddenUserId: {
-        userId: currentUser.id,
-        hiddenUserId
-      }
-    },
-    create: {
-      userId: currentUser.id,
-      hiddenUserId
-    },
-    update: {}
-  });
 }
 
 

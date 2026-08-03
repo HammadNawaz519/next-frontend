@@ -76,6 +76,10 @@ model SocialMessage {
   sender    User             @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   receiver  User             @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
   reactions SocialReaction[]
+
+  @@index([senderId, receiverId, createdAt])
+  @@index([receiverId, senderId, createdAt])
+  @@index([receiverId, isSeen])
 }
 
 model SocialReaction {
