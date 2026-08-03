@@ -2056,9 +2056,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 )}
 
                 {selectedMessageIds.size === 0 ? (
-                  <footer className="footer">
+                  <footer className="footer" style={{ borderTop: 'none', background: 'transparent', padding: '6px 16px 16px' }}>
                     {isVoiceToText ? (
-                      <div className="type-box" style={{ position: 'relative' }}>
+                      <div
+                        className="type-box"
+                        style={{
+                          position: 'relative',
+                          borderRadius: '9999px',
+                          background: activeTheme.incomingBubbleColor || 'var(--dm-bg-hover)',
+                          borderColor: activeTheme.inputBorderColor || 'var(--dm-border)',
+                          backdropFilter: 'blur(12px)'
+                        }}
+                      >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, padding: '8px 14px', borderRadius: '24px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', animation: 'pulse 2s infinite' }}>
                           <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
                           <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dm-text-primary)', flex: 1 }}>
@@ -2073,17 +2082,25 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               handleSendMessage();
                             }
                           }}
-                          style={{ background: inputValue.trim() ? '#6366f1' : '#ef4444' }}
+                          style={{
+                            background: activeTheme.accentColor || '#6366f1',
+                            borderRadius: '9999px'
+                          }}
                         >
-                          {inputValue.trim() ? (
-                            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
-                          ) : (
-                            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
-                          )}
+                          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
                         </button>
                       </div>
                     ) : !isRecording ? (
-                      <div className="type-box">
+                      <div
+                        className="type-box"
+                        style={{
+                          borderRadius: '9999px',
+                          background: activeTheme.incomingBubbleColor || 'var(--dm-bg-hover)',
+                          borderColor: activeTheme.inputBorderColor || 'var(--dm-border)',
+                          backdropFilter: 'blur(12px)',
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
                         <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Send Media">
                           <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
                         </button>
@@ -2212,7 +2229,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         }
                       }}
                       title={isRecording ? 'Tap to stop & send' : inputValue.trim() ? 'Send' : 'Voice message'}
-                      style={isRecording ? { background: '#ef4444' } : undefined}
+                      style={
+                        isRecording
+                          ? { background: '#ef4444' }
+                          : {
+                              background: activeTheme.accentColor || '#6366f1',
+                              borderRadius: '9999px',
+                              boxShadow: activeTheme.accentColor ? `0 4px 15px ${activeTheme.accentColor}40` : undefined,
+                              transition: 'all 0.3s ease'
+                            }
+                      }
                     >
                       {inputValue.trim() ? (
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
