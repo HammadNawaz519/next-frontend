@@ -2295,9 +2295,40 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         @{selectedUser.username || selectedUser.email?.split('@')[0]}
                       </p>
 
-                      {/* Nickname Editor */}
-                      {editingNickname ? (
-                        <div className="flex items-center gap-2 mt-3 w-full max-w-xs">
+                      {/* 3 Simple Action Buttons under Profile Pic (No background, no boundaries) */}
+                      <div className="flex items-center justify-center gap-6 mt-4 text-xs font-semibold">
+                        <button
+                          onClick={() => {
+                            setShowChatDetails(false);
+                            if (typeof window !== 'undefined') {
+                              window.dispatchEvent(new CustomEvent('open_user_profile', { detail: selectedUser }));
+                            }
+                          }}
+                          className="text-[var(--dm-text-primary)] hover:text-indigo-500 transition-colors cursor-pointer"
+                        >
+                          Profile
+                        </button>
+                        <span className="text-[var(--dm-text-muted)] opacity-30">•</span>
+                        <button
+                          onClick={() => {
+                            setShowChatDetails(false);
+                          }}
+                          className="text-[var(--dm-text-primary)] hover:text-indigo-500 transition-colors cursor-pointer"
+                        >
+                          Search
+                        </button>
+                        <span className="text-[var(--dm-text-muted)] opacity-30">•</span>
+                        <button
+                          onClick={() => setIsUserBlocked(!isUserBlocked)}
+                          className={`transition-colors cursor-pointer ${isUserBlocked ? 'text-rose-500 font-bold' : 'text-[var(--dm-text-primary)] hover:text-rose-500'}`}
+                        >
+                          {isUserBlocked ? 'Blocked' : 'Block'}
+                        </button>
+                      </div>
+
+                      {/* Nickname Input Popup when editing */}
+                      {editingNickname && (
+                        <div className="flex items-center gap-2 mt-4 w-full max-w-xs animate-in zoom-in-95 duration-150">
                           <input
                             type="text"
                             placeholder="Enter nickname..."
@@ -2320,16 +2351,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             Save
                           </button>
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => setEditingNickname(true)}
-                          className="mt-2.5 px-3.5 py-1.5 rounded-full border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-xs font-semibold text-[var(--dm-text-secondary)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer"
-                        >
-                          {nicknames[selectedUser.id] ? 'Edit Nickname' : '+ Set Nickname'}
-                        </button>
                       )}
 
-                      {/* Simple Unboxed Action List (No boxes, no icons) */}
+                      {/* Simple Unboxed Action List (No boxes, no icons, no boundaries) */}
                       <div className="w-full max-w-sm mt-6 divide-y divide-[var(--dm-border)]/40 text-left">
                         {/* Theme Selection Row */}
                         <button
@@ -2358,23 +2382,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                         {/* Nickname Row */}
                         <button
-                          onClick={() => setEditingNickname(true)}
+                          onClick={() => {
+                            setNicknameInput(nicknames[selectedUser.id] || '');
+                            setEditingNickname(!editingNickname);
+                          }}
                           className="w-full py-3.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] cursor-pointer"
                         >
                           <span className="font-semibold text-[var(--dm-text-primary)]">Set Nickname</span>
                           <span className="text-xs text-[var(--dm-text-secondary)]">
                             {nicknames[selectedUser.id] || 'None'}
-                          </span>
-                        </button>
-
-                        {/* Block User Row */}
-                        <button
-                          onClick={() => setIsUserBlocked(!isUserBlocked)}
-                          className="w-full py-3.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] cursor-pointer"
-                        >
-                          <span className="font-semibold text-[var(--dm-text-primary)]">Block User</span>
-                          <span className={`text-xs font-semibold ${isUserBlocked ? 'text-rose-500' : 'text-[var(--dm-text-muted)]'}`}>
-                            {isUserBlocked ? 'Blocked' : 'Block'}
                           </span>
                         </button>
 
@@ -2411,14 +2427,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       </div>
                     </div>
 
-                    {/* Shared Content Tab Navigation */}
-                    <div className="px-4 pt-2 max-w-lg mx-auto w-full">
-                      <div className="grid grid-cols-3 p-1 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] text-center">
+                    {/* Shared Content Tab Navigation (Simple Text Tabs) */}
+                    <div className="px-4 pt-3 max-w-lg mx-auto w-full">
+                      <div className="flex items-center justify-around border-b border-[var(--dm-border)]/40 pb-2 text-center">
                         <button
                           onClick={() => setDetailsTab('photos')}
-                          className={`py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          className={`text-xs font-bold transition-all cursor-pointer ${
                             detailsTab === 'photos'
-                              ? 'bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] shadow-sm border border-[var(--dm-border)]'
+                              ? 'text-[var(--dm-text-primary)] border-b-2 border-[var(--dm-text-primary)] pb-1'
                               : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
                           }`}
                         >
@@ -2426,9 +2442,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </button>
                         <button
                           onClick={() => setDetailsTab('reels')}
-                          className={`py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          className={`text-xs font-bold transition-all cursor-pointer ${
                             detailsTab === 'reels'
-                              ? 'bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] shadow-sm border border-[var(--dm-border)]'
+                              ? 'text-[var(--dm-text-primary)] border-b-2 border-[var(--dm-text-primary)] pb-1'
                               : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
                           }`}
                         >
@@ -2436,9 +2452,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </button>
                         <button
                           onClick={() => setDetailsTab('files')}
-                          className={`py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          className={`text-xs font-bold transition-all cursor-pointer ${
                             detailsTab === 'files'
-                              ? 'bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] shadow-sm border border-[var(--dm-border)]'
+                              ? 'text-[var(--dm-text-primary)] border-b-2 border-[var(--dm-text-primary)] pb-1'
                               : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
                           }`}
                         >
