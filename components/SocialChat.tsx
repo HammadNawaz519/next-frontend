@@ -1639,6 +1639,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     setInputValue('');
     setShowAIMention(false);
 
+    // Reset textarea element height to single line
+    if (typeof document !== 'undefined') {
+      const textareaEl = document.querySelector('.social-chat-container .type-box textarea') as HTMLTextAreaElement;
+      if (textareaEl) textareaEl.style.height = 'auto';
+    }
+
     // Un-hide user locally and update sidebar list
     if (selectedUser) {
       if (deletedChatIds.has(selectedUser.id)) {
@@ -2337,7 +2343,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             // Auto-resize
                             const t = e.target as HTMLTextAreaElement;
                             t.style.height = 'auto';
-                            t.style.height = Math.min(t.scrollHeight, 128) + 'px';
+                            t.style.height = Math.min(t.scrollHeight, 84) + 'px';
 
                             // Typing Indicator Logic
                             if (socket && selectedUser) {

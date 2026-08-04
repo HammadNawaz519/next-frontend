@@ -571,12 +571,12 @@
   display: flex;
   align-items: flex-end;
   background: var(--dm-bg-hover);
-  border-radius: 50px;
+  border-radius: 24px;
   padding: 6px 10px 6px 16px;
   border: 1px solid var(--dm-border);
   position: relative;
-  min-height: 48px;
-  max-height: 160px;
+  min-height: 44px;
+  max-height: 100px;
   transition: background 0.3s ease, border-color 0.3s ease;
 }
 
@@ -590,8 +590,8 @@
   color: var(--dm-text-primary);
   resize: none;
   min-height: 28px;
-  max-height: 128px;
-  line-height: 1.5;
+  max-height: 84px;
+  line-height: 1.4;
   font-family: inherit;
   overflow-y: auto;
   scrollbar-width: none;
