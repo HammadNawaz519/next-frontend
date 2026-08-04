@@ -349,7 +349,7 @@ export async function getRecentChats() {
   });
   const contactIdsSet = new Set(sentMessages.map(m => m.receiverId));
 
-  const sent = await prisma.socialMessage.findMany({
+  const sent = await (prisma.socialMessage as any).findMany({
     where: {
       senderId: currentUser.id,
       receiverId: { notIn: hiddenUserIds },
@@ -357,10 +357,10 @@ export async function getRecentChats() {
     },
     distinct: ['receiverId'],
     orderBy: { createdAt: 'desc' },
-    include: { receiver: { select: { id: true, name: true, username: true, email: true, image: true } } }
+    include: { receiver: { select: { id: true, name: true, username: true, email: true, image: true, lastSeen: true } } }
   });
 
-  const received = await prisma.socialMessage.findMany({
+  const received = await (prisma.socialMessage as any).findMany({
     where: {
       receiverId: currentUser.id,
       senderId: { notIn: hiddenUserIds },
@@ -368,7 +368,7 @@ export async function getRecentChats() {
     },
     distinct: ['senderId'],
     orderBy: { createdAt: 'desc' },
-    include: { sender: { select: { id: true, name: true, username: true, email: true, image: true } } }
+    include: { sender: { select: { id: true, name: true, username: true, email: true, image: true, lastSeen: true } } }
   });
 
   const formatLastMessage = (m: any) => {
@@ -776,17 +776,17 @@ export async function searchUsers(query: string) {
   const q = query ? query.trim() : '';
 
   if (!q) {
-    return await prisma.user.findMany({
+    return await (prisma.user as any).findMany({
       where: {
         id: { not: currentUser.id }
       },
-      select: { id: true, name: true, username: true, email: true, image: true, bio: true, isPrivate: true },
+      select: { id: true, name: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true },
       take: 30,
       orderBy: { createdAt: 'desc' }
     });
   }
 
-  return await prisma.user.findMany({
+  return await (prisma.user as any).findMany({
     where: {
       id: { not: currentUser.id },
       OR: [
@@ -795,9 +795,23 @@ export async function searchUsers(query: string) {
         { email: { contains: q, mode: 'insensitive' } },
       ]
     },
-    select: { id: true, name: true, username: true, email: true, image: true, bio: true, isPrivate: true },
+    select: { id: true, name: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true },
     take: 30,
   });
+}
+
+export async function updateUserLastSeenAction(timestampIso?: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { error: 'Not authenticated' };
+
+  const targetDate = timestampIso ? new Date(timestampIso) : new Date();
+
+  await (prisma.user as any).update({
+    where: { email: session.user.email },
+    data: { lastSeen: targetDate }
+  });
+
+  return { success: true, lastSeen: targetDate.toISOString() };
 }
 
 export async function toggleProfilePrivacy(isPrivate: boolean) {

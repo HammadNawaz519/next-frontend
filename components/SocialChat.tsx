@@ -14,7 +14,8 @@ import {
   getRecentChats,
   markMessagesAsSeen,
   askAI,
-  saveCall
+  saveCall,
+  updateUserLastSeenAction
 } from '@/app/dashboard/actions';
 import CallInterface from './CallInterface';
 import './SocialChat.css';
@@ -92,6 +93,25 @@ export const PRESET_TAGS: MessageTag[] = [
   { id: 'favorite', emoji: '❤️', label: 'Favorite', color: '#ec4899' },
   { id: 'todo', emoji: '📝', label: 'To Do', color: '#10b981' },
 ];
+
+export const formatLastSeenAgo = (lastSeenRaw?: string | Date) => {
+  if (!lastSeenRaw) return 'recently';
+  if (lastSeenRaw === 'online' || lastSeenRaw === 'Online') return 'Online';
+
+  const d = typeof lastSeenRaw === 'string' ? new Date(lastSeenRaw) : lastSeenRaw;
+  if (isNaN(d.getTime())) return String(lastSeenRaw);
+
+  const now = new Date();
+  const diffSec = Math.max(0, Math.floor((now.getTime() - d.getTime()) / 1000));
+
+  if (diffSec < 60) return 'just now';
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  const diffDays = Math.floor(diffSec / 86400);
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
 
 const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onLongPress, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker }: any) => {
   if (msg.type === 'system') {
@@ -1319,24 +1339,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       newSocket.on('user_last_seen', ({ email, lastSeen }: { email: string; lastSeen: string }) => {
         if (email) {
           const cleanEmail = email.toLowerCase().trim();
-          let timeStr = 'recently';
-          if (lastSeen === 'online') {
-            timeStr = 'Online';
-          } else if (lastSeen) {
-            const d = new Date(lastSeen);
-            if (!isNaN(d.getTime())) {
-              const now = new Date();
-              const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
-              if (diffSec < 60) timeStr = 'just now';
-              else if (diffSec < 3600) timeStr = `${Math.floor(diffSec / 60)}m ago`;
-              else if (diffSec < 86400) timeStr = `${Math.floor(diffSec / 3600)}h ago`;
-              else timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-            } else {
-              timeStr = lastSeen;
-            }
-          }
           setLastSeenMap(prev => {
-            const updated = { ...prev, [cleanEmail]: timeStr };
+            const updated = { ...prev, [cleanEmail]: lastSeen };
             if (typeof window !== 'undefined') {
               localStorage.setItem('chat_last_seen', JSON.stringify(updated));
             }
@@ -1537,10 +1541,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         getRecentChats().then(results => {
           const contacts: User[] = [];
           const reqs: User[] = [];
+          const initialLastSeen: Record<string, string> = {};
           results.forEach((u: any) => {
             if (u.isRequest) reqs.push(u);
             else contacts.push(u);
+            if (u.email && u.lastSeen) {
+              initialLastSeen[u.email.toLowerCase().trim()] = u.lastSeen;
+            }
           });
+          if (Object.keys(initialLastSeen).length > 0) {
+            setLastSeenMap(prev => ({ ...initialLastSeen, ...prev }));
+          }
           allContactsRef.current = contacts;
           allRequestsRef.current = reqs.filter(r => !contacts.some(c => c.id === r.id));
           setUsers(allContactsRef.current);
@@ -1549,6 +1560,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       }
     }
   }, [searchQuery]);
+
+  // Persist last seen in DB when current user closes tab or goes offline
+  useEffect(() => {
+    const handleUnload = () => {
+      if (session?.user?.email) {
+        updateUserLastSeenAction(new Date().toISOString()).catch(() => {});
+      }
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, [session]);
 
   // Load messages
   useEffect(() => {
@@ -2036,7 +2060,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         )}
                       </b>
                       <small style={{ color: isOnline ? '#22c55e' : undefined }}>
-                        {isOnline ? '● Online' : (user as any).lastMessage || 'Offline'}
+                        {isOnline ? '● Online' : ((user as any).lastMessage || `Active ${formatLastSeenAgo(lastSeenMap[user.email?.toLowerCase().trim() || ''] || (user as any).lastSeen)}`)}
                       </small>
                     </div>
                   </div>
@@ -2104,7 +2128,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           </span>
                         ) : (
                           <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>
-                            {onlineUsers.has((selectedUser.email || '').toLowerCase().trim()) ? 'Active' : (lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id] ? `Active ${lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || lastSeenMap[selectedUser.id]}` : 'Offline')}
+                            {onlineUsers.has((selectedUser.email || '').toLowerCase().trim()) ? 'Active' : `Active ${formatLastSeenAgo(lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || (selectedUser as any).lastSeen)}`}
                           </span>
                         )}
                       </div>

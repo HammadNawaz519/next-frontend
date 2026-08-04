@@ -23,6 +23,7 @@ model User {
   bio           String?
   website       String?
   isPrivate     Boolean   @default(false)
+  lastSeen      DateTime?
 
   accounts Account[]
   sessions Session[]
