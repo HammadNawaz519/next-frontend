@@ -396,7 +396,7 @@ export async function getRecentChats() {
   });
   const unseenMap = new Map(unseenMessages.map(m => [m.senderId, m._count]));
 
-  sent.forEach(m => {
+  sent.forEach((m: any) => {
     partners.set(m.receiverId, { 
       ...m.receiver, 
       lastMessage: formatLastMessage(m), 
@@ -406,7 +406,7 @@ export async function getRecentChats() {
     });
   });
 
-  received.forEach(m => {
+  received.forEach((m: any) => {
     const existing = partners.get(m.senderId);
     const isRequest = !contactIdsSet.has(m.senderId);
     

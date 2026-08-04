@@ -812,7 +812,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
 
-  const activeThemeId = (selectedUser ? chatThemes[selectedUser.id] : null) || 'default';
+  const activeThemeId = (selectedUser ? (chatThemes[selectedUser.id] || chatThemes[(selectedUser.email || '').toLowerCase().trim()]) : null) || 'default';
   const activeTheme = useMemo(() => {
     return INSTAGRAM_THEMES.find(t => t.id === activeThemeId) || INSTAGRAM_THEMES[0];
   }, [activeThemeId, selectedUser, chatThemes]);
@@ -858,8 +858,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const handleSelectTheme = async (theme: ChatTheme) => {
     if (!selectedUser) return;
     const currentUserName = session?.user?.name || (session?.user?.email ? session.user.email.split('@')[0] : 'Someone');
+    const myId = (session?.user as any)?.id || (session?.user as any)?.email;
+    const myEmail = session?.user?.email ? session.user.email.toLowerCase().trim() : '';
 
-    const updated = { ...chatThemes, [selectedUser.id]: theme.id };
+    const updated = {
+      ...chatThemes,
+      [selectedUser.id]: theme.id,
+      ...(selectedUser.email ? { [selectedUser.email.toLowerCase().trim()]: theme.id } : {})
+    };
     setChatThemes(updated);
     if (typeof window !== 'undefined') {
       localStorage.setItem('chat_themes', JSON.stringify(updated));
@@ -873,16 +879,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         themeId: theme.id,
         themeName: theme.name,
         senderName: currentUserName,
-        senderId: (session?.user as any)?.id
+        senderId: myId,
+        senderEmail: myEmail
       });
     }
 
     const systemText = `${currentUserName} set theme to ${theme.name}`;
-    const senderId = (session?.user as any)?.id || 'user';
     const stableId = 'system-theme-' + Date.now() + Math.random().toString(36).substring(7);
     const systemMsg: Message = {
       id: stableId,
-      senderId: senderId,
+      senderId: myId,
       receiverId: selectedUser.id,
       content: systemText,
       type: 'system',
@@ -1297,10 +1303,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
       });
 
-      newSocket.on('receive_chat_theme', ({ themeId, senderId }) => {
-        if (senderId && themeId) {
+      newSocket.on('receive_chat_theme', ({ themeId, senderId, senderEmail }: any) => {
+        if (themeId) {
           setChatThemes(prev => {
-            const updated = { ...prev, [senderId]: themeId };
+            const updated = { ...prev };
+            if (senderId) updated[senderId] = themeId;
+            if (senderEmail) updated[senderEmail.toLowerCase().trim()] = themeId;
             if (typeof window !== 'undefined') {
               localStorage.setItem('chat_themes', JSON.stringify(updated));
             }
@@ -1309,16 +1317,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
       });
 
-      newSocket.on('receive_nickname', ({ nickname, senderId }) => {
-        if (senderId) {
-          setNicknames(prev => {
-            const updated = { ...prev, [senderId]: nickname };
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('chat_nicknames', JSON.stringify(updated));
-            }
-            return updated;
-          });
-        }
+      newSocket.on('receive_nickname', ({ nickname, senderId, senderEmail }: any) => {
+        setNicknames(prev => {
+          const updated = { ...prev };
+          if (senderId) updated[senderId] = nickname;
+          if (senderEmail) updated[senderEmail.toLowerCase().trim()] = nickname;
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('chat_nicknames', JSON.stringify(updated));
+          }
+          return updated;
+        });
       });
 
 
