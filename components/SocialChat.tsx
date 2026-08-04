@@ -311,9 +311,9 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         }}
       >
         {msg.replyTo && (
-          <div className="mb-2 p-2 rounded-xl border-l-4 border-white/60 bg-black/20 dark:bg-white/10 text-xs flex flex-col gap-0.5">
-            <span className="font-bold opacity-90">{msg.replyTo.senderName || 'Quoted Message'}</span>
-            <span className="truncate opacity-75">{msg.replyTo.content}</span>
+          <div className={`mb-2 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden ${isSent ? 'border-white/70 bg-black/25 text-white' : 'border-indigo-500 bg-black/10 dark:bg-white/10'}`}>
+            <span className="font-bold text-[11px] opacity-90">{msg.replyTo.senderName || 'Quoted Message'}</span>
+            <span className="truncate text-[11px] opacity-85">{msg.replyTo.content}</span>
           </div>
         )}
         {isAI && <div className="system-sender">AI Assistant</div>}
@@ -1714,11 +1714,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       // Background DB Save
       const savedMsg = await saveSocialMessage(selectedUser.id, currentContent);
       if (savedMsg) {
-        const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
-        setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
+        setMessages(prev => prev.map(m => m.id === stableId ? { ...(savedMsg as any), id: (savedMsg as any).id || stableId, replyTo: m.replyTo || currentReplyTo } : m));
         setMessagesCache(prev => {
           const current = prev[selectedUser.id] || [];
-          return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m) };
+          return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? { ...(savedMsg as any), id: (savedMsg as any).id || stableId, replyTo: m.replyTo || currentReplyTo } : m) };
         });
       }
     } catch (err) {
