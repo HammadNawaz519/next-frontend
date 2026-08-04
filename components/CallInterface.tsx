@@ -13,6 +13,42 @@ interface CallInterfaceProps {
   onEnd: (duration?: number, wasConnected?: boolean) => void;
 }
 
+// Ultra-reliable Online STUN & TURN Servers for seamless connection through firewalls & poor networks
+const ICE_SERVERS: RTCIceServer[] = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302', 'stun:stun3.l.google.com:19302', 'stun:stun4.l.google.com:19302'] },
+  { urls: ['stun:global.relay.metered.ca:80', 'stun:global.relay.metered.ca:443'] },
+  {
+    urls: [
+      'turn:global.relay.metered.ca:80',
+      'turn:global.relay.metered.ca:80?transport=tcp',
+      'turn:global.relay.metered.ca:443',
+      'turn:global.relay.metered.ca:443?transport=tcp',
+      'turns:global.relay.metered.ca:443?transport=tcp'
+    ],
+    username: '3fe6f0a72ac7f100111cacfe',
+    credential: 'k8LmNASFj+JSwE0D'
+  },
+  {
+    urls: [
+      'turn:openrelay.metered.ca:80',
+      'turn:openrelay.metered.ca:80?transport=tcp',
+      'turn:openrelay.metered.ca:443',
+      'turn:openrelay.metered.ca:443?transport=tcp',
+      'turns:openrelay.metered.ca:443?transport=tcp'
+    ],
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  }
+];
+
+const RTC_CONFIG: RTCConfiguration = {
+  iceServers: ICE_SERVERS,
+  iceCandidatePoolSize: 10,
+  bundlePolicy: 'max-bundle',
+  rtcpMuxPolicy: 'require',
+  iceTransportPolicy: 'all'
+};
+
 export default function CallInterface({ socket, peer, type, isCaller, isAccepted, initialOffer, onEnd }: CallInterfaceProps) {
   const [callStatus, setCallStatus] = useState<'ringing' | 'connecting' | 'active' | 'ended'>(isCaller ? 'ringing' : 'connecting');
   const [isMuted, setIsMuted] = useState(false);
@@ -27,8 +63,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const hasEnded = useRef(false);
-  const remoteDescriptionSetRef = useRef(false);
-  const candidateQueueRef = useRef<any[]>([]);
+  const candidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
+  const pendingSignalsRef = useRef<any[]>([]);
 
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -58,8 +94,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         };
         playRing();
         ringInterval = setInterval(playRing, 3000);
-      } catch (e) {
-        console.error("Audio API not supported or blocked");
+      } catch {
+        console.warn("Audio API not supported or blocked");
       }
     }
 
@@ -83,9 +119,21 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     return () => clearInterval(timer);
   }, [callStatus]);
 
-  const pendingSignalsRef = useRef<any[]>([]);
+  // Drain Queued ICE Candidates safely
+  const drainIceCandidates = async (pc: RTCPeerConnection) => {
+    while (candidateQueueRef.current.length > 0) {
+      const candidate = candidateQueueRef.current.shift();
+      if (candidate) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {
+          console.warn('[CallEngine] Queued ICE Candidate error:', e);
+        }
+      }
+    }
+  };
 
-  // Unified Signal Handler (Strictly matching AdminCamViewer offer/answer/candidate pipeline)
+  // Unified WebRTC Signal Handler with bulletproof queueing
   const handleSignalRef = useRef<any>(null);
 
   const handleSignal = async (signal: any) => {
@@ -97,17 +145,11 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     const target = peer.email?.toLowerCase().trim();
 
     try {
-      // 1. CALLEE RECEIVES SDP OFFER FROM CALLER
+      // 1. RECEIVE OFFER
       if (signal.type === 'offer' || (signal.sdp && signal.sdp.type === 'offer')) {
         const sdpInit = signal.sdp || signal;
         await pc.setRemoteDescription(new RTCSessionDescription(sdpInit));
-        remoteDescriptionSetRef.current = true;
-
-        // Drain queued ICE candidates
-        while (candidateQueueRef.current.length > 0) {
-          const candidate = candidateQueueRef.current.shift();
-          if (candidate) await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
-        }
+        await drainIceCandidates(pc);
 
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
@@ -120,30 +162,26 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         return;
       }
 
-      // 2. CALLER RECEIVES SDP ANSWER FROM CALLEE
+      // 2. RECEIVE ANSWER
       if (signal.type === 'answer' || (signal.sdp && signal.sdp.type === 'answer')) {
         const sdpInit = signal.sdp || signal;
         await pc.setRemoteDescription(new RTCSessionDescription(sdpInit));
-        remoteDescriptionSetRef.current = true;
-
-        // Drain queued ICE candidates
-        while (candidateQueueRef.current.length > 0) {
-          const candidate = candidateQueueRef.current.shift();
-          if (candidate) await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
-        }
+        await drainIceCandidates(pc);
         return;
       }
 
-      // 3. ICE CANDIDATE SIGNAL
+      // 3. ICE CANDIDATE
       if (signal.candidate || signal.sdpMid !== undefined) {
         const candidateInit = signal.candidate || signal;
-        if (remoteDescriptionSetRef.current && pc.remoteDescription) {
-          await pc.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(e => console.warn('ICE Candidate add error:', e));
+        if (pc.remoteDescription && pc.remoteDescription.type) {
+          await pc.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(e => console.warn('[CallEngine] Add ICE error:', e));
         } else {
           candidateQueueRef.current.push(candidateInit);
         }
       }
-    } catch (e) { console.error("WebRTC Signaling Error:", e); }
+    } catch (e) {
+      console.error("[CallEngine] WebRTC Signaling Error:", e);
+    }
   };
 
   useEffect(() => {
@@ -171,7 +209,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     if (isAccepted && callStatus === 'ringing') {
       setCallStatus('connecting');
     }
-  }, [isAccepted]);
+  }, [isAccepted, callStatus]);
 
   // Media & Connection Initialization
   useEffect(() => {
@@ -182,64 +220,39 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     const initCall = async () => {
       try {
         let stream: MediaStream | null = null;
-        let retries = 4;
+        // Adaptive media constraints to ensure fast acquisition & resilience on poor internet
+        const mediaConstraints: MediaStreamConstraints = {
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          video: type === 'video' ? {
+            width: { ideal: 640, max: 1280 },
+            height: { ideal: 480, max: 720 },
+            frameRate: { ideal: 24, max: 30 }
+          } : false
+        };
+
+        let retries = 3;
         while (retries > 0) {
           try {
-            stream = await navigator.mediaDevices.getUserMedia({
-              audio: true,
-              video: type === 'video'
-            });
+            stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
             break;
-          } catch (e) {
-            retries--;
-            if (retries === 0) throw e;
-            await new Promise(r => setTimeout(r, 600));
+          } catch {
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+              break;
+            } catch (err) {
+              retries--;
+              if (retries === 0) throw err;
+              await new Promise(r => setTimeout(r, 500));
+            }
           }
         }
         if (!stream) throw new Error("Stream could not be acquired.");
         if (!isMounted) return;
+
         localStreamRef.current = stream;
         setLocalStream(stream);
 
-        const rtcConfig: RTCConfiguration = {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' },
-            { urls: 'stun:openrelay.metered.ca:80' },
-            { urls: 'stun:openrelay.metered.ca:443' },
-            {
-              urls: [
-                'turn:openrelay.metered.ca:80',
-                'turn:openrelay.metered.ca:80?transport=tcp',
-                'turn:openrelay.metered.ca:443',
-                'turn:openrelay.metered.ca:443?transport=tcp',
-                'turns:openrelay.metered.ca:443?transport=tcp'
-              ],
-              username: 'openrelayproject',
-              credential: 'openrelayproject'
-            },
-            {
-              urls: [
-                'turn:global.relay.metered.ca:80',
-                'turn:global.relay.metered.ca:80?transport=tcp',
-                'turn:global.relay.metered.ca:443',
-                'turn:global.relay.metered.ca:443?transport=tcp',
-                'turns:global.relay.metered.ca:443?transport=tcp'
-              ],
-              username: '3fe6f0a72ac7f100111cacfe',
-              credential: 'k8LmNASFj+JSwE0D'
-            }
-          ],
-          iceCandidatePoolSize: 10,
-          bundlePolicy: 'max-bundle',
-          rtcpMuxPolicy: 'require',
-          iceTransportPolicy: 'all'
-        };
-
-        const pc = new RTCPeerConnection(rtcConfig);
+        const pc = new RTCPeerConnection(RTC_CONFIG);
         pcRef.current = pc;
 
         stream.getTracks().forEach(track => {
@@ -262,22 +275,23 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           setCallStatus('active');
         };
 
+        // ICE Connection State Monitoring with Automatic Restart on bad internet drops
         pc.oniceconnectionstatechange = () => {
-          console.log("ICE state:", pc.iceConnectionState);
+          console.log("[CallEngine] ICE state:", pc.iceConnectionState);
           if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
             setCallStatus('active');
-          }
-          if (pc.iceConnectionState === 'failed') {
+          } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
             pc.restartIce();
           }
         };
 
         pc.onconnectionstatechange = () => {
+          console.log("[CallEngine] Connection state:", pc.connectionState);
           if (pc.connectionState === 'connected') setCallStatus('active');
           if (pc.connectionState === 'failed') pc.restartIce();
         };
 
-        // Drain any pending WebRTC signals received while getUserMedia was resolving
+        // Process any signals received before PeerConnection was fully constructed
         while (pendingSignalsRef.current.length > 0) {
           const pendingSignal = pendingSignalsRef.current.shift();
           if (pendingSignal && handleSignalRef.current) {
@@ -289,12 +303,12 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           handleSignal(initialOffer);
         }
       } catch (err) {
-        console.error("Media error:", err);
+        console.error("[CallEngine] Media initialization error:", err);
         handleEnd();
       }
     };
 
-    initTimer = setTimeout(() => { initCall(); }, 200);
+    initTimer = setTimeout(() => { initCall(); }, 150);
 
     return () => {
       isMounted = false;
@@ -322,12 +336,14 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             toUserId: peer.id,
             signal: { type: 'offer', sdp: offer.sdp }
           });
-        } catch (e) { console.error("Offer creation error:", e); }
+        } catch (e) {
+          console.error("[CallEngine] Offer creation error:", e);
+        }
       };
       
       createOffer();
     }
-  }, [isAccepted, isCaller, peer.email, socket, type]);
+  }, [isAccepted, isCaller, peer.email, peer.id, socket, type]);
 
   // Wire local stream → video element
   useEffect(() => {
@@ -346,18 +362,15 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
       const videoEl = remoteVideoRef.current;
       if (videoEl.srcObject !== remoteStream) {
         videoEl.srcObject = remoteStream;
-        const playPromise = videoEl.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            const retryPlay = () => {
-              videoEl.play().catch(e => console.warn('Remote video retry play:', e));
-              document.removeEventListener('click', retryPlay);
-              document.removeEventListener('touchstart', retryPlay);
-            };
-            document.addEventListener('click', retryPlay, { once: true });
-            document.addEventListener('touchstart', retryPlay, { once: true });
-          });
-        }
+        videoEl.play().catch(() => {
+          const retryPlay = () => {
+            videoEl.play().catch(() => {});
+            document.removeEventListener('click', retryPlay);
+            document.removeEventListener('touchstart', retryPlay);
+          };
+          document.addEventListener('click', retryPlay, { once: true });
+          document.addEventListener('touchstart', retryPlay, { once: true });
+        });
       }
     } else if (type === 'audio' && remoteAudioRef.current) {
       const audioEl = remoteAudioRef.current;
@@ -370,7 +383,14 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
   const cleanup = () => {
     localStreamRef.current?.getTracks().forEach(t => t.stop());
-    pcRef.current?.close();
+    if (pcRef.current) {
+      try {
+        pcRef.current.onicecandidate = null;
+        pcRef.current.ontrack = null;
+        pcRef.current.close();
+      } catch {}
+      pcRef.current = null;
+    }
   };
 
   const formatDuration = (s: number) => {
@@ -390,16 +410,20 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const toggleMute = () => {
     if (localStreamRef.current) {
       const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      audioTrack.enabled = !audioTrack.enabled;
-      setIsMuted(!audioTrack.enabled);
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+      }
     }
   };
 
   const toggleCamera = () => {
     if (localStreamRef.current && type === 'video') {
       const videoTrack = localStreamRef.current.getVideoTracks()[0];
-      videoTrack.enabled = !videoTrack.enabled;
-      setIsCamOff(!videoTrack.enabled);
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsCamOff(!videoTrack.enabled);
+      }
     }
   };
 
@@ -421,7 +445,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
             if (earpiece) await (targetAudio as any).setSinkId(earpiece.deviceId);
           }
         }
-      } catch (e) {
+      } catch {
         console.log('Audio routing not supported');
       }
     }
@@ -462,7 +486,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
                 </>
               )}
               <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 shadow-2xl flex items-center justify-center text-4xl font-bold" style={{ borderColor: 'var(--dm-border)', background: 'var(--dm-bg-sidebar)', color: 'var(--dm-text-primary)' }}>
-                {peer.image ? <img src={peer.image} className="w-full h-full object-cover" /> : <img src="/Avatar.avif" className="w-full h-full object-cover" />}
+                {peer.image ? <img src={peer.image} className="w-full h-full object-cover" alt="peer" /> : <img src="/Avatar.avif" className="w-full h-full object-cover" alt="avatar" />}
               </div>
             </div>
             <div className="space-y-2">

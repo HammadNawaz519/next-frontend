@@ -444,8 +444,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         clearTimeout(timeoutId);
         setStreamStatus('live');
       } else if (pc.connectionState === 'failed') {
-        clearTimeout(timeoutId);
-        setStreamStatus('error');
+        pc.restartIce();
       }
     };
 
@@ -454,9 +453,8 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
       if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
         clearTimeout(timeoutId);
         setStreamStatus('live');
-      } else if (pc.iceConnectionState === 'failed') {
-        clearTimeout(timeoutId);
-        setStreamStatus('error');
+      } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+        pc.restartIce();
       }
     };
 
