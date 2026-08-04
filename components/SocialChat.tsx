@@ -2137,18 +2137,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         {nicknames[selectedUser.id] || selectedUser.name}
                       </div>
                       <div className="status-text">
-                        {typingUsers.has(selectedUser.email) ? (
-                          <span style={{ fontSize: '11px', color: 'var(--dm-text-secondary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                            typing
-                            <span className="inline-flex gap-0.5 items-center ml-0.5">
-                              <span className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.3s]" />
-                              <span className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.15s]" />
-                              <span className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce" />
-                            </span>
+                        {onlineUsers.has((selectedUser.email || '').toLowerCase().trim()) ? (
+                          <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                            Active
                           </span>
                         ) : (
                           <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>
-                            {onlineUsers.has((selectedUser.email || '').toLowerCase().trim()) ? 'Active' : `Active ${formatLastSeenAgo(lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || (selectedUser as any).lastSeen)}`}
+                            {`Active ${formatLastSeenAgo(lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || (selectedUser as any).lastSeen)}`}
                           </span>
                         )}
                       </div>
@@ -2228,6 +2224,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <p>Send a message to start chatting with <b>{selectedUser.name}</b></p>
                       <div className="empty-chat-hint">
                         Messages are encrypted and secure
+                      </div>
+                    </div>
+                  )}
+                  {typingUsers.has(selectedUser.email) && (
+                    <div className="msg-wrapper received animate-in fade-in slide-in-from-bottom-2 duration-200 my-1" style={{ width: 'fit-content', marginLeft: 0 }}>
+                      <div
+                        className="msg received"
+                        style={{
+                          background: activeTheme?.incomingBubbleColor || 'var(--dm-bg-hover)',
+                          color: activeTheme?.incomingTextColor || 'var(--dm-text-primary)',
+                          borderRadius: '1.25rem',
+                          padding: '12px 18px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-300 animate-bounce [animation-delay:-0.3s]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-300 animate-bounce [animation-delay:-0.15s]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-300 animate-bounce" />
                       </div>
                     </div>
                   )}
