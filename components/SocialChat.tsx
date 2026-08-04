@@ -94,6 +94,16 @@ export const PRESET_TAGS: MessageTag[] = [
 ];
 
 const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onLongPress, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker }: any) => {
+  if (msg.type === 'system') {
+    return (
+      <div className="w-full flex justify-center my-3.5 text-center px-4 animate-in fade-in duration-300 pointer-events-none">
+        <span className="text-[11px] font-medium py-1 px-4 rounded-full bg-black/20 dark:bg-white/10 text-[var(--dm-text-muted)] backdrop-blur-md">
+          {msg.content}
+        </span>
+      </div>
+    );
+  }
+
   const isAI = msg.senderId === 'ai';
   // A message is "Sent" if the sender is the current user
   const isSent = !isAI && String(msg.senderId) === String(currentUserId);
@@ -824,6 +834,115 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     usersRef.current = users;
     requestsRef.current = requests;
   }, [selectedUser, session, users, requests]);
+
+  const handleSelectTheme = async (theme: ChatTheme) => {
+    if (!selectedUser) return;
+    const currentUserName = session?.user?.name || (session?.user?.email ? session.user.email.split('@')[0] : 'Someone');
+
+    const updated = { ...chatThemes, [selectedUser.id]: theme.id };
+    setChatThemes(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chat_themes', JSON.stringify(updated));
+    }
+    setShowThemePicker(false);
+
+    if (socket) {
+      socket.emit('change_chat_theme', {
+        receiverEmail: selectedUser.email,
+        receiverId: selectedUser.id,
+        themeId: theme.id,
+        themeName: theme.name,
+        senderName: currentUserName,
+        senderId: (session?.user as any)?.id
+      });
+    }
+
+    const systemText = `${currentUserName} set theme to ${theme.name}`;
+    const senderId = (session?.user as any)?.id || 'user';
+    const stableId = 'system-theme-' + Date.now() + Math.random().toString(36).substring(7);
+    const systemMsg: Message = {
+      id: stableId,
+      senderId: senderId,
+      receiverId: selectedUser.id,
+      content: systemText,
+      type: 'system',
+      createdAt: new Date(),
+      isSeen: false
+    };
+
+    setMessages(prev => [...prev, systemMsg]);
+    setMessagesCache(prev => {
+      const current = prev[selectedUser.id] || [];
+      return { ...prev, [selectedUser.id]: [...current, systemMsg] };
+    });
+
+    if (socket) {
+      socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...systemMsg });
+    }
+
+    try {
+      await saveSocialMessage(selectedUser.id, systemText, 'system');
+    } catch (err) {
+      console.error("Failed to save theme system message:", err);
+    }
+  };
+
+  const handleSaveNickname = async () => {
+    if (!selectedUser) return;
+    const newNick = nicknameInput.trim();
+    const currentUserName = session?.user?.name || (session?.user?.email ? session.user.email.split('@')[0] : 'Someone');
+    const targetName = selectedUser.name || 'User';
+
+    const updated = { ...nicknames, [selectedUser.id]: newNick };
+    setNicknames(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chat_nicknames', JSON.stringify(updated));
+    }
+    setEditingNickname(false);
+
+    if (socket) {
+      socket.emit('change_nickname', {
+        receiverEmail: selectedUser.email,
+        receiverId: selectedUser.id,
+        nickname: newNick,
+        senderName: currentUserName,
+        senderId: (session?.user as any)?.id
+      });
+    }
+
+    const systemText = newNick
+      ? `${currentUserName} set nickname for ${targetName} to ${newNick}`
+      : `${currentUserName} removed nickname for ${targetName}`;
+
+    const senderId = (session?.user as any)?.id || 'user';
+    const stableId = 'system-nick-' + Date.now() + Math.random().toString(36).substring(7);
+    const systemMsg: Message = {
+      id: stableId,
+      senderId: senderId,
+      receiverId: selectedUser.id,
+      content: systemText,
+      type: 'system',
+      createdAt: new Date(),
+      isSeen: false
+    };
+
+    setMessages(prev => [...prev, systemMsg]);
+    setMessagesCache(prev => {
+      const current = prev[selectedUser.id] || [];
+      return { ...prev, [selectedUser.id]: [...current, systemMsg] };
+    });
+
+    if (socket) {
+      socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...systemMsg });
+    }
+
+    try {
+      await saveSocialMessage(selectedUser.id, systemText, 'system');
+    } catch (err) {
+      console.error("Failed to save nickname system message:", err);
+    }
+  };
+
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const ringtoneRef = useRef<AudioContext | null>(null);
 
@@ -1157,6 +1276,31 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return next;
         });
       });
+
+      newSocket.on('receive_chat_theme', ({ themeId, senderId }) => {
+        if (senderId && themeId) {
+          setChatThemes(prev => {
+            const updated = { ...prev, [senderId]: themeId };
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('chat_themes', JSON.stringify(updated));
+            }
+            return updated;
+          });
+        }
+      });
+
+      newSocket.on('receive_nickname', ({ nickname, senderId }) => {
+        if (senderId) {
+          setNicknames(prev => {
+            const updated = { ...prev, [senderId]: nickname };
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('chat_nicknames', JSON.stringify(updated));
+            }
+            return updated;
+          });
+        }
+      });
+
 
       // Online / offline presence
       newSocket.on('online_users', (emails: string[]) => {
@@ -2390,14 +2534,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             autoFocus
                           />
                           <button
-                            onClick={() => {
-                              const updated = { ...nicknames, [selectedUser.id]: nicknameInput.trim() };
-                              setNicknames(updated);
-                              if (typeof window !== 'undefined') {
-                                localStorage.setItem('chat_nicknames', JSON.stringify(updated));
-                              }
-                              setEditingNickname(false);
-                            }}
+                            onClick={handleSaveNickname}
                             className="px-3.5 py-2 text-xs font-bold rounded-full bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700 transition-colors"
                           >
                             Save
@@ -2786,14 +2923,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           return (
                             <div
                               key={theme.id}
-                              onClick={() => {
-                                const updated = { ...chatThemes, [selectedUser.id]: theme.id };
-                                setChatThemes(updated);
-                                if (typeof window !== 'undefined') {
-                                  localStorage.setItem('chat_themes', JSON.stringify(updated));
-                                }
-                                setShowThemePicker(false);
-                              }}
+                              onClick={() => handleSelectTheme(theme)}
                               className={`flex items-center justify-between py-3 px-3 rounded-2xl cursor-pointer transition-all ${
                                 isSelected ? 'bg-[var(--dm-bg-hover)]/80' : 'hover:bg-[var(--dm-bg-hover)]/40'
                               }`}
