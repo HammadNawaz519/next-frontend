@@ -446,7 +446,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         {/* Timer (video only) */}
         {type === 'video' && callStatus === 'active' && (
           <div className="absolute top-[calc(1.5rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 px-4 py-2 backdrop-blur-xl rounded-full shadow-lg flex items-center gap-3" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
-            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+            <div className="w-1.5 h-1.5 bg-zinc-400 dark:bg-white rounded-full animate-pulse" />
             <span className="text-xs font-semibold tracking-wider" style={{ color: 'var(--dm-text-primary)' }}>{formatDuration(duration)}</span>
           </div>
         )}
@@ -494,8 +494,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
               onClick={toggleSpeaker}
               className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
               style={{
-                background: isSpeakerOn ? 'rgba(34,197,94,0.2)' : 'var(--dm-bg-input)',
-                color: isSpeakerOn ? '#10b981' : 'var(--dm-text-primary)',
+                background: isSpeakerOn ? 'var(--dm-bg-active)' : 'var(--dm-bg-input)',
+                color: isSpeakerOn ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)',
                 border: '1px solid var(--dm-border)',
                 cursor: 'pointer'
               }}
@@ -515,8 +515,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
               onClick={toggleMute}
               className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
               style={{
-                background: isMuted ? 'rgba(239,68,68,0.2)' : 'var(--dm-bg-input)',
-                color: isMuted ? '#ef4444' : 'var(--dm-text-primary)',
+                background: isMuted ? 'var(--dm-bg-active)' : 'var(--dm-bg-input)',
+                color: isMuted ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)',
                 border: '1px solid var(--dm-border)',
                 cursor: 'pointer'
               }}
@@ -531,8 +531,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
                 onClick={toggleCamera}
                 className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
                 style={{
-                  background: isCamOff ? 'rgba(239,68,68,0.2)' : 'var(--dm-bg-input)',
-                  color: isCamOff ? '#ef4444' : 'var(--dm-text-primary)',
+                  background: isCamOff ? 'var(--dm-bg-active)' : 'var(--dm-bg-input)',
+                  color: isCamOff ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)',
                   border: '1px solid var(--dm-border)',
                   cursor: 'pointer'
                 }}
@@ -545,8 +545,8 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
             <button
               onClick={handleEnd}
-              className="w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 transition-all shadow-[0_4px_20px_rgba(239,68,68,0.4)] active:scale-90"
-              style={{ background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer' }}
+              className="w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 transition-all active:scale-90"
+              style={{ background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.25)' }}
             >
               <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.71c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.66c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />

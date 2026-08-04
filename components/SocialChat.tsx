@@ -2162,15 +2162,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          background: 'rgba(34,197,94,0.12)',
-                          border: '1px solid rgba(34,197,94,0.35)',
-                          color: '#16a34a',
+                          background: 'var(--dm-bg-hover)',
+                          border: '1px solid var(--dm-border)',
+                          color: 'var(--dm-text-primary)',
                           cursor: 'pointer',
                           flexShrink: 0,
                           transition: 'all 0.2s'
                         }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(34,197,94,0.22)'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(34,197,94,0.12)'; }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-active)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
                       >
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
