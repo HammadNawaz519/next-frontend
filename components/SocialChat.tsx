@@ -347,18 +347,32 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
             </div>
           </div>
         )}
-        {msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' && <div>{msg.content}</div>}
-
-        <div className="time-row">
-          <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-          {isSent && (
-            <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-              </svg>
+        {msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
+          <div style={{ fontSize: '0.98rem', lineHeight: '1.45', wordBreak: 'break-word', display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: '8px', justifyContent: 'space-between' }}>
+            <span style={{ flex: '1 1 auto' }}>{msg.content}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', opacity: 0.75, flexShrink: 0, marginLeft: 'auto', alignSelf: 'flex-end', paddingBottom: '1px' }}>
+              <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+              {isSent && (
+                <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+                  </svg>
+                </span>
+              )}
             </span>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="time-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '3px', fontSize: '0.68rem', opacity: 0.75 }}>
+            <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+            {isSent && (
+              <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                  <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+                </svg>
+              </span>
+            )}
+          </div>
+        )}
 
         {msgTag && (
           <div
@@ -2103,9 +2117,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 <div
                   className="chat-header"
                   style={{
-                    background: activeTheme.incomingBubbleColor || 'rgba(255, 255, 255, 0.05)',
-                    backdropFilter: 'blur(16px)',
-                    borderBottom: activeTheme.inputBorderColor ? `1px solid ${activeTheme.inputBorderColor}` : 'none',
+                    background: activeTheme.id !== 'default'
+                      ? (activeTheme.incomingBubbleColor || 'var(--dm-bg-sidebar)')
+                      : 'var(--dm-bg-sidebar)',
+                    borderBottom: 'none',
                     transition: 'all 300ms ease'
                   }}
                 >
@@ -2310,9 +2325,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         className="type-box"
                         style={{
                           borderRadius: '9999px',
-                          background: activeTheme.incomingBubbleColor || 'var(--dm-bg-hover)',
-                          borderColor: activeTheme.inputBorderColor || 'var(--dm-border)',
-                          backdropFilter: 'blur(12px)',
+                          background: activeTheme.id !== 'default'
+                            ? (activeTheme.incomingBubbleColor || 'var(--dm-bg-sidebar)')
+                            : 'var(--dm-bg-sidebar)',
+                          borderColor: activeTheme.id !== 'default'
+                            ? (activeTheme.inputBorderColor || 'var(--dm-border)')
+                            : 'var(--dm-border)',
                           transition: 'all 0.3s ease'
                         }}
                       >
