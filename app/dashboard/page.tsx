@@ -1005,18 +1005,6 @@ export default function DashboardPage() {
               )
             },
             { 
-              id: 'reels', 
-              element: (
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="5" />
-                  <line x1="3" y1="9" x2="21" y2="9" />
-                  <path d="m7 3 3 6" />
-                  <path d="m14 3 3 6" />
-                  <polygon points="10,12 16,15 10,18" fill="currentColor" stroke="none" />
-                </svg>
-              )
-            },
-            { 
               id: 'chat', 
               element: (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

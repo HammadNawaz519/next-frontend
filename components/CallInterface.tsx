@@ -471,7 +471,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   };
 
   return (
-    <div className="fixed inset-0 z-[1500] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
+    <div className="fixed inset-0 z-[1500] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: '#000000', color: '#ffffff' }}>
       {/* Remote video/audio */}
       <video
         ref={remoteVideoRef}
@@ -479,12 +479,12 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         playsInline
         controls={false}
         className={`absolute inset-0 w-full h-full object-cover ${type !== 'video' ? 'hidden' : ''}`}
-        style={{ background: '#000' }}
+        style={{ background: '#000000' }}
       />
       <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
 
       {/* Main UI Layer */}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center" style={{ background: type === 'video' ? 'rgba(0,0,0,0.3)' : 'transparent' }}>
+      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center" style={{ background: '#000000' }}>
 
         {/* Timer (video only) */}
         {type === 'video' && callStatus === 'active' && (
