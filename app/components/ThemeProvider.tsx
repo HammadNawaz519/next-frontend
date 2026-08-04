@@ -39,21 +39,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize theme from localStorage or system preference & listen for system theme changes
   useEffect(() => {
-    const stored = localStorage.getItem('theme') as Theme | null;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const stored = localStorage.getItem('theme') as Theme | null;
 
     if (stored === 'dark' || stored === 'light') {
       applyTheme(stored);
     } else {
-      const initialSystemTheme = mediaQuery.matches ? 'dark' : 'light';
-      applyTheme(initialSystemTheme);
+      applyTheme(mediaQuery.matches ? 'dark' : 'light');
     }
 
     const handleSystemThemeChange = (e: MediaQueryListEvent) => {
-      const userHasStoredPreference = localStorage.getItem('theme');
-      if (!userHasStoredPreference) {
-        applyTheme(e.matches ? 'dark' : 'light');
-      }
+      const newTheme = e.matches ? 'dark' : 'light';
+      applyTheme(newTheme);
+      localStorage.setItem('theme', newTheme);
     };
 
     mediaQuery.addEventListener('change', handleSystemThemeChange);
