@@ -657,9 +657,59 @@
   100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
 }
 
-.social-chat-container .send-btn.recording-pulse {
-  background: #ef4444 !important;
-  animation: recording-ring 1.2s ease-out infinite;
+
+
+/* =========================================
+   DARK MODE OVERRIDES — INSTAGRAM OLED PITCH BLACK
+   ========================================= */
+[data-theme="dark"] .social-chat-container,
+[data-theme="dark"] .social-chat-container .sidebar,
+[data-theme="dark"] .social-chat-container .chat-area,
+[data-theme="dark"] .social-chat-container .messages {
+  background-color: #000000 !important;
+  color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .social-chat-container .view-toggle {
+  background: #121212 !important;
+}
+
+[data-theme="dark"] .social-chat-container .view-toggle button {
+  color: #a8a8a8 !important;
+}
+
+[data-theme="dark"] .social-chat-container .view-toggle button.active {
+  background: #262626 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .social-chat-container .empty-chat-state h3,
+[data-theme="dark"] .social-chat-container .empty-state h3 {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .social-chat-container .empty-chat-hint {
+  background: #121212 !important;
+  border-color: #262626 !important;
+  color: #a8a8a8 !important;
+}
+
+[data-theme="dark"] .social-chat-container .mention-popup {
+  background: #121212 !important;
+  border-color: #262626 !important;
+}
+
+[data-theme="dark"] .social-chat-container .mention-item:hover {
+  background: #181818 !important;
+}
+
+[data-theme="dark"] .social-chat-container .mention-info b {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .social-chat-container .msg-actions {
+  background: #121212 !important;
+  border-color: #262626 !important;
 }
 
 /* VISUALIZER */

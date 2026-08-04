@@ -36,38 +36,38 @@
   --background: #000000;
   --foreground: #ffffff;
 
-  /* Dashboard dark-mode tokens */
-  --dm-bg-page:        #050505;
-  --dm-bg-sidebar:     #0e0e11;
-  --dm-bg-main:        #0e0e11;
-  --dm-bg-input:       #18181c;
-  --dm-bg-hover:       #1e1e24;
-  --dm-bg-active:      #26262d;
+  /* Dashboard dark-mode tokens (Instagram OLED pitch black) */
+  --dm-bg-page:        #000000;
+  --dm-bg-sidebar:     #000000;
+  --dm-bg-main:        #000000;
+  --dm-bg-input:       #121212;
+  --dm-bg-hover:       #181818;
+  --dm-bg-active:      #262626;
   
-  /* Bright, crisp outlines for separation */
-  --dm-border:         rgba(255, 255, 255, 0.12);
-  --dm-border-main:    rgba(255, 255, 255, 0.18);
+  /* Instagram crisp dark borders */
+  --dm-border:         #262626;
+  --dm-border-main:    #262626;
   
   /* Text */
-  --dm-text-primary:   #ffffff;
-  --dm-text-secondary: #a1a1aa;
-  --dm-text-muted:     #71717a;
+  --dm-text-primary:   #f5f5f5;
+  --dm-text-secondary: #a8a8a8;
+  --dm-text-muted:     #737373;
   --dm-text-heading:   #ffffff;
   
-  /* Eye-catching glowing shadows */
-  --dm-shadow-sidebar: 0 0 40px rgba(0,0,0,0.8), 0 0 10px rgba(255,255,255,0.02);
-  --dm-shadow-main:    0 0 40px rgba(0,0,0,0.8), 0 0 10px rgba(255,255,255,0.02);
+  /* Shadows */
+  --dm-shadow-sidebar: none;
+  --dm-shadow-main:    none;
   
   /* Interactive elements */
   --dm-thumb:          #ffffff;
-  --dm-chat-sent-bg:   #ffffff;
-  --dm-chat-sent-text: #000000;
-  --dm-chat-recv-bg:   #18181c;
-  --dm-chat-recv-text: #e4e4e7;
-  --dm-header-bg:      rgba(14,14,17,0.75);
-  --dm-input-border:   rgba(255, 255, 255, 0.15);
-  --dm-input-ring:     rgba(255, 255, 255, 0.1);
-  --dm-typing-bg:      #18181c;
+  --dm-chat-sent-bg:   #3797f0;
+  --dm-chat-sent-text: #ffffff;
+  --dm-chat-recv-bg:   #262626;
+  --dm-chat-recv-text: #f5f5f5;
+  --dm-header-bg:      rgba(0,0,0,0.85);
+  --dm-input-border:   #262626;
+  --dm-input-ring:     rgba(255, 255, 255, 0.15);
+  --dm-typing-bg:      #262626;
 }
 
 /* View Transition API - Native Ripple Effect */
