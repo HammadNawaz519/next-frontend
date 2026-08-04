@@ -32,7 +32,9 @@
 }
 
 /* ===== DARK MODE TOKENS ===== */
-[data-theme="dark"] {
+[data-theme="dark"],
+html.dark,
+.dark {
   --background: #000000;
   --foreground: #ffffff;
 
@@ -68,6 +70,37 @@
   --dm-input-border:   #262626;
   --dm-input-ring:     rgba(255, 255, 255, 0.15);
   --dm-typing-bg:      #262626;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #000000;
+    --foreground: #ffffff;
+
+    --dm-bg-page:        #000000;
+    --dm-bg-sidebar:     #000000;
+    --dm-bg-main:        #000000;
+    --dm-bg-input:       #121212;
+    --dm-bg-hover:       #181818;
+    --dm-bg-active:      #262626;
+    --dm-border:         #262626;
+    --dm-border-main:    #262626;
+    --dm-text-primary:   #f5f5f5;
+    --dm-text-secondary: #a8a8a8;
+    --dm-text-muted:     #737373;
+    --dm-text-heading:   #ffffff;
+    --dm-shadow-sidebar: none;
+    --dm-shadow-main:    none;
+    --dm-thumb:          #ffffff;
+    --dm-chat-sent-bg:   #3797f0;
+    --dm-chat-sent-text: #ffffff;
+    --dm-chat-recv-bg:   #262626;
+    --dm-chat-recv-text: #f5f5f5;
+    --dm-header-bg:      rgba(0,0,0,0.85);
+    --dm-input-border:   #262626;
+    --dm-input-ring:     rgba(255, 255, 255, 0.15);
+    --dm-typing-bg:      #262626;
+  }
 }
 
 /* View Transition API - Native Ripple Effect */

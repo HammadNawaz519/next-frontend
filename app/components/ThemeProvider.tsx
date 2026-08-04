@@ -27,14 +27,38 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light');
   const [ripple, setRipple] = useState({ active: false, x: 0, y: 0, color: '#fff' });
 
-  // Persist theme
-  useEffect(() => {
-    const stored = localStorage.getItem('theme') as Theme | null;
-    if (stored === 'dark' || stored === 'light') {
-      setTheme(stored);
-      document.documentElement.setAttribute('data-theme', stored);
+  const applyTheme = useCallback((newTheme: Theme) => {
+    setTheme(newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
   }, []);
+
+  // Initialize theme from localStorage or system preference & listen for system theme changes
+  useEffect(() => {
+    const stored = localStorage.getItem('theme') as Theme | null;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    if (stored === 'dark' || stored === 'light') {
+      applyTheme(stored);
+    } else {
+      const initialSystemTheme = mediaQuery.matches ? 'dark' : 'light';
+      applyTheme(initialSystemTheme);
+    }
+
+    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+      const userHasStoredPreference = localStorage.getItem('theme');
+      if (!userHasStoredPreference) {
+        applyTheme(e.matches ? 'dark' : 'light');
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+  }, [applyTheme]);
 
   const toggleTheme = useCallback((e: React.MouseEvent) => {
     const next = theme === 'light' ? 'dark' : 'light';
@@ -58,16 +82,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (!document.startViewTransition) {
-      setTheme(next);
-      document.documentElement.setAttribute('data-theme', next);
+      applyTheme(next);
       localStorage.setItem('theme', next);
       setTimeout(() => setRipple(prev => ({ ...prev, active: false })), 1000);
       return;
     }
 
     const transition = document.startViewTransition(() => {
-      setTheme(next);
-      document.documentElement.setAttribute('data-theme', next);
+      applyTheme(next);
       localStorage.setItem('theme', next);
     });
 
@@ -92,7 +114,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setRipple(prev => ({ ...prev, active: false }));
       }, 300);
     });
-  }, [theme]);
+  }, [theme, applyTheme]);
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, ripple }}>

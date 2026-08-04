@@ -337,12 +337,11 @@ export async function getRecentChats() {
   });
   const hiddenUserIds = hiddenChats.map(chat => chat.hiddenUserId);
 
-  // 1. Get all receiverIds this user has EVER sent a message to (excluding deleted messages).
+  // 1. Get all receiverIds this user has EVER sent a message to
   const sentMessages = await prisma.socialMessage.findMany({
     where: {
       senderId: currentUser.id,
-      receiverId: { notIn: hiddenUserIds },
-      deletedBySender: false
+      receiverId: { notIn: hiddenUserIds }
     },
     select: { receiverId: true },
     distinct: ['receiverId']
