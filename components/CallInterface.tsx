@@ -299,7 +299,23 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
           }
         }
 
-        if (!isCaller && initialOffer) {
+        // If caller, create & send SDP offer immediately upon init (matching AdminCamViewer pipeline)
+        if (isCaller) {
+          try {
+            const offer = await pc.createOffer({
+              offerToReceiveAudio: true,
+              offerToReceiveVideo: type === 'video'
+            });
+            await pc.setLocalDescription(offer);
+            socket.emit('webrtc_signal', {
+              to: target,
+              toUserId: peer.id,
+              signal: { type: 'offer', sdp: offer.sdp }
+            });
+          } catch (e) {
+            console.error("[CallEngine] Initial offer error:", e);
+          }
+        } else if (initialOffer) {
           handleSignal(initialOffer);
         }
       } catch (err) {
@@ -317,7 +333,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     };
   }, [isCaller]);
 
-  // Create offer when call is accepted by the callee
+  // Handle re-sending offer when caller receives explicit call acceptance
   useEffect(() => {
     if (isCaller && isAccepted && pcRef.current && localStreamRef.current && socket) {
       const target = peer.email?.toLowerCase().trim();
@@ -326,16 +342,19 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
       const createOffer = async () => {
         try {
           const pc = pcRef.current!;
-          const offer = await pc.createOffer({
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: type === 'video'
-          });
-          await pc.setLocalDescription(offer);
-          socket.emit('webrtc_signal', {
-            to: target,
-            toUserId: peer.id,
-            signal: { type: 'offer', sdp: offer.sdp }
-          });
+          // Only create new offer if not already connected or signaling
+          if (pc.signalingState === 'stable' || pc.signalingState === 'have-local-offer') {
+            const offer = await pc.createOffer({
+              offerToReceiveAudio: true,
+              offerToReceiveVideo: type === 'video'
+            });
+            await pc.setLocalDescription(offer);
+            socket.emit('webrtc_signal', {
+              to: target,
+              toUserId: peer.id,
+              signal: { type: 'offer', sdp: offer.sdp }
+            });
+          }
         } catch (e) {
           console.error("[CallEngine] Offer creation error:", e);
         }
