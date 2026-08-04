@@ -1593,6 +1593,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         const filteredCached = cached.filter(m => !deletedMessageIds.has(m.id));
         setMessages(filteredCached);
         setIsLoadingMessages(false);
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        }, 30);
       } else {
         setIsLoadingMessages(true);
         setMessages([]); // Clear while loading if no cache
@@ -1611,6 +1614,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         markMessagesAsSeen(selectedUser.id);
         socket?.emit('mark_as_seen', { senderEmail: selectedUser.email });
+
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        }, 60);
       } catch (err) {
         console.error("Failed to load messages:", err);
       } finally {
@@ -1618,17 +1625,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       }
     }
     loadMessages();
-  }, [selectedUser?.id]); // Only re-run when ID changes, not the whole object
+  }, [selectedUser?.id]);
 
-  // Smart Scrolling
-  const lastMsgCount = useRef(0);
+  // Always scroll to bottom when messages or active user change
   useEffect(() => {
     if (messages.length > 0) {
-      const behavior = messages.length - lastMsgCount.current === 1 ? 'smooth' : 'auto';
-      messagesEndRef.current?.scrollIntoView({ behavior });
-      lastMsgCount.current = messages.length;
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      }, 50);
+      return () => clearTimeout(timer);
     }
-  }, [messages.length]);
+  }, [messages.length, selectedUser?.id]);
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -2072,8 +2079,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           </span>
                         )}
                       </b>
-                      <small style={{ color: isOnline ? '#22c55e' : undefined }}>
-                        {isOnline ? '● Online' : ((user as any).lastMessage || `Active ${formatLastSeenAgo(lastSeenMap[user.email?.toLowerCase().trim() || ''] || (user as any).lastSeen)}`)}
+                      <small style={{ color: (user as any).unseenCount > 0 ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)', fontWeight: (user as any).unseenCount > 0 ? 600 : 400 }}>
+                        {(user as any).lastMessage || (isOnline ? '● Online' : `Active ${formatLastSeenAgo(lastSeenMap[user.email?.toLowerCase().trim() || ''] || (user as any).lastSeen)}`)}
                       </small>
                     </div>
                   </div>
