@@ -120,7 +120,385 @@ export const formatLastSeenAgo = (lastSeenRaw?: string | Date | null): string =>
 };
 
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onLongPress, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker }: any) => {
+
+// ─── Instagram DM-style Message Overlay ────────────────────────────────────
+
+const IG_QUICK_REACTIONS = ['❤️', '😂', '😮', '😢', '😡', '👍', '🙏', '🔥'];
+
+interface IGMenuState {
+  msg: any;
+  bubbleRect: DOMRect;
+  isSent: boolean;
+}
+
+const IGMessageOverlay = ({
+  state,
+  currentUserId,
+  onClose,
+  onReact,
+  onReply,
+  onRequestDelete,
+  onOpenTagPicker,
+  session,
+}: {
+  state: IGMenuState;
+  currentUserId: string;
+  onClose: () => void;
+  onReact: (msgId: string, emoji: string) => void;
+  onReply: (msg: any) => void;
+  onRequestDelete: (msgId: string, type: 'me' | 'everyone') => void;
+  onOpenTagPicker: (msg: any) => void;
+  session: any;
+}) => {
+  const { msg, bubbleRect, isSent } = state;
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const reactionBarRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerEmoji, setPickerEmoji] = useState('');
+
+  // Animate in on mount
+  useEffect(() => {
+    requestAnimationFrame(() => setMounted(true));
+  }, []);
+
+  // Escape key dismiss
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, []);
+
+  const handleClose = () => {
+    setMounted(false);
+    setTimeout(onClose, 220);
+  };
+
+  // Swipe-down-to-dismiss on the menu panel
+  const swipeStartY = useRef(0);
+  const handleMenuTouchStart = (e: React.TouchEvent) => {
+    swipeStartY.current = e.touches[0].clientY;
+  };
+  const handleMenuTouchEnd = (e: React.TouchEvent) => {
+    const diff = e.changedTouches[0].clientY - swipeStartY.current;
+    if (diff > 60) handleClose();
+  };
+
+  // Smart layout: reaction bar above bubble, action menu below (or above if no room)
+  const REACTION_BAR_H = 56;
+  const REACTION_BAR_GAP = 10;
+  const MENU_W = Math.min(320, window.innerWidth * 0.93);
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Clamp bubble rect to viewport
+  const bTop = Math.max(0, bubbleRect.top);
+  const bBottom = Math.min(vh, bubbleRect.bottom);
+  const bLeft = Math.max(0, bubbleRect.left);
+  const bRight = Math.min(vw, bubbleRect.right);
+  const bCenterX = (bLeft + bRight) / 2;
+
+  // Reaction bar X: centred on bubble, clamped to viewport
+  const reactionBarW = Math.min(440, vw - 24);
+  let reactionBarLeft = bCenterX - reactionBarW / 2;
+  reactionBarLeft = Math.max(12, Math.min(reactionBarLeft, vw - reactionBarW - 12));
+  const reactionBarTop = Math.max(12, bTop - REACTION_BAR_H - REACTION_BAR_GAP);
+
+  // Action menu: below bubble by default, above if not enough room
+  const MENU_ITEMS_H = isSent ? 4 * 52 + 8 : 3 * 52 + 8; // approx
+  const spaceBelow = vh - bBottom - 16;
+  const spaceAbove = bTop - 16;
+  let menuTop: number;
+  if (spaceBelow >= MENU_ITEMS_H || spaceBelow >= spaceAbove) {
+    menuTop = bBottom + 10;
+  } else {
+    menuTop = bTop - MENU_ITEMS_H - 10;
+  }
+  menuTop = Math.max(16, Math.min(menuTop, vh - MENU_ITEMS_H - 16));
+
+  // Menu X: align with bubble, clamped
+  let menuLeft = isSent ? bRight - MENU_W : bLeft;
+  menuLeft = Math.max(12, Math.min(menuLeft, vw - MENU_W - 12));
+
+  // Check if user already reacted with an emoji
+  const myReactions = new Set<string>(
+    (msg.reactions || [])
+      .filter((r: any) => String(r.userId) === String(currentUserId))
+      .map((r: any) => r.emoji)
+  );
+
+  const isDark = typeof document !== 'undefined' &&
+    document.documentElement.getAttribute('data-theme') === 'dark';
+
+  const menuBg = isDark
+    ? 'rgba(28, 28, 30, 0.97)'
+    : 'rgba(255,255,255,0.97)';
+  const menuBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const menuText = isDark ? '#fff' : '#000';
+  const menuMuted = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.38)';
+  const dividerColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const hoverBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const dangerColor = '#ef4444';
+
+  const reactionBg = isDark
+    ? 'rgba(28,28,30,0.96)'
+    : 'rgba(255,255,255,0.96)';
+
+  const animStyle = (extraTransform = '') => ({
+    opacity: mounted ? 1 : 0,
+    transform: mounted ? `scale(1) ${extraTransform}` : `scale(0.95) translateY(8px) ${extraTransform}`,
+    transition: 'opacity 0.22s ease-out, transform 0.22s ease-out',
+  });
+
+  const menuItem = (
+    icon: React.ReactNode,
+    label: string,
+    onClick: () => void,
+    danger = false,
+    hint = ''
+  ) => (
+    <button
+      key={label}
+      onClick={() => { onClick(); handleClose(); }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '14px',
+        width: '100%',
+        padding: '0 16px',
+        height: '52px',
+        background: 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        color: danger ? dangerColor : menuText,
+        fontSize: '15px',
+        fontWeight: 500,
+        textAlign: 'left',
+        borderRadius: '0',
+        flexShrink: 0,
+        transition: 'background 0.12s',
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = hoverBg; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+    >
+      <span style={{ width: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: danger ? 1 : 0.8 }}>{icon}</span>
+      <span style={{ flex: 1 }}>{label}</span>
+      {hint && <span style={{ fontSize: '12px', color: menuMuted, flexShrink: 0 }}>{hint}</span>}
+    </button>
+  );
+
+  return (
+    <div
+      ref={overlayRef}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        pointerEvents: 'all',
+      }}
+    >
+      {/* Dim overlay */}
+      <div
+        onClick={handleClose}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(0,0,0,0.25)',
+          opacity: mounted ? 1 : 0,
+          transition: 'opacity 0.22s ease-out',
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)',
+        }}
+      />
+
+      {/* Highlighted ghost of the message bubble */}
+      <div
+        style={{
+          position: 'absolute',
+          top: bubbleRect.top,
+          left: bubbleRect.left,
+          width: bubbleRect.width,
+          height: bubbleRect.height,
+          pointerEvents: 'none',
+          transform: mounted ? 'scale(1.03)' : 'scale(1)',
+          transformOrigin: isSent ? 'right center' : 'left center',
+          transition: 'transform 0.22s ease-out',
+          filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.22))',
+          zIndex: 1,
+        }}
+      />
+
+      {/* Reaction Bar */}
+      <div
+        ref={reactionBarRef}
+        style={{
+          position: 'absolute',
+          top: reactionBarTop,
+          left: reactionBarLeft,
+          width: reactionBarW,
+          height: '52px',
+          background: reactionBg,
+          borderRadius: '26px',
+          border: `1px solid ${menuBorder}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '2px',
+          padding: '0 12px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          zIndex: 2,
+          ...animStyle('translateY(0px)'),
+        }}
+      >
+        {IG_QUICK_REACTIONS.map(emoji => {
+          const alreadyReacted = myReactions.has(emoji);
+          return (
+            <button
+              key={emoji}
+              onClick={() => { onReact(msg.id, emoji); handleClose(); }}
+              title={emoji}
+              style={{
+                background: alreadyReacted ? 'rgba(99,102,241,0.18)' : 'transparent',
+                border: alreadyReacted ? '1.5px solid rgba(99,102,241,0.45)' : '1.5px solid transparent',
+                borderRadius: '50%',
+                width: '44px',
+                height: '44px',
+                fontSize: '24px',
+                lineHeight: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'transform 0.15s ease-out, background 0.15s',
+                flexShrink: 0,
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
+              onTouchStart={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)'; }}
+              onTouchEnd={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
+            >
+              {emoji}
+            </button>
+          );
+        })}
+        {/* More emoji picker button */}
+        <button
+          onClick={() => setShowPicker(p => !p)}
+          style={{
+            background: 'transparent',
+            border: '1.5px solid transparent',
+            borderRadius: '50%',
+            width: '44px',
+            height: '44px',
+            fontSize: '20px',
+            lineHeight: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: menuMuted,
+            transition: 'transform 0.15s ease-out',
+            flexShrink: 0,
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.18)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
+          title="More reactions"
+        >
+          ＋
+        </button>
+      </div>
+
+      {/* Action Menu */}
+      <div
+        ref={menuRef}
+        onTouchStart={handleMenuTouchStart}
+        onTouchEnd={handleMenuTouchEnd}
+        style={{
+          position: 'absolute',
+          top: menuTop,
+          left: menuLeft,
+          width: MENU_W,
+          background: menuBg,
+          borderRadius: '18px',
+          border: `1px solid ${menuBorder}`,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.10)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          overflow: 'hidden',
+          zIndex: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          ...animStyle(),
+        }}
+      >
+        {/* Reply */}
+        {menuItem(
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>,
+          'Reply',
+          () => onReply(msg)
+        )}
+
+        <div style={{ height: '1px', background: dividerColor, margin: '0 16px' }} />
+
+        {/* Copy (text only) */}
+        {msg.type === 'text' && menuItem(
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>,
+          'Copy Text',
+          () => {
+            try { navigator.clipboard.writeText(msg.content); } catch { }
+          }
+        )}
+
+        {/* Forward */}
+        {menuItem(
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M14 9V5l7 7-7 7v-4.1c-5-.13-8.5 1.57-11 5.1.97-4.97 3.97-9.87 11-11z"/></svg>,
+          'Forward',
+          () => {}
+        )}
+
+        {/* Tag */}
+        {menuItem(
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>,
+          'Tag Message',
+          () => onOpenTagPicker(msg)
+        )}
+
+        <div style={{ height: '1px', background: dividerColor, margin: '0 16px' }} />
+
+        {/* Destructive: Delete for me */}
+        {menuItem(
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>,
+          'Delete for Me',
+          () => onRequestDelete(msg.id, 'me'),
+          true
+        )}
+
+        {/* Destructive: Delete for everyone (sent only) */}
+        {isSent && (
+          <>
+            <div style={{ height: '1px', background: dividerColor, margin: '0 16px' }} />
+            {menuItem(
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>,
+              'Delete for Everyone',
+              () => onRequestDelete(msg.id, 'everyone'),
+              true,
+              ''
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── MessageItem ────────────────────────────────────────────────────────────
+
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker }: any) => {
   if (msg.type === 'system') {
     return (
       <div className="w-full flex justify-center my-3.5 text-center px-4 animate-in fade-in duration-300 pointer-events-none">
@@ -132,44 +510,42 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
   }
 
   const isAI = msg.senderId === 'ai';
-  // A message is "Sent" if the sender is the current user
   const isSent = !isAI && String(msg.senderId) === String(currentUserId);
-  const [showActionsMobile, setShowActionsMobile] = useState(false);
 
-  // Swipe-to-tag gesture state & physics
+  // Swipe-to-reply gesture state
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
   const isSwipingHorizontally = useRef<boolean | null>(null);
 
+  // Long-press
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
   const isMoving = useRef(false);
+  const bubbleRef = useRef<HTMLDivElement>(null);
+
+  const triggerIGMenu = () => {
+    if (!bubbleRef.current) return;
+    const rect = bubbleRef.current.getBoundingClientRect();
+    if (navigator.vibrate) navigator.vibrate([8, 4, 8]);
+    onShowIGMenu({ msg, bubbleRect: rect, isSent });
+  };
 
   const handlePointerDown = (e: any) => {
     if (selectedMessageIds && selectedMessageIds.size > 0) return;
     isMoving.current = false;
     longPressTimeout.current = setTimeout(() => {
-      if (!isMoving.current) {
-        if (navigator.vibrate) navigator.vibrate(40);
-        onLongPress(msg.id);
-      }
-    }, 500);
+      if (!isMoving.current) triggerIGMenu();
+    }, 450);
   };
 
   const handlePointerUp = () => {
-    if (longPressTimeout.current) {
-      clearTimeout(longPressTimeout.current);
-      longPressTimeout.current = null;
-    }
+    if (longPressTimeout.current) { clearTimeout(longPressTimeout.current); longPressTimeout.current = null; }
   };
 
   const handlePointerMove = () => {
     isMoving.current = true;
-    if (longPressTimeout.current) {
-      clearTimeout(longPressTimeout.current);
-      longPressTimeout.current = null;
-    }
+    if (longPressTimeout.current) { clearTimeout(longPressTimeout.current); longPressTimeout.current = null; }
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -198,7 +574,6 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         setIsSwiping(true);
         const clampedOffset = Math.min(diffX * 0.65, 100);
         setSwipeOffset(clampedOffset);
-
         if (clampedOffset > 50 && (e.currentTarget as any)._hapticsTriggered !== true) {
           if (navigator.vibrate) navigator.vibrate(30);
           (e.currentTarget as any)._hapticsTriggered = true;
@@ -212,25 +587,16 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
   const handleTouchEnd = (e: React.TouchEvent) => {
     handlePointerUp();
     (e.currentTarget as any)._hapticsTriggered = false;
-
-    if (swipeOffset > 50) {
-      if (onReply) onReply(msg);
-    }
-
+    if (swipeOffset > 50 && onReply) onReply(msg);
     setIsSwiping(false);
     setSwipeOffset(0);
     isSwipingHorizontally.current = null;
   };
 
-  const toggleActions = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('.msg-actions') || target.closest('.msg-reactions') || target.closest('.quick-react-container')) {
-      return;
-    }
-    if (window.innerWidth <= 768) {
-      e.stopPropagation();
-      setShowActionsMobile(!showActionsMobile);
-    }
+  // Right-click context menu (desktop)
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    triggerIGMenu();
   };
 
   const isSelected = selectedMessageIds?.has(msg.id);
@@ -240,22 +606,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
     if (isInSelectionMode) {
       e.stopPropagation();
       toggleMessageSelection(msg.id);
-      return;
-    }
-    toggleActions(e);
-  };
-
-  const handleDeleteClick = (type: 'me' | 'everyone') => {
-    if (onRequestDelete) {
-      onRequestDelete(msg.id, type);
-    } else {
-      onDelete(msg.id, type);
     }
   };
 
-  const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
-
-  // Calculate reaction counts
+  // Reaction counts
   const reactionCounts: Record<string, number> = {};
   if (msg.reactions && msg.type !== 'deleted') {
     msg.reactions.forEach((r: any) => {
@@ -273,6 +627,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchMove={handleTouchMove}
+      onContextMenu={handleContextMenu}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -283,10 +638,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         width: '100%',
         maxWidth: '100%',
         userSelect: 'none',
-        WebkitUserSelect: 'none'
+        WebkitUserSelect: 'none',
       }}
     >
-      {/* Swipe Reveal Reply Indicator */}
+      {/* Swipe Reply Indicator */}
       {swipeOffset > 0 && (
         <div
           className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-sm font-bold transition-opacity z-10 text-indigo-500"
@@ -294,14 +649,14 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         >
           <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
           {swipeOffset > 50 && (
-            <span className="text-[10px] uppercase tracking-wider font-extrabold animate-in zoom-in-50 duration-150">
-              Reply
-            </span>
+            <span className="text-[10px] uppercase tracking-wider font-extrabold animate-in zoom-in-50 duration-150">Reply</span>
           )}
         </div>
       )}
 
+      {/* Bubble */}
       <div
+        ref={bubbleRef}
         className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''}`}
         style={{
           order: isSent ? 2 : 1,
@@ -310,11 +665,11 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           marginLeft: isSent ? 'auto' : '0',
           marginRight: isSent ? '0' : 'auto',
           transition: isSwiping ? 'none' : 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.18s, background 0.3s ease, color 0.3s ease',
-          transform: swipeOffset > 0 
-            ? `translateX(${swipeOffset}px)` 
+          transform: swipeOffset > 0
+            ? `translateX(${swipeOffset}px)`
             : isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
           background: isSent ? (activeTheme?.outgoingGradient || 'linear-gradient(135deg, #18181b 0%, #000000 100%)') : (activeTheme?.incomingBubbleColor || undefined),
-          color: isSent ? (activeTheme?.outgoingTextColor || '#ffffff') : (activeTheme?.incomingTextColor || undefined)
+          color: isSent ? (activeTheme?.outgoingTextColor || '#ffffff') : (activeTheme?.incomingTextColor || undefined),
         }}
       >
         {msg.replyTo && (
@@ -329,11 +684,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
             src={msg.content}
             alt="media"
             className="cursor-pointer hover:opacity-95 transition-opacity"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onPreviewImage) onPreviewImage(msg.content);
-              else window.open(msg.content, '_blank');
-            }}
+            onClick={e => { e.stopPropagation(); if (onPreviewImage) onPreviewImage(msg.content); else window.open(msg.content, '_blank'); }}
           />
         )}
         {msg.type === 'video' && <video src={msg.content} controls />}
@@ -383,13 +734,9 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
 
         {msgTag && (
           <div
-            onClick={(e) => { e.stopPropagation(); onOpenTagPicker(msg); }}
+            onClick={e => { e.stopPropagation(); onOpenTagPicker(msg); }}
             className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-md cursor-pointer transition-all hover:scale-105 active:scale-95 animate-in zoom-in-75 duration-200 mt-1.5"
-            style={{
-              background: `${msgTag.color}25`,
-              border: `1px solid ${msgTag.color}50`,
-              color: msgTag.color
-            }}
+            style={{ background: `${msgTag.color}25`, border: `1px solid ${msgTag.color}50`, color: msgTag.color }}
           >
             <span>{msgTag.emoji}</span>
             <span>{msgTag.label}</span>
@@ -398,41 +745,52 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         )}
       </div>
 
-      {msg.type !== 'deleted' && msg.type !== 'call' && !isInSelectionMode && (
-        <div 
-          className={`msg-actions ${showActionsMobile ? 'show-mobile' : ''}`} 
-          style={{ 
-            order: isSent ? 1 : 2,
-            margin: '0 4px'
+      {/* Reaction bubbles (below the message) */}
+      {Object.keys(reactionCounts).length > 0 && (
+        <div
+          style={{
+            order: isSent ? 3 : 3,
+            display: 'flex',
+            gap: '4px',
+            flexWrap: 'wrap',
+            justifyContent: isSent ? 'flex-end' : 'flex-start',
+            marginTop: '-6px',
+            marginLeft: isSent ? 'auto' : '8px',
+            marginRight: isSent ? '8px' : 'auto',
+            zIndex: 1,
           }}
         >
-          <div className="msg-del-actions">
-            <div className="quick-react-container">
-              {QUICK_REACTIONS.map(emoji => (
-                <span key={emoji} className="quick-react-emoji" onClick={(e) => { e.stopPropagation(); onReact(msg.id, emoji); setShowActionsMobile(false); }}>
-                  {emoji}
-                </span>
-              ))}
-            </div>
-            <div className="del-btn-wrap">
-              <span className="msg-action-btn" title="Reply / Quote" onClick={(e) => { e.stopPropagation(); onReply(msg); setShowActionsMobile(false); }}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg> Reply
-              </span>
-              <span className="msg-action-btn" title="Delete for me" onClick={(e) => { e.stopPropagation(); handleDeleteClick('me'); }}>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z" /></svg> Me
-              </span>
-              {isSent && (
-                <span className="msg-action-btn" title="Delete for everyone" onClick={(e) => { e.stopPropagation(); handleDeleteClick('everyone'); }}>
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z" /></svg> All
-                </span>
-              )}
-            </div>
-          </div>
+          {Object.entries(reactionCounts).map(([emoji, count]) => (
+            <span
+              key={emoji}
+              onClick={e => { e.stopPropagation(); onReact(msg.id, emoji); }}
+              style={{
+                background: 'var(--dm-bg-hover)',
+                border: '1px solid var(--dm-border)',
+                borderRadius: '12px',
+                padding: '2px 7px',
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                fontWeight: 600,
+                color: 'var(--dm-text-secondary)',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
+                transition: 'transform 0.12s ease-out',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.12)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
+            >
+              {emoji}{count > 1 && <span style={{ fontSize: '11px' }}>{count}</span>}
+            </span>
+          ))}
         </div>
       )}
     </div>
   );
 });
+
 
 const SidebarItem = memo(({ user, isActive, onClick }: { user: User, isActive: boolean, onClick: any }) => {
   return (
@@ -663,6 +1021,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   // Bulk Message Selection State
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
+  const [igMenu, setIgMenu] = useState<IGMenuState | null>(null);
 
   const toggleMessageSelection = (msgId: string) => {
     setSelectedMessageIds(prev => {
@@ -2411,7 +2770,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         onRequestDelete={handleRequestDelete}
                         selectedMessageIds={selectedMessageIds}
                         toggleMessageSelection={toggleMessageSelection}
-                        onLongPress={handleLongPress}
+                        onShowIGMenu={(st: any) => setIgMenu(st)}
                         onReply={(m: any) => setReplyToMessage(m)}
                         activeTheme={activeTheme}
                         onPreviewImage={(src: string) => setLightboxImageSrc(src)}
@@ -3714,6 +4073,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             </div>
           </div>
         </div>
+      )}
+
+      {/* Instagram-style Message Overlay Portal */}
+      {igMenu && (
+        <IGMessageOverlay
+          state={igMenu}
+          currentUserId={(session?.user as any)?.id}
+          onClose={() => setIgMenu(null)}
+          onReact={handleReact}
+          onReply={(m: any) => setReplyToMessage(m)}
+          onRequestDelete={handleRequestDelete}
+          onOpenTagPicker={(m: any) => setOpenTagPickerMsg(m)}
+          session={session}
+        />
       )}
     </>
   );
