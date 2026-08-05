@@ -197,10 +197,10 @@ const IGMessageOverlay = ({
     if (diff > 60) handleClose();
   };
 
-  // Smart layout: reaction bar above bubble, action menu below (or above if no room)
-  const REACTION_BAR_H = 56;
-  const REACTION_BAR_GAP = 10;
-  const MENU_W = Math.min(320, window.innerWidth * 0.93);
+  // Smart layout: reaction bar & action menu positioning without collision/overlap
+  const REACTION_BAR_H = 48;
+  const MENU_ITEMS_H = isSent ? 260 : 210;
+  const GAP = 8;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
@@ -211,25 +211,36 @@ const IGMessageOverlay = ({
   const bRight = Math.min(vw, bubbleRect.right);
   const bCenterX = (bLeft + bRight) / 2;
 
-  // Reaction bar X: centred on bubble, clamped to viewport
-  const reactionBarW = Math.min(440, vw - 24);
+  const spaceBelow = vh - bBottom;
+  const spaceAbove = bTop;
+
+  let reactionBarTop: number;
+  let menuTop: number;
+
+  if (spaceBelow >= MENU_ITEMS_H + 20) {
+    // Ample space below: Reaction Bar ABOVE bubble, Menu BELOW bubble
+    reactionBarTop = Math.max(12, bTop - REACTION_BAR_H - GAP);
+    menuTop = Math.min(vh - MENU_ITEMS_H - 12, bBottom + GAP);
+  } else if (spaceAbove >= REACTION_BAR_H + MENU_ITEMS_H + 16) {
+    // Message is near bottom: both Reaction Bar and Menu go ABOVE bubble cleanly stacked
+    reactionBarTop = bTop - REACTION_BAR_H - GAP;
+    menuTop = reactionBarTop - MENU_ITEMS_H - GAP;
+  } else {
+    // Tight viewport: place Reaction Bar ABOVE bubble, Menu BELOW or clamped
+    reactionBarTop = Math.max(12, bTop - REACTION_BAR_H - GAP);
+    menuTop = Math.max(12, Math.min(vh - MENU_ITEMS_H - 12, bBottom + GAP));
+    // Prevent overlap if menu covers reaction bar
+    if (menuTop < reactionBarTop + REACTION_BAR_H && menuTop + MENU_ITEMS_H > reactionBarTop) {
+      menuTop = Math.min(vh - MENU_ITEMS_H - 8, reactionBarTop + REACTION_BAR_H + GAP);
+    }
+  }
+
+  // Horizontal Sizing & Centering
+  const reactionBarW = Math.min(410, vw - 24);
   let reactionBarLeft = bCenterX - reactionBarW / 2;
   reactionBarLeft = Math.max(12, Math.min(reactionBarLeft, vw - reactionBarW - 12));
-  const reactionBarTop = Math.max(12, bTop - REACTION_BAR_H - REACTION_BAR_GAP);
 
-  // Action menu: below bubble by default, above if not enough room
-  const MENU_ITEMS_H = isSent ? 4 * 52 + 8 : 3 * 52 + 8; // approx
-  const spaceBelow = vh - bBottom - 16;
-  const spaceAbove = bTop - 16;
-  let menuTop: number;
-  if (spaceBelow >= MENU_ITEMS_H || spaceBelow >= spaceAbove) {
-    menuTop = bBottom + 10;
-  } else {
-    menuTop = bTop - MENU_ITEMS_H - 10;
-  }
-  menuTop = Math.max(16, Math.min(menuTop, vh - MENU_ITEMS_H - 16));
-
-  // Menu X: align with bubble, clamped
+  const MENU_W = Math.min(300, vw - 24);
   let menuLeft = isSent ? bRight - MENU_W : bLeft;
   menuLeft = Math.max(12, Math.min(menuLeft, vw - MENU_W - 12));
 
@@ -279,12 +290,12 @@ const IGMessageOverlay = ({
         gap: '14px',
         width: '100%',
         padding: '0 16px',
-        height: '52px',
+        height: '48px',
         background: 'transparent',
         border: 'none',
         cursor: 'pointer',
         color: danger ? dangerColor : menuText,
-        fontSize: '15px',
+        fontSize: '14px',
         fontWeight: 500,
         textAlign: 'left',
         borderRadius: '0',
@@ -316,11 +327,11 @@ const IGMessageOverlay = ({
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(0,0,0,0.25)',
+          background: 'rgba(0,0,0,0.3)',
           opacity: mounted ? 1 : 0,
           transition: 'opacity 0.22s ease-out',
-          backdropFilter: 'blur(2px)',
-          WebkitBackdropFilter: 'blur(2px)',
+          backdropFilter: 'blur(3px)',
+          WebkitBackdropFilter: 'blur(3px)',
         }}
       />
 
@@ -333,10 +344,10 @@ const IGMessageOverlay = ({
           width: bubbleRect.width,
           height: bubbleRect.height,
           pointerEvents: 'none',
-          transform: mounted ? 'scale(1.03)' : 'scale(1)',
+          transform: mounted ? 'scale(1.02)' : 'scale(1)',
           transformOrigin: isSent ? 'right center' : 'left center',
           transition: 'transform 0.22s ease-out',
-          filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.22))',
+          filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.25))',
           zIndex: 1,
         }}
       />
@@ -348,20 +359,24 @@ const IGMessageOverlay = ({
           position: 'absolute',
           top: reactionBarTop,
           left: reactionBarLeft,
-          width: reactionBarW,
-          height: '52px',
+          maxWidth: 'calc(100vw - 24px)',
+          width: 'fit-content',
+          height: '48px',
           background: reactionBg,
-          borderRadius: '26px',
+          borderRadius: '24px',
           border: `1px solid ${menuBorder}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: '2px',
-          padding: '0 12px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
+          padding: '0 8px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.12)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          zIndex: 2,
+          zIndex: 3,
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          whiteSpace: 'nowrap',
           ...animStyle('translateY(0px)'),
         }}
       >
@@ -376,9 +391,9 @@ const IGMessageOverlay = ({
                 background: alreadyReacted ? 'rgba(99,102,241,0.18)' : 'transparent',
                 border: alreadyReacted ? '1.5px solid rgba(99,102,241,0.45)' : '1.5px solid transparent',
                 borderRadius: '50%',
-                width: '44px',
-                height: '44px',
-                fontSize: '24px',
+                width: '38px',
+                height: '38px',
+                fontSize: '20px',
                 lineHeight: 1,
                 display: 'flex',
                 alignItems: 'center',
@@ -403,9 +418,9 @@ const IGMessageOverlay = ({
             background: 'transparent',
             border: '1.5px solid transparent',
             borderRadius: '50%',
-            width: '44px',
-            height: '44px',
-            fontSize: '20px',
+            width: '38px',
+            height: '38px',
+            fontSize: '18px',
             lineHeight: 1,
             display: 'flex',
             alignItems: 'center',
