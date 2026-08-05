@@ -18,6 +18,7 @@ import {
   updateUserLastSeenAction
 } from '@/app/dashboard/actions';
 import CallInterface from './CallInterface';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import './SocialChat.css';
 
 interface User {
@@ -460,15 +461,56 @@ interface SocialChatProps {
   onOpenProfile?: (user: any) => void;
 }
 
-// ── Custom PWA / HTML5 Local Notification Dispatcher ──
-const triggerStunningNotification = (
+// ── Custom PWA & Capacitor Mobile Notification Dispatcher ──
+const triggerStunningNotification = async (
   type: 'call' | 'message',
   title: string,
   body: string,
   extraData?: any
 ) => {
-  if (typeof window === 'undefined' || !('Notification' in window)) return;
-  if (Notification.permission !== 'granted') return;
+  if (typeof window === 'undefined') return;
+
+  const isNative = typeof (window as any).Capacitor !== 'undefined' && typeof (window as any).Capacitor.isNativePlatform === 'function' && (window as any).Capacitor.isNativePlatform();
+
+  if (isNative) {
+    try {
+      const perm = await LocalNotifications.checkPermissions();
+      if (perm.display !== 'granted') {
+        const req = await LocalNotifications.requestPermissions();
+        if (req.display !== 'granted') return;
+      }
+
+      await LocalNotifications.createChannel({
+        id: type === 'call' ? 'incoming_calls' : 'chat_messages',
+        name: type === 'call' ? 'Incoming Calls' : 'Chat Messages',
+        importance: type === 'call' ? 5 : 4,
+        visibility: 1,
+        vibration: true
+      }).catch(() => {});
+
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            title,
+            body,
+            id: Math.floor(Math.random() * 1000000) + 1,
+            schedule: { at: new Date(Date.now() + 100) },
+            channelId: type === 'call' ? 'incoming_calls' : 'chat_messages',
+            extra: extraData
+          }
+        ]
+      });
+      return;
+    } catch (err) {
+      console.warn("Capacitor LocalNotifications failed, falling back to Web Notifications:", err);
+    }
+  }
+
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') {
+    try { Notification.requestPermission(); } catch (e) {}
+    return;
+  }
 
   const iconUrl = '/connect-logo.png';
   const badgeUrl = '/icon-192.png';
@@ -743,22 +785,40 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }, [messagesCache]);
 
-  // PWA Notification Permission & SW Message Listener
+  // Mobile & PWA Notification Permission & Tap Action Listener
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'default') {
+    if (typeof window === 'undefined') return;
+
+    const initNotifications = async () => {
+      const isNative = typeof (window as any).Capacitor !== 'undefined' && typeof (window as any).Capacitor.isNativePlatform === 'function' && (window as any).Capacitor.isNativePlatform();
+      
+      if (isNative) {
+        try {
+          await LocalNotifications.requestPermissions();
+          LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+            const extra = action.notification.extra;
+            if (extra?.partnerId) {
+              window.location.href = `/dashboard?userId=${extra.partnerId}`;
+            }
+          });
+        } catch (e) {
+          console.warn("Capacitor notification listener error:", e);
+        }
+      } else if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission().then((permission) => {
           console.log('Notification permission status:', permission);
-        });
+        }).catch(() => {});
       }
-    }
+    };
+
+    initNotifications();
 
     const handleSWMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'NAVIGATE') {
         window.location.href = event.data.url;
       }
     };
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', handleSWMessage);
       return () => navigator.serviceWorker.removeEventListener('message', handleSWMessage);
     }
@@ -1358,17 +1418,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
       });
 
-      newSocket.on('user_last_seen', ({ email, lastSeen }: { email: string; lastSeen: string }) => {
-        if (email) {
-          const cleanEmail = email.toLowerCase().trim();
-          setLastSeenMap(prev => {
-            const updated = { ...prev, [cleanEmail]: lastSeen };
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('chat_last_seen', JSON.stringify(updated));
-            }
-            return updated;
-          });
-        }
+      newSocket.on('user_last_seen', ({ email, userId, lastSeen }: { email?: string; userId?: string; lastSeen: string }) => {
+        setLastSeenMap(prev => {
+          const updated = { ...prev };
+          if (email) updated[email.toLowerCase().trim()] = lastSeen;
+          if (userId) updated[userId] = lastSeen;
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('chat_last_seen', JSON.stringify(updated));
+          }
+          return updated;
+        });
       });
 
       newSocket.on('reconnect', () => {
@@ -1583,18 +1642,58 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }, [searchQuery]);
 
-  // Persist last seen in DB when current user closes tab or goes offline
+  // Periodic heartbeat & keepalive beacon to persist lastSeen in Postgres DB
   useEffect(() => {
-    const handleUnload = () => {
-      if (session?.user?.email) {
-        updateUserLastSeenAction(new Date().toISOString()).catch(() => {});
+    if (!session?.user?.email) return;
+
+    const updateLastSeen = (timestampIso?: string) => {
+      const nowIso = timestampIso || new Date().toISOString();
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        const blob = new Blob([JSON.stringify({ timestamp: nowIso })], { type: 'application/json' });
+        navigator.sendBeacon('/api/user/last-seen', blob);
+      } else {
+        fetch('/api/user/last-seen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timestamp: nowIso }),
+          keepalive: true
+        }).catch(() => {});
       }
     };
-    window.addEventListener('beforeunload', handleUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleUnload);
+
+    // Heartbeat every 30s while active
+    const heartbeatInterval = setInterval(() => {
+      updateLastSeen();
+    }, 30000);
+
+    updateLastSeen();
+
+    const handleVisibilityOrUnload = () => {
+      if (document.visibilityState === 'hidden') {
+        updateLastSeen();
+      }
     };
-  }, [session]);
+
+    document.addEventListener('visibilitychange', handleVisibilityOrUnload);
+    window.addEventListener('pagehide', handleVisibilityOrUnload);
+    window.addEventListener('beforeunload', handleVisibilityOrUnload);
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityOrUnload);
+      window.removeEventListener('pagehide', handleVisibilityOrUnload);
+      window.removeEventListener('beforeunload', handleVisibilityOrUnload);
+    };
+  }, [session?.user?.email]);
+
+  // Periodic ticker to recalculate relative timestamps dynamically
+  const [, setTimeTicker] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeTicker(t => t + 1);
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Load messages
   useEffect(() => {
@@ -1874,45 +1973,75 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedUser || !socket || !session?.user) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'file';
-      const senderId = (session.user as any).id;
-      const tempId = 'temp-file-' + Date.now();
 
-      const stableId = 'file-' + Date.now() + Math.random().toString(36).substring(7);
-      const optimisticMsg: any = {
-        id: stableId,
-        senderId: senderId,
-        receiverId: selectedUser.id,
-        content: base64,
-        type: type,
-        createdAt: new Date(),
-        isSeen: false
-      };
-      setMessages(prev => [...prev, optimisticMsg]);
-      setMessagesCache(prev => {
-        const current = prev[selectedUser.id] || [];
-        return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
-      });
-      socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...optimisticMsg });
+    // Reset input so selecting the same file twice triggers change event
+    e.target.value = '';
 
-      try {
-        const savedMsg = await saveSocialMessage(selectedUser.id, base64, type);
-        if (savedMsg) {
-          const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
-          setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
-          setMessagesCache(prev => {
-            const current = prev[selectedUser.id] || [];
-            return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m) };
-          });
-        }
-      } catch (err) {
-        console.error("Failed to save file:", err);
-      }
+    const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'voice' : 'file';
+    const senderId = (session.user as any).id;
+    const stableId = 'file-' + Date.now() + Math.random().toString(36).substring(7);
+
+    // Create immediate local preview URL
+    const previewUrl = URL.createObjectURL(file);
+
+    const optimisticMsg: any = {
+      id: stableId,
+      senderId: senderId,
+      receiverId: selectedUser.id,
+      content: previewUrl,
+      type: type,
+      createdAt: new Date(),
+      isSeen: false
     };
-    reader.readAsDataURL(file);
+
+    setMessages(prev => [...prev, optimisticMsg]);
+    setMessagesCache(prev => {
+      const current = prev[selectedUser.id] || [];
+      return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
+    });
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('receiverId', selectedUser.id);
+      formData.append('type', type);
+
+      const res = await fetch('/api/chat/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const resData = await res.json();
+
+      if (resData?.success && resData?.message) {
+        const savedMsg = resData.message;
+        const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
+
+        setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
+        setMessagesCache(prev => {
+          const current = prev[selectedUser.id] || [];
+          return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m) };
+        });
+
+        // Emit real-time message with saved permanent file URL
+        socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...finalMsg });
+      } else {
+        // Fallback to base64 via saveSocialMessage
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64 = reader.result as string;
+          const savedMsg = await saveSocialMessage(selectedUser.id, base64, type);
+          if (savedMsg) {
+            const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
+            setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
+            socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...finalMsg });
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (err) {
+      console.error("Failed to upload media file:", err);
+    }
   };
 
   const handleDelete = async (msgId: string, type: 'me' | 'everyone') => {
@@ -2047,8 +2176,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   })
                 : requests.filter(u => !deletedChatIds.has(u.id))
               ).map((user) => {
-                const isOnline = onlineUsers.has((user.email || '').toLowerCase().trim());
+                const userEmail = (user.email || '').toLowerCase().trim();
+                const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(user.id);
                 const isPinned = pinnedChats.has(user.id);
+                const lastSeenVal = lastSeenMap[userEmail] || lastSeenMap[user.id] || (user as any).lastSeen;
                 let chatLongPressTimer: ReturnType<typeof setTimeout> | null = null;
                 const handleChatLongPress = () => {
                   setSelectedChatForOptions(user);
@@ -2094,7 +2225,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         )}
                       </b>
                       <small style={{ color: (user as any).unseenCount > 0 ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)', fontWeight: (user as any).unseenCount > 0 ? 600 : 400 }}>
-                        {(user as any).lastMessage || (isOnline ? '● Online' : `Active ${formatLastSeenAgo(lastSeenMap[user.email?.toLowerCase().trim() || ''] || (user as any).lastSeen)}`)}
+                        {(user as any).lastMessage || (isOnline ? '● Online' : `Active ${formatLastSeenAgo(lastSeenVal)}`)}
                       </small>
                     </div>
                   </div>
@@ -2152,14 +2283,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         {nicknames[selectedUser.id] || selectedUser.name}
                       </div>
                       <div className="status-text">
-                        {onlineUsers.has((selectedUser.email || '').toLowerCase().trim()) ? (
+                        {((selectedUser.email && onlineUsers.has(selectedUser.email.toLowerCase().trim())) || onlineUsers.has(selectedUser.id)) ? (
                           <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                             <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
                             Active
                           </span>
                         ) : (
                           <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>
-                            {`Active ${formatLastSeenAgo(lastSeenMap[selectedUser.email?.toLowerCase().trim() || ''] || (selectedUser as any).lastSeen)}`}
+                            {`Active ${formatLastSeenAgo(lastSeenMap[(selectedUser.email || '').toLowerCase().trim()] || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen)}`}
                           </span>
                         )}
                       </div>

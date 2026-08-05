@@ -4,6 +4,12 @@ import path from "path";
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["localhost", "127.0.0.1", "::1", "100.123.234.111"],
   
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+  },
+
   // Disable server-side bundling for these native/browser-only modules
   serverExternalPackages: [
     "@tensorflow/tfjs-core",

@@ -17,6 +17,7 @@
     "@auth/prisma-adapter": "^2.11.2",
     "@capacitor/android": "^8.3.4",
     "@capacitor/core": "^8.3.4",
+    "@capacitor/local-notifications": "^8.2.1",
     "@mediapipe/selfie_segmentation": "^0.1.1675465747",
     "@paper-design/shaders-react": "^0.0.76",
     "@prisma/adapter-pg": "^7.8.0",

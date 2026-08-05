@@ -194,9 +194,44 @@ export async function saveSocialMessage(receiverId: string, content: string, typ
     }
   });
 
+  let finalContent = content;
+
+  // Fallback: If content is base64 image/video/voice, write to disk file in /public/uploads/chat/
+  if (content && content.startsWith("data:")) {
+    try {
+      const fs = require("fs");
+      const path = require("path");
+      const matches = content.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mimeType = matches[1];
+        const rawBuffer = Buffer.from(matches[2], "base64");
+
+        let ext = ".bin";
+        if (mimeType.includes("png")) ext = ".png";
+        else if (mimeType.includes("jpeg") || mimeType.includes("jpg")) ext = ".jpg";
+        else if (mimeType.includes("gif")) ext = ".gif";
+        else if (mimeType.includes("webm")) ext = ".webm";
+        else if (mimeType.includes("mp4")) ext = ".mp4";
+        else if (mimeType.includes("ogg")) ext = ".ogg";
+
+        const uploadsDir = path.join(process.cwd(), "public", "uploads", "chat");
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+
+        const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}${ext}`;
+        const filePath = path.join(uploadsDir, filename);
+        fs.writeFileSync(filePath, rawBuffer);
+        finalContent = `/uploads/chat/${filename}`;
+      }
+    } catch (e) {
+      console.error("Failed to parse base64 media in saveSocialMessage fallback:", e);
+    }
+  }
+
   return await prisma.socialMessage.create({
     data: {
-      content,
+      content: finalContent,
       type,
       senderId: currentUser.id,
       receiverId
