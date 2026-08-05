@@ -391,7 +391,7 @@ export async function getRecentChats() {
     },
     distinct: ['receiverId'],
     orderBy: { createdAt: 'desc' },
-    include: { receiver: { select: { id: true, name: true, username: true, email: true, image: true, lastSeen: true } } }
+    include: { receiver: { select: { id: true, name: true, username: true, email: true, image: true, lastSeen: true, isOnline: true, lastHeartbeat: true, showActivityStatus: true } } }
   });
 
   const received = await (prisma.socialMessage as any).findMany({
@@ -402,7 +402,7 @@ export async function getRecentChats() {
     },
     distinct: ['senderId'],
     orderBy: { createdAt: 'desc' },
-    include: { sender: { select: { id: true, name: true, username: true, email: true, image: true, lastSeen: true } } }
+    include: { sender: { select: { id: true, name: true, username: true, email: true, image: true, lastSeen: true, isOnline: true, lastHeartbeat: true, showActivityStatus: true } } }
   });
 
   const formatLastMessage = (m: any) => {
@@ -1297,3 +1297,46 @@ export async function getReelsAction() {
 }
 
 
+
+// -- Activity Status Server Actions ------------------------------------------
+
+export async function updateActivityStatus(action: 'online' | 'offline' | 'heartbeat') {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return null;
+
+  const now = new Date();
+  let data: any = { lastHeartbeat: now };
+
+  if (action === 'online') {
+    data = { isOnline: true, lastSeen: now, lastHeartbeat: now };
+  } else if (action === 'offline') {
+    data = { isOnline: false, lastSeen: now, lastHeartbeat: now };
+  }
+
+  return await prisma.user.update({
+    where: { email: session.user.email },
+    data,
+    select: { id: true, isOnline: true, lastSeen: true, showActivityStatus: true }
+  });
+}
+
+export async function toggleShowActivityStatus(show: boolean) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return null;
+
+  return await prisma.user.update({
+    where: { email: session.user.email },
+    data: { showActivityStatus: show },
+    select: { id: true, showActivityStatus: true }
+  });
+}
+
+export async function getMyActivitySettings() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return null;
+
+  return await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true, showActivityStatus: true, isOnline: true, lastSeen: true }
+  });
+}

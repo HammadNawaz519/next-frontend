@@ -15,7 +15,8 @@ import {
   markMessagesAsSeen,
   askAI,
   saveCall,
-  updateUserLastSeenAction
+  updateActivityStatus,
+  toggleShowActivityStatus,
 } from '@/app/dashboard/actions';
 import CallInterface from './CallInterface';
 import { LocalNotifications } from '@capacitor/local-notifications';
@@ -95,24 +96,29 @@ export const PRESET_TAGS: MessageTag[] = [
   { id: 'todo', emoji: '📝', label: 'To Do', color: '#10b981' },
 ];
 
-export const formatLastSeenAgo = (lastSeenRaw?: string | Date) => {
-  if (!lastSeenRaw) return 'recently';
-  if (lastSeenRaw === 'online' || lastSeenRaw === 'Online') return 'Online';
+export const formatLastSeenAgo = (lastSeenRaw?: string | Date | null): string => {
+  if (!lastSeenRaw) return '';
 
   const d = typeof lastSeenRaw === 'string' ? new Date(lastSeenRaw) : lastSeenRaw;
-  if (isNaN(d.getTime())) return String(lastSeenRaw);
+  if (isNaN(d.getTime())) return '';
 
   const now = new Date();
   const diffSec = Math.max(0, Math.floor((now.getTime() - d.getTime()) / 1000));
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffSec / 3600);
+  const diffDays = Math.floor(diffSec / 86400);
+  const diffWeeks = Math.floor(diffDays / 7);
 
   if (diffSec < 60) return 'just now';
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-  const diffDays = Math.floor(diffSec / 86400);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
   if (diffDays === 1) return 'yesterday';
   if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffWeeks === 1) return '1 week ago';
+  if (diffWeeks < 5) return `${diffWeeks} weeks ago`;
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 };
+
 
 const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onLongPress, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker }: any) => {
   if (msg.type === 'system') {
@@ -1414,30 +1420,43 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       });
 
 
-      // Online / offline presence
-      newSocket.on('online_users', (emails: string[]) => {
-        setOnlineUsers(new Set(emails.map((e: string) => e.toLowerCase().trim())));
+      // ── Presence: online_users bulk snapshot on connect ──────────────────
+      newSocket.on('online_users', (identifiers: string[]) => {
+        setOnlineUsers(new Set(identifiers.map((e: string) => e.toLowerCase().trim())));
       });
 
-      newSocket.on('user_status', ({ email, status }: { email: string; status: 'online' | 'offline' }) => {
+      // ── Presence: single user activity change (online/offline) ───────────
+      // Replaces old user_last_seen + user_status combo
+      newSocket.on('activity_update', ({ userId, email, isOnline, lastSeen }: {
+        userId?: string;
+        email?: string;
+        isOnline: boolean;
+        lastSeen: string;
+      }) => {
+        // Update online set
         setOnlineUsers(prev => {
           const next = new Set(prev);
-          if (status === 'online') next.add(email.toLowerCase().trim());
-          else next.delete(email.toLowerCase().trim());
+          const keys = [email && email.toLowerCase().trim(), userId].filter(Boolean) as string[];
+          if (isOnline) {
+            keys.forEach(k => next.add(k));
+          } else {
+            keys.forEach(k => next.delete(k));
+          }
           return next;
         });
-      });
 
-      newSocket.on('user_last_seen', ({ email, userId, lastSeen }: { email?: string; userId?: string; lastSeen: string }) => {
-        setLastSeenMap(prev => {
-          const updated = { ...prev };
-          if (email) updated[email.toLowerCase().trim()] = lastSeen;
-          if (userId) updated[userId] = lastSeen;
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('chat_last_seen', JSON.stringify(updated));
-          }
-          return updated;
-        });
+        // Update lastSeen map
+        if (!isOnline && lastSeen) {
+          setLastSeenMap(prev => {
+            const updated = { ...prev };
+            if (email) updated[email.toLowerCase().trim()] = lastSeen;
+            if (userId) updated[userId] = lastSeen;
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('chat_last_seen', JSON.stringify(updated));
+            }
+            return updated;
+          });
+        }
       });
 
       newSocket.on('reconnect', () => {
@@ -1522,18 +1541,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     };
   }, [session?.user?.email]); // Run when session loads
 
-  // 2. Identify whenever session becomes available + Heartbeat
+  // 2. Identify once when socket connects or session loads
   useEffect(() => {
-    const identify = () => {
-      if (socket && socket.connected && session?.user?.email) {
-        const email = session.user.email.toLowerCase().trim();
-        const username = session.user.name || email.split('@')[0];
-        socket.emit('identify', { email, userId: (session.user as any).id, username });
-      }
-    };
-    identify();
-    const interval = setInterval(identify, 15000); // Re-identify every 15s to keep room alive
-    return () => clearInterval(interval);
+    if (socket && socket.connected && session?.user?.email) {
+      const email = session.user.email.toLowerCase().trim();
+      const username = session.user.name || email.split('@')[0];
+      socket.emit('identify', { email, userId: (session.user as any).id, username });
+    }
   }, [socket, session]);
 
   const handleCall = async (type: 'audio' | 'video') => {
@@ -1652,49 +1666,62 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }, [searchQuery]);
 
-  // Periodic heartbeat & keepalive beacon to persist lastSeen in Postgres DB
+  // ── Instagram-style Activity Status Lifecycle ─────────────────────────────
   useEffect(() => {
     if (!session?.user?.email) return;
 
-    const updateLastSeen = (timestampIso?: string) => {
-      const nowIso = timestampIso || new Date().toISOString();
-      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-        const blob = new Blob([JSON.stringify({ timestamp: nowIso })], { type: 'application/json' });
-        navigator.sendBeacon('/api/user/last-seen', blob);
-      } else {
-        fetch('/api/user/last-seen', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ timestamp: nowIso }),
-          keepalive: true
-        }).catch(() => {});
-      }
-    };
+    const myEmail = session.user.email.toLowerCase().trim();
+    const myId = (session.user as any)?.id;
 
-    // Heartbeat every 30s while active
+    // Mark online immediately — sets isOnline=true, lastSeen=now, lastHeartbeat=now in DB
+    updateActivityStatus('online').catch(() => {});
+
+    // Socket heartbeat every 25s (lightweight — just updates lastHeartbeat via socket)
     const heartbeatInterval = setInterval(() => {
-      updateLastSeen();
-    }, 30000);
+      if (socket?.connected) {
+        socket.emit('heartbeat', { userId: myId, email: myEmail });
+      }
+      // DB heartbeat every 25s too (lightweight — only writes lastHeartbeat)
+      updateActivityStatus('heartbeat').catch(() => {});
+    }, 25000);
 
-    updateLastSeen();
-
-    const handleVisibilityOrUnload = () => {
-      if (document.visibilityState === 'hidden') {
-        updateLastSeen();
+    // Visibility: come back to foreground → go online again
+    const handleVisible = () => {
+      if (document.visibilityState === 'visible') {
+        updateActivityStatus('online').catch(() => {});
+        if (socket?.connected) {
+          socket.emit('heartbeat', { userId: myId, email: myEmail });
+        }
+      } else {
+        // Going to background — mark offline immediately
+        updateActivityStatus('offline').catch(() => {});
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityOrUnload);
-    window.addEventListener('pagehide', handleVisibilityOrUnload);
-    window.addEventListener('beforeunload', handleVisibilityOrUnload);
+    // Page close / navigate away — use sendBeacon for fire-and-forget
+    const handleUnload = () => {
+      const blob = new Blob(
+        [JSON.stringify({ action: 'offline' })],
+        { type: 'application/json' }
+      );
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        navigator.sendBeacon('/api/user/activity', blob);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisible);
+    window.addEventListener('pagehide', handleUnload);
+    window.addEventListener('beforeunload', handleUnload);
 
     return () => {
       clearInterval(heartbeatInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityOrUnload);
-      window.removeEventListener('pagehide', handleVisibilityOrUnload);
-      window.removeEventListener('beforeunload', handleVisibilityOrUnload);
+      document.removeEventListener('visibilitychange', handleVisible);
+      window.removeEventListener('pagehide', handleUnload);
+      window.removeEventListener('beforeunload', handleUnload);
+      // Mark offline on component unmount (logout / route change)
+      updateActivityStatus('offline').catch(() => {});
     };
-  }, [session?.user?.email]);
+  }, [session?.user?.email, socket]);
 
   // Periodic ticker to recalculate relative timestamps dynamically
   const [, setTimeTicker] = useState(0);
@@ -2192,7 +2219,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 : requests.filter(u => !deletedChatIds.has(u.id))
               ).map((user) => {
                 const userEmail = (user.email || '').toLowerCase().trim();
-                const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(user.id);
+                const showActivity = (user as any).showActivityStatus !== false;
+                const isOnline = showActivity && ((userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(user.id));
                 const isPinned = pinnedChats.has(user.id);
                 const lastSeenVal = lastSeenMap[userEmail] || lastSeenMap[user.id] || (user as any).lastSeen;
                 let chatLongPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -2218,14 +2246,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           : <img src="/Avatar.avif" alt="avatar" />
                         }
                       </div>
-                      <span style={{
-                        position: 'absolute', bottom: 2, right: 2,
-                        width: '12px', height: '12px', borderRadius: '50%',
-                        background: isOnline ? '#22c55e' : '#9ca3af',
-                        border: '2px solid var(--dm-bg-sidebar)',
-                        display: 'block',
-                        transition: 'background 0.3s'
-                      }} />
+                      {showActivity && (
+                        <span style={{
+                          position: 'absolute', bottom: 2, right: 2,
+                          width: '12px', height: '12px', borderRadius: '50%',
+                          background: isOnline ? '#22c55e' : 'transparent',
+                          border: isOnline ? '2px solid var(--dm-bg-sidebar)' : 'none',
+                          display: 'block',
+                          transition: 'background 0.3s'
+                        }} />
+                      )}
                     </div>
 
                     {/* Meta */}
@@ -2240,7 +2270,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         )}
                       </b>
                       <small style={{ color: (user as any).unseenCount > 0 ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)', fontWeight: (user as any).unseenCount > 0 ? 600 : 400 }}>
-                        {(user as any).lastMessage || (isOnline ? '● Online' : `Active ${formatLastSeenAgo(lastSeenVal)}`)}
+                        {(user as any).lastMessage || (
+                          showActivity
+                            ? (isOnline ? '● Active now' : (formatLastSeenAgo(lastSeenVal) ? `Active ${formatLastSeenAgo(lastSeenVal)}` : ''))
+                            : ''
+                        )}
                       </small>
                     </div>
                   </div>
@@ -2298,16 +2332,30 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         {nicknames[selectedUser.id] || selectedUser.name}
                       </div>
                       <div className="status-text">
-                        {((selectedUser.email && onlineUsers.has(selectedUser.email.toLowerCase().trim())) || onlineUsers.has(selectedUser.id)) ? (
-                          <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                            Active
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>
-                            {`Active ${formatLastSeenAgo(lastSeenMap[(selectedUser.email || '').toLowerCase().trim()] || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen)}`}
-                          </span>
-                        )}
+                        {(() => {
+                          const showActivity = (selectedUser as any).showActivityStatus !== false;
+                          if (!showActivity) {
+                            // User has disabled activity status — show nothing
+                            return null;
+                          }
+                          const isOnline = (selectedUser.email && onlineUsers.has(selectedUser.email.toLowerCase().trim())) || onlineUsers.has(selectedUser.id);
+                          if (isOnline) {
+                            return (
+                              <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', boxShadow: '0 0 6px #22c55e' }} />
+                                Active now
+                              </span>
+                            );
+                          }
+                          const lastSeenVal = lastSeenMap[(selectedUser.email || '').toLowerCase().trim()] || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen;
+                          const ago = formatLastSeenAgo(lastSeenVal);
+                          if (!ago) return null;
+                          return (
+                            <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>
+                              Active {ago}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
