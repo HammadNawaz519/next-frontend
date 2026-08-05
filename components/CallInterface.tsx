@@ -50,10 +50,11 @@ const RTC_CONFIG: RTCConfiguration = {
 };
 
 export default function CallInterface({ socket, peer, type, isCaller, isAccepted, initialOffer, onEnd }: CallInterfaceProps) {
-  const [callStatus, setCallStatus] = useState<'ringing' | 'connecting' | 'active' | 'ended'>(isCaller ? 'ringing' : 'connecting');
+  const [callStatus, setCallStatus] = useState<'ringing' | 'connecting' | 'active' | 'reconnecting' | 'ended'>(isCaller ? 'ringing' : 'connecting');
   const [isMuted, setIsMuted] = useState(false);
   const [isCamOff, setIsCamOff] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [duration, setDuration] = useState(0);
   const durationRef = useRef(0);
 
@@ -69,13 +70,32 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
-  // Ringing Sound Effect
+  // 30-Second Ringing Timeout (Caller side)
+  useEffect(() => {
+    let timeoutTimer: NodeJS.Timeout | null = null;
+    if (callStatus === 'ringing' && isCaller) {
+      timeoutTimer = setTimeout(() => {
+        console.log('[CallEngine] Ringing timed out after 30s');
+        const target = peer.email?.toLowerCase().trim();
+        socket.emit('call_timeout', { to: target, toUserId: peer.id });
+        handleEnd();
+      }, 30000);
+    }
+    return () => {
+      if (timeoutTimer) clearTimeout(timeoutTimer);
+    };
+  }, [callStatus, isCaller, peer.email, peer.id, socket]);
+
+  // Ringing Sound Effect & Haptics
   useEffect(() => {
     let audioCtx: AudioContext | null = null;
     let ringInterval: NodeJS.Timeout | null = null;
 
     if (callStatus === 'ringing') {
       try {
+        if (typeof window !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([300, 200, 300, 200, 300]);
+        }
         audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
         const playRing = () => {
           if (!audioCtx) return;
@@ -194,13 +214,32 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
       if (handleSignalRef.current) handleSignalRef.current(data);
     };
     const handleCallEnded = () => handleEnd();
+    const handleOfferWrapper = (data: any) => handleSignal({ offer: data.offer || data });
+    const handleAnswerWrapper = (data: any) => handleSignal({ answer: data.answer || data });
+    const handleIceCandidateWrapper = (data: any) => handleSignal({ candidate: data.candidate || data });
 
     socket.on('webrtc_signal', handleSignalWrapper);
+    socket.on('offer', handleOfferWrapper);
+    socket.on('answer', handleAnswerWrapper);
+    socket.on('ice_candidate', handleIceCandidateWrapper);
     socket.on('call_ended', handleCallEnded);
+    socket.on('call_rejected', handleCallEnded);
+    socket.on('call_decline', handleCallEnded);
+    socket.on('call_cancelled', handleCallEnded);
+    socket.on('call_timed_out', handleCallEnded);
+    socket.on('call_busy', handleCallEnded);
 
     return () => {
       socket.off('webrtc_signal', handleSignalWrapper);
+      socket.off('offer', handleOfferWrapper);
+      socket.off('answer', handleAnswerWrapper);
+      socket.off('ice_candidate', handleIceCandidateWrapper);
       socket.off('call_ended', handleCallEnded);
+      socket.off('call_rejected', handleCallEnded);
+      socket.off('call_decline', handleCallEnded);
+      socket.off('call_cancelled', handleCallEnded);
+      socket.off('call_timed_out', handleCallEnded);
+      socket.off('call_busy', handleCallEnded);
     };
   }, [socket]);
 
@@ -422,6 +461,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     if (hasEnded.current) return;
     hasEnded.current = true;
     socket.emit('end_call', { to: peer.email?.toLowerCase().trim(), toUserId: peer.id });
+    socket.emit('call_end', { to: peer.email?.toLowerCase().trim(), toUserId: peer.id });
     cleanup();
     onEnd(durationRef.current, callStatus === 'active' || durationRef.current > 0);
   };
@@ -443,6 +483,29 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         videoTrack.enabled = !videoTrack.enabled;
         setIsCamOff(!videoTrack.enabled);
       }
+    }
+  };
+
+  const switchCamera = async () => {
+    if (!localStreamRef.current || type !== 'video') return;
+    const currentVideoTrack = localStreamRef.current.getVideoTracks()[0];
+    const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newFacingMode);
+    try {
+      if (currentVideoTrack) currentVideoTrack.stop();
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: newFacingMode, width: { ideal: 640 }, height: { ideal: 480 } }
+      });
+      const newTrack = newStream.getVideoTracks()[0];
+      localStreamRef.current.removeTrack(currentVideoTrack);
+      localStreamRef.current.addTrack(newTrack);
+      if (pcRef.current) {
+        const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) sender.replaceTrack(newTrack);
+      }
+      if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current;
+    } catch (e) {
+      console.warn("Camera flip failed:", e);
     }
   };
 
@@ -579,9 +642,28 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
                   border: '1px solid var(--dm-border)',
                   cursor: 'pointer'
                 }}
+                title="Toggle Camera"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            )}
+
+            {type === 'video' && (
+              <button
+                onClick={switchCamera}
+                className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
+                style={{
+                  background: 'var(--dm-bg-input)',
+                  color: 'var(--dm-text-muted)',
+                  border: '1px solid var(--dm-border)',
+                  cursor: 'pointer'
+                }}
+                title="Switch Camera"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </button>
             )}

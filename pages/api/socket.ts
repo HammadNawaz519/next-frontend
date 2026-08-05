@@ -78,30 +78,69 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
       });
 
       // --- CALL EVENTS ---
-      socket.on('call_user', (data) => {
-        const target = data.to.toLowerCase().trim();
-        socket.to(target).emit('incoming_call', { from: data.from, type: data.type });
+      const handleCallReq = (data: any) => {
+        const target = (data.to || data.toUserId || '').toLowerCase().trim();
+        if (target) socket.to(target).emit('incoming_call', { from: data.from, type: data.type, callId: data.callId });
+      };
+      socket.on('call_user', handleCallReq);
+      socket.on('call_request', handleCallReq);
+
+      const handleCallAcc = (data: any) => {
+        const target = (data.to || data.toUserId || '').toLowerCase().trim();
+        if (target) {
+          socket.to(target).emit('call_accepted', { from: data.from });
+          socket.to(target).emit('call_accept', { from: data.from });
+        }
+      };
+      socket.on('accept_call', handleCallAcc);
+      socket.on('call_accept', handleCallAcc);
+
+      const handleCallRej = (data: any) => {
+        const target = (data.to || data.toUserId || '').toLowerCase().trim();
+        if (target) {
+          socket.to(target).emit('call_rejected');
+          socket.to(target).emit('call_decline');
+        }
+      };
+      socket.on('reject_call', handleCallRej);
+      socket.on('call_decline', handleCallRej);
+
+      socket.on('call_cancel', (data: any) => {
+        const target = (data.to || data.toUserId || '').toLowerCase().trim();
+        if (target) socket.to(target).emit('call_cancelled');
       });
 
-      socket.on('accept_call', (data) => {
-        const target = data.to.toLowerCase().trim();
-        socket.to(target).emit('call_accepted', { from: data.from });
+      socket.on('call_timeout', (data: any) => {
+        const target = (data.to || data.toUserId || '').toLowerCase().trim();
+        if (target) socket.to(target).emit('call_timed_out');
       });
 
-      socket.on('reject_call', (data) => {
-        const target = data.to.toLowerCase().trim();
-        socket.to(target).emit('call_rejected');
+      socket.on('webrtc_signal', (data: any) => {
+        const target = (data.to || data.toUserId || '').toLowerCase().trim();
+        if (target) socket.to(target).emit('webrtc_signal', data.signal);
       });
 
-      socket.on('webrtc_signal', (data) => {
-        const target = data.to.toLowerCase().trim();
-        socket.to(target).emit('webrtc_signal', data.signal);
+      socket.on('offer', (data: any) => {
+        const target = (data.to || data.toUserId || '').toLowerCase().trim();
+        if (target) socket.to(target).emit('offer', { offer: data.offer });
       });
 
-      socket.on('end_call', (data) => {
-        const target = data.to.toLowerCase().trim();
-        socket.to(target).emit('call_ended');
+      socket.on('answer', (data: any) => {
+        const target = (data.to || data.toUserId || '').toLowerCase().trim();
+        if (target) socket.to(target).emit('answer', { answer: data.answer });
       });
+
+      socket.on('ice_candidate', (data: any) => {
+        const target = (data.to || data.toUserId || '').toLowerCase().trim();
+        if (target) socket.to(target).emit('ice_candidate', { candidate: data.candidate });
+      });
+
+      const handleCallEnding = (data: any) => {
+        const target = (data.to || data.toUserId || '').toLowerCase().trim();
+        if (target) socket.to(target).emit('call_ended');
+      };
+      socket.on('end_call', handleCallEnding);
+      socket.on('call_end', handleCallEnding);
 
       socket.on("disconnect", () => {
         console.log("Socket disconnected:", socket.id);

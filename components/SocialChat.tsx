@@ -1948,13 +1948,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (!selectedUser || !session?.user || !socket) return;
 
     const targetEmail = selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined;
+    const callId = `call-${Date.now()}`;
 
-    socket.emit('call_user', {
+    const payload = {
       to: targetEmail,
       toUserId: selectedUser.id,
       from: session.user,
-      type
-    });
+      type,
+      callId
+    };
+
+    socket.emit('call_user', payload);
+    socket.emit('call_request', payload);
 
     setActiveCall({ peer: { ...selectedUser, email: targetEmail }, type, isCaller: true });
   };
@@ -1962,11 +1967,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const handleAcceptCall = () => {
     if (!incomingCall || !socket) return;
 
-    socket.emit('accept_call', {
+    const payload = {
       to: incomingCall.from.email?.toLowerCase().trim(),
       toUserId: incomingCall.from.id,
       from: session?.user
-    });
+    };
+
+    socket.emit('accept_call', payload);
+    socket.emit('call_accept', payload);
 
     setActiveCall({
       peer: incomingCall.from,
@@ -1979,10 +1987,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   const handleRejectCall = async () => {
     if (!incomingCall || !socket) return;
-    socket.emit('reject_call', {
+
+    const payload = {
       to: incomingCall.from.email?.toLowerCase().trim(),
       toUserId: incomingCall.from.id
-    });
+    };
+
+    socket.emit('reject_call', payload);
+    socket.emit('call_decline', payload);
+
     const result = await saveCall(incomingCall.from.id, incomingCall.type, 'rejected');
     if (result?.message) {
       socket.emit('send_social_message', {
@@ -1998,10 +2011,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   const handleEndCall = () => {
     if (!activeCall || !socket) return;
-    socket.emit('end_call', {
+    const payload = {
       to: activeCall.peer.email?.toLowerCase().trim(),
       toUserId: activeCall.peer.id
-    });
+    };
+    socket.emit('end_call', payload);
+    socket.emit('call_end', payload);
   };
 
   // Search or Load Recent
