@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     }
     // heartbeat: only updates lastHeartbeat (lightweight)
 
-    const user = await prisma.user.update({
+    const user = await (prisma.user as any).update({
       where: { email: session.user.email },
       data,
       select: {
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await (prisma.user as any).findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -112,7 +112,7 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const showActivityStatus = Boolean(body?.showActivityStatus);
 
-    const user = await prisma.user.update({
+    const user = await (prisma.user as any).update({
       where: { email: session.user.email },
       data: { showActivityStatus },
       select: { id: true, showActivityStatus: true },
