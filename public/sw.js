@@ -62,6 +62,9 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (event.request.url.startsWith('chrome-extension')) return;
 
+  // Never intercept or cache Next.js internal chunks / dev HMR or localhost requests
+  if (url.pathname.startsWith('/_next/') || url.hostname === 'localhost' || url.hostname === '127.0.0.1') return;
+
   // 1. API / WebSocket calls: always network-only
   if (isAPICall(url)) return;
 

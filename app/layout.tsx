@@ -75,9 +75,15 @@ export default function RootLayout({
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js')
-                    .then(function(reg) { console.log('SW registered'); })
-                    .catch(function(err) { console.log('SW error:', err); });
+                  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                      for (let reg of registrations) { reg.unregister(); }
+                    });
+                  } else {
+                    navigator.serviceWorker.register('/sw.js')
+                      .then(function(reg) { console.log('SW registered'); })
+                      .catch(function(err) { console.log('SW error:', err); });
+                  }
                 });
               }
             `,
