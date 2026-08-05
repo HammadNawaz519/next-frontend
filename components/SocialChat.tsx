@@ -733,7 +733,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (typeof window === 'undefined') return;
     try {
       const cachedMsgs = sessionStorage.getItem('social_messages_cache');
-      if (cachedMsgs) setMessagesCache(JSON.parse(cachedMsgs));
+      if (cachedMsgs) {
+        try {
+          const parsed = JSON.parse(cachedMsgs);
+          Object.keys(parsed).forEach(k => {
+            parsed[k] = (parsed[k] || []).filter((m: any) => !m.content || !m.content.startsWith('blob:'));
+          });
+          setMessagesCache(parsed);
+        } catch (e) {}
+      }
 
       const pinned = localStorage.getItem('social_pinned_chats');
       if (pinned) setPinnedChats(new Set(JSON.parse(pinned)));
@@ -1705,7 +1713,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       const cached = messagesCache[selectedUser.id];
       if (cached) {
-        const filteredCached = cached.filter(m => !deletedMessageIds.has(m.id));
+        const filteredCached = cached
+          .filter(m => !deletedMessageIds.has(m.id))
+          .filter(m => !m.content || !m.content.startsWith('blob:'));
         setMessages(filteredCached);
         setIsLoadingMessages(false);
         setTimeout(() => {
@@ -1983,67 +1993,70 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const senderId = (session.user as any).id;
     const stableId = 'file-' + Date.now() + Math.random().toString(36).substring(7);
 
-    // Create immediate local preview URL
-    const previewUrl = URL.createObjectURL(file);
+    // Read as Base64 for persistent optimistic preview that survives page refresh
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Preview = reader.result as string;
 
-    const optimisticMsg: any = {
-      id: stableId,
-      senderId: senderId,
-      receiverId: selectedUser.id,
-      content: previewUrl,
-      type: type,
-      createdAt: new Date(),
-      isSeen: false
-    };
+      const optimisticMsg: any = {
+        id: stableId,
+        senderId: senderId,
+        receiverId: selectedUser.id,
+        content: base64Preview,
+        type: type,
+        createdAt: new Date(),
+        isSeen: false
+      };
 
-    setMessages(prev => [...prev, optimisticMsg]);
-    setMessagesCache(prev => {
-      const current = prev[selectedUser.id] || [];
-      return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
-    });
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('receiverId', selectedUser.id);
-      formData.append('type', type);
-
-      const res = await fetch('/api/chat/upload', {
-        method: 'POST',
-        body: formData
+      setMessages(prev => [...prev, optimisticMsg]);
+      setMessagesCache(prev => {
+        const current = prev[selectedUser.id] || [];
+        return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
       });
 
-      const resData = await res.json();
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('receiverId', selectedUser.id);
+        formData.append('type', type);
 
-      if (resData?.success && resData?.message) {
-        const savedMsg = resData.message;
-        const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
-
-        setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
-        setMessagesCache(prev => {
-          const current = prev[selectedUser.id] || [];
-          return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m) };
+        const res = await fetch('/api/chat/upload', {
+          method: 'POST',
+          body: formData
         });
 
-        // Emit real-time message with saved permanent file URL
-        socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...finalMsg });
-      } else {
-        // Fallback to base64 via saveSocialMessage
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64 = reader.result as string;
-          const savedMsg = await saveSocialMessage(selectedUser.id, base64, type);
+        const resData = await res.json();
+
+        if (resData?.success && resData?.message) {
+          const savedMsg = resData.message;
+          const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
+
+          setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
+          setMessagesCache(prev => {
+            const current = prev[selectedUser.id] || [];
+            return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m) };
+          });
+
+          // Emit real-time message with saved permanent file URL
+          socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...finalMsg });
+        } else {
+          // Fallback to base64 via saveSocialMessage
+          const savedMsg = await saveSocialMessage(selectedUser.id, base64Preview, type);
           if (savedMsg) {
             const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
             setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
+            setMessagesCache(prev => {
+              const current = prev[selectedUser.id] || [];
+              return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m) };
+            });
             socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...finalMsg });
           }
-        };
-        reader.readAsDataURL(file);
+        }
+      } catch (err) {
+        console.error("Failed to upload media file:", err);
       }
-    } catch (err) {
-      console.error("Failed to upload media file:", err);
-    }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleDelete = async (msgId: string, type: 'me' | 'everyone') => {
