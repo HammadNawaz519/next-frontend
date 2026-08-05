@@ -3810,36 +3810,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         </div>
       )}
 
-      {/* DELETE CONFIRMATION MODAL */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-[600] flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-200" style={{ background: 'rgba(0,0,0,0.4)' }}>
-          <div className="bg-white rounded-[2rem] p-6 max-w-sm w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200 border border-gray-100 flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4 text-red-500">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z" /></svg>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Message?</h3>
-            <p className="text-sm text-gray-500 mb-6">
-              {deleteConfirm.type === 'everyone'
-                ? "This will permanently delete the message for everyone in this chat. They will see that a message was deleted."
-                : "This message will be deleted for you, but others will still be able to see it."}
-            </p>
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="flex-1 px-4 py-3 rounded-full font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="flex-1 px-4 py-3 rounded-full font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
       {/* --- IMAGE LIGHTBOX PREVIEW OVERLAY --- */}
       {lightboxImageSrc && (
         <div
