@@ -101,9 +101,12 @@ export interface MessageTag {
 
 export const PRESET_TAGS: MessageTag[] = [
   { id: 'important', emoji: '⭐', label: 'Important', color: '#f59e0b' },
-  { id: 'followup', emoji: '📌', label: 'Follow Up', color: '#3b82f6' },
   { id: 'favorite', emoji: '❤️', label: 'Favorite', color: '#ec4899' },
-  { id: 'todo', emoji: '📝', label: 'To Do', color: '#10b981' },
+  { id: 'urgent', emoji: '⚡', label: 'Urgent', color: '#ef4444' },
+  { id: 'pinned', emoji: '📌', label: 'Pinned', color: '#3b82f6' },
+  { id: 'todo', emoji: '🏷️', label: 'To Do', color: '#10b981' },
+  { id: 'idea', emoji: '💡', label: 'Idea', color: '#a855f7' },
+  { id: 'trending', emoji: '🔥', label: 'Trending', color: '#f97316' },
 ];
 
 export const formatLastSeenAgo = (lastSeenRaw?: string | Date | null): string => {
@@ -147,6 +150,7 @@ const IGMessageOverlay = ({
   onClose,
   onReact,
   onReply,
+  onForward,
   onRequestDelete,
   onOpenTagPicker,
   session,
@@ -156,6 +160,7 @@ const IGMessageOverlay = ({
   onClose: () => void;
   onReact: (msgId: string, emoji: string) => void;
   onReply: (msg: any) => void;
+  onForward: (msg: any) => void;
   onRequestDelete: (msgId: string, type: 'me' | 'everyone') => void;
   onOpenTagPicker: (msg: any) => void;
   session: any;
@@ -483,7 +488,7 @@ const IGMessageOverlay = ({
         {menuItem(
           <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M14 9V5l7 7-7 7v-4.1c-5-.13-8.5 1.57-11 5.1.97-4.97 3.97-9.87 11-11z"/></svg>,
           'Forward',
-          () => {}
+          () => onForward(msg)
         )}
 
         {/* Tag */}
@@ -1030,18 +1035,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       });
   };
 
-  // Custom Delete Modal State
-  const [deleteConfirm, setDeleteConfirm] = useState<{ msgId: string, type: 'me' | 'everyone' } | null>(null);
+  // Forward Message Modal State
+  const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
+  const [forwardSearch, setForwardSearch] = useState('');
+  const [forwardSentUserIds, setForwardSentUserIds] = useState<Set<string>>(new Set());
 
+  // Direct Immediate Message Deletion
   const handleRequestDelete = (msgId: string, type: 'me' | 'everyone') => {
-    setDeleteConfirm({ msgId, type });
-  };
-
-  const confirmDelete = async () => {
-    if (deleteConfirm) {
-      await handleDelete(deleteConfirm.msgId, deleteConfirm.type);
-      setDeleteConfirm(null);
-    }
+    handleDelete(msgId, type);
   };
 
   // Bulk Message Selection State
@@ -4100,6 +4101,105 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         </div>
       )}
 
+      {/* Forward Message Modal */}
+      {forwardMsg && (
+        <div
+          className="fixed inset-0 z-[1800] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => { setForwardMsg(null); setForwardSearch(''); setForwardSentUserIds(new Set()); }}
+        >
+          <div
+            className="w-full max-w-sm bg-[var(--dm-bg-sidebar)] border border-[var(--dm-border)] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-[var(--dm-border)] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className="text-indigo-500"><path d="M14 9V5l7 7-7 7v-4.1c-5-.13-8.5 1.57-11 5.1.97-4.97 3.97-9.87 11-11z"/></svg>
+                <h3 className="font-extrabold text-base text-[var(--dm-text-primary)]">Forward Message</h3>
+              </div>
+              <button
+                onClick={() => { setForwardMsg(null); setForwardSearch(''); setForwardSentUserIds(new Set()); }}
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Snippet Preview */}
+            <div className="mx-4 my-3 p-3 rounded-2xl bg-[var(--dm-bg-hover)] border border-[var(--dm-border)] text-xs text-[var(--dm-text-secondary)] italic truncate">
+              "{forwardMsg.content}"
+            </div>
+
+            {/* Search Input */}
+            <div className="px-4 pb-2">
+              <input
+                type="text"
+                placeholder="Search contacts..."
+                value={forwardSearch}
+                onChange={e => setForwardSearch(e.target.value)}
+                className="w-full px-4 py-2 text-xs rounded-full border border-[var(--dm-border)] bg-[var(--dm-bg-input)] text-[var(--dm-text-primary)] focus:outline-none"
+              />
+            </div>
+
+            {/* User List */}
+            <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2 max-h-[45vh]">
+              {users
+                .filter(u => u.name.toLowerCase().includes(forwardSearch.toLowerCase()) || (u.username && u.username.toLowerCase().includes(forwardSearch.toLowerCase())))
+                .map(targetUser => {
+                  const isSentToTarget = forwardSentUserIds.has(targetUser.id);
+                  return (
+                    <div key={targetUser.id} className="flex items-center justify-between p-2 rounded-2xl hover:bg-[var(--dm-bg-hover)] transition-colors">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-[var(--dm-bg-active)] flex items-center justify-center font-bold text-xs">
+                          {targetUser.image && targetUser.image.length > 5 ? (
+                            <img src={targetUser.image} alt={targetUser.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <img src="/Avatar.avif" alt="avatar" className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-[var(--dm-text-primary)] truncate">{targetUser.name}</p>
+                          <p className="text-[10px] text-[var(--dm-text-secondary)] truncate">@{targetUser.username || targetUser.name.toLowerCase().replace(/\s+/g, '')}</p>
+                        </div>
+                      </div>
+                      <button
+                        disabled={isSentToTarget}
+                        onClick={async () => {
+                          setForwardSentUserIds(prev => new Set(prev).add(targetUser.id));
+                          const newMsg: Message = {
+                            id: 'fwd-' + Date.now() + Math.random().toString(36).substring(7),
+                            senderId: (session?.user as any)?.id,
+                            receiverId: targetUser.id,
+                            content: forwardMsg.content,
+                            type: forwardMsg.type || 'text',
+                            createdAt: new Date(),
+                            isSeen: false
+                          };
+                          try {
+                            await saveSocialMessage(targetUser.id, forwardMsg.content, forwardMsg.type || 'text');
+                            if (socket) {
+                              socket.emit('send_social_message', newMsg);
+                            }
+                          } catch (e) {
+                            console.error('Forward failed', e);
+                          }
+                        }}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                          isSentToTarget
+                            ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
+                            : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md active:scale-95'
+                        }`}
+                      >
+                        {isSentToTarget ? 'Sent ✓' : 'Send'}
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Instagram-style Message Overlay Portal */}
       {igMenu && (
         <IGMessageOverlay
@@ -4108,6 +4208,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           onClose={() => setIgMenu(null)}
           onReact={handleReact}
           onReply={(m: any) => setReplyToMessage(m)}
+          onForward={(m: any) => setForwardMsg(m)}
           onRequestDelete={handleRequestDelete}
           onOpenTagPicker={(m: any) => setOpenTagPickerMsg(m)}
           session={session}
