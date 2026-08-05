@@ -1272,6 +1272,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
   // Instagram-style Chat Details, Theme, Tagging & Lightbox State
+  const [showChatDetails, setShowChatDetails] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [liveThemeId, setLiveThemeId] = useState<string | null>(null);
   const [themeSearchQuery, setThemeSearchQuery] = useState('');
