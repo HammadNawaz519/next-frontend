@@ -929,11 +929,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     requestsRef.current = requests;
   }, [selectedUser, session, users, requests]);
 
-  const handleSelectTheme = async (theme: ChatTheme) => {
+  const handleSelectTheme = (theme: ChatTheme) => {
     if (!selectedUser) return;
-    const currentUserName = session?.user?.name || (session?.user?.email ? session.user.email.split('@')[0] : 'Someone');
-    const myId = (session?.user as any)?.id || (session?.user as any)?.email;
-    const myEmail = session?.user?.email ? session.user.email.toLowerCase().trim() : '';
 
     const updated = {
       ...chatThemes,
@@ -945,46 +942,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       localStorage.setItem('chat_themes', JSON.stringify(updated));
     }
     setShowThemePicker(false);
-
-    if (socket) {
-      socket.emit('change_chat_theme', {
-        receiverEmail: selectedUser.email,
-        receiverId: selectedUser.id,
-        themeId: theme.id,
-        themeName: theme.name,
-        senderName: currentUserName,
-        senderId: myId,
-        senderEmail: myEmail
-      });
-    }
-
-    const systemText = `${currentUserName} set theme to ${theme.name}`;
-    const stableId = 'system-theme-' + Date.now() + Math.random().toString(36).substring(7);
-    const systemMsg: Message = {
-      id: stableId,
-      senderId: myId,
-      receiverId: selectedUser.id,
-      content: systemText,
-      type: 'system',
-      createdAt: new Date(),
-      isSeen: false
-    };
-
-    setMessages(prev => [...prev, systemMsg]);
-    setMessagesCache(prev => {
-      const current = prev[selectedUser.id] || [];
-      return { ...prev, [selectedUser.id]: [...current, systemMsg] };
-    });
-
-    if (socket) {
-      socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...systemMsg });
-    }
-
-    try {
-      await saveSocialMessage(selectedUser.id, systemText, 'system');
-    } catch (err) {
-      console.error("Failed to save theme system message:", err);
-    }
   };
 
   const handleSaveNickname = async () => {
@@ -1377,19 +1334,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
       });
 
-      newSocket.on('receive_chat_theme', ({ themeId, senderId, senderEmail }: any) => {
-        if (themeId) {
-          setChatThemes(prev => {
-            const updated = { ...prev };
-            if (senderId) updated[senderId] = themeId;
-            if (senderEmail) updated[senderEmail.toLowerCase().trim()] = themeId;
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('chat_themes', JSON.stringify(updated));
-            }
-            return updated;
-          });
-        }
-      });
+
 
       newSocket.on('receive_nickname', ({ nickname, senderId, senderEmail }: any) => {
         setNicknames(prev => {
