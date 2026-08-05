@@ -1286,6 +1286,30 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [editingNickname, setEditingNickname] = useState(false);
   const [nicknameInput, setNicknameInput] = useState('');
   const [isChatMuted, setIsChatMuted] = useState(false);
+  const [mutedChats, setMutedChats] = useState<Set<string>>(new Set());
+  const [acceptedContactIds, setAcceptedContactIds] = useState<Set<string>>(new Set());
+  const acceptedContactIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedMuted = localStorage.getItem('social_muted_chats');
+      if (savedMuted) {
+        try { setMutedChats(new Set(JSON.parse(savedMuted))); } catch (e) {}
+      }
+      const savedAccepted = localStorage.getItem('social_accepted_contacts');
+      if (savedAccepted) {
+        try {
+          const parsed = new Set<string>(JSON.parse(savedAccepted));
+          setAcceptedContactIds(parsed);
+          acceptedContactIdsRef.current = parsed;
+        } catch (e) {}
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    acceptedContactIdsRef.current = acceptedContactIds;
+  }, [acceptedContactIds]);
   const [isUserBlocked, setIsUserBlocked] = useState(false);
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [showSearchWindow, setShowSearchWindow] = useState(false);
@@ -1650,16 +1674,31 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             return finalList;
           }
 
-          // If it's a completely new person who messaged us
+          // If it's a completely new person who messaged us or chat was deleted
           if (msg.senderId !== (sessionRef.current?.user as any)?.id && !usersRef.current.some(u => u.id === msg.senderId)) {
             getSocialUser(msg.senderId).then(newUser => {
               if (newUser) {
-                setRequests(current => {
-                  if (current.some(u => u.id === newUser.id)) return current;
-                  const finalList = [{ ...(newUser as any), lastMessage: formatMsg(msg), isRequest: true, unseenCount: 1 }, ...current];
-                  allRequestsRef.current = finalList;
-                  return finalList;
-                });
+                const isAcceptedUser = acceptedContactIdsRef.current.has(newUser.id) ||
+                                      allContactsRef.current.some(u => u.id === newUser.id) ||
+                                      !(newUser as any).isRequest;
+
+                if (isAcceptedUser) {
+                  // Resurrect directly into main chats inbox!
+                  setUsers(current => {
+                    if (current.some(u => u.id === newUser.id)) return current;
+                    const finalList = [{ ...(newUser as any), lastMessage: formatMsg(msg), isRequest: false, unseenCount: 1 }, ...current];
+                    allContactsRef.current = finalList;
+                    return finalList;
+                  });
+                } else {
+                  // Stranger request -> add to Requests tab
+                  setRequests(current => {
+                    if (current.some(u => u.id === newUser.id)) return current;
+                    const finalList = [{ ...(newUser as any), lastMessage: formatMsg(msg), isRequest: true, unseenCount: 1 }, ...current];
+                    allRequestsRef.current = finalList;
+                    return finalList;
+                  });
+                }
               }
             });
           }
@@ -3739,28 +3778,47 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         />
       )}
 
-      {/* CHAT OPTIONS MODAL (PIN / DELETE) */}
+      {/* ── CHAT OPTIONS BOTTOM SHEET (PIN / MUTE / DELETE) ── */}
       {selectedChatForOptions && (
         <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-[10000] flex items-end justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300 font-sans"
           onClick={() => setSelectedChatForOptions(null)}
         >
           <div
-            className="w-full max-w-sm rounded-[2rem] p-6 shadow-2xl space-y-4 border animate-in zoom-in-95 duration-200"
-            style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', color: 'var(--dm-text-primary)' }}
+            className="w-full max-w-lg bg-[var(--dm-bg-sidebar)] border-t border-x border-[var(--dm-border)] rounded-t-[2.5rem] shadow-2xl p-6 flex flex-col space-y-4 max-h-[80vh] overflow-hidden animate-in slide-in-from-bottom duration-300"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border" style={{ borderColor: 'var(--dm-border)' }}>
-                <img src={selectedChatForOptions.image || '/Avatar.avif'} className="w-full h-full object-cover" />
+            {/* Sheet Top Handle Bar */}
+            <div className="w-12 h-1.5 rounded-full bg-[var(--dm-border)] mx-auto flex-shrink-0 mb-1" />
+
+            {/* Header: User Avatar & Name displayed ON TOP of the action buttons */}
+            <div className="flex items-center gap-3.5 pb-3 border-b border-[var(--dm-border)]">
+              <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-[var(--dm-border)] shadow-md bg-[var(--dm-bg-hover)]">
+                <img
+                  src={selectedChatForOptions.image || '/Avatar.avif'}
+                  alt={selectedChatForOptions.name}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="font-extrabold text-base truncate">{selectedChatForOptions.name}</h3>
-                <p className="text-xs truncate opacity-60">{selectedChatForOptions.email}</p>
+                <h3 className="text-base font-extrabold text-[var(--dm-text-primary)] truncate tracking-tight">
+                  {selectedChatForOptions.name}
+                </h3>
+                <p className="text-xs text-[var(--dm-text-secondary)] truncate opacity-70">
+                  @{selectedChatForOptions.username || selectedChatForOptions.email?.split('@')[0] || 'user'}
+                </p>
               </div>
+              <button
+                onClick={() => setSelectedChatForOptions(null)}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
 
-            <div className="space-y-2 pt-2">
+            {/* Action Buttons List */}
+            <div className="space-y-2.5 pt-1">
+              {/* Pin / Unpin Button */}
               <button
                 onClick={() => {
                   const isPinned = pinnedChats.has(selectedChatForOptions.id);
@@ -3768,16 +3826,51 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     const next = new Set(prev);
                     if (isPinned) next.delete(selectedChatForOptions.id);
                     else next.add(selectedChatForOptions.id);
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('social_pinned_chats', JSON.stringify(Array.from(next)));
+                    }
                     return next;
                   });
                   setSelectedChatForOptions(null);
                 }}
-                className="w-full py-3.5 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer shadow-sm"
-                style={{ background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}
+                className="w-full py-3.5 px-5 rounded-2xl text-xs font-bold flex items-center justify-between transition-all active:scale-[0.98] cursor-pointer bg-[var(--dm-bg-input)] hover:bg-[var(--dm-bg-hover)] text-[var(--dm-text-primary)] border border-[var(--dm-border)] shadow-sm"
               >
-                {pinnedChats.has(selectedChatForOptions.id) ? 'Unpin Chat' : 'Pin Chat to Top'}
+                <span className="flex items-center gap-2.5">
+                  <span className="text-base">📌</span>
+                  {pinnedChats.has(selectedChatForOptions.id) ? 'Unpin Chat' : 'Pin Chat to Top'}
+                </span>
+                {pinnedChats.has(selectedChatForOptions.id) && (
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-500">Pinned</span>
+                )}
               </button>
 
+              {/* Mute / Unmute Notifications Button */}
+              <button
+                onClick={() => {
+                  const isMuted = mutedChats.has(selectedChatForOptions.id);
+                  setMutedChats(prev => {
+                    const next = new Set(prev);
+                    if (isMuted) next.delete(selectedChatForOptions.id);
+                    else next.add(selectedChatForOptions.id);
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('social_muted_chats', JSON.stringify(Array.from(next)));
+                    }
+                    return next;
+                  });
+                  setSelectedChatForOptions(null);
+                }}
+                className="w-full py-3.5 px-5 rounded-2xl text-xs font-bold flex items-center justify-between transition-all active:scale-[0.98] cursor-pointer bg-[var(--dm-bg-input)] hover:bg-[var(--dm-bg-hover)] text-[var(--dm-text-primary)] border border-[var(--dm-border)] shadow-sm"
+              >
+                <span className="flex items-center gap-2.5">
+                  <span className="text-base">{mutedChats.has(selectedChatForOptions.id) ? '🔔' : '🔕'}</span>
+                  {mutedChats.has(selectedChatForOptions.id) ? 'Unmute Notifications' : 'Mute Notifications'}
+                </span>
+                {mutedChats.has(selectedChatForOptions.id) && (
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500">Muted</span>
+                )}
+              </button>
+
+              {/* Delete Chat Button */}
               <button
                 onClick={async () => {
                   const targetId = selectedChatForOptions.id;
@@ -3810,14 +3903,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     alert('Failed to delete chat. Please try again.');
                   }
                 }}
-                className="w-full py-3.5 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer text-red-500 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 shadow-sm"
+                className="w-full py-3.5 px-5 rounded-2xl text-xs font-bold flex items-center justify-between transition-all active:scale-[0.98] cursor-pointer text-rose-500 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 shadow-sm"
               >
-                Delete Chat
+                <span className="flex items-center gap-2.5">
+                  <span className="text-base">🗑️</span>
+                  Delete Chat
+                </span>
               </button>
 
+              {/* Cancel Button */}
               <button
                 onClick={() => setSelectedChatForOptions(null)}
-                className="w-full py-2 text-xs font-medium text-center opacity-60 hover:opacity-100 transition-opacity cursor-pointer mt-1"
+                className="w-full py-3.5 px-5 rounded-2xl text-xs font-bold text-center text-[var(--dm-text-secondary)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] transition-all cursor-pointer mt-1"
               >
                 Cancel
               </button>
