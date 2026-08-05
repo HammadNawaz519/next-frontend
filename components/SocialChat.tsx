@@ -3778,22 +3778,23 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         />
       )}
 
-      {/* ── CHAT OPTIONS BOTTOM SHEET (EXACT SIGN UP SHEET UI MATCH, NO EMOJIS) ── */}
+      {/* ── CHAT OPTIONS BOTTOM SHEET (DYNAMIC SYSTEM THEME: LIGHT & DARK MODE WITH ANIMATIONS, NO EMOJIS) ── */}
       {selectedChatForOptions && (
         <div
           className="fixed inset-0 z-[10000] flex items-end justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300 font-sans"
           onClick={() => setSelectedChatForOptions(null)}
         >
           <div
-            className="w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-10 shadow-[0_-15px_40px_rgba(0,0,0,0.4)] max-h-[90vh] overflow-y-auto no-scrollbar transform animate-in slide-in-from-bottom duration-300"
+            className="w-full max-w-md mx-auto z-40 border-t border-x rounded-t-[2.5rem] p-7 md:p-8 pb-10 shadow-[0_-15px_40px_rgba(0,0,0,0.35)] max-h-[90vh] overflow-y-auto no-scrollbar transform animate-in slide-in-from-bottom duration-300 ease-out"
+            style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', color: 'var(--dm-text-primary)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Sign Up Sheet Handle Bar */}
-            <div className="w-12 h-1 bg-[#27272a] rounded-full mx-auto mb-6" />
+            {/* Sheet Top Handle Bar */}
+            <div className="w-12 h-1 rounded-full mx-auto mb-6 opacity-50" style={{ background: 'var(--dm-text-muted)' }} />
 
             {/* Header: User Avatar & Name on TOP of the action buttons */}
-            <div className="flex items-center gap-4 pb-5 mb-5 border-b border-[#1e1e21]">
-              <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-zinc-700 bg-zinc-800 shadow-md">
+            <div className="flex items-center gap-4 pb-5 mb-5 border-b transition-colors" style={{ borderColor: 'var(--dm-border)' }}>
+              <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 shadow-md" style={{ borderColor: 'var(--dm-border)', background: 'var(--dm-bg-hover)' }}>
                 <img
                   src={selectedChatForOptions.image || '/Avatar.avif'}
                   alt={selectedChatForOptions.name}
@@ -3801,22 +3802,23 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-lg font-bold text-white tracking-tight truncate">
+                <h3 className="text-lg font-bold tracking-tight truncate" style={{ color: 'var(--dm-text-primary)' }}>
                   {selectedChatForOptions.name}
                 </h3>
-                <p className="text-xs text-zinc-400 font-medium truncate mt-0.5">
+                <p className="text-xs font-medium truncate mt-0.5" style={{ color: 'var(--dm-text-muted)' }}>
                   @{selectedChatForOptions.username || selectedChatForOptions.email?.split('@')[0] || 'user'}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedChatForOptions(null)}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-[#1c1c1e] text-zinc-400 hover:text-white border border-[#1e1e21] transition-colors cursor-pointer text-sm"
+                className="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-105 cursor-pointer text-sm font-bold"
+                style={{ background: 'var(--dm-bg-hover)', color: 'var(--dm-text-muted)', border: '1px solid var(--dm-border)' }}
               >
                 ✕
               </button>
             </div>
 
-            {/* Action Buttons List (Sign Up Sheet Pill Buttons, NO EMOJIS) */}
+            {/* Action Buttons List (Pill Buttons with Dynamic System Theme, NO EMOJIS) */}
             <div className="flex flex-col gap-3">
               {/* Pin / Unpin Button */}
               <button
@@ -3833,11 +3835,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   });
                   setSelectedChatForOptions(null);
                 }}
-                className="w-full bg-[#1c1c1e] text-white hover:bg-zinc-800 border border-zinc-800 transition-all active:scale-98 rounded-full py-3.5 px-6 font-bold text-center text-sm flex items-center justify-between shadow-sm cursor-pointer"
+                className="w-full transition-all duration-200 active:scale-[0.98] rounded-full py-3.5 px-6 font-bold text-center text-sm flex items-center justify-between shadow-sm cursor-pointer hover:opacity-90"
+                style={{ background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}
               >
                 <span>{pinnedChats.has(selectedChatForOptions.id) ? 'Unpin Chat' : 'Pin Chat to Top'}</span>
                 {pinnedChats.has(selectedChatForOptions.id) && (
-                  <span className="text-xs text-zinc-400 font-normal">Pinned</span>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={{ background: 'var(--dm-bg-hover)', color: 'var(--dm-text-secondary)' }}>
+                    Pinned
+                  </span>
                 )}
               </button>
 
@@ -3856,11 +3861,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   });
                   setSelectedChatForOptions(null);
                 }}
-                className="w-full bg-[#1c1c1e] text-white hover:bg-zinc-800 border border-zinc-800 transition-all active:scale-98 rounded-full py-3.5 px-6 font-bold text-center text-sm flex items-center justify-between shadow-sm cursor-pointer"
+                className="w-full transition-all duration-200 active:scale-[0.98] rounded-full py-3.5 px-6 font-bold text-center text-sm flex items-center justify-between shadow-sm cursor-pointer hover:opacity-90"
+                style={{ background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}
               >
                 <span>{mutedChats.has(selectedChatForOptions.id) ? 'Unmute Notifications' : 'Mute Notifications'}</span>
                 {mutedChats.has(selectedChatForOptions.id) && (
-                  <span className="text-xs text-zinc-400 font-normal">Muted</span>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={{ background: 'var(--dm-bg-hover)', color: 'var(--dm-text-secondary)' }}>
+                    Muted
+                  </span>
                 )}
               </button>
 
@@ -3897,7 +3905,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     alert('Failed to delete chat. Please try again.');
                   }
                 }}
-                className="w-full bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-sm cursor-pointer"
+                className="w-full bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition-all duration-200 active:scale-[0.98] rounded-full py-3.5 font-bold text-center text-sm shadow-sm cursor-pointer"
               >
                 Delete Chat
               </button>
@@ -3905,7 +3913,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               {/* Cancel Button */}
               <button
                 onClick={() => setSelectedChatForOptions(null)}
-                className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-1 cursor-pointer"
+                className="w-full transition-all duration-200 active:scale-[0.98] rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-1 cursor-pointer hover:opacity-90"
+                style={{ background: 'var(--dm-text-primary)', color: 'var(--dm-bg-sidebar)' }}
               >
                 Cancel
               </button>
