@@ -711,7 +711,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         }}
       >
         {msg.replyTo && (
-          <div className={`mb-2 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden ${isSent ? 'border-white/70 bg-black/25 text-white' : 'border-indigo-500 bg-black/10 dark:bg-white/10'}`}>
+          <div className={`mb-2 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden ${isSent ? 'border-white/50 bg-black/25 text-white' : 'border-white/50 bg-black/10 dark:bg-white/10'}`}>
             <span className="font-bold text-[11px] opacity-90">{msg.replyTo.senderName || 'Quoted Message'}</span>
             <span className="truncate text-[11px] opacity-85">{msg.replyTo.content}</span>
           </div>
