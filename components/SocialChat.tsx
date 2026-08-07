@@ -991,6 +991,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   const [isSlidingOut, setIsSlidingOut] = useState(false);
   const transitionInProgress = React.useRef(false);
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const audioChunksRef = React.useRef<Blob[]>([]);
+  const isCancelingRecordingRef = React.useRef(false);
+  const [isRecording, setIsRecording] = useState(false);
 
   // Circular ripple transition helper
   // Transition helper (direct action execution, standard IG slide animations handle the rest)
