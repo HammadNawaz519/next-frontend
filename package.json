@@ -8,7 +8,7 @@
     "dev:frontend": "next dev",
     "dev:next": "next dev",
     "dev:backend": "python ../Backend/server.py",
-    "build": "prisma generate && next build",
+    "build": "npx prisma generate && npx next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"
