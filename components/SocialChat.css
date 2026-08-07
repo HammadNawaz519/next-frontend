@@ -289,7 +289,16 @@
   line-height: 1.5;
   position: relative;
   word-wrap: break-word;
-  transition: all 0.3s ease;
+  transition: background-color 200ms var(--ease-ig), color 200ms var(--ease-ig), border-color 200ms var(--ease-ig);
+}
+
+.social-chat-container .msg-wrapper.sent {
+  animation: ig-msg-sent 160ms var(--ease-ig) forwards;
+}
+
+.social-chat-container .msg-wrapper.received,
+.social-chat-container .msg-wrapper.ai {
+  animation: ig-msg-recv 160ms var(--ease-ig) forwards;
 }
 
 .social-chat-container .msg.sent {
@@ -413,6 +422,7 @@
   font-size: .8rem;
   box-shadow: 0 4px 8px rgba(0,0,0,0.05);
   border: 1px solid #f3f4f6;
+  animation: ig-reaction-pop 180ms var(--ease-ig) forwards;
 }
 
 /* ACTIONS */

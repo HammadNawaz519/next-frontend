@@ -891,18 +891,18 @@ export default function HomeFeed({ isDark, session, onNavigate, isAdmin, onOpenA
               />
               <div className="space-y-4 mt-4">
                 {loadingPosts ? (
-                  // Premium skeleton loaders
+                  // Premium shimmer skeleton loaders
                   <div className="space-y-6">
                     {[1, 2].map(n => (
-                      <div key={n} className="animate-pulse bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800/40 rounded-2xl p-4 space-y-4">
+                      <div key={n} className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800/40 rounded-2xl p-4 space-y-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
+                          <div className="w-10 h-10 ig-skeleton rounded-full" />
                           <div className="space-y-2">
-                            <div className="h-4 bg-zinc-200 dark:bg-zinc-800 w-24 rounded" />
-                            <div className="h-3 bg-zinc-200 dark:bg-zinc-800 w-16 rounded" />
+                            <div className="h-4 ig-skeleton w-24 rounded" />
+                            <div className="h-3 ig-skeleton w-16 rounded" />
                           </div>
                         </div>
-                        <div className="aspect-square bg-zinc-200 dark:bg-zinc-800 rounded-xl" />
+                        <div className="aspect-square ig-skeleton rounded-xl" />
                       </div>
                     ))}
                   </div>

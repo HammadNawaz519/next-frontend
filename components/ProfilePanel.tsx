@@ -531,6 +531,7 @@ export default function ProfilePanel({
 
   return (
     <div
+      className={isClosing ? 'ig-profile-exit' : 'ig-profile-enter'}
       style={{
         position:'absolute', inset:0, zIndex:60, display:'flex',
         flexDirection:'column', overflow:'hidden',

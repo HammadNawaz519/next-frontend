@@ -464,90 +464,21 @@ export default function DashboardPage() {
     }
   };
 
-  const handleNavClick = (viewId: any, e: React.MouseEvent, reverse = false) => {
-    // If profile is open, close it AND switch view in ONE single ripple transition
-    // to avoid two conflicting startViewTransition calls causing a glitch.
+  const handleNavClick = (viewId: any, e: React.MouseEvent) => {
     if (isProfileOpen) {
-      runProfileTransition(() => {
-        setIsProfileOpen(false);
-        setIsClosingProfile(false);
-        setSelectedProfileUser(null);
-        if (viewId === 'chat') {
-          // silentReset instead of closeChat to avoid nesting a 2nd startViewTransition
-          chatComponentRef.current?.silentReset();
-          setSelectedChatUser(null);
-        }
-        // Only change the view if we're actually going somewhere different
-        if (viewId !== activeView) {
-          setActiveView(viewId);
-        }
-      }, e.clientX, e.clientY, false);
-      return; // ← critical: skip the nav transition below
+      setIsProfileOpen(false);
+      setIsClosingProfile(false);
+      setSelectedProfileUser(null);
     }
 
-    if (activeView === viewId && viewId !== 'chat') return;
-    
     if (viewId === 'chat') {
-      // Called before any startViewTransition starts — safe, no nesting
       chatComponentRef.current?.silentReset();
       setSelectedChatUser(null);
-      if (activeView === 'chat') return;
     }
 
-    if (navTransitionInProgress.current || !(document as any).startViewTransition) {
+    if (activeView !== viewId) {
       setActiveView(viewId);
-      return;
     }
-    
-    navTransitionInProgress.current = true;
-
-    if (reverse) {
-      document.documentElement.classList.add('view-transition-reverse');
-    }
-
-    const x = e.clientX;
-    const y = e.clientY;
-    const endRadius = Math.hypot(
-      Math.max(x, window.innerWidth - x),
-      Math.max(y, window.innerHeight - y)
-    );
-
-    let transition: any;
-    try {
-      transition = (document as any).startViewTransition(() => {
-        flushSync(() => {
-          setActiveView(viewId);
-        });
-      });
-    } catch {
-      setActiveView(viewId);
-      navTransitionInProgress.current = false;
-      document.documentElement.classList.remove('view-transition-reverse');
-      return;
-    }
-
-    transition.ready
-      .then(() => {
-        const keyframes = reverse
-          ? [{ clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }, { clipPath: `circle(0px at ${x}px ${y}px)` }]
-          : [{ clipPath: `circle(0px at ${x}px ${y}px)` }, { clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }];
-        document.documentElement.animate(keyframes, {
-          duration: 700,
-          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
-          pseudoElement: reverse ? '::view-transition-old(root)' : '::view-transition-new(root)',
-        });
-      })
-      .catch(() => {});
-      
-    transition.finished
-      .then(() => { 
-        navTransitionInProgress.current = false; 
-        document.documentElement.classList.remove('view-transition-reverse');
-      })
-      .catch(() => { 
-        navTransitionInProgress.current = false; 
-        document.documentElement.classList.remove('view-transition-reverse');
-      });
   };
 
   return (
@@ -696,7 +627,8 @@ export default function DashboardPage() {
       <div className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[40px] shadow-sm md:border" style={{ background: activeView === 'reels' ? '#000000' : 'var(--dm-bg-main)', borderColor: activeView === 'reels' ? '#000000' : 'var(--dm-border-main)' }}>
 
         {/* Content Views */}
-        {activeView === 'home' && (
+        {/* Content Views — Always mounted for zero-delay tab switching & scroll preservation */}
+        <div className={`ig-tab-panel ${activeView === 'home' ? 'ig-tab-enter' : ''}`} data-active={activeView === 'home'}>
           <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden">
             <HomeFeed 
               isDark={isDark} 
@@ -706,9 +638,9 @@ export default function DashboardPage() {
               onOpenAdminCam={() => setIsAdminCamOpen(true)}
             />
           </div>
-        )}
+        </div>
 
-        {activeView === 'reels' && (
+        <div className={`ig-tab-panel ${activeView === 'reels' ? 'ig-tab-enter' : ''}`} data-active={activeView === 'reels'}>
           <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden bg-black" style={{ background: '#000000' }}>
             <ReelsPlayer 
               onBack={() => setActiveView('home')}
@@ -716,10 +648,10 @@ export default function DashboardPage() {
               isDark={isDark}
             />
           </div>
-        )}
+        </div>
 
         {/* Search Explore Page */}
-        {activeView === 'search' && (
+        <div className={`ig-tab-panel ${activeView === 'search' ? 'ig-tab-enter' : ''}`} data-active={activeView === 'search'}>
           <div className="w-full h-full flex flex-col min-h-0 relative" style={{ background: 'var(--dm-bg-main)' }}>
             
             {/* Top Search Action Bar */}
@@ -927,21 +859,23 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-        )}
+        </div>
 
-        <SocialChat 
-          isActive={activeView === 'chat'} 
-          onStatusChange={setIsConnected} 
-          onChatChange={setSelectedChatUser}
-          onBack={() => setActiveView('home')}
-          onCallStateChange={setIsCallActive}
-          initialUser={selectedChatUser}
-          ref={chatComponentRef as any}
-          onOpenProfile={(targetUser) => {
-            setSelectedProfileUser(targetUser);
-            setIsProfileOpen(true);
-          }}
-        />
+        <div className={`ig-tab-panel ${activeView === 'chat' ? 'ig-tab-enter' : ''}`} data-active={activeView === 'chat'}>
+          <SocialChat 
+            isActive={activeView === 'chat'} 
+            onStatusChange={setIsConnected} 
+            onChatChange={setSelectedChatUser}
+            onBack={() => setActiveView('home')}
+            onCallStateChange={setIsCallActive}
+            initialUser={selectedChatUser}
+            ref={chatComponentRef as any}
+            onOpenProfile={(targetUser) => {
+              setSelectedProfileUser(targetUser);
+              setIsProfileOpen(true);
+            }}
+          />
+        </div>
 
         {/* Instagram-style Profile Panel */}
         <ProfilePanel
