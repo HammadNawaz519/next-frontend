@@ -20,6 +20,7 @@ import {
 } from '@/app/dashboard/actions';
 import CallInterface from './CallInterface';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { triggerHaptic } from '@/lib/haptics';
 import './SocialChat.css';
 
 interface User {
@@ -2419,6 +2420,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const cancelRecording = () => {
+    triggerHaptic('warning');
     isCancelingRecordingRef.current = true;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();

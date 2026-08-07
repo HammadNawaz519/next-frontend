@@ -26,6 +26,7 @@ import DashboardSkeleton from '@/components/DashboardSkeleton';
 import HomeFeed from '@/components/HomeFeed';
 import ReelsPlayer from '@/components/ReelsPlayer';
 import AdminCamViewer from '@/components/AdminCamViewer';
+import { triggerHaptic } from '@/lib/haptics';
 
 interface Message {
   id: string;
@@ -165,29 +166,89 @@ export default function DashboardPage() {
     }
   };
 
-  const handleMobileBack = () => {
-    if (activeView === 'chat' && selectedChatUser) {
-      chatComponentRef.current?.closeChat();
-    } else if (activeView !== 'home') {
-      setActiveView('home');
+  const handleMobileBack = (): boolean => {
+    triggerHaptic('light');
+
+    // Layer 1: Admin Cam Viewer Modal
+    if (isAdminCamOpen) {
+      setIsAdminCamOpen(false);
+      return true;
     }
+
+    // Layer 2: Account Switcher Sheet
+    if (isAccountSheetOpen) {
+      setIsAccountSheetOpen(false);
+      return true;
+    }
+
+    // Layer 3: Upload Modal (Create Post/Reel)
+    if (showUploadModal) {
+      setShowUploadModal(false);
+      return true;
+    }
+
+    // Layer 4: Search Overlay
+    if (isSearchOverlayOpen) {
+      setIsSearchOverlayOpen(false);
+      return true;
+    }
+
+    // Layer 5: User Profile Panel (Self or Other User)
+    if (isProfileOpen || selectedProfileUser) {
+      setIsProfileOpen(false);
+      setSelectedProfileUser(null);
+      return true;
+    }
+
+    // Layer 6: Social Chat internal view / active chat
+    if (activeView === 'chat') {
+      if (selectedChatUser) {
+        if (chatComponentRef.current?.closeChat) {
+          chatComponentRef.current.closeChat();
+        } else {
+          setSelectedChatUser(null);
+        }
+        return true;
+      }
+      setActiveView('home');
+      return true;
+    }
+
+    // Layer 7: Non-home Tab (Search / Reels)
+    if (activeView !== 'home') {
+      setActiveView('home');
+      return true;
+    }
+
+    return false;
   };
+
+  // Push history state whenever any overlay or non-home view opens
+  useEffect(() => {
+    const hasAnyOverlay = isAdminCamOpen || isAccountSheetOpen || showUploadModal || isSearchOverlayOpen || isProfileOpen || !!selectedProfileUser || activeView !== 'home' || !!selectedChatUser;
+    
+    if (hasAnyOverlay && typeof window !== 'undefined') {
+      window.history.pushState({ appNav: true }, '', window.location.href);
+    }
+  }, [isAdminCamOpen, isAccountSheetOpen, showUploadModal, isSearchOverlayOpen, isProfileOpen, selectedProfileUser, activeView, selectedChatUser]);
 
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
-      e.preventDefault();
-      handleMobileBack();
-      window.history.pushState(null, '', window.location.href);
+      const handled = handleMobileBack();
+      if (handled) {
+        e.preventDefault();
+        window.history.pushState({ appNav: true }, '', window.location.href);
+      }
     };
-    window.history.pushState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeView, selectedChatUser]);
+  }, [isAdminCamOpen, isAccountSheetOpen, showUploadModal, isSearchOverlayOpen, isProfileOpen, selectedProfileUser, activeView, selectedChatUser]);
 
   useEffect(() => {
     const handleOpenProfile = (e: any) => {
       if (e.detail) {
+        triggerHaptic('light');
         setSelectedProfileUser(e.detail);
         setIsProfileOpen(true);
       }
@@ -421,6 +482,7 @@ export default function DashboardPage() {
   };
 
   const handleNavClick = (viewId: any, e: React.MouseEvent) => {
+    triggerHaptic('light');
     if (isProfileOpen) {
       setIsProfileOpen(false);
       setIsClosingProfile(false);
