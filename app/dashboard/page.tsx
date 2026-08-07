@@ -81,52 +81,8 @@ export default function DashboardPage() {
   const navTransitionInProgress = useRef(false);
   const profileTransitionInProgress = useRef(false);
 
-  const runProfileTransition = (action: () => void, x: number, y: number, reverse = false) => {
-    if (typeof window !== 'undefined' && window.innerWidth > 768) {
-      action();
-      return;
-    }
-    if (profileTransitionInProgress.current || !(document as any).startViewTransition) {
-      action();
-      return;
-    }
-    profileTransitionInProgress.current = true;
-    
-    if (reverse) {
-      document.documentElement.classList.add('view-transition-reverse');
-    }
-
-    const endRadius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
-    let transition: any;
-    try {
-      transition = (document as any).startViewTransition(() => { flushSync(action); });
-    } catch {
-      action();
-      profileTransitionInProgress.current = false;
-      document.documentElement.classList.remove('view-transition-reverse');
-      return;
-    }
-    transition.ready
-      .then(() => {
-        const keyframes = reverse
-          ? [{ clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }, { clipPath: `circle(0px at ${x}px ${y}px)` }]
-          : [{ clipPath: `circle(0px at ${x}px ${y}px)` }, { clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }];
-        document.documentElement.animate(keyframes, {
-          duration: 700,
-          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
-          pseudoElement: reverse ? '::view-transition-old(root)' : '::view-transition-new(root)',
-        });
-      })
-      .catch(() => {});
-    transition.finished
-      .then(() => { 
-        profileTransitionInProgress.current = false; 
-        document.documentElement.classList.remove('view-transition-reverse');
-      })
-      .catch(() => { 
-        profileTransitionInProgress.current = false; 
-        document.documentElement.classList.remove('view-transition-reverse');
-      });
+  const runProfileTransition = (action: () => void, _x?: number, _y?: number, _reverse = false) => {
+    action();
   };
   const [editingUsername, setEditingUsername] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');

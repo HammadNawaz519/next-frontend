@@ -993,71 +993,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const transitionInProgress = React.useRef(false);
 
   // Circular ripple transition helper
+  // Transition helper (direct action execution, standard IG slide animations handle the rest)
   const runCircleTransition = (
     action: () => void,
-    x: number,
-    y: number,
-    reverse = false
+    _x?: number,
+    _y?: number,
+    _reverse = false
   ) => {
-    // On laptop/desktop view (> 768px), execute action directly with NO horizontal swipe or circle transition
-    if (typeof window !== 'undefined' && window.innerWidth > 768) {
-      action();
-      return;
-    }
-
-    // If transition is already running, just execute action directly
-    if (transitionInProgress.current || !(document as any).startViewTransition) {
-      action();
-      return;
-    }
-
-    transitionInProgress.current = true;
-
-    if (reverse) {
-      document.documentElement.classList.add('view-transition-reverse');
-    }
-
-    const endRadius = Math.hypot(
-      Math.max(x, window.innerWidth - x),
-      Math.max(y, window.innerHeight - y)
-    );
-
-    let transition: any;
-    try {
-      transition = (document as any).startViewTransition(() => {
-        action();
-      });
-    } catch {
-      action();
-      transitionInProgress.current = false;
-      document.documentElement.classList.remove('view-transition-reverse');
-      return;
-    }
-
-    transition.ready
-      .then(() => {
-        const keyframes = reverse
-          ? [{ clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }, { clipPath: `circle(0px at ${x}px ${y}px)` }]
-          : [{ clipPath: `circle(0px at ${x}px ${y}px)` }, { clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }];
-        document.documentElement.animate(keyframes, {
-          duration: 700,
-          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
-          pseudoElement: reverse ? '::view-transition-old(root)' : '::view-transition-new(root)',
-        });
-      })
-      .catch(() => {
-        // Transition was skipped/aborted — no action needed, state already updated
-      });
-
-    transition.finished
-      .then(() => { 
-        transitionInProgress.current = false; 
-        document.documentElement.classList.remove('view-transition-reverse');
-      })
-      .catch(() => { 
-        transitionInProgress.current = false; 
-        document.documentElement.classList.remove('view-transition-reverse');
-      });
+    action();
   };
 
   // Forward Message Modal State
@@ -2800,7 +2743,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           </aside>
 
           <section
-            className={`chat-area ${selectedUser ? 'active' : ''} ${selectedUser ? 'show-on-mobile' : 'hide-on-mobile'}`}
+            className={`chat-area ${selectedUser ? 'active ig-chat-enter' : ''} ${selectedUser ? 'show-on-mobile' : 'hide-on-mobile'}`}
             style={{ background: activeTheme.chatBg, transition: 'background 300ms ease' }}
           >
             {selectedUser ? (
