@@ -594,90 +594,48 @@ export default function ProfilePanel({
         }}
       >
         <div style={{ width: 48, height: 4, background: isDark ? '#3a3a3c' : '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
-        <h2 style={{ fontSize: 18, fontWeight: 800, color: txt, marginBottom: 16, textAlign: 'center' }}>Change Profile Picture</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: txt, marginBottom: 18, textAlign: 'center' }}>Change Profile Picture</h2>
         
         {isAvatarUploading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 0', gap: 12 }}>
             <div className="w-8 h-8 rounded-full border-3 border-t-transparent border-blue-500 animate-spin" />
             <p style={{ fontSize: 14, fontWeight: 600, color: sub }}>Updating profile picture...</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
-            {/* File upload option */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+            {/* Direct File Upload Option */}
             <label style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px',
-              background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6', 
-              color: txt, 
+              background: '#0095f6', 
+              color: '#ffffff', 
               borderRadius: '100px',
               fontWeight: 700, 
-              fontSize: 13, 
+              fontSize: 14, 
               cursor: 'pointer', 
               textAlign: 'center', 
-              border: `1px solid ${border}`,
-              transition: 'background-color 0.2s'
+              transition: 'all 0.2s',
+              boxShadow: '0 4px 12px rgba(0, 149, 246, 0.25)'
             }}>
-              Choose from Library
+              Upload New Photo
               <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isAvatarUploading} style={{display: 'none'}} />
             </label>
-            
-            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '4px 0', color: sub, fontSize: 11, fontWeight: 600}}>
-              — OR —
-            </div>
 
-            {/* URL paste option */}
-            <div style={{display: 'flex', gap: 8}}>
-              <input
-                type="text"
-                placeholder="Paste avatar URL..."
-                value={avatarInputUrl}
-                onChange={e => setAvatarInputUrl(e.target.value)}
-                disabled={isAvatarUploading}
-                style={{
-                  flex: 1, 
-                  padding: '12px 20px', 
-                  borderRadius: '100px', 
-                  border: `1px solid ${border}`,
-                  background: isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb', 
-                  color: txt, 
-                  fontSize: 13,
-                  outline: 'none'
-                }}
-              />
-              <button
-                onClick={() => handleUpdateAvatar(avatarInputUrl)}
-                disabled={isAvatarUploading || !avatarInputUrl.trim()}
-                style={{
-                  padding: '0 24px', 
-                  background: txt, 
-                  color: isDark ? '#000' : '#fff',
-                  border: 'none', 
-                  borderRadius: '100px', 
-                  fontWeight: 700, 
-                  fontSize: 13, 
-                  cursor: avatarInputUrl.trim() ? 'pointer' : 'not-allowed',
-                  opacity: avatarInputUrl.trim() ? 1 : 0.5
-                }}
-              >
-                Set
-              </button>
-            </div>
-
-            {/* Remove picture option */}
+            {/* Remove Picture Option */}
             {image && (
               <button
                 onClick={handleRemoveAvatar}
                 disabled={isAvatarUploading}
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: '14px',
                   borderRadius: '100px',
                   border: '1px solid rgba(239, 68, 68, 0.3)',
-                  background: 'rgba(239, 68, 68, 0.08)',
+                  background: isDark ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239, 68, 68, 0.06)',
                   color: '#ef4444',
                   fontWeight: 700,
-                  fontSize: 13,
+                  fontSize: 14,
                   cursor: 'pointer',
-                  marginTop: 6
+                  transition: 'all 0.2s'
                 }}
               >
                 Remove Current Picture
@@ -688,13 +646,14 @@ export default function ProfilePanel({
 
         <button 
           onClick={() => setShowAvatarModal(false)} 
+          disabled={isAvatarUploading}
           style={{
             width: '100%', 
             padding: '12px 0', 
             background: 'none', 
-            color: '#ef4444', 
-            fontWeight: 700, 
-            fontSize: 13, 
+            color: sub, 
+            fontWeight: 600, 
+            fontSize: 14, 
             cursor: 'pointer',
             border: 'none'
           }}
