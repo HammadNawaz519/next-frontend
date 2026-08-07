@@ -955,6 +955,23 @@ const triggerStunningNotification = async (
   }
 };
 
+/** Converts flat DB replyTo fields into the nested object the UI renders.
+ *  Works for messages coming from getSocialMessages (Prisma) as well as
+ *  the return value of saveSocialMessage. */
+const normalizeMsg = (m: any): any => {
+  if (m.replyToId && !m.replyTo) {
+    return {
+      ...m,
+      replyTo: {
+        id: m.replyToId,
+        content: m.replyToContent ?? '',
+        senderName: m.replyToSenderName ?? undefined,
+      },
+    };
+  }
+  return m;
+};
+
 const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange, initialUser, onOpenProfile }: SocialChatProps, ref) => {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -1910,17 +1927,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           getSocialMessages(activeUser.id).then((history: any) => {
             setMessages(prev => {
               const deletedRef = deletedMessageIds;
-              const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id));
+              const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
               const now = Date.now();
               const inFlight = prev.filter(m =>
-                !dbMsgs.some(dbM => dbM.id === m.id || (dbM.content === m.content && String(dbM.senderId) === String(m.senderId))) &&
+                !dbMsgs.some((dbM: any) => dbM.id === m.id || (dbM.content === m.content && String(dbM.senderId) === String(m.senderId))) &&
                 (now - new Date(m.createdAt).getTime() < 30000)
               );
               return [...dbMsgs, ...inFlight].sort(
                 (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
               );
             });
-            setMessagesCache((prev: any) => ({ ...prev, [activeUser.id]: history }));
+            const normalizedHistory = (history as any[]).map(normalizeMsg);
+            setMessagesCache((prev: any) => ({ ...prev, [activeUser.id]: normalizedHistory }));
           }).catch(() => {});
         }
       });
@@ -1949,17 +1967,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             getSocialMessages(activeUser.id).then((history: any) => {
               setMessages(prev => {
                 const deletedRef = deletedMessageIds;
-                const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id));
+                const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
                 const now = Date.now();
                 const inFlight = prev.filter(m =>
-                  !dbMsgs.some(dbM => dbM.id === m.id || (dbM.content === m.content && String(dbM.senderId) === String(m.senderId))) &&
+                  !dbMsgs.some((dbM: any) => dbM.id === m.id || (dbM.content === m.content && String(dbM.senderId) === String(m.senderId))) &&
                   (now - new Date(m.createdAt).getTime() < 30000)
                 );
                 return [...dbMsgs, ...inFlight].sort(
                   (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
                 );
               });
-              setMessagesCache((prev: any) => ({ ...prev, [activeUser.id]: history }));
+              const normalizedHistory = (history as any[]).map(normalizeMsg);
+              setMessagesCache((prev: any) => ({ ...prev, [activeUser.id]: normalizedHistory }));
             }).catch(() => {});
           }
         });
@@ -2207,7 +2226,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         const history = await getSocialMessages(selectedUser.id);
         // Filter out messages the user deleted locally (persisted in localStorage)
         const deletedRef = deletedMessageIds;
-        const fresh = (history as any[]).filter(m => !deletedRef.has(m.id));
+        const fresh = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
 
         setMessages(fresh);
         setMessagesCache(prev => ({ ...prev, [selectedUser.id]: fresh }));
@@ -2318,13 +2337,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...optimisticMsg });
 
     try {
-      // Background DB Save
-      const savedMsg = await saveSocialMessage(selectedUser.id, currentContent);
+      // Background DB Save – pass replyTo so it's persisted in the database
+      const savedMsg = await saveSocialMessage(selectedUser.id, currentContent, 'text', currentReplyTo ?? null);
       if (savedMsg) {
-        setMessages(prev => prev.map(m => m.id === stableId ? { ...(savedMsg as any), id: (savedMsg as any).id || stableId, replyTo: m.replyTo || currentReplyTo } : m));
+        const normalized = normalizeMsg(savedMsg as any);
+        setMessages(prev => prev.map(m => m.id === stableId ? { ...normalized, id: normalized.id || stableId } : m));
         setMessagesCache(prev => {
           const current = prev[selectedUser.id] || [];
-          return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? { ...(savedMsg as any), id: (savedMsg as any).id || stableId, replyTo: m.replyTo || currentReplyTo } : m) };
+          return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? { ...normalized, id: normalized.id || stableId } : m) };
         });
       }
     } catch (err) {

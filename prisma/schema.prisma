@@ -67,15 +67,20 @@ model TranslationHistory {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 model SocialMessage {
-  id                String   @id @default(cuid())
-  content           String   @db.Text
-  type              String   @default("text") // "text", "image", "video", "voice", "deleted"
-  senderId          String
-  receiverId        String
-  createdAt         DateTime @default(now())
-  isSeen            Boolean  @default(false)
-  deletedBySender   Boolean  @default(false)
-  deletedByReceiver Boolean  @default(false)
+  id                  String   @id @default(cuid())
+  content             String   @db.Text
+  type                String   @default("text") // "text", "image", "video", "voice", "deleted"
+  senderId            String
+  receiverId          String
+  createdAt           DateTime @default(now())
+  isSeen              Boolean  @default(false)
+  deletedBySender     Boolean  @default(false)
+  deletedByReceiver   Boolean  @default(false)
+
+  // Reply-to metadata (persisted so quoted preview survives refresh)
+  replyToId           String?  @db.Text
+  replyToContent      String?  @db.Text
+  replyToSenderName   String?
 
   sender    User             @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   receiver  User             @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)

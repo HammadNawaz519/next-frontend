@@ -173,7 +173,12 @@ export async function markMessagesAsSeen(senderId: string) {
 }
 
 
-export async function saveSocialMessage(receiverId: string, content: string, type: string = "text") {
+export async function saveSocialMessage(
+  receiverId: string,
+  content: string,
+  type: string = "text",
+  replyTo?: { id: string; content: string; senderName: string } | null
+) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
 
@@ -234,7 +239,12 @@ export async function saveSocialMessage(receiverId: string, content: string, typ
       content: finalContent,
       type,
       senderId: currentUser.id,
-      receiverId
+      receiverId,
+      ...(replyTo ? {
+        replyToId: replyTo.id,
+        replyToContent: replyTo.content,
+        replyToSenderName: replyTo.senderName,
+      } : {})
     },
     include: {
       reactions: true
