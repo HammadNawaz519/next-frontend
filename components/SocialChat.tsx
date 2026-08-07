@@ -2339,6 +2339,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const startRecording = async () => {
+    isCancelingRecordingRef.current = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
@@ -2350,13 +2351,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       };
 
       mediaRecorder.onstop = async () => {
+        if (isCancelingRecordingRef.current) {
+          isCancelingRecordingRef.current = false;
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         const reader = new FileReader();
         reader.onloadend = async () => {
           const base64Audio = reader.result as string;
           if (selectedUser && socket && session?.user) {
             const senderId = (session.user as any).id;
-            const tempId = 'temp-voice-' + Date.now();
 
             // Immediate Update
             const stableId = 'voice-' + Date.now() + Math.random().toString(36).substring(7);
@@ -2404,10 +2410,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const stopRecording = () => {
+    isCancelingRecordingRef.current = false;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
+  };
+
+  const cancelRecording = () => {
+    isCancelingRecordingRef.current = true;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    audioChunksRef.current = [];
+    setIsRecording(false);
   };
 
   const startVoiceToText = () => {
@@ -3074,9 +3090,38 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         )}
                       </div>
                     ) : (
-                      <div className="visualizer">
-                        {[...Array(13)].map((_, i) => <div key={i} className="bar" style={{ animationDelay: `${-0.1 * (i % 7)}s` }} />)}
-                      </div>
+                      <>
+                        <button
+                          className="cancel-record-btn transition-all active:scale-90 animate-in fade-in zoom-in duration-200"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            cancelRecording();
+                          }}
+                          title="Cancel recording"
+                          aria-label="Cancel recording"
+                          style={{
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            color: '#ef4444',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            cursor: 'pointer',
+                            marginRight: '8px',
+                            flexShrink: 0
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                        <div className="visualizer" style={{ flex: 1 }}>
+                          {[...Array(13)].map((_, i) => <div key={i} className="bar" style={{ animationDelay: `${-0.1 * (i % 7)}s` }} />)}
+                        </div>
+                      </>
                     )}
 
 
@@ -3084,7 +3129,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       className={`send-btn${isRecording ? ' recording-pulse' : ''}`}
                       onClick={(e) => {
                         e.preventDefault();
-                        // If touch already handled this action, skip (prevents ghost click starting recording)
                         if ((e.currentTarget as any)._touchHandled) {
                           (e.currentTarget as any)._touchHandled = false;
                           return;
@@ -3099,7 +3143,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       }}
                       onTouchEnd={(e) => {
                         e.preventDefault();
-                        // Mark that touch handled this so the ghost onClick is ignored
                         (e.currentTarget as any)._touchHandled = true;
                         if (inputValue.trim()) {
                           handleSendMessage();
@@ -3109,10 +3152,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           startRecording();
                         }
                       }}
-                      title={isRecording ? 'Tap to stop & send' : inputValue.trim() ? 'Send' : 'Voice message'}
+                      title={isRecording ? 'Send voice note' : inputValue.trim() ? 'Send' : 'Voice message'}
                       style={
                         isRecording
-                          ? { background: '#ef4444' }
+                          ? {
+                              background: activeTheme.accentColor || '#0095f6',
+                              borderRadius: '9999px',
+                              boxShadow: '0 4px 15px rgba(0, 149, 246, 0.3)',
+                              transition: 'all 0.3s ease'
+                            }
                           : {
                               background: activeTheme.accentColor || '#6366f1',
                               borderRadius: '9999px',
@@ -3121,10 +3169,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             }
                       }
                     >
-                      {inputValue.trim() ? (
+                      {inputValue.trim() || isRecording ? (
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
-                      ) : isRecording ? (
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
                       ) : isVoiceToText ? (
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
                       ) : (
