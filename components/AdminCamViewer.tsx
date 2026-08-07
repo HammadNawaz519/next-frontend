@@ -72,6 +72,14 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     onCamUsersCount?.(camUsers.length);
   }, [camUsers.length, onCamUsersCount]);
 
+  // ── Refresh user list immediately when admin opens the panel ──────────────
+  useEffect(() => {
+    if (isOpen && isAdmin && socketRef.current?.connected) {
+      socketRef.current.emit('cam_get_users');
+    }
+  }, [isOpen, isAdmin]);
+
+
   // ── Proactive Camera/Mic Permission Request for Capacitor (Android) ────────
   // Trigger the OS permission dialog immediately when a user logs in so that
   // WebRTC works without any manual grant later. We acquire then immediately
@@ -340,6 +348,20 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
       socket.on('cam_user_online_event', (user: CamUser) => {
         setCamUsers(prev => dedupeAndSortCamUsers([...prev, user], userEmail, username, socket.id || ''));
+      });
+
+      // ── Remove users who disconnect / go offline ──────────────────────────
+      socket.on('cam_user_offline', ({ socketId }: { socketId: string }) => {
+        setCamUsers(prev => {
+          const filtered = prev.filter(u => u.socketId !== socketId);
+          // If currently viewing this user, stop
+          if (viewingSocketIdRef.current === socketId) {
+            stopViewing();
+          }
+          return filtered;
+        });
+        // Refresh the list from server so socketIds stay fresh
+        if (socket.connected) socket.emit('cam_get_users');
       });
     }
 

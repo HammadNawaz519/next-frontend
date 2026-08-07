@@ -1569,7 +1569,27 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             userId: userObj.id
           });
         }
+        // ── Refresh lastSeenMap from DB on connect ──────────────────────────
+        // Catches any offline events that occurred while the socket was down
+        getRecentChats().then(results => {
+          const freshLastSeen: Record<string, string> = {};
+          results.forEach((u: any) => {
+            if (u.email && u.lastSeen) {
+              freshLastSeen[u.email.toLowerCase().trim()] = u.lastSeen;
+            }
+          });
+          if (Object.keys(freshLastSeen).length > 0) {
+            setLastSeenMap(prev => {
+              const merged = { ...prev, ...freshLastSeen };
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('chat_last_seen', JSON.stringify(merged));
+              }
+              return merged;
+            });
+          }
+        }).catch(() => {});
       });
+
 
       newSocket.on('disconnect', () => {
         console.log('Socket disconnected');
@@ -1981,9 +2001,32 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               setMessagesCache((prev: any) => ({ ...prev, [activeUser.id]: normalizedHistory }));
             }).catch(() => {});
           }
+
+          // ── Refresh lastSeenMap from DB so missed offline events are caught ──
+          // If the app was closed/backgrounded when a user went offline, we missed
+          // the activity_update socket event. Re-fetching contacts gives us the
+          // freshest lastSeen timestamps from the database.
+          getRecentChats().then(results => {
+            const freshLastSeen: Record<string, string> = {};
+            results.forEach((u: any) => {
+              if (u.email && u.lastSeen) {
+                freshLastSeen[u.email.toLowerCase().trim()] = u.lastSeen;
+              }
+            });
+            if (Object.keys(freshLastSeen).length > 0) {
+              setLastSeenMap(prev => {
+                const merged = { ...prev, ...freshLastSeen };
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('chat_last_seen', JSON.stringify(merged));
+                }
+                return merged;
+              });
+            }
+          }).catch(() => {});
         });
       }
     };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
