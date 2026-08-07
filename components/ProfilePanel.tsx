@@ -100,6 +100,23 @@ export default function ProfilePanel({
   const [targetAccountSheet, setTargetAccountSheet] = useState<'none' | 'accounts' | 'options' | 'signIn' | 'signUp' | 'verify' | 'success'>('none');
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarInputUrl, setAvatarInputUrl] = useState('');
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+  const [showAvatarPreview, setShowAvatarPreview] = useState(false);
+  const avatarTouchTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const handleAvatarTouchStart = () => {
+    if (avatarTouchTimer.current) clearTimeout(avatarTouchTimer.current);
+    avatarTouchTimer.current = setTimeout(() => {
+      setShowAvatarPreview(true);
+    }, 450);
+  };
+
+  const handleAvatarTouchEnd = () => {
+    if (avatarTouchTimer.current) {
+      clearTimeout(avatarTouchTimer.current);
+      avatarTouchTimer.current = null;
+    }
+  };
   const [savedAccounts, setSavedAccounts] = useState<any[]>([]);
 
   // Switch account form fields
@@ -418,7 +435,8 @@ export default function ProfilePanel({
   };
 
   const handleUpdateAvatar = async (url: string) => {
-    if (!url.trim()) return;
+    if (!url.trim() || isAvatarUploading) return;
+    setIsAvatarUploading(true);
     try {
       await updateProfileImageAction(url.trim());
       if (refreshProfile) refreshProfile();
@@ -426,12 +444,15 @@ export default function ProfilePanel({
       setAvatarInputUrl('');
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsAvatarUploading(false);
     }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || isAvatarUploading) return;
+    setIsAvatarUploading(true);
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64String = reader.result as string;
@@ -441,9 +462,25 @@ export default function ProfilePanel({
         setShowAvatarModal(false);
       } catch (err) {
         console.error(err);
+      } finally {
+        setIsAvatarUploading(false);
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (isAvatarUploading) return;
+    setIsAvatarUploading(true);
+    try {
+      await updateProfileImageAction('');
+      if (refreshProfile) refreshProfile();
+      setShowAvatarModal(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsAvatarUploading(false);
+    }
   };
 
   const handleCreatePost = async (type: 'single_image' | 'carousel' | 'reel') => {
@@ -559,63 +596,95 @@ export default function ProfilePanel({
         <div style={{ width: 48, height: 4, background: isDark ? '#3a3a3c' : '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
         <h2 style={{ fontSize: 18, fontWeight: 800, color: txt, marginBottom: 16, textAlign: 'center' }}>Change Profile Picture</h2>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
-          {/* File upload option */}
-          <label style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px',
-            background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6', 
-            color: txt, 
-            borderRadius: '100px',
-            fontWeight: 700, 
-            fontSize: 13, 
-            cursor: 'pointer', 
-            textAlign: 'center', 
-            border: `1px solid ${border}`,
-            transition: 'background-color 0.2s'
-          }}>
-            Choose from Library
-            <input type="file" accept="image/*" onChange={handleFileUpload} style={{display: 'none'}} />
-          </label>
-          
-          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '4px 0', color: sub, fontSize: 11, fontWeight: 600}}>
-            — OR —
+        {isAvatarUploading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0', gap: 12 }}>
+            <div className="w-8 h-8 rounded-full border-3 border-t-transparent border-blue-500 animate-spin" />
+            <p style={{ fontSize: 14, fontWeight: 600, color: sub }}>Updating profile picture...</p>
           </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+            {/* File upload option */}
+            <label style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px',
+              background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6', 
+              color: txt, 
+              borderRadius: '100px',
+              fontWeight: 700, 
+              fontSize: 13, 
+              cursor: 'pointer', 
+              textAlign: 'center', 
+              border: `1px solid ${border}`,
+              transition: 'background-color 0.2s'
+            }}>
+              Choose from Library
+              <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isAvatarUploading} style={{display: 'none'}} />
+            </label>
+            
+            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '4px 0', color: sub, fontSize: 11, fontWeight: 600}}>
+              — OR —
+            </div>
 
-          {/* URL paste option */}
-          <div style={{display: 'flex', gap: 8}}>
-            <input
-              type="text"
-              placeholder="Paste avatar URL..."
-              value={avatarInputUrl}
-              onChange={e => setAvatarInputUrl(e.target.value)}
-              style={{
-                flex: 1, 
-                padding: '12px 20px', 
-                borderRadius: '100px', 
-                border: `1px solid ${border}`,
-                background: isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb', 
-                color: txt, 
-                fontSize: 13,
-                outline: 'none'
-              }}
-            />
-            <button
-              onClick={() => handleUpdateAvatar(avatarInputUrl)}
-              style={{
-                padding: '0 24px', 
-                background: txt, 
-                color: isDark ? '#000' : '#fff',
-                border: 'none', 
-                borderRadius: '100px', 
-                fontWeight: 700, 
-                fontSize: 13, 
-                cursor: 'pointer',
-              }}
-            >
-              Set
-            </button>
+            {/* URL paste option */}
+            <div style={{display: 'flex', gap: 8}}>
+              <input
+                type="text"
+                placeholder="Paste avatar URL..."
+                value={avatarInputUrl}
+                onChange={e => setAvatarInputUrl(e.target.value)}
+                disabled={isAvatarUploading}
+                style={{
+                  flex: 1, 
+                  padding: '12px 20px', 
+                  borderRadius: '100px', 
+                  border: `1px solid ${border}`,
+                  background: isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb', 
+                  color: txt, 
+                  fontSize: 13,
+                  outline: 'none'
+                }}
+              />
+              <button
+                onClick={() => handleUpdateAvatar(avatarInputUrl)}
+                disabled={isAvatarUploading || !avatarInputUrl.trim()}
+                style={{
+                  padding: '0 24px', 
+                  background: txt, 
+                  color: isDark ? '#000' : '#fff',
+                  border: 'none', 
+                  borderRadius: '100px', 
+                  fontWeight: 700, 
+                  fontSize: 13, 
+                  cursor: avatarInputUrl.trim() ? 'pointer' : 'not-allowed',
+                  opacity: avatarInputUrl.trim() ? 1 : 0.5
+                }}
+              >
+                Set
+              </button>
+            </div>
+
+            {/* Remove picture option */}
+            {image && (
+              <button
+                onClick={handleRemoveAvatar}
+                disabled={isAvatarUploading}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '100px',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  color: '#ef4444',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  marginTop: 6
+                }}
+              >
+                Remove Current Picture
+              </button>
+            )}
           </div>
-        </div>
+        )}
 
         <button 
           onClick={() => setShowAvatarModal(false)} 
@@ -633,6 +702,44 @@ export default function ProfilePanel({
           Cancel
         </button>
       </div>
+
+      {/* ── Fullscreen Avatar Preview Lightbox Modal ── */}
+      {showAvatarPreview && (
+        <div 
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in"
+          onClick={() => setShowAvatarPreview(false)}
+        >
+          {/* Header Bar */}
+          <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
+            <div className="flex items-center gap-3">
+              <span className="text-white font-bold text-base">{name}</span>
+              <span className="text-white/60 text-xs">@{username}</span>
+            </div>
+            <button 
+              onClick={() => setShowAvatarPreview(false)} 
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Large Avatar Card */}
+          <div 
+            className="w-72 h-72 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-white/20 shadow-2xl bg-zinc-900 flex items-center justify-center transition-transform transform hover:scale-[1.02]"
+            onClick={e => e.stopPropagation()}
+          >
+            {image ? (
+              <img src={image} alt={name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <DefaultAvatarSvg size={180} color="#ffffff" />
+            )}
+          </div>
+          
+          <p className="text-white/70 text-xs mt-6 font-medium">Tap anywhere to close</p>
+        </div>
+      )}
 
       {/* ── Center Confirm Delete Post Modal ── */}
       {longPressedPostId && isOwnProfile && (
@@ -762,15 +869,25 @@ export default function ProfilePanel({
             {/* Header (Stats) */}
             <div style={{display:'flex', alignItems:'center', padding:'16px 16px 8px', gap:24}}>
               <div 
-                onClick={isOwnProfile ? () => setShowAvatarModal(true) : undefined}
+                onMouseDown={handleAvatarTouchStart}
+                onMouseUp={handleAvatarTouchEnd}
+                onMouseLeave={handleAvatarTouchEnd}
+                onTouchStart={handleAvatarTouchStart}
+                onTouchEnd={handleAvatarTouchEnd}
+                onTouchCancel={handleAvatarTouchEnd}
+                onContextMenu={(e) => { e.preventDefault(); setShowAvatarPreview(true); }}
+                onClick={() => {
+                  if (isOwnProfile) setShowAvatarModal(true);
+                  else setShowAvatarPreview(true);
+                }}
                 style={{
                   width:80, height:80, borderRadius:'50%', flexShrink:0,
                   background: isDark ? '#26262d':'#e5e7eb',
                   border:`0.5px solid ${isDark ? 'rgba(255,255,255,0.15)':'#d1d5db'}`,
                   overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center',
-                  cursor: isOwnProfile ? 'pointer' : 'default', position: 'relative'
+                  cursor: 'pointer', position: 'relative'
                 }}
-                title={isOwnProfile ? "Change profile picture" : ""}
+                title={isOwnProfile ? "Tap to change picture, hold to view full size" : "Hold to view full size"}
               >
                 {image
                   ? <img src={image} alt={name} style={{width:'100%',height:'100%',objectFit:'cover'}} referrerPolicy="no-referrer"/>
