@@ -537,7 +537,7 @@ const IGMessageOverlay = ({
 
 // ─── MessageItem ────────────────────────────────────────────────────────────
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, selectedMessageIds, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker }: any) => {
   if (msg.type === 'system') {
     return (
       <div className="w-full flex justify-center my-3.5 text-center px-4 animate-in fade-in duration-300 pointer-events-none">
@@ -571,7 +571,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
   };
 
   const handlePointerDown = (e: any) => {
-    if (selectedMessageIds && selectedMessageIds.size > 0) return;
+    if (isInSelectionMode) return;
     isMoving.current = false;
     longPressTimeout.current = setTimeout(() => {
       if (!isMoving.current) triggerIGMenu();
@@ -637,9 +637,6 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
     e.preventDefault();
     triggerIGMenu();
   };
-
-  const isSelected = selectedMessageIds?.has(msg.id);
-  const isInSelectionMode = selectedMessageIds && selectedMessageIds.size > 0;
 
   const handleMessageClick = (e: React.MouseEvent) => {
     if (isInSelectionMode) {
@@ -980,6 +977,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [hasMoreMessages, setHasMoreMessages] = useState<boolean>(true);
+  const [isLoadingOlder, setIsLoadingOlder] = useState<boolean>(false);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-select the user passed from another profile's Message button
   const initialUserRef = React.useRef<any>(null);
@@ -1092,7 +1092,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const cachedMsgs = sessionStorage.getItem('social_messages_cache');
+      const cachedMsgs = localStorage.getItem('social_messages_cache');
       if (cachedMsgs) {
         try {
           const parsed = JSON.parse(cachedMsgs);
@@ -1146,10 +1146,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }, [deletedMessageIds]);
 
-  // Sync cache to session storage
+  // Sync cache to local storage for instant offline / reload access
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('social_messages_cache', JSON.stringify(messagesCache));
+      localStorage.setItem('social_messages_cache', JSON.stringify(messagesCache));
     }
   }, [messagesCache]);
 
@@ -1893,17 +1893,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             setMessages(prev => {
               const deletedRef = deletedMessageIds;
               const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
+              const dbMsgIds = new Set(dbMsgs.map(m => m.id));
+              const olderInPrev = prev.filter(m => !dbMsgIds.has(m.id));
               const now = Date.now();
               const inFlight = prev.filter(m =>
                 !dbMsgs.some((dbM: any) => dbM.id === m.id || (dbM.content === m.content && String(dbM.senderId) === String(m.senderId))) &&
                 (now - new Date(m.createdAt).getTime() < 30000)
               );
-              return [...dbMsgs, ...inFlight].sort(
+              return [...olderInPrev, ...dbMsgs, ...inFlight].sort(
                 (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
               );
             });
             const normalizedHistory = (history as any[]).map(normalizeMsg);
-            setMessagesCache((prev: any) => ({ ...prev, [activeUser.id]: normalizedHistory }));
+            setMessagesCache((prev: any) => {
+              const existing = prev[activeUser.id] || [];
+              const dbMsgIds = new Set(normalizedHistory.map(m => m.id));
+              const olderInExisting = existing.filter((m: any) => !dbMsgIds.has(m.id));
+              return { ...prev, [activeUser.id]: [...olderInExisting, ...normalizedHistory] };
+            });
           }).catch(() => {});
         }
       });
@@ -1933,17 +1940,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               setMessages(prev => {
                 const deletedRef = deletedMessageIds;
                 const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
+                const dbMsgIds = new Set(dbMsgs.map(m => m.id));
+                const olderInPrev = prev.filter(m => !dbMsgIds.has(m.id));
                 const now = Date.now();
                 const inFlight = prev.filter(m =>
                   !dbMsgs.some((dbM: any) => dbM.id === m.id || (dbM.content === m.content && String(dbM.senderId) === String(m.senderId))) &&
                   (now - new Date(m.createdAt).getTime() < 30000)
                 );
-                return [...dbMsgs, ...inFlight].sort(
+                return [...olderInPrev, ...dbMsgs, ...inFlight].sort(
                   (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
                 );
               });
               const normalizedHistory = (history as any[]).map(normalizeMsg);
-              setMessagesCache((prev: any) => ({ ...prev, [activeUser.id]: normalizedHistory }));
+              setMessagesCache((prev: any) => {
+                const existing = prev[activeUser.id] || [];
+                const dbMsgIds = new Set(normalizedHistory.map(m => m.id));
+                const olderInExisting = existing.filter((m: any) => !dbMsgIds.has(m.id));
+                return { ...prev, [activeUser.id]: [...olderInExisting, ...normalizedHistory] };
+              });
             }).catch(() => {});
           }
 
@@ -2192,9 +2206,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     async function loadMessages() {
       if (!selectedUser) return;
       setSelectedMessageIds(new Set());
+      setHasMoreMessages(true);
+      setIsLoadingOlder(false);
 
       const cached = messagesCache[selectedUser.id];
-      if (cached) {
+      if (cached && cached.length > 0) {
         const filteredCached = cached
           .filter(m => !deletedMessageIds.has(m.id))
           .filter(m => !m.content || !m.content.startsWith('blob:'));
@@ -2211,10 +2227,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, unseenCount: 0 } : u));
 
       try {
-        const history = await getSocialMessages(selectedUser.id);
+        const history = await getSocialMessages(selectedUser.id, 25);
         // Filter out messages the user deleted locally (persisted in localStorage)
         const deletedRef = deletedMessageIds;
         const fresh = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
+
+        if (fresh.length < 25) {
+          setHasMoreMessages(false);
+        } else {
+          setHasMoreMessages(true);
+        }
 
         setMessages(fresh);
         setMessagesCache(prev => ({ ...prev, [selectedUser.id]: fresh }));
@@ -2234,15 +2256,71 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     loadMessages();
   }, [selectedUser?.id]);
 
-  // Always scroll to bottom when messages or active user change
+  // Load older historical messages on scroll up
+  const loadOlderMessages = async () => {
+    if (!selectedUser || isLoadingOlder || !hasMoreMessages || messages.length === 0) return;
+    const firstMsg = messages[0];
+    if (!firstMsg || !firstMsg.id) return;
+
+    setIsLoadingOlder(true);
+    const container = messagesContainerRef.current;
+    const prevScrollHeight = container ? container.scrollHeight : 0;
+
+    try {
+      const olderHistory = await getSocialMessages(selectedUser.id, 25, firstMsg.id);
+      if (!olderHistory || olderHistory.length === 0) {
+        setHasMoreMessages(false);
+        setIsLoadingOlder(false);
+        return;
+      }
+      if (olderHistory.length < 25) {
+        setHasMoreMessages(false);
+      }
+      const deletedRef = deletedMessageIds;
+      const olderFresh = (olderHistory as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
+
+      setMessages(prev => {
+        const existingIds = new Set(prev.map(m => m.id));
+        const uniqueOlder = olderFresh.filter(m => !existingIds.has(m.id));
+        if (uniqueOlder.length === 0) return prev;
+        return [...uniqueOlder, ...prev];
+      });
+
+      setMessagesCache(prev => {
+        const currentCache = prev[selectedUser.id] || [];
+        const existingIds = new Set(currentCache.map(m => m.id));
+        const uniqueOlder = olderFresh.filter(m => !existingIds.has(m.id));
+        return { ...prev, [selectedUser.id]: [...uniqueOlder, ...currentCache] };
+      });
+
+      requestAnimationFrame(() => {
+        if (container) {
+          container.scrollTop = container.scrollHeight - prevScrollHeight;
+        }
+      });
+    } catch (err) {
+      console.error("Failed to load older messages:", err);
+    } finally {
+      setIsLoadingOlder(false);
+    }
+  };
+
+  const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    if (target.scrollTop < 120 && hasMoreMessages && !isLoadingOlder && !isLoadingMessages) {
+      loadOlderMessages();
+    }
+  };
+
+  // Scroll to bottom when active user opens chat
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 0 && selectedUser?.id) {
       const timer = setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [messages.length, selectedUser?.id]);
+  }, [selectedUser?.id]);
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -2872,7 +2950,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                 </div>
 
-                <div className="messages" style={{ background: 'transparent' }}>
+                <div
+                  ref={messagesContainerRef}
+                  onScroll={handleMessagesScroll}
+                  className="messages"
+                  style={{ background: 'transparent' }}
+                >
+                  {isLoadingMessages && messages.length === 0 && (
+                    <div className="chat-skeleton-container">
+                      <div className="chat-skeleton-bubble recv" />
+                      <div className="chat-skeleton-bubble sent" />
+                      <div className="chat-skeleton-bubble recv" style={{ width: '40%' }} />
+                      <div className="chat-skeleton-bubble sent" style={{ width: '50%' }} />
+                    </div>
+                  )}
+                  {isLoadingOlder && (
+                    <div className="pagination-loader">
+                      <div className="pagination-loader-spinner" />
+                      <span>Loading older messages...</span>
+                    </div>
+                  )}
                   {messages.filter(msg => msg.type !== 'accepted').map((msg) => (
                     <div key={msg.id} id={`msg-item-${msg.id}`}>
                       <MessageItem
@@ -2882,14 +2979,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         onDelete={handleDelete}
                         onReact={handleReact}
                         onRequestDelete={handleRequestDelete}
-                        selectedMessageIds={selectedMessageIds}
+                        isSelected={selectedMessageIds.has(msg.id)}
+                        isInSelectionMode={selectedMessageIds.size > 0}
                         toggleMessageSelection={toggleMessageSelection}
-                        onShowIGMenu={(st: any) => setIgMenu(st)}
-                        onReply={(m: any) => setReplyToMessage(m)}
+                        onShowIGMenu={setIgMenu}
+                        onReply={setReplyToMessage}
                         activeTheme={activeTheme}
-                        onPreviewImage={(src: string) => setLightboxImageSrc(src)}
+                        onPreviewImage={setLightboxImageSrc}
                         msgTag={msgTags[msg.id]}
-                        onOpenTagPicker={(m: any) => setOpenTagPickerMsg(m)}
+                        onOpenTagPicker={setOpenTagPickerMsg}
                       />
                     </div>
                   ))}

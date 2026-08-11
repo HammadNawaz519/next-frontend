@@ -118,7 +118,7 @@ export async function getUserDetails() {
 
 
 
-export async function getSocialMessages(otherUserId: string, limit: number = 150) {
+export async function getSocialMessages(otherUserId: string, limit: number = 25, beforeId?: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return [];
 
@@ -129,12 +129,24 @@ export async function getSocialMessages(otherUserId: string, limit: number = 150
 
   if (!currentUser) return [];
 
+  let cursorFilter: any = {};
+  if (beforeId) {
+    const beforeMsg = await prisma.socialMessage.findUnique({
+      where: { id: beforeId },
+      select: { createdAt: true }
+    });
+    if (beforeMsg) {
+      cursorFilter = { createdAt: { lt: beforeMsg.createdAt } };
+    }
+  }
+
   const messages = await prisma.socialMessage.findMany({
     where: {
       OR: [
         { senderId: currentUser.id, receiverId: otherUserId, deletedBySender: false },
         { senderId: otherUserId, receiverId: currentUser.id, deletedByReceiver: false }
-      ]
+      ],
+      ...cursorFilter
     },
     take: limit,
     orderBy: { createdAt: 'desc' },

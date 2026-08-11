@@ -1718,4 +1718,91 @@
   }
 }
 
+/* ─────────────────────────────────────────────────────────────
+   CAPACITOR & MOBILE GPU HARDWARE ACCELERATION & SMOOTH TOUCH
+   ───────────────────────────────────────────────────────────── */
+.social-chat-container .messages {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  transform: translateZ(0);
+  will-change: scroll-position;
+}
+
+.social-chat-container .msg {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  touch-action: manipulation;
+}
+
+.social-chat-container .type-box textarea {
+  touch-action: manipulation;
+}
+
+/* Spinner loader for scroll-up pagination */
+.social-chat-container .pagination-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--dm-text-secondary, #8e8e8e);
+}
+
+.social-chat-container .pagination-loader-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Instagram Skeleton Loader when opening a chat with no cache */
+.social-chat-container .chat-skeleton-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 16px;
+  width: 100%;
+}
+
+.social-chat-container .chat-skeleton-bubble {
+  height: 42px;
+  border-radius: 18px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.06) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+[data-theme="light"] .social-chat-container .chat-skeleton-bubble {
+  background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.09) 50%, rgba(0,0,0,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.social-chat-container .chat-skeleton-bubble.recv {
+  width: 55%;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.social-chat-container .chat-skeleton-bubble.sent {
+  width: 65%;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+
+
 
