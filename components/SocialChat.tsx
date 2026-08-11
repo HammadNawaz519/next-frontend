@@ -3938,16 +3938,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           onClick={() => setSelectedChatForOptions(null)}
         >
           <div
-            className="w-full max-w-md mx-auto z-40 border-t border-x rounded-t-[2.5rem] p-7 md:p-8 pb-10 shadow-[0_-15px_40px_rgba(0,0,0,0.35)] max-h-[90vh] overflow-y-auto no-scrollbar transform animate-in slide-in-from-bottom duration-300 ease-out"
-            style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)', color: 'var(--dm-text-primary)' }}
+            className="w-full max-w-md mx-auto z-40 rounded-t-[2rem] p-6 pb-8 max-h-[90vh] overflow-y-auto no-scrollbar transform animate-in slide-in-from-bottom duration-300 ease-out"
+            style={{ background: 'var(--dm-bg-sidebar)', borderTop: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Sheet Top Handle Bar */}
-            <div className="w-12 h-1 rounded-full mx-auto mb-6 opacity-50" style={{ background: 'var(--dm-text-muted)' }} />
+            <div className="w-10 h-1 rounded-full mx-auto mb-5 opacity-30" style={{ background: 'var(--dm-text-muted)' }} />
 
-            {/* Header: User Avatar & Name on TOP of the action buttons */}
-            <div className="flex items-center gap-4 pb-5 mb-5 border-b transition-colors" style={{ borderColor: 'var(--dm-border)' }}>
-              <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 shadow-md" style={{ borderColor: 'var(--dm-border)', background: 'var(--dm-bg-hover)' }}>
+            {/* Header: User Avatar & Name */}
+            <div className="flex items-center gap-3.5 pb-4 mb-2 border-b" style={{ borderColor: 'var(--dm-border)' }}>
+              <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'var(--dm-bg-hover)' }}>
                 <img
                   src={selectedChatForOptions.image || '/Avatar.avif'}
                   alt={selectedChatForOptions.name}
@@ -3955,24 +3955,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-lg font-bold tracking-tight truncate" style={{ color: 'var(--dm-text-primary)' }}>
+                <h3 className="text-base font-bold truncate" style={{ color: 'var(--dm-text-primary)' }}>
                   {selectedChatForOptions.name}
                 </h3>
-                <p className="text-xs font-medium truncate mt-0.5" style={{ color: 'var(--dm-text-muted)' }}>
+                <p className="text-xs font-medium truncate opacity-70" style={{ color: 'var(--dm-text-muted)' }}>
                   @{selectedChatForOptions.username || selectedChatForOptions.email?.split('@')[0] || 'user'}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedChatForOptions(null)}
-                className="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-105 cursor-pointer text-sm font-bold"
-                style={{ background: 'var(--dm-bg-hover)', color: 'var(--dm-text-muted)', border: '1px solid var(--dm-border)' }}
+                className="w-7 h-7 rounded-full flex items-center justify-center cursor-pointer text-xs font-bold opacity-60 hover:opacity-100 transition-opacity"
+                style={{ background: 'var(--dm-bg-hover)', color: 'var(--dm-text-muted)' }}
               >
                 ✕
               </button>
             </div>
 
-            {/* Action Buttons List (Pill Buttons with Dynamic System Theme, NO EMOJIS) */}
-            <div className="flex flex-col gap-3">
+            {/* Flat Action Menu List with Plain Horizontal Divider Lines */}
+            <div className="flex flex-col">
               {/* Pin / Unpin Button */}
               <button
                 onClick={() => {
@@ -3988,12 +3988,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   });
                   setSelectedChatForOptions(null);
                 }}
-                className="w-full transition-all duration-200 active:scale-[0.98] rounded-full py-3.5 px-6 font-bold text-center text-sm flex items-center justify-between shadow-sm cursor-pointer hover:opacity-90"
-                style={{ background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}
+                className="w-full py-3.5 px-2 text-left text-sm font-semibold flex items-center justify-between border-b transition-colors cursor-pointer hover:bg-black/5 dark:hover:bg-white/5"
+                style={{ borderColor: 'var(--dm-border)', color: 'var(--dm-text-primary)' }}
               >
                 <span>{pinnedChats.has(selectedChatForOptions.id) ? 'Unpin Chat' : 'Pin Chat to Top'}</span>
                 {pinnedChats.has(selectedChatForOptions.id) && (
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={{ background: 'var(--dm-bg-hover)', color: 'var(--dm-text-secondary)' }}>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded" style={{ background: 'var(--dm-bg-hover)', color: 'var(--dm-text-secondary)' }}>
                     Pinned
                   </span>
                 )}
@@ -4014,18 +4014,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   });
                   setSelectedChatForOptions(null);
                 }}
-                className="w-full transition-all duration-200 active:scale-[0.98] rounded-full py-3.5 px-6 font-bold text-center text-sm flex items-center justify-between shadow-sm cursor-pointer hover:opacity-90"
-                style={{ background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}
+                className="w-full py-3.5 px-2 text-left text-sm font-semibold flex items-center justify-between border-b transition-colors cursor-pointer hover:bg-black/5 dark:hover:bg-white/5"
+                style={{ borderColor: 'var(--dm-border)', color: 'var(--dm-text-primary)' }}
               >
                 <span>{mutedChats.has(selectedChatForOptions.id) ? 'Unmute Notifications' : 'Mute Notifications'}</span>
                 {mutedChats.has(selectedChatForOptions.id) && (
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={{ background: 'var(--dm-bg-hover)', color: 'var(--dm-text-secondary)' }}>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded" style={{ background: 'var(--dm-bg-hover)', color: 'var(--dm-text-secondary)' }}>
                     Muted
                   </span>
                 )}
               </button>
 
-              {/* Delete Chat Button */}
+              {/* Delete Chat Button (Darker Red accent) */}
               <button
                 onClick={async () => {
                   const targetId = selectedChatForOptions.id;
@@ -4058,16 +4058,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     alert('Failed to delete chat. Please try again.');
                   }
                 }}
-                className="w-full bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition-all duration-200 active:scale-[0.98] rounded-full py-3.5 font-bold text-center text-sm shadow-sm cursor-pointer"
+                className="w-full py-3.5 px-2 text-left text-sm font-bold flex items-center justify-between border-b transition-colors cursor-pointer"
+                style={{ borderColor: 'var(--dm-border)', color: '#b91c1c' }}
               >
-                Delete Chat
+                <span>Delete Chat</span>
               </button>
 
               {/* Cancel Button */}
               <button
                 onClick={() => setSelectedChatForOptions(null)}
-                className="w-full transition-all duration-200 active:scale-[0.98] rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-1 cursor-pointer hover:opacity-90"
-                style={{ background: 'var(--dm-text-primary)', color: 'var(--dm-bg-sidebar)' }}
+                className="w-full py-3 mt-3 text-center text-sm font-semibold rounded-xl transition-colors cursor-pointer hover:opacity-80"
+                style={{ background: 'var(--dm-bg-hover)', color: 'var(--dm-text-secondary)' }}
               >
                 Cancel
               </button>

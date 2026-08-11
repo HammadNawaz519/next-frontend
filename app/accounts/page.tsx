@@ -182,22 +182,22 @@ export default function AccountsPage() {
 
   return (
     <div className={`min-h-screen transition-colors duration-500 font-sans ${isDark ? 'bg-[#09090b] text-white' : 'bg-[#f8f9fa] text-gray-900'}`}>
-      <div className="max-w-xl mx-auto px-4 py-8 md:py-12">
+      <div className="max-w-xl mx-auto px-4 pt-12 pb-10 md:pt-16">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-500/15">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-500/15">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push('/dashboard')}
-              className={`p-2.5 rounded-full border transition-all active:scale-95 ${
-                isDark ? 'border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300' : 'border-gray-200 bg-white hover:bg-gray-100 text-gray-700'
+              className={`p-2 rounded-full transition-all active:scale-95 ${
+                isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
               }`}
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-black tracking-tight">Account Center</h1>
-              <p className={`text-xs font-medium ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                Saved accounts on this device
+              <h1 className="text-xl font-bold tracking-tight">Account Center</h1>
+              <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                Manage accounts on this device
               </p>
             </div>
           </div>
@@ -205,27 +205,27 @@ export default function AccountsPage() {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className={`p-2.5 rounded-full border transition-all active:scale-95 ${
-                isDark ? 'border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300' : 'border-gray-200 bg-white hover:bg-gray-100 text-gray-700'
+              className={`p-2 rounded-full transition-all active:scale-95 ${
+                isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
               }`}
             >
               <MoreVertical className="w-5 h-5" />
             </button>
 
             {showDropdown && (
-              <div className={`absolute right-0 mt-2 w-56 border rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200 ${
+              <div className={`absolute right-0 mt-2 w-52 border rounded-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-200 ${
                 isDark ? 'bg-[#16161a] border-zinc-800 text-white' : 'bg-white border-gray-200 text-gray-900'
               }`}>
                 <button
                   onClick={() => { setShowDropdown(false); setViewMode(viewMode === 'remove' ? 'list' : 'remove'); }}
-                  className="w-full text-left px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 text-rose-500 hover:bg-rose-500/10 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
-                  {viewMode === 'remove' ? 'Done Managing' : 'Remove an Account'}
+                  {viewMode === 'remove' ? 'Done Managing' : 'Remove Account'}
                 </button>
                 <button
                   onClick={() => { setShowDropdown(false); setViewMode(viewMode === 'removeSaved' ? 'list' : 'removeSaved'); }}
-                  className={`w-full text-left px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 transition-colors ${isDark ? 'text-zinc-300 hover:bg-zinc-800' : 'text-gray-600 hover:bg-gray-100'}`}
+                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 transition-colors ${isDark ? 'text-zinc-300 hover:bg-zinc-800' : 'text-gray-600 hover:bg-gray-100'}`}
                 >
                   <Key className="w-4 h-4" />
                   {viewMode === 'removeSaved' ? 'Done' : 'Remove Saved Login'}
@@ -235,22 +235,12 @@ export default function AccountsPage() {
           </div>
         </div>
 
-        {/* Account Legend */}
-        <div className={`flex items-center gap-4 mb-4 px-1 text-xs font-semibold ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-            Saved on this device
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-zinc-400 inline-block" />
-            Sign in required
-          </div>
-        </div>
-
-        {/* Saved Accounts List */}
-        <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-base font-bold">Accounts ({displayAccounts.length})</h2>
+        {/* Clean Simple Accounts List Container */}
+        <div className="divide-y divide-zinc-500/15">
+          <div className="flex items-center justify-between py-2 mb-1">
+            <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+              Saved Accounts ({displayAccounts.length})
+            </span>
             {(viewMode === 'remove' || viewMode === 'removeSaved') && (
               <button
                 onClick={() => setViewMode('list')}
@@ -261,113 +251,86 @@ export default function AccountsPage() {
             )}
           </div>
 
-          <div className="space-y-3">
-            {displayAccounts.length === 0 && (
-              <p className={`text-sm text-center py-6 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
-                No accounts saved on this device yet.
-              </p>
-            )}
+          {displayAccounts.length === 0 && (
+            <p className={`text-sm text-center py-8 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
+              No accounts saved on this device yet.
+            </p>
+          )}
 
-            {displayAccounts.map((acc) => {
-              const accountName = acc.displayName || acc.username || acc.email.split('@')[0];
-              const displayUsername = acc.username || acc.email.split('@')[0];
-              const isActive = acc.isCurrent;
-              const isSaved = acc.isSavedOnDevice;
-              const isSwitchingThis = switchingId === acc.userId;
+          {displayAccounts.map((acc) => {
+            const accountName = acc.displayName || acc.username || acc.email.split('@')[0];
+            const displayUsername = acc.username || acc.email.split('@')[0];
+            const isActive = acc.isCurrent;
+            const isSaved = acc.isSavedOnDevice;
+            const isSwitchingThis = switchingId === acc.userId;
 
-              return (
-                <div
-                  key={acc.userId || acc.email}
-                  onClick={() => viewMode === 'list' && !isActive && handleAccountClick(acc)}
-                  className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                    isActive
-                      ? isDark ? 'border-blue-500/40 bg-blue-500/10' : 'border-blue-300 bg-blue-50/70'
-                      : viewMode === 'list'
-                        ? isDark ? 'border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 cursor-pointer' : 'border-gray-200 bg-white hover:bg-gray-50 cursor-pointer'
-                        : isDark ? 'border-zinc-800 bg-zinc-900/60' : 'border-gray-200 bg-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    {acc.profilePicture ? (
-                      <img src={acc.profilePicture} alt={accountName} className="w-11 h-11 rounded-full object-cover border border-zinc-700 flex-shrink-0" />
-                    ) : (
-                      <div className={`w-11 h-11 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0 ${
-                        isActive ? 'bg-blue-600 text-white' : isDark ? 'bg-zinc-800 text-zinc-300 border border-zinc-700' : 'bg-gray-200 text-gray-700'
-                      }`}>
-                        {getInitials(acc)}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold truncate">{accountName}</span>
-                        {isActive ? (
-                          <span className="text-[9px] font-extrabold bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">
-                            Active Session
-                          </span>
-                        ) : isSaved ? (
-                          <span className="text-[9px] font-extrabold bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 flex-shrink-0">
-                            <Check className="w-2.5 h-2.5 stroke-[3]" />
-                            Saved on this device
-                          </span>
-                        ) : (
-                          <span className="text-[9px] font-semibold bg-zinc-500/20 text-zinc-500 px-2 py-0.5 rounded-full flex-shrink-0">
-                            Sign in required
-                          </span>
-                        )}
-                      </div>
-                      <span className={`text-xs truncate block ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>@{displayUsername}</span>
+            return (
+              <div
+                key={acc.userId || acc.email}
+                onClick={() => viewMode === 'list' && !isActive && handleAccountClick(acc)}
+                className={`flex items-center justify-between py-3.5 px-2 border-b transition-colors ${
+                  isDark ? 'border-zinc-800/80 hover:bg-white/5' : 'border-gray-100 hover:bg-black/5'
+                } ${isActive ? '' : 'cursor-pointer'}`}
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  {acc.profilePicture ? (
+                    <img src={acc.profilePicture} alt={accountName} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                  ) : (
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0 ${
+                      isActive ? 'bg-blue-600 text-white' : isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-gray-200 text-gray-700'
+                    }`}>
+                      {getInitials(acc)}
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-shrink-0 pl-2">
-                    {isSwitchingThis ? (
-                      <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                    ) : viewMode === 'remove' && !isActive ? (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRemoveAccount(acc.userId); }}
-                        className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl transition-colors"
-                        title="Remove account from device"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    ) : viewMode === 'removeSaved' && isSaved && !isActive ? (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRemoveSavedLogin(acc.userId); }}
-                        className="p-2 text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 rounded-xl transition-colors"
-                        title="Remove saved login info"
-                      >
-                        <Key className="w-4 h-4" />
-                      </button>
-                    ) : isActive ? (
-                      <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white">
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      </div>
-                    ) : (
-                      <ChevronRight className={`w-4 h-4 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`} />
-                    )}
+                  )}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold truncate">{accountName}</span>
+                      {isActive && (
+                        <span className="text-[10px] font-bold bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <span className={`text-xs truncate block ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>@{displayUsername}</span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
 
-        {/* Security Note */}
-        <div className={`mt-4 p-4 rounded-2xl border flex items-start gap-3 ${isDark ? 'bg-zinc-900/30 border-zinc-800' : 'bg-gray-50 border-gray-200'}`}>
-          <Shield className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`} />
-          <p className={`text-xs leading-relaxed ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>
-            Accounts marked <strong>Saved on this device</strong> can switch without entering a password. 
-            Credentials are stored securely per account on this device only. 
-            Use <em>Remove Saved Login</em> to require sign-in next time.
-          </p>
+                <div className="flex items-center gap-2 flex-shrink-0 pl-2">
+                  {isSwitchingThis ? (
+                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  ) : viewMode === 'remove' && !isActive ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleRemoveAccount(acc.userId); }}
+                      className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                      title="Remove account from device"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  ) : viewMode === 'removeSaved' && isSaved && !isActive ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleRemoveSavedLogin(acc.userId); }}
+                      className="p-1.5 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors"
+                      title="Remove saved login info"
+                    >
+                      <Key className="w-4 h-4" />
+                    </button>
+                  ) : isActive ? (
+                    <span className="text-xs font-semibold text-blue-500">✓ Logged In</span>
+                  ) : (
+                    <ChevronRight className={`w-4 h-4 ${isDark ? 'text-zinc-600' : 'text-gray-400'}`} />
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Add Account Button */}
-        <div className="mt-6">
+        <div className="mt-8">
           <button
             onClick={() => router.push('/?sheet=signIn')}
-            className={`w-full py-4 rounded-3xl font-extrabold text-sm border flex items-center justify-center gap-2 transition-all active:scale-98 ${
-              isDark ? 'bg-zinc-900 border-zinc-800 text-white hover:bg-zinc-800' : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50 shadow-sm'
+            className={`w-full py-3.5 rounded-2xl font-bold text-xs border flex items-center justify-center gap-2 transition-all active:scale-98 ${
+              isDark ? 'bg-zinc-900 border-zinc-800 text-white hover:bg-zinc-800' : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50'
             }`}
           >
             <UserPlus className="w-4 h-4 text-blue-500" />
