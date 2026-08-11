@@ -859,6 +859,7 @@ interface SocialChatProps {
   onCallStateChange?: (isCallActive: boolean) => void;
   initialUser?: any; // Pre-select a user when opened from another profile
   onOpenProfile?: (user: any) => void;
+  onLongPressChatChange?: (active: boolean) => void;
 }
 
 // ── Custom PWA & Capacitor Mobile Notification Dispatcher ──
@@ -970,7 +971,7 @@ const normalizeMsg = (m: any): any => {
   return m;
 };
 
-const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange, initialUser, onOpenProfile }: SocialChatProps, ref) => {
+const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange, initialUser, onOpenProfile, onLongPressChatChange }: SocialChatProps, ref) => {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -1087,6 +1088,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [deletedMessageIds, setDeletedMessageIds] = useState<Set<string>>(new Set());
   const [deletedChatIds, setDeletedChatIds] = useState<Set<string>>(new Set());
   const [selectedChatForOptions, setSelectedChatForOptions] = useState<User | null>(null);
+
+  // Notify parent component when long press options sheet is open/closed
+  useEffect(() => {
+    if (onLongPressChatChange) {
+      onLongPressChatChange(!!selectedChatForOptions);
+    }
+  }, [selectedChatForOptions, onLongPressChatChange]);
 
   // Load storage states safely after mount to prevent React hydration mismatch errors on Vercel
   useEffect(() => {
@@ -2312,15 +2320,28 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   };
 
-  // Scroll to bottom when active user opens chat
+  // Auto swipe / scroll to bottom on new messages, typing, or chat selection
+  const lastMsgId = messages.length > 0 ? messages[messages.length - 1]?.id : null;
+  const isOtherUserTyping = typingUsers.has(selectedUser?.email || '');
+
   useEffect(() => {
-    if (messages.length > 0 && selectedUser?.id) {
+    if (selectedUser?.id && messages.length > 0) {
       const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [selectedUser?.id]);
+  }, [selectedUser?.id, lastMsgId, messages.length, isOtherUserTyping]);
+
+  // Scroll to bottom when user is typing in the input box
+  useEffect(() => {
+    if (inputValue && selectedUser?.id) {
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [inputValue, selectedUser?.id]);
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();

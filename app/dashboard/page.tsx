@@ -91,6 +91,7 @@ export default function DashboardPage() {
   const [usernameError, setUsernameError] = useState('');
   const [usernameSaving, setUsernameSaving] = useState(false);
   const [isAccountSheetOpen, setIsAccountSheetOpen] = useState(false);
+  const [isChatLongPressActive, setIsChatLongPressActive] = useState(false);
 
   // ── RULE 1 ── Auto-register account immediately on every successful session mount ──
   // This uses the REAL userId from NextAuth so the primary key is correct.
@@ -919,6 +920,7 @@ export default function DashboardPage() {
               setSelectedProfileUser(targetUser);
               setIsProfileOpen(true);
             }}
+            onLongPressChatChange={setIsChatLongPressActive}
           />
         </div>
 
@@ -965,7 +967,7 @@ export default function DashboardPage() {
 
       {/* Mobile Bottom Navigation — round glass pill bar floats nicely near the bottom */}
       {((activeView === 'home' || activeView === 'search' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive) && (
-        <nav className={`mobile-nav ${(isAccountSheetOpen || isSearchOverlayOpen) ? 'mobile-nav-hidden' : ''}`}>
+        <nav className={`mobile-nav ${(isAccountSheetOpen || isSearchOverlayOpen || isChatLongPressActive) ? 'mobile-nav-hidden' : ''}`}>
           {[
             { 
               id: 'home', 
