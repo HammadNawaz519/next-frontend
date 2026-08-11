@@ -124,6 +124,7 @@ export default function ProfilePanel({
   const [switchEmail, setSwitchEmail] = useState('');
   const [switchPassword, setSwitchPassword] = useState('');
   const [switchUsername, setSwitchUsername] = useState('');
+  const [switchPhone, setSwitchPhone] = useState('');
   const [switchOtp, setSwitchOtp] = useState(['', '', '', '', '', '']);
   const [switchError, setSwitchError] = useState('');
   const [switchLoading, setSwitchLoading] = useState(false);
@@ -2315,211 +2316,148 @@ export default function ProfilePanel({
                 </button>
               </div>
             </div>
-          ) : (
-            /* IF NO SAVED ACCOUNTS OR USER CLICKED "LOG INTO ANOTHER ACCOUNT" -> SHOW CENTERED INPUT FIELDS */
-            <div>
-              <div style={{
-                width: 64, height: 64, borderRadius: '50%', background: 'rgba(59, 130, 246, 0.12)',
-                color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 16px', border: '1.5px solid rgba(59, 130, 246, 0.25)'
-              }}>
-                <svg width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                </svg>
-              </div>
-
-              <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Log Into Existing Account</h1>
-              <p style={{ fontSize: 13, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 24 }}>
-                Enter your username or email and password
-              </p>
-
-              {switchError && (
-                <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '10px 16px', borderRadius: 14, fontSize: 12, fontWeight: 600, marginBottom: 16 }}>
-                  {switchError}
-                </div>
-              )}
-
-              <form onSubmit={handleSwitchLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div style={{ textAlign: 'left' }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#a1a1aa' : '#4b5563', marginBottom: 6, display: 'block' }}>Username or Email</label>
-                  <input
-                    type="text"
-                    placeholder="Username or email address"
-                    required
-                    value={switchEmail}
-                    onChange={e => setSwitchEmail(e.target.value)}
-                    style={{
-                      width: '100%', borderRadius: '16px', background: isDark ? '#16161a' : '#f9fafb',
-                      color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
-                      padding: '14px 18px', outline: 'none', fontSize: 14
-                    }}
-                  />
-                </div>
-
-                <div style={{ textAlign: 'left' }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#a1a1aa' : '#4b5563', marginBottom: 6, display: 'block' }}>Password</label>
-                  <input
-                    type="password"
-                    placeholder="Enter password"
-                    required
-                    value={switchPassword}
-                    onChange={e => setSwitchPassword(e.target.value)}
-                    style={{
-                      width: '100%', borderRadius: '16px', background: isDark ? '#16161a' : '#f9fafb',
-                      color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
-                      padding: '14px 18px', outline: 'none', fontSize: 14
-                    }}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={switchLoading}
-                  style={{
-                    width: '100%', padding: '16px 0', background: '#3b82f6', color: '#ffffff',
-                    borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 14,
-                    opacity: switchLoading ? 0.6 : 1, transition: 'all 0.2s', marginTop: 10,
-                    boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)'
-                  }}
-                >
-                  {switchLoading ? 'Signing In...' : 'Log In'}
-                </button>
-              </form>
-
-              {displayAccounts.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowManualSignIn(false)}
-                  style={{
-                    background: 'none', border: 'none', color: '#3b82f6', fontSize: 13,
-                    fontWeight: 600, cursor: 'pointer', marginTop: 20
-                  }}
-                >
-                  ← Back to Account Center saved accounts
-                </button>
-              )}
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {/* 4. Create New Account — FULL PAGE View */}
-      <div
-        style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: isDark ? '#09090b' : '#ffffff',
-          color: isDark ? '#ffffff' : '#121214',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          padding: '24px', overflowY: 'auto',
-          transform: activeAccountSheet === 'signUp' ? 'scale(1)' : 'scale(0.95)',
-          opacity: activeAccountSheet === 'signUp' ? 1 : 0,
-          transition: 'transform 0.3s ease, opacity 0.3s ease',
-          pointerEvents: activeAccountSheet === 'signUp' ? 'auto' : 'none',
-        }}
+      {/* Manual Sign In - Charcoal Black Bottom Popup Sheet */}
+      <div 
+        className={`fixed inset-0 z-[9999] transition-opacity duration-500 ${showManualSignIn && activeAccountSheet === 'signIn' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       >
-        {/* Top Header Back Button */}
-        <div style={{ position: 'absolute', top: 24, left: 24, zIndex: 10 }}>
-          <button
-            type="button"
-            onClick={() => triggerAccountSheetTransition('options')}
-            style={{
-              background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6',
-              border: 'none', color: isDark ? '#fff' : '#121214',
-              borderRadius: '50%', width: 42, height: 42, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.2s'
-            }}
-          >
-            <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Centered Form Content (NO Account Center list) */}
-        <div style={{ width: '100%', maxWidth: 400, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{
-            width: 64, height: 64, borderRadius: '50%', background: 'rgba(34, 197, 94, 0.12)',
-            color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px', border: '1.5px solid rgba(34, 197, 94, 0.25)'
-          }}>
-            <svg width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
+        <div 
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+          onClick={() => setShowManualSignIn(false)}
+        />
+        <div 
+          className={`absolute bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${showManualSignIn && activeAccountSheet === 'signIn' ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
+        >
+          {/* Top bar back button */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => setShowManualSignIn(false)}
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
+              title="Back"
+            >
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+            <div className="w-12 h-1 bg-[#27272a] rounded-full" />
+            <div className="w-10" />
           </div>
 
-          <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Create New Account</h1>
-          <p style={{ fontSize: 13, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 24 }}>
-            Enter your details to create a new Connect profile
-          </p>
-
           {switchError && (
-            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '10px 16px', borderRadius: 14, fontSize: 12, fontWeight: 600, marginBottom: 16 }}>
+            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
               {switchError}
             </div>
           )}
 
-          <form onSubmit={handleSwitchSignup} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ textAlign: 'left' }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#a1a1aa' : '#4b5563', marginBottom: 6, display: 'block' }}>Username</label>
-              <input
-                type="text"
-                placeholder="Choose a username"
-                required
-                value={switchUsername}
-                onChange={e => setSwitchUsername(e.target.value)}
-                style={{
-                  width: '100%', borderRadius: '16px', background: isDark ? '#16161a' : '#f9fafb',
-                  color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
-                  padding: '14px 18px', outline: 'none', fontSize: 14
-                }}
-              />
-            </div>
+          <form onSubmit={handleSwitchLogin} className="space-y-3">
+            <input
+              type="text"
+              placeholder="Username or Email Address"
+              required
+              value={switchEmail}
+              onChange={e => setSwitchEmail(e.target.value)}
+              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
+            />
 
-            <div style={{ textAlign: 'left' }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#a1a1aa' : '#4b5563', marginBottom: 6, display: 'block' }}>Email Address</label>
-              <input
-                type="email"
-                placeholder="name@example.com"
-                required
-                value={switchEmail}
-                onChange={e => setSwitchEmail(e.target.value)}
-                style={{
-                  width: '100%', borderRadius: '16px', background: isDark ? '#16161a' : '#f9fafb',
-                  color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
-                  padding: '14px 18px', outline: 'none', fontSize: 14
-                }}
-              />
-            </div>
-
-            <div style={{ textAlign: 'left' }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#a1a1aa' : '#4b5563', marginBottom: 6, display: 'block' }}>Password</label>
-              <input
-                type="password"
-                placeholder="Create a strong password"
-                required
-                value={switchPassword}
-                onChange={e => setSwitchPassword(e.target.value)}
-                style={{
-                  width: '100%', borderRadius: '16px', background: isDark ? '#16161a' : '#f9fafb',
-                  color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
-                  padding: '14px 18px', outline: 'none', fontSize: 14
-                }}
-              />
-            </div>
+            <input
+              type="password"
+              placeholder="Password"
+              required
+              value={switchPassword}
+              onChange={e => setSwitchPassword(e.target.value)}
+              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
+            />
 
             <button
               type="submit"
               disabled={switchLoading}
-              style={{
-                width: '100%', padding: '16px 0', background: '#22c55e', color: '#ffffff',
-                borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 14,
-                opacity: switchLoading ? 0.6 : 1, transition: 'all 0.2s', marginTop: 10,
-                boxShadow: '0 4px 14px rgba(34, 197, 94, 0.35)'
-              }}
+              className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
             >
-              {switchLoading ? 'Creating Account...' : 'Create Account'}
+              {switchLoading ? 'Signing In...' : 'Sign In'}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* 4. Create New Account — Charcoal Black Bottom Popup Sheet */}
+      <div
+        className={`fixed inset-0 z-[9999] transition-opacity duration-500 ${activeAccountSheet === 'signUp' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+      >
+        <div 
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+          onClick={() => triggerAccountSheetTransition('signIn')}
+        />
+        <div 
+          className={`absolute bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${activeAccountSheet === 'signUp' ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
+        >
+          {/* Top bar back button */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              type="button"
+              onClick={() => triggerAccountSheetTransition('signIn')}
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
+              title="Back"
+            >
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+            <div className="w-12 h-1 bg-[#27272a] rounded-full" />
+            <div className="w-10" />
+          </div>
+
+          {switchError && (
+            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
+              {switchError}
+            </div>
+          )}
+
+          <form onSubmit={handleSwitchSignup} className="space-y-3">
+            <input
+              type="text"
+              placeholder="Username / Full Name"
+              required
+              value={switchUsername}
+              onChange={e => setSwitchUsername(e.target.value)}
+              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
+            />
+
+            <input
+              type="email"
+              placeholder="Email Address"
+              required
+              value={switchEmail}
+              onChange={e => setSwitchEmail(e.target.value)}
+              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
+            />
+
+            <input
+              type="tel"
+              placeholder="+92 300 0000000"
+              required
+              value={switchPhone}
+              onChange={e => setSwitchPhone(e.target.value)}
+              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
+            />
+
+            <input
+              type="password"
+              placeholder="Password"
+              required
+              value={switchPassword}
+              onChange={e => setSwitchPassword(e.target.value)}
+              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
+            />
+
+            <button
+              type="submit"
+              disabled={switchLoading}
+              className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
+            >
+              {switchLoading ? 'Creating Account...' : 'Sign Up'}
             </button>
           </form>
         </div>
