@@ -8,7 +8,8 @@ export async function getAccountsCenterOverview() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) throw new Error('Unauthorized');
 
-  const user = await prisma.user.findUnique({
+  const db = prisma as any;
+  const user = await db.user.findUnique({
     where: { email: session.user.email },
     include: {
       profileSync: true,
@@ -27,27 +28,28 @@ export async function getAccountsCenterOverview() {
 
   // Initialize defaults if null
   if (!user.profileSync) {
-    await prisma.profileSyncSetting.create({
+    await db.profileSyncSetting.create({
       data: { userId: user.id, syncPolicy: 'FULL_SYNC', syncName: true, syncBio: true, syncAvatar: true },
     });
   }
 
   if (!user.securitySetting) {
-    await prisma.securitySetting.create({
+    await db.securitySetting.create({
       data: { userId: user.id, isTwoFactorEnabled: false, loginAlertsEmail: true, loginAlertsPush: true },
     });
   }
 
   if (!user.adPreference) {
-    await prisma.adPreference.create({
+    await db.adPreference.create({
       data: { userId: user.id, sensitiveTopicsHidden: ['Gambling', 'Politics'], usePartnerData: true, personalizedAds: true },
     });
   }
 
   // Ensure current session exists in ActiveSessions
-  const existingCurrent = user.activeSessions.find((s) => s.isCurrent);
+  const activeSessions: any[] = user.activeSessions || [];
+  const existingCurrent = activeSessions.find((s: any) => s.isCurrent);
   if (!existingCurrent) {
-    await prisma.activeSession.create({
+    await db.activeSession.create({
       data: {
         userId: user.id,
         sessionToken: `sess_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
@@ -61,7 +63,7 @@ export async function getAccountsCenterOverview() {
     });
   }
 
-  const updatedUser = await prisma.user.findUnique({
+  const updatedUser = await db.user.findUnique({
     where: { email: session.user.email },
     include: {
       profileSync: true,
@@ -86,7 +88,7 @@ export async function updateProfileSyncAction(data: { syncPolicy: string; syncNa
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) throw new Error('User not found');
 
-  return await prisma.profileSyncSetting.upsert({
+  return await (prisma as any).profileSyncSetting.upsert({
     where: { userId: user.id },
     update: data,
     create: { userId: user.id, ...data },
@@ -100,7 +102,7 @@ export async function toggleTwoFactorAction(enabled: boolean) {
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) throw new Error('User not found');
 
-  return await prisma.securitySetting.upsert({
+  return await (prisma as any).securitySetting.upsert({
     where: { userId: user.id },
     update: { isTwoFactorEnabled: enabled },
     create: { userId: user.id, isTwoFactorEnabled: enabled },
@@ -113,7 +115,7 @@ export async function revokeActiveSessionAction(sessionId: string) {
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) throw new Error('User not found');
 
-  return await prisma.activeSession.delete({
+  return await (prisma as any).activeSession.delete({
     where: { id: sessionId, userId: user.id },
   });
 }
@@ -125,7 +127,7 @@ export async function clearOffPlatformDataAction() {
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) throw new Error('User not found');
 
-  return await prisma.offPlatformActivity.updateMany({
+  return await (prisma as any).offPlatformActivity.updateMany({
     where: { userId: user.id },
     data: { isCleared: true },
   });
@@ -137,7 +139,7 @@ export async function clearSearchHistoryAction() {
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) throw new Error('User not found');
 
-  return await prisma.searchHistory.deleteMany({
+  return await (prisma as any).searchHistory.deleteMany({
     where: { userId: user.id },
   });
 }
@@ -148,7 +150,7 @@ export async function requestDataExportAction(format: 'JSON' | 'HTML') {
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) throw new Error('User not found');
 
-  return await prisma.dataExportJob.create({
+  return await (prisma as any).dataExportJob.create({
     data: {
       userId: user.id,
       exportFormat: format,
@@ -165,7 +167,7 @@ export async function updateAdPreferencesAction(sensitiveTopics: string[], usePa
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) throw new Error('User not found');
 
-  return await prisma.adPreference.upsert({
+  return await (prisma as any).adPreference.upsert({
     where: { userId: user.id },
     update: { sensitiveTopicsHidden: sensitiveTopics, usePartnerData },
     create: { userId: user.id, sensitiveTopicsHidden: sensitiveTopics, usePartnerData },
@@ -178,7 +180,7 @@ export async function addPaymentVaultTokenAction(data: { cardBrand: string; card
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) throw new Error('User not found');
 
-  return await prisma.paymentVaultToken.create({
+  return await (prisma as any).paymentVaultToken.create({
     data: {
       userId: user.id,
       provider: 'STRIPE',
