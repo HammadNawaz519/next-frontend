@@ -4,12 +4,12 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { signOut, signIn } from 'next-auth/react';
 import { useTheme } from '@/app/components/ThemeProvider';
 import { DeviceAccountStore, DeviceAccountMeta } from '@/lib/deviceAccountStore';
-import { 
-  updateProfileDetails, 
-  updateProfileImageAction, 
-  getFollowRequests, 
-  respondToFollowRequest, 
-  createPostAction, 
+import {
+  updateProfileDetails,
+  updateProfileImageAction,
+  getFollowRequests,
+  respondToFollowRequest,
+  createPostAction,
   deletePostAction,
   toggleProfilePrivacy,
   getSavedPostsAction
@@ -55,27 +55,27 @@ interface Props {
 }
 
 /* ─── Default data ─── */
-const DEFAULT_POSTS: Post[]   = [];
-const DEFAULT_REELS: Post[]   = [];
-const DEFAULT_TAGGED: Post[]  = [];
+const DEFAULT_POSTS: Post[] = [];
+const DEFAULT_REELS: Post[] = [];
+const DEFAULT_TAGGED: Post[] = [];
 
 /* ─── Icon helpers ─── */
 const CarouselIcon = () => (
-  <svg width="16" height="16" fill="#fff" viewBox="0 0 24 24" style={{filter:'drop-shadow(0 1px 2px rgba(0,0,0,.5))'}}>
-    <path d="M2 6a2 2 0 012-2h11a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm16 1.5v5a3.5 3.5 0 01-3.5 3.5H7A3.5 3.5 0 0110.5 19H18a3.5 3.5 0 003.5-3.5V9l-3.5-1.5z"/>
+  <svg width="16" height="16" fill="#fff" viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,.5))' }}>
+    <path d="M2 6a2 2 0 012-2h11a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm16 1.5v5a3.5 3.5 0 01-3.5 3.5H7A3.5 3.5 0 0110.5 19H18a3.5 3.5 0 003.5-3.5V9l-3.5-1.5z" />
   </svg>
 );
 const ReelIcon = () => (
-  <svg width="16" height="16" fill="#fff" viewBox="0 0 24 24" style={{filter:'drop-shadow(0 1px 2px rgba(0,0,0,.5))'}}>
-    <path d="M8 5v14l11-7z"/>
+  <svg width="16" height="16" fill="#fff" viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,.5))' }}>
+    <path d="M8 5v14l11-7z" />
   </svg>
 );
 
 const DefaultAvatarSvg = ({ size = 32, color, style }: { size?: number; color?: string; style?: React.CSSProperties }) => (
-  <img 
-    src="/Avatar.avif" 
-    alt="Default Avatar" 
-    style={{ display: 'block', width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', ...style }} 
+  <img
+    src="/Avatar.avif"
+    alt="Default Avatar"
+    style={{ display: 'block', width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', ...style }}
   />
 );
 
@@ -91,10 +91,10 @@ export default function ProfilePanel({
   onOpenUpload,
 }: Props) {
   const { theme, toggleTheme } = useTheme();
-  const [activeTab, setActiveTab]         = useState<'grid'|'reels'|'tagged'>('grid');
-  const [copyToast, setCopyToast]         = useState(false);
+  const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'tagged'>('grid');
+  const [copyToast, setCopyToast] = useState(false);
   const [savedPostsList, setSavedPostsList] = useState<any[]>([]);
-  const [loadingSaved, setLoadingSaved]     = useState(false);
+  const [loadingSaved, setLoadingSaved] = useState(false);
 
   // Switch account state
   const [activeAccountSheet, setActiveAccountSheet] = useState<'none' | 'accounts' | 'options' | 'signIn' | 'signUp' | 'verify' | 'success'>('none');
@@ -246,7 +246,7 @@ export default function ProfilePanel({
             provider: 'credentials' as const,
           };
           await DeviceAccountStore.addOrUpdateAccount(tempMeta, true);
-        } catch (e) {}
+        } catch (e) { }
 
         if (refreshProfile) refreshProfile();
         triggerAccountSheetTransition('none');
@@ -313,7 +313,7 @@ export default function ProfilePanel({
               list.push({ email: switchEmail, password: switchPassword, provider: 'credentials' });
             }
             localStorage.setItem('connected_accounts', JSON.stringify(list));
-          } catch (e) {}
+          } catch (e) { }
           triggerAccountSheetTransition('success');
         } else {
           setSwitchError('Verified! Please sign in.');
@@ -328,17 +328,17 @@ export default function ProfilePanel({
   };
 
   /* Multi-page Navigation States */
-  const [subView, setSubView]             = useState<'profile' | 'followers' | 'following' | 'edit_profile' | 'follow_requests' | 'settings' | 'notifications' | 'saved'>('profile');
-  const [searchQuery, setSearchQuery]     = useState('');
+  const [subView, setSubView] = useState<'profile' | 'followers' | 'following' | 'edit_profile' | 'follow_requests' | 'settings' | 'notifications' | 'saved'>('profile');
+  const [searchQuery, setSearchQuery] = useState('');
   const [longPressedPostId, setLongPressedPostId] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   /* Form edit states */
-  const [editName, setEditName]           = useState('');
-  const [editUsername, setEditUsername]   = useState('');
-  const [editBio, setEditBio]             = useState('');
-  const [editWebsite, setEditWebsite]     = useState('');
-  const [profileError, setProfileError]   = useState('');
+  const [editName, setEditName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [editWebsite, setEditWebsite] = useState('');
+  const [profileError, setProfileError] = useState('');
 
   /* Preferences toggles (no emojis) */
   const [prefNotifications, setPrefNotifications] = useState(true);
@@ -379,10 +379,10 @@ export default function ProfilePanel({
       if (isClosing) {
         onAccountSheetChange(false);
       } else {
-        const shouldHideBottomNav = 
-          activeAccountSheet !== 'none' || 
-          showAvatarModal || 
-          subView !== 'profile' || 
+        const shouldHideBottomNav =
+          activeAccountSheet !== 'none' ||
+          showAvatarModal ||
+          subView !== 'profile' ||
           !isOwnProfile;
         onAccountSheetChange(shouldHideBottomNav);
       }
@@ -390,21 +390,21 @@ export default function ProfilePanel({
   }, [activeAccountSheet, showAvatarModal, subView, isOwnProfile, isClosing, onAccountSheetChange]);
 
   /* Derived profile data from Database */
-  const name     = fullUser?.name     || session?.user?.name  || 'User';
-  const email    = fullUser?.email    || session?.user?.email || '';
-  const image    = fullUser?.image    || session?.user?.image;
-  const username = (fullUser?.username || email.split('@')[0] || 'user').toLowerCase().replace(/\s+/g,'');
-  const bio      = fullUser?.bio      || '';
-  const website  = fullUser?.website  || '';
+  const name = fullUser?.name || session?.user?.name || 'User';
+  const email = fullUser?.email || session?.user?.email || '';
+  const image = fullUser?.image || session?.user?.image;
+  const username = (fullUser?.username || email.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, '');
+  const bio = fullUser?.bio || '';
+  const website = fullUser?.website || '';
 
   // Actual DB entries
-  const dbPosts   = fullUser?.posts || [];
+  const dbPosts = fullUser?.posts || [];
   const followersList = fullUser?.followers || [];
   const followingList = fullUser?.following || [];
   const followRequestsList = fullUser?.receivedFollowRequests || [];
 
-  const metrics  = {
-    posts:     dbPosts.length,
+  const metrics = {
+    posts: dbPosts.length,
     followers: followersList.length,
     following: followingList.length,
   };
@@ -522,20 +522,20 @@ export default function ProfilePanel({
 
   /* Share / copy handler */
   const handleShare = useCallback(async () => {
-    const url  = typeof window !== 'undefined' ? window.location.href : '';
+    const url = typeof window !== 'undefined' ? window.location.href : '';
     const data = { title: name, text: `Check out ${name} on Connect!`, url };
     if (navigator.share) {
-      try { await navigator.share(data); return; } catch {}
+      try { await navigator.share(data); return; } catch { }
     }
     try {
       await navigator.clipboard.writeText(url);
       setCopyToast(true);
       setTimeout(() => setCopyToast(false), 2500);
-    } catch {}
+    } catch { }
   }, [name]);
 
   /* Grid content per tab from DB */
-  const gridItems = activeTab === 'reels' 
+  const gridItems = activeTab === 'reels'
     ? dbPosts.filter((p: any) => p.postType === 'reel')
     : activeTab === 'tagged'
       ? []
@@ -543,12 +543,12 @@ export default function ProfilePanel({
 
   if (!isOpen) return null;
 
-  const border  = isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0';
-  const txt     = isDark ? '#fff'    : '#111';
-  const sub     = isDark ? '#a1a1aa' : '#6b7280';
-  const btnBg   = isDark ? 'rgba(255,255,255,0.10)' : '#f3f4f6';
-  const btnBdr  = isDark ? 'rgba(255,255,255,0.15)' : '#e5e7eb';
-  const bg      = isDark ? '#1c1c1e' : '#ffffff';
+  const border = isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0';
+  const txt = isDark ? '#fff' : '#111';
+  const sub = isDark ? '#a1a1aa' : '#6b7280';
+  const btnBg = isDark ? 'rgba(255,255,255,0.10)' : '#f3f4f6';
+  const btnBdr = isDark ? 'rgba(255,255,255,0.15)' : '#e5e7eb';
+  const bg = isDark ? '#1c1c1e' : '#ffffff';
 
   /* Long press handler for touch & mouse */
   let pressTimer: NodeJS.Timeout;
@@ -569,8 +569,8 @@ export default function ProfilePanel({
     <div
       className={isClosing ? 'ig-profile-exit' : 'ig-profile-enter'}
       style={{
-        position:'absolute', inset:0, zIndex:60, display:'flex',
-        flexDirection:'column', overflow:'hidden',
+        position: 'absolute', inset: 0, zIndex: 60, display: 'flex',
+        flexDirection: 'column', overflow: 'hidden',
         background: isDark ? '#0e0e11' : '#fff',
       }}
     >
@@ -581,10 +581,10 @@ export default function ProfilePanel({
       <div
         style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
-          background: isDark ? '#1c1c1e' : '#ffffff', 
-          borderTop: `1px solid ${border}`, 
+          background: isDark ? '#1c1c1e' : '#ffffff',
+          borderTop: `1px solid ${border}`,
           borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
-          padding: '24px 24px 32px', 
+          padding: '24px 24px 32px',
           boxShadow: isDark ? '0 -15px 40px rgba(0,0,0,0.4)' : '0 -15px 40px rgba(0,0,0,0.15)',
           transform: (showAvatarModal && isOwnProfile) ? 'translateY(0)' : 'translateY(100%)',
           opacity: (showAvatarModal && isOwnProfile) ? 1 : 0,
@@ -594,7 +594,7 @@ export default function ProfilePanel({
       >
         <div style={{ width: 48, height: 4, background: isDark ? '#3a3a3c' : '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
         <h2 style={{ fontSize: 18, fontWeight: 800, color: txt, marginBottom: 18, textAlign: 'center' }}>Change Profile Picture</h2>
-        
+
         {isAvatarUploading ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 0', gap: 12 }}>
             <div className="w-8 h-8 rounded-full border-3 border-t-transparent border-blue-500 animate-spin" />
@@ -605,18 +605,18 @@ export default function ProfilePanel({
             {/* Direct File Upload Option */}
             <label style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px',
-              background: '#0095f6', 
-              color: '#ffffff', 
+              background: '#0095f6',
+              color: '#ffffff',
               borderRadius: '100px',
-              fontWeight: 700, 
-              fontSize: 14, 
-              cursor: 'pointer', 
-              textAlign: 'center', 
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: 'pointer',
+              textAlign: 'center',
               transition: 'all 0.2s',
               boxShadow: '0 4px 12px rgba(0, 149, 246, 0.25)'
             }}>
               Upload New Photo
-              <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isAvatarUploading} style={{display: 'none'}} />
+              <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isAvatarUploading} style={{ display: 'none' }} />
             </label>
 
             {/* Remove Picture Option */}
@@ -643,16 +643,16 @@ export default function ProfilePanel({
           </div>
         )}
 
-        <button 
-          onClick={() => setShowAvatarModal(false)} 
+        <button
+          onClick={() => setShowAvatarModal(false)}
           disabled={isAvatarUploading}
           style={{
-            width: '100%', 
-            padding: '12px 0', 
-            background: 'none', 
-            color: sub, 
-            fontWeight: 600, 
-            fontSize: 14, 
+            width: '100%',
+            padding: '12px 0',
+            background: 'none',
+            color: sub,
+            fontWeight: 600,
+            fontSize: 14,
             cursor: 'pointer',
             border: 'none'
           }}
@@ -663,7 +663,7 @@ export default function ProfilePanel({
 
       {/* ── Fullscreen Avatar Preview Lightbox Modal ── */}
       {showAvatarPreview && (
-        <div 
+        <div
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in"
           onClick={() => setShowAvatarPreview(false)}
         >
@@ -673,8 +673,8 @@ export default function ProfilePanel({
               <span className="text-white font-bold text-base">{name}</span>
               <span className="text-white/60 text-xs">@{username}</span>
             </div>
-            <button 
-              onClick={() => setShowAvatarPreview(false)} 
+            <button
+              onClick={() => setShowAvatarPreview(false)}
               className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
             >
               <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
@@ -684,7 +684,7 @@ export default function ProfilePanel({
           </div>
 
           {/* Large Avatar Card */}
-          <div 
+          <div
             className="w-72 h-72 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-white/20 shadow-2xl bg-zinc-900 flex items-center justify-center transition-transform transform hover:scale-[1.02]"
             onClick={e => e.stopPropagation()}
           >
@@ -694,30 +694,30 @@ export default function ProfilePanel({
               <DefaultAvatarSvg size={180} color="#ffffff" />
             )}
           </div>
-          
+
           <p className="text-white/70 text-xs mt-6 font-medium">Tap anywhere to close</p>
         </div>
       )}
 
       {/* ── Center Confirm Delete Post Modal ── */}
       {longPressedPostId && isOwnProfile && (
-        <div 
+        <div
           style={{
             position: 'fixed', inset: 0, zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-          }} 
+          }}
           onClick={() => setLongPressedPostId(null)}
         >
-          <div 
+          <div
             style={{
               width: '80%', maxWidth: 300, background: isDark ? '#1c1c1e' : '#fff', borderRadius: '24px', padding: 24,
               boxShadow: '0 8px 32px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center'
-            }} 
+            }}
             onClick={e => e.stopPropagation()}
           >
-            <h4 style={{margin: 0, fontSize: 16, fontWeight: 700, color: txt, textAlign: 'center'}}>Delete this post?</h4>
-            <p style={{margin: 0, fontSize: 13, color: sub, textAlign: 'center'}}>This action is permanent and will remove it from the database.</p>
-            <div style={{display: 'flex', gap: 12, width: '100%', marginTop: 8}}>
+            <h4 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: txt, textAlign: 'center' }}>Delete this post?</h4>
+            <p style={{ margin: 0, fontSize: 13, color: sub, textAlign: 'center' }}>This action is permanent and will remove it from the database.</p>
+            <div style={{ display: 'flex', gap: 12, width: '100%', marginTop: 8 }}>
               <button
                 onClick={() => setLongPressedPostId(null)}
                 style={{
@@ -744,9 +744,9 @@ export default function ProfilePanel({
       {/* ── Copy toast ── */}
       {copyToast && (
         <div style={{
-          position:'absolute', bottom:80, left:'50%', transform:'translateX(-50%)',
-          background:'#10b981', color:'#fff', padding:'8px 20px',
-          borderRadius:100, fontSize:13, fontWeight:600, zIndex:99, whiteSpace:'nowrap',
+          position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+          background: '#10b981', color: '#fff', padding: '8px 20px',
+          borderRadius: 100, fontSize: 13, fontWeight: 600, zIndex: 99, whiteSpace: 'nowrap',
         }}>
           Link copied to clipboard
         </div>
@@ -759,8 +759,8 @@ export default function ProfilePanel({
         <>
           {/* Top Nav Bar */}
           <div style={{
-            display:'flex', alignItems:'center', justifyContent:'space-between',
-            padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
           }}>
             <button onClick={(e) => (onClose as any)(e)} style={{
               background: 'none', border: 'none', cursor: 'pointer',
@@ -768,11 +768,11 @@ export default function ProfilePanel({
               color: txt, padding: 0
             }}>
               <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </button>
 
-            <span 
+            <span
               onClick={() => triggerAccountSheetTransition('options')}
               style={{
                 fontWeight: 700,
@@ -785,32 +785,32 @@ export default function ProfilePanel({
               }}
             >
               {username}
-              <svg 
-                width="14" 
-                height="14" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2.5" 
-                viewBox="0 0 24 24" 
-                style={{ 
-                  transform: (activeAccountSheet === 'options' || activeAccountSheet === 'accounts') ? 'rotate(180deg)' : 'none', 
-                  transition: 'transform 0.25s ease' 
+              <svg
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                viewBox="0 0 24 24"
+                style={{
+                  transform: (activeAccountSheet === 'options' || activeAccountSheet === 'accounts') ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.25s ease'
                 }}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
             </span>
 
-            <div style={{display:'flex', gap:3, alignItems:'center'}}>
+            <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
               {/* Options/Settings trigger - only for own profile */}
               {isOwnProfile && (
-                <button 
-                  onClick={() => setSubView('settings')} 
+                <button
+                  onClick={() => setSubView('settings')}
                   style={{
-                    width:36, height:36, borderRadius:'50%', border:'none', cursor:'pointer',
-                    display:'flex', alignItems:'center', justifyContent:'center',
-                    background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color:txt,
-                    transition:'all 0.2s'
+                    width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: txt,
+                    transition: 'all 0.2s'
                   }}
                   title="Settings & Privacy"
                 >
@@ -823,10 +823,10 @@ export default function ProfilePanel({
             </div>
           </div>
 
-          <div style={{flex:1, overflowY:'auto'}}>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
             {/* Header (Stats) */}
-            <div style={{display:'flex', alignItems:'center', padding:'16px 16px 8px', gap:24}}>
-              <div 
+            <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 8px', gap: 24 }}>
+              <div
                 onMouseDown={handleAvatarTouchStart}
                 onMouseUp={handleAvatarTouchEnd}
                 onMouseLeave={handleAvatarTouchEnd}
@@ -839,84 +839,84 @@ export default function ProfilePanel({
                   else setShowAvatarPreview(true);
                 }}
                 style={{
-                  width:80, height:80, borderRadius:'50%', flexShrink:0,
-                  background: isDark ? '#26262d':'#e5e7eb',
-                  border:`0.5px solid ${isDark ? 'rgba(255,255,255,0.15)':'#d1d5db'}`,
-                  overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center',
+                  width: 80, height: 80, borderRadius: '50%', flexShrink: 0,
+                  background: isDark ? '#26262d' : '#e5e7eb',
+                  border: `0.5px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db'}`,
+                  overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', position: 'relative'
                 }}
                 title={isOwnProfile ? "Tap to change picture, hold to view full size" : "Hold to view full size"}
               >
                 {image
-                  ? <img src={image} alt={name} style={{width:'100%',height:'100%',objectFit:'cover'}} referrerPolicy="no-referrer"/>
+                  ? <img src={image} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
                   : <DefaultAvatarSvg size={60} color={isDark ? '#fff' : '#374151'} />
                 }
               </div>
 
               {/* Stats */}
-              <div style={{flex:1, display:'flex', justifyContent:'space-around'}}>
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around' }}>
                 {[
-                  { num: metrics.posts,     label:'Posts', action: () => {} },
-                  { num: metrics.followers, label:'Followers', action: () => { if (!isPrivateAndUnfollowed) setSubView('followers'); } },
-                  { num: metrics.following, label:'Following', action: () => { if (!isPrivateAndUnfollowed) setSubView('following'); } },
+                  { num: metrics.posts, label: 'Posts', action: () => { } },
+                  { num: metrics.followers, label: 'Followers', action: () => { if (!isPrivateAndUnfollowed) setSubView('followers'); } },
+                  { num: metrics.following, label: 'Following', action: () => { if (!isPrivateAndUnfollowed) setSubView('following'); } },
                 ].map(s => (
-                  <div key={s.label} onClick={s.action} style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2, cursor: isPrivateAndUnfollowed ? 'default' : 'pointer'}}>
-                    <span style={{fontWeight:700, fontSize:17, color:txt}}>{s.num}</span>
-                    <span style={{fontSize:12, color:sub}}>{s.label}</span>
+                  <div key={s.label} onClick={s.action} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, cursor: isPrivateAndUnfollowed ? 'default' : 'pointer' }}>
+                    <span style={{ fontWeight: 700, fontSize: 17, color: txt }}>{s.num}</span>
+                    <span style={{ fontSize: 12, color: sub }}>{s.label}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Bio Section */}
-            <div style={{padding:'4px 16px 12px', display:'flex', flexDirection:'column', gap:3}}>
-              <span style={{fontWeight:700, fontSize:14, color:txt}}>{name}</span>
+            <div style={{ padding: '4px 16px 12px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontWeight: 700, fontSize: 14, color: txt }}>{name}</span>
               {bio && bio.split('\n').map((line: string, i: number) => (
-                <span key={i} style={{fontSize:13, color:sub}}>{line}</span>
+                <span key={i} style={{ fontSize: 13, color: sub }}>{line}</span>
               ))}
-              
+
               {website && (
                 <a
                   href={website.startsWith('http') ? website : `https://${website}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{display:'flex', alignItems:'center', gap:4, textDecoration:'none', marginTop:2}}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none', marginTop: 2 }}
                 >
                   <svg width="12" height="12" fill="none" stroke={sub} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
-                  <span style={{fontSize:12, color:sub, fontWeight:600}}>{website}</span>
+                  <span style={{ fontSize: 12, color: sub, fontWeight: 600 }}>{website}</span>
                 </a>
               )}
             </div>
 
             {/* Action Buttons */}
-            <div style={{display:'flex', padding:'0 16px 12px', gap:8}}>
+            <div style={{ display: 'flex', padding: '0 16px 12px', gap: 8 }}>
               {isOwnProfile ? (
                 <>
                   <button onClick={() => setSubView('edit_profile')} style={{
-                    flex:1, padding:'8px', borderRadius:'20px', fontWeight:600, fontSize:13,
-                    background:btnBg, border:`1px solid ${btnBdr}`, color:txt, cursor:'pointer', transition:'all 0.2s',
+                    flex: 1, padding: '8px', borderRadius: '20px', fontWeight: 600, fontSize: 13,
+                    background: btnBg, border: `1px solid ${btnBdr}`, color: txt, cursor: 'pointer', transition: 'all 0.2s',
                   }}>
                     Edit Profile
                   </button>
                   <button onClick={handleShare} style={{
-                    flex:1, padding:'8px', borderRadius:'20px', fontWeight:600, fontSize:13,
-                    background:btnBg, border:`1px solid ${btnBdr}`, color:txt, cursor:'pointer', transition:'all 0.2s',
+                    flex: 1, padding: '8px', borderRadius: '20px', fontWeight: 600, fontSize: 13,
+                    background: btnBg, border: `1px solid ${btnBdr}`, color: txt, cursor: 'pointer', transition: 'all 0.2s',
                   }}>
                     Share Profile
                   </button>
                 </>
               ) : (
                 <>
-                  <button 
-                    onClick={() => onToggleFollow && onToggleFollow(targetUser.id)} 
+                  <button
+                    onClick={() => onToggleFollow && onToggleFollow(targetUser.id)}
                     style={{
-                      flex:1, padding:'8px', borderRadius:'20px', fontWeight:600, fontSize:13,
-                      background: targetUser?.isFollowing 
-                        ? btnBg 
-                        : targetUser?.hasSentRequest 
-                          ? btnBg 
+                      flex: 1, padding: '8px', borderRadius: '20px', fontWeight: 600, fontSize: 13,
+                      background: targetUser?.isFollowing
+                        ? btnBg
+                        : targetUser?.hasSentRequest
+                          ? btnBg
                           : (isDark ? '#fff' : '#111'),
                       border: targetUser?.isFollowing || targetUser?.hasSentRequest
                         ? `1px solid ${btnBdr}`
@@ -924,19 +924,19 @@ export default function ProfilePanel({
                       color: targetUser?.isFollowing || targetUser?.hasSentRequest
                         ? txt
                         : (isDark ? '#000' : '#fff'),
-                      cursor:'pointer', transition:'all 0.2s',
+                      cursor: 'pointer', transition: 'all 0.2s',
                     }}
                   >
-                    {targetUser?.isFollowing 
-                      ? 'Following' 
-                      : targetUser?.hasSentRequest 
-                        ? 'Requested' 
+                    {targetUser?.isFollowing
+                      ? 'Following'
+                      : targetUser?.hasSentRequest
+                        ? 'Requested'
                         : targetUser?.isPrivate
                           ? 'Request'
                           : 'Follow'}
                   </button>
                   {!isPrivateAndUnfollowed && (
-                    <button 
+                    <button
                       onClick={() => {
                         if (onOpenChat) {
                           onOpenChat(targetUser);
@@ -944,10 +944,10 @@ export default function ProfilePanel({
                           onClose();
                           window.location.href = `/dashboard?chat=${targetUser.id}`;
                         }
-                      }} 
+                      }}
                       style={{
-                        flex:1, padding:'8px', borderRadius:'20px', fontWeight:600, fontSize:13,
-                        background:btnBg, border:`1px solid ${btnBdr}`, color:txt, cursor:'pointer', transition:'all 0.2s',
+                        flex: 1, padding: '8px', borderRadius: '20px', fontWeight: 600, fontSize: 13,
+                        background: btnBg, border: `1px solid ${btnBdr}`, color: txt, cursor: 'pointer', transition: 'all 0.2s',
                       }}
                     >
                       Message
@@ -965,7 +965,7 @@ export default function ProfilePanel({
                 marginTop: 20
               }}>
                 <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: sub }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: txt }}>This account is private</h3>
                 <p style={{ fontSize: 13, color: sub, maxWidth: 260 }}>Follow this account to see their posts and reels.</p>
@@ -976,23 +976,23 @@ export default function ProfilePanel({
 
                 {/* Tab Navigation */}
                 <div style={{
-                  display:'flex', justifyContent:'space-around', alignItems:'center',
-                  borderTop:`1px solid ${border}`, borderBottom:`1px solid ${border}`,
+                  display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+                  borderTop: `1px solid ${border}`, borderBottom: `1px solid ${border}`,
                 }}>
                   {([
-                    { id:'grid'   as const, icon:<svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M3 3h7v7H3zm0 11h7v7H3zm11-11h7v7h-7zm0 11h7v7h-7z"/></svg> },
-                    { id:'reels'  as const, icon:<svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/></svg> },
-                    { id:'tagged' as const, icon:<svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg> },
+                    { id: 'grid' as const, icon: <svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M3 3h7v7H3zm0 11h7v7H3zm11-11h7v7h-7zm0 11h7v7h-7z" /></svg> },
+                    { id: 'reels' as const, icon: <svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" /></svg> },
+                    { id: 'tagged' as const, icon: <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> },
                   ]).map(tab => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
                       style={{
-                        flex:1, display:'flex', justifyContent:'center', padding:'12px 0',
-                        background:'none', border:'none', cursor:'pointer',
+                        flex: 1, display: 'flex', justifyContent: 'center', padding: '12px 0',
+                        background: 'none', border: 'none', cursor: 'pointer',
                         borderBottom: activeTab === tab.id ? `2px solid ${txt}` : '2px solid transparent',
                         color: activeTab === tab.id ? txt : sub,
-                        transition:'all 0.2s',
+                        transition: 'all 0.2s',
                       }}
                     >
                       {tab.icon}
@@ -1029,7 +1029,7 @@ export default function ProfilePanel({
                 )}
 
                 {/* Dynamic Content Grid */}
-                <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:2}}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 2 }}>
                   {gridItems.map((post: any, i: number) => (
                     <div
                       key={post.id}
@@ -1042,30 +1042,30 @@ export default function ProfilePanel({
                         if (typeof window !== 'undefined') window.location.href = `/p/${post.id}`;
                       }}
                       style={{
-                        aspectRatio:'1/1', position:'relative', overflow:'hidden', cursor:'pointer',
+                        aspectRatio: '1/1', position: 'relative', overflow: 'hidden', cursor: 'pointer',
                         background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
                       }}
                     >
                       {post.thumbnailUrl ? (
-                        <img 
-                          src={post.thumbnailUrl} 
-                          alt="thumbnail" 
-                          style={{width:'100%',height:'100%',objectFit:'cover'}}
+                        <img
+                          src={post.thumbnailUrl}
+                          alt="thumbnail"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       ) : (
                         <div style={{
-                          width:'100%', height:'100%',
+                          width: '100%', height: '100%',
                           background: isDark ? `hsl(${post.hue || 200},40%,22%)` : `hsl(${post.hue || 200},60%,92%)`,
-                          display:'flex', alignItems:'center', justifyContent:'center',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
-                          <span style={{fontSize:12, fontWeight:700, color: isDark ? '#fff':'#4b5563', textTransform:'uppercase'}}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? '#fff' : '#4b5563', textTransform: 'uppercase' }}>
                             {post.postType}
                           </span>
                         </div>
                       )}
 
                       {/* Icon overlay depending on media type */}
-                      <div style={{position:'absolute', top:8, right:8, zIndex:10}}>
+                      <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}>
                         {post.postType === 'carousel' && <CarouselIcon />}
                         {post.postType === 'reel' && <ReelIcon />}
                       </div>
@@ -1074,14 +1074,14 @@ export default function ProfilePanel({
                 </div>
 
                 {gridItems.length === 0 && (
-                  <div style={{padding:'60px 20px', textAlign:'center', color:sub, fontSize:14}}>
+                  <div style={{ padding: '60px 20px', textAlign: 'center', color: sub, fontSize: 14 }}>
                     No posts yet.
                   </div>
                 )}
               </>
             )}
 
-            <div style={{height: 100}} />
+            <div style={{ height: 100 }} />
           </div>
         </>
       )}
@@ -1096,27 +1096,27 @@ export default function ProfilePanel({
         <>
           {/* Top Navigation Bar */}
           <div style={{
-            display:'flex', alignItems:'center', justifyContent:'space-between',
-            padding:'16px 20px', borderBottom:`1px solid ${border}`, flexShrink:0,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 20px', borderBottom: `1px solid ${border}`, flexShrink: 0,
             background: isDark ? '#0e0e11' : '#fff'
           }}>
             <button onClick={() => setSubView('profile')} style={{
-              background:'none', border:'none', color:txt, cursor:'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center', padding:0
+              background: 'none', border: 'none', color: txt, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0
             }}>
               <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
 
-            <span style={{fontWeight:800, fontSize:17, color:txt, letterSpacing: '-0.02em'}}>Settings & Privacy</span>
+            <span style={{ fontWeight: 800, fontSize: 17, color: txt, letterSpacing: '-0.02em' }}>Settings & Privacy</span>
 
-            <div style={{width: 22}} />
+            <div style={{ width: 22 }} />
           </div>
 
           {/* Settings Options Scrollable Body */}
-          <div style={{flex:1, overflowY:'auto', padding:'20px 20px', display:'flex', flexDirection:'column', gap:20}}>
-            
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
             {/* User Profile Header Card */}
             <div style={{
               background: isDark ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)' : '#f9fafb',
@@ -1129,26 +1129,26 @@ export default function ProfilePanel({
                 background: isDark ? '#26262d' : '#e5e7eb', flexShrink: 0,
                 border: `2px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db'}`
               }}>
-                {image 
-                  ? <img src={image} alt={name} style={{width: '100%', height: '100%', objectFit: 'cover'}} referrerPolicy="no-referrer" />
+                {image
+                  ? <img src={image} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
                   : <DefaultAvatarSvg size={48} color={txt} />
                 }
               </div>
-              <div style={{display: 'flex', flexDirection: 'column', gap: 3}}>
-                <span style={{fontSize: 17, fontWeight: 800, color: txt}}>{name}</span>
-                <span style={{fontSize: 12, color: sub, fontWeight: 500}}>@{username} · {fullUser?.email || (username + '@connect.app')}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontSize: 17, fontWeight: 800, color: txt }}>{name}</span>
+                <span style={{ fontSize: 12, color: sub, fontWeight: 500 }}>@{username} · {fullUser?.email || (username + '@connect.app')}</span>
               </div>
             </div>
 
             {/* Account Settings Section */}
-            <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
-              <p style={{fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub, paddingLeft: 4, margin: 0}}>Account & Privacy</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub, paddingLeft: 4, margin: 0 }}>Account & Privacy</p>
               <div style={{
                 background: isDark ? 'rgba(255,255,255,0.02)' : '#fff',
                 border: `1px solid ${border}`, borderRadius: 20, overflow: 'hidden'
               }}>
                 {/* Manage Profile */}
-                <div 
+                <div
                   onClick={() => setSubView('edit_profile')}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -1156,35 +1156,35 @@ export default function ProfilePanel({
                     transition: 'background 0.15s'
                   }}
                 >
-                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                    <span style={{color: txt, display: 'flex', alignItems: 'center'}}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <span style={{ color: txt, display: 'flex', alignItems: 'center' }}>
                       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                     </span>
-                    <span style={{fontSize: 14, fontWeight: 600, color: txt}}>Edit Profile</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: txt }}>Edit Profile</span>
                   </div>
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: sub }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
 
                 {/* Private Account Switch Row */}
-                <div 
+                <div
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '16px 18px', borderBottom: `1px solid ${border}`
                   }}
                 >
-                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                    <span style={{color: txt, display: 'flex', alignItems: 'center'}}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <span style={{ color: txt, display: 'flex', alignItems: 'center' }}>
                       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
                     </span>
-                    <span style={{fontSize: 14, fontWeight: 600, color: txt}}>Private Account</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: txt }}>Private Account</span>
                   </div>
-                  <button 
+                  <button
                     onClick={() => handleTogglePrivacy(!fullUser?.isPrivate)}
                     style={{
                       width: 44, height: 24, borderRadius: 100, border: 'none',
@@ -1193,9 +1193,9 @@ export default function ProfilePanel({
                     }}
                   >
                     <div style={{
-                      width: 18, height: 18, borderRadius: '50%', 
+                      width: 18, height: 18, borderRadius: '50%',
                       background: fullUser?.isPrivate && isDark ? '#000' : '#fff',
-                      position: 'absolute', top: 3, 
+                      position: 'absolute', top: 3,
                       left: fullUser?.isPrivate ? 23 : 3,
                       transition: 'left 0.2s'
                     }} />
@@ -1203,37 +1203,37 @@ export default function ProfilePanel({
                 </div>
 
                 {/* Password & Security */}
-                <div 
+                <div
                   onClick={() => alert('Password & Security settings are synchronized with Prisma DB.')}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '16px 18px', cursor: 'pointer'
                   }}
                 >
-                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                    <span style={{color: txt, display: 'flex', alignItems: 'center'}}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <span style={{ color: txt, display: 'flex', alignItems: 'center' }}>
                       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                       </svg>
                     </span>
-                    <span style={{fontSize: 14, fontWeight: 600, color: txt}}>Password & Security</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: txt }}>Password & Security</span>
                   </div>
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: sub }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
               </div>
             </div>
 
             {/* Content & Display Section */}
-            <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
-              <p style={{fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub, paddingLeft: 4, margin: 0}}>Content & Display</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub, paddingLeft: 4, margin: 0 }}>Content & Display</p>
               <div style={{
                 background: isDark ? 'rgba(255,255,255,0.02)' : '#fff',
                 border: `1px solid ${border}`, borderRadius: 20, overflow: 'hidden'
               }}>
                 {/* Saved Posts & Reels */}
-                <div 
+                <div
                   onClick={() => {
                     setSubView('saved');
                     setLoadingSaved(true);
@@ -1252,75 +1252,75 @@ export default function ProfilePanel({
                     padding: '16px 18px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
                   }}
                 >
-                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                    <span style={{color: txt, display: 'flex', alignItems: 'center'}}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <span style={{ color: txt, display: 'flex', alignItems: 'center' }}>
                       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                       </svg>
                     </span>
-                    <span style={{fontSize: 14, fontWeight: 600, color: txt}}>Saved Posts & Reels</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: txt }}>Saved Posts & Reels</span>
                   </div>
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: sub }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
 
                 {/* Dark Theme */}
-                <div 
+                <div
                   onClick={toggleTheme}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '16px 18px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
                   }}
                 >
-                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                    <span style={{color: txt, display: 'flex', alignItems: 'center'}}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <span style={{ color: txt, display: 'flex', alignItems: 'center' }}>
                       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                       </svg>
                     </span>
-                    <span style={{fontSize: 14, fontWeight: 600, color: txt}}>Dark Theme</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: txt }}>Dark Theme</span>
                   </div>
-                  <span style={{fontSize: 12, fontWeight: 600, color: sub}}>{theme === 'dark' ? 'On' : 'Off'}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: sub }}>{theme === 'dark' ? 'On' : 'Off'}</span>
                 </div>
 
                 {/* Notifications */}
-                <div 
+                <div
                   onClick={() => setSubView('notifications')}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '16px 18px', cursor: 'pointer'
                   }}
                 >
-                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                    <span style={{color: txt, display: 'flex', alignItems: 'center'}}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <span style={{ color: txt, display: 'flex', alignItems: 'center' }}>
                       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                       </svg>
                     </span>
-                    <span style={{fontSize: 14, fontWeight: 600, color: txt}}>Notifications</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: txt }}>Notifications</span>
                   </div>
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: sub}}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: sub }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
               </div>
             </div>
 
             {/* Support & Sign Out Section */}
-            <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
-              <p style={{fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub, paddingLeft: 4, margin: 0}}>Session</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub, paddingLeft: 4, margin: 0 }}>Session</p>
               <div style={{
                 background: isDark ? 'rgba(255,255,255,0.02)' : '#fff',
                 border: `1px solid ${border}`, borderRadius: 20, overflow: 'hidden'
               }}>
-                <div 
+                <div
                   onClick={() => {
                     try {
                       localStorage.removeItem('has_active_session');
                       localStorage.removeItem('last_logged_user');
                       localStorage.removeItem('social_messages_cache');
-                    } catch (e) {}
+                    } catch (e) { }
                     signOut({ callbackUrl: '/accounts' });
                   }}
                   style={{
@@ -1328,22 +1328,22 @@ export default function ProfilePanel({
                     padding: '16px 18px', cursor: 'pointer'
                   }}
                 >
-                  <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
-                    <span style={{color: '#ef4444', display: 'flex', alignItems: 'center'}}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center' }}>
                       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                       </svg>
                     </span>
-                    <span style={{fontSize: 14, fontWeight: 700, color: '#ef4444'}}>Log Out</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#ef4444' }}>Log Out</span>
                   </div>
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{color: '#ef4444'}}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: '#ef4444' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
               </div>
             </div>
 
-            <div style={{height: 60}} />
+            <div style={{ height: 60 }} />
           </div>
         </>
       )}
@@ -1355,8 +1355,8 @@ export default function ProfilePanel({
         <>
           {/* Top Navigation Bar */}
           <div style={{
-            display:'flex', alignItems:'center', justifyContent:'space-between',
-            padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
           }}>
             <button onClick={() => { setSubView(isOwnProfile ? 'profile' : 'settings'); setProfileError(''); }} style={{
               background: 'none', border: 'none', cursor: 'pointer',
@@ -1364,18 +1364,18 @@ export default function ProfilePanel({
               color: txt, padding: 0
             }}>
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </button>
 
-            <span style={{fontWeight:700, fontSize:16, color:txt}}>Edit Profile</span>
+            <span style={{ fontWeight: 700, fontSize: 16, color: txt }}>Edit Profile</span>
 
             {/* Save Button */}
             <button
               onClick={handleSaveProfile}
               disabled={isSavingProfile}
               style={{
-                background:'none', border:'none', color:txt, fontWeight:700, fontSize:14, cursor:'pointer',
+                background: 'none', border: 'none', color: txt, fontWeight: 700, fontSize: 14, cursor: 'pointer',
                 opacity: isSavingProfile ? 0.5 : 1
               }}
             >
@@ -1384,18 +1384,18 @@ export default function ProfilePanel({
           </div>
 
           {/* Form scrollable area */}
-          <div style={{flex:1, overflowY:'auto', padding:'20px 16px'}}>
-            
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
+
             {profileError && (
-              <div style={{color: '#ef4444', fontSize: 13, fontWeight: 600, textAlign: 'center', marginBottom: 12}}>
+              <div style={{ color: '#ef4444', fontSize: 13, fontWeight: 600, textAlign: 'center', marginBottom: 12 }}>
                 {profileError}
               </div>
             )}
 
-            <div style={{display: 'flex', flexDirection: 'column', gap: 16}}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Name */}
-              <div style={{display: 'flex', flexDirection: 'column', gap: 6}}>
-                <label style={{fontSize: 12, fontWeight: 600, color: sub}}>Name</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: sub }}>Name</label>
                 <input
                   type="text"
                   value={editName}
@@ -1408,12 +1408,12 @@ export default function ProfilePanel({
               </div>
 
               {/* Username */}
-              <div style={{display: 'flex', flexDirection: 'column', gap: 6}}>
-                <label style={{fontSize: 12, fontWeight: 600, color: sub}}>Username</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: sub }}>Username</label>
                 <input
                   type="text"
                   value={editUsername}
-                  onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/\s+/g,''))}
+                  onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
                   style={{
                     padding: '12px 18px', borderRadius: '24px', border: `1px solid ${border}`,
                     background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none'
@@ -1422,8 +1422,8 @@ export default function ProfilePanel({
               </div>
 
               {/* Website */}
-              <div style={{display: 'flex', flexDirection: 'column', gap: 6}}>
-                <label style={{fontSize: 12, fontWeight: 600, color: sub}}>Website</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: sub }}>Website</label>
                 <input
                   type="text"
                   value={editWebsite}
@@ -1437,8 +1437,8 @@ export default function ProfilePanel({
               </div>
 
               {/* Bio */}
-              <div style={{display: 'flex', flexDirection: 'column', gap: 6}}>
-                <label style={{fontSize: 12, fontWeight: 600, color: sub}}>Bio</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: sub }}>Bio</label>
                 <textarea
                   value={editBio}
                   onChange={e => setEditBio(e.target.value)}
@@ -1452,7 +1452,7 @@ export default function ProfilePanel({
                 />
               </div>
             </div>
-            <div style={{height:60}}/>
+            <div style={{ height: 60 }} />
           </div>
         </>
       )}
@@ -1464,8 +1464,8 @@ export default function ProfilePanel({
         <>
           {/* Top Navigation Bar */}
           <div style={{
-            display:'flex', alignItems:'center', justifyContent:'space-between',
-            padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
           }}>
             <button onClick={() => { setSubView('profile'); setSearchQuery(''); }} style={{
               background: 'none', border: 'none', cursor: 'pointer',
@@ -1473,18 +1473,18 @@ export default function ProfilePanel({
               color: txt, padding: 0
             }}>
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </button>
 
-            <span style={{fontWeight:700, fontSize:16, color:txt}}>Followers</span>
+            <span style={{ fontWeight: 700, fontSize: 16, color: txt }}>Followers</span>
 
-            <div style={{width: 36}} />
+            <div style={{ width: 36 }} />
           </div>
 
           {/* Search Box */}
-          <div style={{padding: '12px 16px', borderBottom: `1px solid ${border}`}}>
-            <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${border}` }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <input
                 type="text"
                 placeholder="Search followers..."
@@ -1495,7 +1495,7 @@ export default function ProfilePanel({
                   background: isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6', color: txt, fontSize: 14, outline: 'none'
                 }}
               />
-              <svg style={{position: 'absolute', left: 14, color: sub}} width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg style={{ position: 'absolute', left: 14, color: sub }} width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
@@ -1503,7 +1503,7 @@ export default function ProfilePanel({
 
           {/* Follow Requests Button - only for own profile */}
           {isOwnProfile && (
-            <div style={{padding: '12px 16px'}}>
+            <div style={{ padding: '12px 16px' }}>
               <button
                 onClick={() => setSubView('follow_requests')}
                 style={{
@@ -1512,7 +1512,7 @@ export default function ProfilePanel({
                   border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14
                 }}
               >
-                <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span>Follow Requests</span>
                 </div>
                 <div style={{
@@ -1525,27 +1525,27 @@ export default function ProfilePanel({
           )}
 
           {/* Followers List */}
-          <div style={{flex: 1, overflowY: 'auto', padding: '0 16px'}}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px' }}>
             {followersList
-              .filter((f: any) => 
-                (f.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+              .filter((f: any) =>
+                (f.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (f.username || '').toLowerCase().includes(searchQuery.toLowerCase())
               )
               .map((f: any) => (
-                <div key={f.id} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${border}`}}>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                <div key={f.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{
                       width: 44, height: 44, borderRadius: '50%', background: isDark ? '#26262d' : '#e5e7eb',
                       overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }}>
-                      {f.image 
-                        ? <img src={f.image} alt={f.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                      {f.image
+                        ? <img src={f.image} alt={f.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : <DefaultAvatarSvg size={28} color={txt} />
                       }
                     </div>
-                    <div style={{display: 'flex', flexDirection: 'column'}}>
-                      <span style={{fontSize: 14, fontWeight: 700, color: txt}}>{f.name}</span>
-                      <span style={{fontSize: 12, color: sub}}>@{f.username || 'user'}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: txt }}>{f.name}</span>
+                      <span style={{ fontSize: 12, color: sub }}>@{f.username || 'user'}</span>
                     </div>
                   </div>
                   {isOwnProfile && (
@@ -1558,9 +1558,9 @@ export default function ProfilePanel({
                   )}
                 </div>
               ))}
-            
+
             {followersList.length === 0 && (
-              <div style={{padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13}}>
+              <div style={{ padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13 }}>
                 No followers yet.
               </div>
             )}
@@ -1575,8 +1575,8 @@ export default function ProfilePanel({
         <>
           {/* Top Navigation Bar */}
           <div style={{
-            display:'flex', alignItems:'center', justifyContent:'space-between',
-            padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
           }}>
             <button onClick={() => { setSubView('profile'); setSearchQuery(''); }} style={{
               background: 'none', border: 'none', cursor: 'pointer',
@@ -1584,18 +1584,18 @@ export default function ProfilePanel({
               color: txt, padding: 0
             }}>
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </button>
 
-            <span style={{fontWeight:700, fontSize:16, color:txt}}>Following</span>
+            <span style={{ fontWeight: 700, fontSize: 16, color: txt }}>Following</span>
 
-            <div style={{width: 36}} />
+            <div style={{ width: 36 }} />
           </div>
 
           {/* Search Box */}
-          <div style={{padding: '12px 16px', borderBottom: `1px solid ${border}`}}>
-            <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${border}` }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <input
                 type="text"
                 placeholder="Search following..."
@@ -1606,34 +1606,34 @@ export default function ProfilePanel({
                   background: isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6', color: txt, fontSize: 14, outline: 'none'
                 }}
               />
-              <svg style={{position: 'absolute', left: 14, color: sub}} width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg style={{ position: 'absolute', left: 14, color: sub }} width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
           </div>
 
           {/* Following List */}
-          <div style={{flex: 1, overflowY: 'auto', padding: '16px'}}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
             {followingList
-              .filter((f: any) => 
-                (f.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+              .filter((f: any) =>
+                (f.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (f.username || '').toLowerCase().includes(searchQuery.toLowerCase())
               )
               .map((f: any) => (
-                <div key={f.id} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${border}`}}>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                <div key={f.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{
                       width: 44, height: 44, borderRadius: '50%', background: isDark ? '#26262d' : '#e5e7eb',
                       overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }}>
-                      {f.image 
-                        ? <img src={f.image} alt={f.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                      {f.image
+                        ? <img src={f.image} alt={f.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : <DefaultAvatarSvg size={28} color={txt} />
                       }
                     </div>
-                    <div style={{display: 'flex', flexDirection: 'column'}}>
-                      <span style={{fontSize: 14, fontWeight: 700, color: txt}}>{f.name}</span>
-                      <span style={{fontSize: 12, color: sub}}>@{f.username || 'user'}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: txt }}>{f.name}</span>
+                      <span style={{ fontSize: 12, color: sub }}>@{f.username || 'user'}</span>
                     </div>
                   </div>
                   {isOwnProfile && (
@@ -1648,7 +1648,7 @@ export default function ProfilePanel({
               ))}
 
             {followingList.length === 0 && (
-              <div style={{padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13}}>
+              <div style={{ padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13 }}>
                 Not following anyone yet.
               </div>
             )}
@@ -1663,8 +1663,8 @@ export default function ProfilePanel({
         <>
           {/* Top Navigation Bar */}
           <div style={{
-            display:'flex', alignItems:'center', justifyContent:'space-between',
-            padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
           }}>
             <button onClick={() => setSubView('followers')} style={{
               background: 'none', border: 'none', cursor: 'pointer',
@@ -1672,38 +1672,38 @@ export default function ProfilePanel({
               color: txt, padding: 0
             }}>
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </button>
 
-            <span style={{fontWeight:700, fontSize:16, color:txt}}>Follow Requests</span>
+            <span style={{ fontWeight: 700, fontSize: 16, color: txt }}>Follow Requests</span>
 
-            <div style={{width: 36}} />
+            <div style={{ width: 36 }} />
           </div>
 
           {/* List of Requests */}
-          <div style={{flex: 1, overflowY: 'auto', padding: '16px'}}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
             {followRequestsList.map((req: any) => (
-              <div key={req.id} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${border}`}}>
-                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+              <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${border}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{
                     width: 44, height: 44, borderRadius: '50%', background: isDark ? '#26262d' : '#e5e7eb',
                     overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
-                    {req.sender.image 
-                      ? <img src={req.sender.image} alt={req.sender.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                    {req.sender.image
+                      ? <img src={req.sender.image} alt={req.sender.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : <DefaultAvatarSvg size={28} color={txt} />
                     }
                   </div>
-                  <div style={{display: 'flex', flexDirection: 'column'}}>
-                    <span style={{fontSize: 14, fontWeight: 700, color: txt}}>{req.sender.name}</span>
-                    <span style={{fontSize: 12, color: sub}}>@{req.sender.username || 'user'}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: txt }}>{req.sender.name}</span>
+                    <span style={{ fontSize: 12, color: sub }}>@{req.sender.username || 'user'}</span>
                   </div>
                 </div>
-                
+
                 {/* Accept / Decline actions */}
-                <div style={{display: 'flex', gap: 8}}>
-                  <button 
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
                     onClick={() => handleRespondRequest(req.id, 'accept')}
                     style={{
                       padding: '6px 14px', background: isDark ? '#fff' : '#111', color: isDark ? '#000' : '#fff',
@@ -1712,7 +1712,7 @@ export default function ProfilePanel({
                   >
                     Accept
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleRespondRequest(req.id, 'decline')}
                     style={{
                       padding: '6px 14px', background: btnBg, border: `1px solid ${btnBdr}`,
@@ -1726,7 +1726,7 @@ export default function ProfilePanel({
             ))}
 
             {followRequestsList.length === 0 && (
-              <div style={{padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13}}>
+              <div style={{ padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13 }}>
                 No pending requests.
               </div>
             )}
@@ -1741,8 +1741,8 @@ export default function ProfilePanel({
         <>
           {/* Top Navigation Bar */}
           <div style={{
-            display:'flex', alignItems:'center', justifyContent:'space-between',
-            padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
           }}>
             <button onClick={() => setSubView('profile')} style={{
               background: 'none', border: 'none', cursor: 'pointer',
@@ -1750,47 +1750,47 @@ export default function ProfilePanel({
               color: txt, padding: 0
             }}>
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </button>
 
-            <span style={{fontWeight:700, fontSize:16, color:txt}}>Activity & Alerts</span>
+            <span style={{ fontWeight: 700, fontSize: 16, color: txt }}>Activity & Alerts</span>
 
-            <div style={{width: 36}} />
+            <div style={{ width: 36 }} />
           </div>
 
           {/* Activity Logs scrollable list */}
-          <div style={{flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 18}}>
-            
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+
             {/* Follow Requests inside notifications alert */}
             {followRequestsList.length > 0 && (
               <div style={{
                 background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
                 border: `1px solid ${border}`, borderRadius: '16px', padding: 16
               }}>
-                <h3 style={{fontSize: 12, fontWeight: 700, color: txt, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em'}}>
+                <h3 style={{ fontSize: 12, fontWeight: 700, color: txt, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Follow Requests ({followRequestsList.length})
                 </h3>
-                <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {followRequestsList.map((req: any) => (
-                    <div key={req.id} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, borderBottom: `1px solid ${border}`}}>
-                      <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
+                    <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, borderBottom: `1px solid ${border}` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{
                           width: 38, height: 38, borderRadius: '50%', background: isDark ? '#26262d' : '#e5e7eb',
                           overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
                         }}>
-                          {req.sender.image 
-                            ? <img src={req.sender.image} alt={req.sender.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                          {req.sender.image
+                            ? <img src={req.sender.image} alt={req.sender.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             : <DefaultAvatarSvg size={24} color={txt} />
                           }
                         </div>
-                        <div style={{display: 'flex', flexDirection: 'column'}}>
-                          <span style={{fontSize: 13, fontWeight: 700, color: txt}}>{req.sender.name}</span>
-                          <span style={{fontSize: 11, color: sub}}>@{req.sender.username || 'user'}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: txt }}>{req.sender.name}</span>
+                          <span style={{ fontSize: 11, color: sub }}>@{req.sender.username || 'user'}</span>
                         </div>
                       </div>
-                      <div style={{display: 'flex', gap: 6}}>
-                        <button 
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
                           onClick={() => handleRespondRequest(req.id, 'accept')}
                           style={{
                             padding: '6px 12px', background: isDark ? '#fff' : '#111', color: isDark ? '#000' : '#fff',
@@ -1799,7 +1799,7 @@ export default function ProfilePanel({
                         >
                           Accept
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleRespondRequest(req.id, 'decline')}
                           style={{
                             padding: '6px 12px', background: btnBg, border: `1px solid ${btnBdr}`,
@@ -1820,44 +1820,44 @@ export default function ProfilePanel({
               background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
               border: `1px solid ${border}`, borderRadius: '16px', padding: 16
             }}>
-              <h3 style={{fontSize: 12, fontWeight: 700, color: txt, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em'}}>
+              <h3 style={{ fontSize: 12, fontWeight: 700, color: txt, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Recent Activity
               </h3>
 
-              <div style={{display: 'flex', flexDirection: 'column', gap: 16}}>
-                <div style={{display: 'flex', gap: 12, fontSize: 13, color: txt}}>
-                  <span style={{width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7}} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', gap: 12, fontSize: 13, color: txt }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7 }} />
                   <div>
-                    <span style={{fontWeight: 600}}>System Guard</span>
-                    <p style={{fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4'}}>Your account privacy mode is fully synchronized with Connect PostgreSQL.</p>
+                    <span style={{ fontWeight: 600 }}>System Guard</span>
+                    <p style={{ fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4' }}>Your account privacy mode is fully synchronized with Connect PostgreSQL.</p>
                   </div>
                 </div>
 
-                <div style={{display: 'flex', gap: 12, fontSize: 13, color: txt}}>
-                  <span style={{width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7}} />
+                <div style={{ display: 'flex', gap: 12, fontSize: 13, color: txt }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7 }} />
                   <div>
-                    <span style={{fontWeight: 600}}>Direct Messaging</span>
-                    <p style={{fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4'}}>All chats are configured with secure low-latency WebSockets.</p>
+                    <span style={{ fontWeight: 600 }}>Direct Messaging</span>
+                    <p style={{ fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4' }}>All chats are configured with secure low-latency WebSockets.</p>
                   </div>
                 </div>
 
                 {followersList.length > 0 && (
-                  <div style={{display: 'flex', gap: 12, fontSize: 13, color: txt}}>
-                    <span style={{width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7}} />
+                  <div style={{ display: 'flex', gap: 12, fontSize: 13, color: txt }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7 }} />
                     <div>
-                      <span style={{fontWeight: 600}}>New Follower</span>
-                      <p style={{fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4'}}>
+                      <span style={{ fontWeight: 600 }}>New Follower</span>
+                      <p style={{ fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4' }}>
                         @{followersList[0]?.username || 'user'} started following you recently.
                       </p>
                     </div>
                   </div>
                 )}
 
-                <div style={{display: 'flex', gap: 12, fontSize: 13, color: txt}}>
-                  <span style={{width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7}} />
+                <div style={{ display: 'flex', gap: 12, fontSize: 13, color: txt }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7 }} />
                   <div>
-                    <span style={{fontWeight: 600}}>Welcome to Connect</span>
-                    <p style={{fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4'}}>Your profile is live! Customize your avatar, web links, or bio anytime.</p>
+                    <span style={{ fontWeight: 600 }}>Welcome to Connect</span>
+                    <p style={{ fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4' }}>Your profile is live! Customize your avatar, web links, or bio anytime.</p>
                   </div>
                 </div>
               </div>
@@ -1874,8 +1874,8 @@ export default function ProfilePanel({
         <>
           {/* Top Navigation Bar */}
           <div style={{
-            display:'flex', alignItems:'center', justifyContent:'space-between',
-            padding:'14px 16px', borderBottom:`1px solid ${border}`, flexShrink:0,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
           }}>
             <button onClick={() => setSubView('settings')} style={{
               background: 'none', border: 'none', cursor: 'pointer',
@@ -1883,19 +1883,19 @@ export default function ProfilePanel({
               color: txt, padding: 0
             }}>
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
 
-            <span style={{fontWeight:700, fontSize:16, color:txt}}>Saved</span>
+            <span style={{ fontWeight: 700, fontSize: 16, color: txt }}>Saved</span>
 
-            <div style={{width: 36}} />
+            <div style={{ width: 36 }} />
           </div>
 
           {/* Grid area */}
-          <div style={{flex: 1, overflowY: 'auto'}}>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
             {loadingSaved ? (
-              <div style={{padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13}}>
+              <div style={{ padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13 }}>
                 Loading saved items...
               </div>
             ) : savedPostsList.length === 0 ? (
@@ -1904,7 +1904,7 @@ export default function ProfilePanel({
                 justifyContent: 'center', textAlign: 'center', gap: 12
               }}>
                 <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: sub }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                 </svg>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: txt }}>Save Photos and Videos</h3>
                 <p style={{ fontSize: 13, color: sub, maxWidth: 260 }}>
@@ -1912,7 +1912,7 @@ export default function ProfilePanel({
                 </p>
               </div>
             ) : (
-              <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:2}}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 2 }}>
                 {savedPostsList.map((post: any) => (
                   <div
                     key={post.id}
@@ -1920,30 +1920,30 @@ export default function ProfilePanel({
                       if (typeof window !== 'undefined') window.location.href = `/p/${post.id}`;
                     }}
                     style={{
-                      aspectRatio:'1/1', position:'relative', overflow:'hidden', cursor:'pointer',
+                      aspectRatio: '1/1', position: 'relative', overflow: 'hidden', cursor: 'pointer',
                       background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
                     }}
                   >
                     {post.thumbnailUrl || post.imageUrl ? (
-                      <img 
-                        src={post.thumbnailUrl || post.imageUrl} 
-                        alt="saved thumbnail" 
-                        style={{width:'100%',height:'100%',objectFit:'cover'}}
+                      <img
+                        src={post.thumbnailUrl || post.imageUrl}
+                        alt="saved thumbnail"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     ) : (
                       <div style={{
-                        width:'100%', height:'100%',
+                        width: '100%', height: '100%',
                         background: isDark ? `hsl(200,40%,22%)` : `hsl(200,60%,92%)`,
-                        display:'flex', alignItems:'center', justifyContent:'center',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
-                        <span style={{fontSize: 12, fontWeight: 700, color: isDark ? '#fff':'#4b5563', textTransform:'uppercase'}}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? '#fff' : '#4b5563', textTransform: 'uppercase' }}>
                           {post.postType}
                         </span>
                       </div>
                     )}
 
                     {/* Icon overlay depending on media type */}
-                    <div style={{position:'absolute', top:8, right:8, zIndex:10}}>
+                    <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}>
                       {post.postType === 'carousel' && <CarouselIcon />}
                       {post.postType === 'reel' && <ReelIcon />}
                     </div>
@@ -1951,14 +1951,14 @@ export default function ProfilePanel({
                 ))}
               </div>
             )}
-            <div style={{height: 80}} />
+            <div style={{ height: 80 }} />
           </div>
         </>
       )}
 
       {/* ── Sheets Overlay & Backdrop ── */}
       {(activeAccountSheet !== 'none' || (showAvatarModal && isOwnProfile)) && (
-        <div 
+        <div
           onClick={() => {
             triggerAccountSheetTransition('none');
             setShowAvatarModal(false);
@@ -1985,14 +1985,14 @@ export default function ProfilePanel({
       >
         <div style={{ width: 48, height: 4, background: '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
         <h2 style={{ fontSize: 18, fontWeight: 800, color: '#121214', marginBottom: 16, textAlign: 'center' }}>Switch Account</h2>
-        
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20, maxHeight: 260, overflowY: 'auto' }}>
           {displayAccounts.map((acc) => {
             const isActive = acc.isCurrent;
             const accountName = acc.displayName || acc.username || acc.email.split('@')[0];
             const username = acc.username || acc.email.split('@')[0];
             return (
-              <div 
+              <div
                 key={acc.userId || acc.email}
                 onClick={() => {
                   if (isActive) {
@@ -2016,7 +2016,7 @@ export default function ProfilePanel({
                     overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     border: isActive ? '2px solid #3b82f6' : 'none'
                   }}>
-                    {acc.profilePicture 
+                    {acc.profilePicture
                       ? <img src={acc.profilePicture} alt={accountName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : <DefaultAvatarSvg size={24} color="#374151" />
                     }
@@ -2062,7 +2062,7 @@ export default function ProfilePanel({
           })}
         </div>
 
-        <div 
+        <div
           onClick={() => triggerAccountSheetTransition('options')}
           style={{
             display: 'flex', alignItems: 'center', gap: 12,
@@ -2106,12 +2106,12 @@ export default function ProfilePanel({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20, maxHeight: 260, overflowY: 'auto' }}>
           {displayAccounts.map((acc) => {
             const isActive = acc.isCurrent;
-            const displayHandle = acc.displayName 
-              ? acc.displayName 
+            const displayHandle = acc.displayName
+              ? acc.displayName
               : (acc.username ? `@${acc.username.replace(/^@/, '').split('@')[0]}` : (acc.email ? acc.email.split('@')[0] : 'User'));
 
             return (
-              <div 
+              <div
                 key={acc.userId || acc.email}
                 onClick={() => {
                   if (isActive) {
@@ -2135,7 +2135,7 @@ export default function ProfilePanel({
                     overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     border: 'none'
                   }}>
-                    {acc.profilePicture 
+                    {acc.profilePicture
                       ? <img src={acc.profilePicture} alt={displayHandle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : <DefaultAvatarSvg size={24} color="#374151" />
                     }
@@ -2201,7 +2201,7 @@ export default function ProfilePanel({
           background: isDark ? '#09090b' : '#ffffff',
           color: isDark ? '#ffffff' : '#121214',
           display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
+          alignItems: 'center',
           padding: '24px', overflowY: 'auto',
           transform: activeAccountSheet === 'signIn' ? 'scale(1)' : 'scale(0.95)',
           opacity: activeAccountSheet === 'signIn' ? 1 : 0,
@@ -2209,9 +2209,9 @@ export default function ProfilePanel({
           pointerEvents: activeAccountSheet === 'signIn' ? 'auto' : 'none',
         }}
       >
-        {/* Top Header Back Button */}
-        <div style={{ position: 'absolute', top: 24, left: 24, zIndex: 10 }}>
-          <button 
+        {/* Top Header Back Button (Shifted Down) */}
+        <div style={{ position: 'absolute', top: 36, left: 24, zIndex: 10 }}>
+          <button
             type="button"
             onClick={() => { setShowManualSignIn(false); triggerAccountSheetTransition('options'); }}
             style={{
@@ -2229,24 +2229,18 @@ export default function ProfilePanel({
         </div>
 
         {/* Centered Card Content */}
-        <div style={{ width: '100%', maxWidth: 400, margin: '0 auto', textAlign: 'center' }}>
-          
+        <div style={{ width: '100%', maxWidth: 400, margin: '0 auto', display: 'flex', flexDirection: 'column', height: '100%' }}>
+
           {/* IF SAVED ACCOUNTS EXIST & NOT MANUAL SIGN IN MODE -> SHOW ACCOUNT CENTER LIST */}
           {displayAccounts.length > 0 && !showManualSignIn ? (
-            <div>
-              <img
-                src="/logo.png"
-                alt="Connect Logo"
-                style={{
-                  width: 56, height: 56, objectFit: 'contain', borderRadius: 16,
-                  margin: '0 auto 16px', background: '#000', padding: 4
-                }}
-              />
-
-              <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Log Into Existing Account</h1>
-              <p style={{ fontSize: 13, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 24 }}>
-                Select a saved account from your device to switch
-              </p>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              
+              {/* Account Center Header (Shifted Up, Left-Aligned 2-Line) */}
+              <div style={{ textAlign: 'left', marginTop: '64px', marginBottom: '24px' }}>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 900, lineHeight: 1.08, color: isDark ? '#ffffff' : '#1c1c22', letterSpacing: '-0.02em', margin: 0 }}>
+                  Account<br />Center
+                </h1>
+              </div>
 
               {switchError && (
                 <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '10px 16px', borderRadius: 14, fontSize: 12, fontWeight: 600, marginBottom: 16 }}>
@@ -2255,10 +2249,10 @@ export default function ProfilePanel({
               )}
 
               {/* Account Center Saved Accounts List — Uniform & Clean */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, maxHeight: 320, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
                 {displayAccounts.map((acc) => {
-                  const displayHandle = acc.displayName 
-                    ? acc.displayName 
+                  const displayHandle = acc.displayName
+                    ? acc.displayName
                     : (acc.username ? `@${acc.username.replace(/^@/, '').split('@')[0]}` : (acc.email ? acc.email.split('@')[0] : 'User'));
                   return (
                     <div
@@ -2282,7 +2276,7 @@ export default function ProfilePanel({
                           )}
                         </div>
                         <div style={{ textAlign: 'left' }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, display: 'block' }}>{displayHandle}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, display: 'block', color: isDark ? '#ffffff' : '#121214' }}>{displayHandle}</span>
                         </div>
                       </div>
 
@@ -2294,14 +2288,14 @@ export default function ProfilePanel({
                 })}
               </div>
 
-              {/* Bottom Action Buttons in Same Theme */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Bottom Action Buttons (Pushed to bottom) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 'auto', paddingBottom: '24px' }}>
                 <button
                   type="button"
                   onClick={() => setShowManualSignIn(true)}
                   style={{
-                    width: '100%', padding: '14px 0', background: isDark ? '#1c1c22' : '#f3f4f6',
-                    color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                    width: '100%', padding: '16px 0', background: '#1c1c22',
+                    color: '#ffffff', border: 'none',
                     borderRadius: '100px', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s'
                   }}
                 >
@@ -2312,7 +2306,7 @@ export default function ProfilePanel({
                   type="button"
                   onClick={() => triggerAccountSheetTransition('signUp')}
                   style={{
-                    width: '100%', padding: '14px 0', background: isDark ? '#1c1c22' : '#f3f4f6',
+                    width: '100%', padding: '16px 0', background: isDark ? '#1c1c22' : '#f3f4f6',
                     color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
                     borderRadius: '100px', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s'
                   }}
@@ -2426,7 +2420,7 @@ export default function ProfilePanel({
       >
         {/* Top Header Back Button */}
         <div style={{ position: 'absolute', top: 24, left: 24, zIndex: 10 }}>
-          <button 
+          <button
             type="button"
             onClick={() => triggerAccountSheetTransition('options')}
             style={{
@@ -2544,7 +2538,7 @@ export default function ProfilePanel({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <button 
+          <button
             type="button"
             onClick={() => triggerAccountSheetTransition('signUp')}
             style={{ background: 'none', border: 'none', color: '#121214', cursor: 'pointer', padding: 0 }}
