@@ -2123,33 +2123,32 @@ export default function ProfilePanel({
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '12px 16px', borderRadius: '18px',
-                  background: isActive ? '#1c1c22' : (isDark ? '#16161a' : '#f9fafb'),
-                  border: isActive ? '1.5px solid #3f3f46' : (isDark ? '1px solid #27272a' : '1px solid #e5e7eb'),
+                  background: isDark ? '#16161a' : '#f9fafb',
+                  border: isActive ? (isDark ? '1.5px solid #52525b' : '1.5px solid #18181b') : (isDark ? '1px solid #27272a' : '1px solid #e5e7eb'),
                   cursor: isActive ? 'default' : 'pointer',
                   transition: 'all 0.2s',
-                  boxShadow: isActive ? '0 4px 14px rgba(0,0,0,0.25)' : 'none',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{
-                    width: 40, height: 40, borderRadius: '50%', background: '#27272a',
+                    width: 40, height: 40, borderRadius: '50%', background: isDark ? '#27272a' : '#e5e7eb',
                     overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     border: 'none'
                   }}>
                     {acc.profilePicture 
                       ? <img src={acc.profilePicture} alt={usernameOnly} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <DefaultAvatarSvg size={24} color={isActive ? '#e4e4e7' : '#374151'} />
+                      : <DefaultAvatarSvg size={24} color="#374151" />
                     }
                   </div>
                   <div style={{ textAlign: 'left' }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? '#ffffff' : (isDark ? '#ffffff' : '#121214') }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#ffffff' : '#121214' }}>
                       {usernameOnly}
                     </span>
                   </div>
                 </div>
 
                 {isActive ? (
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#3f3f46', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: isDark ? '#3f3f46' : '#18181b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="12" height="12" fill="none" stroke="#ffffff" strokeWidth="3" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
