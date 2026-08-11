@@ -3,9 +3,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { MoreVertical, Trash2, UserPlus, LogIn, Lock, Eye, EyeOff, X, ArrowLeft, ChevronRight, Check } from 'lucide-react';
+import {
+  MoreVertical, Trash2, UserPlus, LogIn, Lock, Eye, EyeOff, X, ArrowLeft,
+  ChevronRight, Check, ShieldCheck, Smartphone, Key, History, Activity,
+  Download, CreditCard, Sliders, Globe, RefreshCw, AlertCircle
+} from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useTheme } from '@/app/components/ThemeProvider';
+import {
+  getAccountsCenterOverview,
+  updateProfileSyncAction,
+  toggleTwoFactorAction,
+  revokeActiveSessionAction,
+  clearOffPlatformDataAction,
+  clearSearchHistoryAction,
+  requestDataExportAction,
+  updateAdPreferencesAction,
+  addPaymentVaultTokenAction,
+} from './actions';
 
 const GrainGradient = dynamic(
   () => import('@paper-design/shaders-react').then((mod) => mod.GrainGradient),
@@ -26,22 +41,27 @@ export default function AccountsPage() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { data: session } = useSession();
-  
+
   const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<'accounts' | 'security' | 'privacy' | 'preferences'>('accounts');
   const [accounts, setAccounts] = useState<SavedAccount[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'remove'>('list');
   const [showDropdown, setShowDropdown] = useState(false);
-  
-  // Password modal state
+
+  // Backend state from Prisma
+  const [overviewData, setOverviewData] = useState<any>(null);
+  const [loadingOverview, setLoadingOverview] = useState(true);
+
+  // Form states
   const [selectedAccount, setSelectedAccount] = useState<SavedAccount | null>(null);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+  const [actionSuccess, setActionSuccess] = useState('');
+
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Hydration safety and loading from device-local storage
   useEffect(() => {
     setMounted(true);
     try {
@@ -49,7 +69,6 @@ export default function AccountsPage() {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          // Filter out any locally removed emails
           const removedStr = localStorage.getItem('removed_accounts');
           const removedList: string[] = removedStr ? JSON.parse(removedStr) : [];
           const cleanAccounts = parsed.filter(
@@ -62,6 +81,25 @@ export default function AccountsPage() {
       console.error('Failed to load accounts:', e);
     }
   }, []);
+
+  const loadOverview = async () => {
+    if (!session?.user?.email) return;
+    setLoadingOverview(true);
+    try {
+      const data = await getAccountsCenterOverview();
+      setOverviewData(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingOverview(false);
+    }
+  };
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      loadOverview();
+    }
+  }, [session?.user?.email]);
 
   const curEmail = session?.user?.email ? session.user.email.toLowerCase().trim() : '';
 
@@ -91,7 +129,6 @@ export default function AccountsPage() {
     return Array.from(map.values());
   }, [session, accounts, curEmail]);
 
-  // Dropdown close listener
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -104,30 +141,23 @@ export default function AccountsPage() {
 
   if (!mounted) {
     return (
-      <div className={`min-h-screen flex items-center justify-center transition-colors duration-500 ${
-        isDark ? 'bg-[#050505]' : 'bg-[#f3f4f6]'
-      }`}>
-        <div className={`w-8 h-8 border-2 rounded-full animate-spin ${
-          isDark ? 'border-white/20 border-t-white' : 'border-black/20 border-t-black'
-        }`} />
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#050505]' : 'bg-[#f3f4f6]'}`}>
+        <div className={`w-8 h-8 border-2 rounded-full animate-spin ${isDark ? 'border-white/20 border-t-white' : 'border-black/20 border-t-black'}`} />
       </div>
     );
   }
 
-  // Remove account permanently from device cache/memory
   const handleRemoveAccount = (email: string) => {
     try {
       const targetEmail = email.toLowerCase().trim();
       const updated = accounts.filter(acc => acc.email.toLowerCase().trim() !== targetEmail);
       setAccounts(updated);
-
       if (updated.length > 0) {
         localStorage.setItem('connected_accounts', JSON.stringify(updated));
       } else {
         localStorage.removeItem('connected_accounts');
       }
 
-      // Add to device removed_accounts blacklist so it never reappears on refresh
       const removedStr = localStorage.getItem('removed_accounts');
       let removedList: string[] = removedStr ? JSON.parse(removedStr) : [];
       if (!Array.isArray(removedList)) removedList = [];
@@ -135,13 +165,9 @@ export default function AccountsPage() {
         removedList.push(targetEmail);
         localStorage.setItem('removed_accounts', JSON.stringify(removedList));
       }
-
-      // If no accounts remain, exit remove view
-      if (updated.length === 0) {
-        setViewMode('list');
-      }
+      if (updated.length === 0) setViewMode('list');
     } catch (e) {
-      console.error('Failed to remove account:', e);
+      console.error(e);
     }
   };
 
@@ -166,10 +192,8 @@ export default function AccountsPage() {
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAccount) return;
-
     setLoading(true);
     setError('');
-
     try {
       const res = await signIn('credentials', {
         redirect: false,
@@ -177,17 +201,14 @@ export default function AccountsPage() {
         password: password,
       });
 
-      if (res?.error === 'EMAIL_NOT_VERIFIED') {
-        setError("This account is not verified. Please log in on the main page to verify.");
-      } else if (res?.error) {
+      if (res?.error) {
         setError('Incorrect password.');
       } else {
-        // Success
         router.push('/dashboard');
         router.refresh();
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('An error occurred.');
     } finally {
       setLoading(false);
     }
@@ -199,133 +220,90 @@ export default function AccountsPage() {
     return acc.email.slice(0, 2).toUpperCase();
   };
 
-  const renderLeft = () => {
-    return (
-      <div className="relative overflow-hidden hidden lg:flex flex-col items-center justify-center h-full">
-        <GrainGradient
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-          colorBack={isDark ? "#0A0A0C" : "#F8F9FA"}
-          softness={0.5}
-          intensity={0.8}
-          noise={0.06}
-          shape="corners"
-          offsetX={0}
-          offsetY={0}
-          scale={0.8}
-          rotation={0}
-          speed={0.5}
-          colors={['#8B5CF6', '#3B82F6', '#F59E0B']}
-        />
-        <div className="relative z-10 flex flex-col items-center justify-center gap-6 px-12 text-center select-none">
-          <p
-            className="font-light lg:tracking-[0.4em] uppercase text-sm lg:[writing-mode:vertical-rl] lg:rotate-180"
-            style={{ 
-              letterSpacing: '0.45em', 
-              opacity: 0.75,
-              color: isDark ? '#ffffff' : '#111827'
-            }}
-          >
-            Account Center
-          </p>
-        </div>
-      </div>
-    );
+  const showToast = (msg: string) => {
+    setActionSuccess(msg);
+    setTimeout(() => setActionSuccess(''), 3000);
   };
 
-  const renderAccountCenterContent = () => {
-    return (
-      <div className="w-full h-full flex flex-col p-6 md:p-10 pt-[calc(1.25rem+0.15in+env(safe-area-inset-top,0px))] md:pt-12 justify-between relative overflow-hidden">
-        
-        {/* ── HEADER (Shifted ~0.15in down to avoid touching nav/status bar) ── */}
-        <div className="flex items-center justify-between mb-6 relative z-20 pt-2">
-          {viewMode === 'remove' ? (
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
-                  isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white' : 'bg-gray-100 border-gray-200 text-gray-700 hover:text-gray-950'
-                }`}
-                title="Back to Account Center"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-              <div>
-                <h1 className={`text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-950'}`}>Remove Accounts</h1>
-                <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>Remove saved logins from this device</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div>
-                <h1 className={`text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-950'}`}>Account Center</h1>
-                <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>Manage saved accounts on this device</p>
-              </div>
-            </div>
-          )}
+  return (
+    <div className={`min-h-screen transition-colors duration-500 font-sans ${isDark ? 'bg-[#09090b] text-white' : 'bg-[#f8f9fa] text-gray-900'}`}>
+      {/* Toast Notification */}
+      {actionSuccess && (
+        <div className="fixed top-5 right-5 z-[999] bg-blue-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2 text-xs font-bold animate-in fade-in slide-in-from-top-4 duration-300">
+          <Check className="w-4 h-4 stroke-[3]" />
+          {actionSuccess}
+        </div>
+      )}
 
-          {/* 3-Dots Dropdown Menu (Top Right) */}
-          {viewMode === 'list' && accounts.length > 0 && (
-            <div className="relative z-[100]" ref={dropdownRef}>
-              <button
-                onClick={() => setShowDropdown(!showDropdown)}
-                className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
-                  isDark 
-                    ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300' 
-                    : 'bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-700'
-                }`}
-                title="Options"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
-
-              {/* High Z-Index Smooth Animated Dropdown Panel */}
-              {showDropdown && (
-                <div 
-                  className={`absolute right-0 mt-2 w-52 border rounded-2xl p-1.5 shadow-2xl z-[100] transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200 ${
-                    isDark 
-                      ? 'bg-[#16161a]/95 border-zinc-800 text-white backdrop-blur-xl' 
-                      : 'bg-white/95 border-gray-200 text-gray-900 backdrop-blur-xl shadow-xl'
-                  }`}
-                >
-                  <p className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
-                    Account Options
-                  </p>
-                  <button
-                    onClick={() => {
-                      setShowDropdown(false);
-                      setViewMode('remove');
-                    }}
-                    className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-2.5 cursor-pointer ${
-                      isDark 
-                        ? 'hover:bg-rose-500/10 text-rose-400/90 hover:text-rose-300' 
-                        : 'hover:bg-rose-50 text-rose-600/90'
-                    }`}
-                  >
-                    <Trash2 className="w-4 h-4 text-rose-400/80" />
-                    Remove an account
-                  </button>
-                </div>
-              )}
+      {/* Main Container */}
+      <div className="max-w-5xl mx-auto px-4 py-8 md:py-12">
+        {/* Header Navigation */}
+        <div className="flex items-center justify-between mb-8 pb-6 border-b border-zinc-500/20">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/dashboard')}
+              className={`p-2.5 rounded-full border transition-all active:scale-95 ${
+                isDark ? 'border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300' : 'border-gray-200 bg-white hover:bg-gray-100 text-gray-700'
+              }`}
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight">Accounts Center</h1>
+              <p className={`text-xs font-medium ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                Manage connected experiences, security, privacy & Meta Pay across linked accounts.
+              </p>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* ── VIEW 1: NORMAL SAVED ACCOUNTS LIST ── */}
-        {viewMode === 'list' && (
-          <>
-            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 mb-6 relative z-10 min-h-[180px] flex flex-col justify-start">
-              {displayAccounts.length === 0 ? (
-                <div className="text-center py-10 my-auto">
-                  <div className={`w-14 h-14 rounded-full border flex items-center justify-center mx-auto mb-4 ${
-                    isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-100 border-gray-200'
-                  }`}>
-                    <Lock className={`w-6 h-6 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`} />
-                  </div>
-                  <p className={`text-sm font-semibold ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>No saved accounts on this device</p>
-                  <p className={`text-xs mt-1 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>Sign in below to save your profile to Account Center</p>
-                </div>
-              ) : (
-                displayAccounts.map((acc) => {
+        {/* System Module Navigation Tabs */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-8">
+          {[
+            { id: 'accounts', label: 'Profiles & Sync', icon: Globe },
+            { id: 'security', label: 'Security & Sessions', icon: ShieldCheck },
+            { id: 'privacy', label: 'Data & Privacy', icon: History },
+            { id: 'preferences', label: 'Ads & Payments', icon: CreditCard },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl text-xs font-extrabold transition-all active:scale-98 border ${
+                  isActive
+                    ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/25'
+                    : isDark
+                      ? 'bg-zinc-900/40 border-zinc-800/80 text-zinc-400 hover:text-white hover:bg-zinc-900'
+                      : 'bg-white border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* MODULE 1: PROFILES & CONNECTED EXPERIENCES */}
+        {activeTab === 'accounts' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold">Connected Profiles ({displayAccounts.length})</h2>
+                <button
+                  onClick={() => setViewMode(viewMode === 'list' ? 'remove' : 'list')}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${
+                    isDark ? 'border-zinc-700 hover:bg-zinc-800 text-zinc-300' : 'border-gray-300 hover:bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  {viewMode === 'list' ? 'Manage Devices' : 'Done'}
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {displayAccounts.map((acc) => {
                   const accountName = acc.name || acc.username || acc.email.split('@')[0];
                   const rawUsername = acc.username || acc.email.split('@')[0];
                   const displayUsername = rawUsername.startsWith('@') ? rawUsername : `@${rawUsername}`;
@@ -334,296 +312,372 @@ export default function AccountsPage() {
                   return (
                     <div
                       key={acc.email}
-                      onClick={() => {
-                        if (!isActive) handleAccountClick(acc);
-                      }}
-                      className={`group flex items-center justify-between p-4 rounded-[1.75rem] border backdrop-blur-xl transition-all duration-300 ${
+                      onClick={() => !isActive && handleAccountClick(acc)}
+                      className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
                         isActive
-                          ? (isDark ? 'border-blue-500/50 bg-blue-500/10 shadow-[0_4px_25px_rgba(59,130,246,0.15)]' : 'border-blue-300 bg-blue-50/70 shadow-[0_4px_20px_rgba(59,130,246,0.1)]')
-                          : (isDark
-                            ? 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 shadow-[0_4px_25px_rgba(0,0,0,0.3)] cursor-pointer active:scale-[0.98]'
-                            : 'border-gray-200/80 bg-white/80 hover:bg-white hover:border-gray-300 shadow-[0_4px_20px_rgba(0,0,0,0.03)] cursor-pointer active:scale-[0.98]')
+                          ? isDark ? 'border-blue-500/40 bg-blue-500/10' : 'border-blue-300 bg-blue-50'
+                          : isDark ? 'border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 cursor-pointer' : 'border-gray-200 bg-white hover:bg-gray-50 cursor-pointer'
                       }`}
                     >
-                      <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="flex items-center gap-3.5">
                         {acc.image ? (
-                          <img
-                            src={acc.image}
-                            alt={accountName}
-                            className={`w-12 h-12 rounded-full border object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${
-                              isActive ? 'border-blue-500' : (isDark ? 'border-zinc-700' : 'border-gray-200')
-                            }`}
-                          />
+                          <img src={acc.image} alt={accountName} className="w-11 h-11 rounded-full object-cover border border-zinc-700" />
                         ) : (
-                          <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-bold text-sm flex-shrink-0 uppercase transition-transform duration-300 group-hover:scale-105 ${
-                            isActive
-                              ? 'bg-blue-600 border-blue-500 text-white'
-                              : (isDark 
-                                ? 'bg-zinc-800 border-zinc-700 text-zinc-300' 
-                                : 'bg-gray-100 border-gray-200 text-gray-700')
-                          }`}>
+                          <div className="w-11 h-11 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs">
                             {getInitials(acc)}
                           </div>
                         )}
-                        <div className="min-w-0">
+                        <div>
                           <div className="flex items-center gap-2">
-                            <p className={`text-sm font-bold truncate transition-colors ${
-                              isDark ? 'text-zinc-100 group-hover:text-white' : 'text-gray-900 group-hover:text-gray-950'
-                            }`}>
-                              {accountName}
-                            </p>
+                            <span className="text-sm font-bold">{accountName}</span>
                             {isActive && (
-                              <span className="text-[10px] font-extrabold bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                Logged In
+                              <span className="text-[10px] font-extrabold bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase">
+                                Active Session
                               </span>
                             )}
                           </div>
-                          <p className={`text-xs truncate mt-0.5 font-medium ${
-                            isDark ? 'text-zinc-400' : 'text-gray-500'
-                          }`}>{displayUsername}</p>
+                          <span className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>{displayUsername}</span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 flex-shrink-0 pl-2">
-                        {isActive ? (
+                      {viewMode === 'remove' && !isActive ? (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleRemoveAccount(acc.email); }}
+                          className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        isActive && (
                           <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white">
                             <Check className="w-3.5 h-3.5 stroke-[3]" />
                           </div>
-                        ) : (
-                          <ChevronRight className={`w-4 h-4 transition-colors ${isDark ? 'text-zinc-600 group-hover:text-zinc-400' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                        )}
-                      </div>
+                        )
+                      )}
                     </div>
                   );
-                })
-              )}
+                })}
+              </div>
             </div>
 
-            {/* Bottom Actions */}
-            <div className={`space-y-3 pt-4 border-t z-10 ${isDark ? 'border-zinc-900' : 'border-gray-200'}`}>
-              <button
-                onClick={() => router.push('/?sheet=signUp')}
-                className={`w-full flex items-center justify-center gap-2 transition-all active:scale-98 rounded-full py-3.5 font-semibold text-sm shadow-md cursor-pointer ${
-                  isDark 
-                    ? 'bg-white text-black hover:bg-zinc-200' 
-                    : 'bg-zinc-900 text-white hover:bg-zinc-800'
-                }`}
-              >
-                <UserPlus className="w-4 h-4" />
-                Create an Account
-              </button>
-              
-              <button
-                onClick={() => router.push('/?sheet=signIn')}
-                className={`w-full flex items-center justify-center gap-2 border rounded-full py-3.5 font-semibold text-sm transition-all active:scale-98 cursor-pointer ${
-                  isDark 
-                    ? 'bg-zinc-950 hover:bg-zinc-900 text-zinc-300 hover:text-white border-zinc-800' 
-                    : 'bg-white hover:bg-gray-50 text-gray-750 hover:text-gray-950 border-gray-200'
-                }`}
-              >
-                <LogIn className="w-4 h-4" />
-                Sign In to Existing Account
-              </button>
-            </div>
-          </>
-        )}
+            {/* Profile Metadata Sync Control */}
+            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <h2 className="text-base font-bold mb-1">Profile Metadata Syncing</h2>
+              <p className={`text-xs mb-5 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                Automatically sync your Name, Bio, and Avatar across Instagram, Facebook, and Threads.
+              </p>
 
-        {/* ── VIEW 2: DEDICATED REMOVE ACCOUNTS VIEW PAGE ── */}
-        {viewMode === 'remove' && (
-          <div className="flex-1 flex flex-col justify-between relative z-10 animate-in fade-in slide-in-from-right-4 duration-250">
-            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 mb-6">
-              {accounts.length === 0 ? (
-                <div className="text-center py-10 my-auto">
-                  <p className={`text-sm font-semibold ${isDark ? 'text-zinc-400' : 'text-gray-600'}`}>All accounts removed</p>
-                </div>
-              ) : (
-                accounts.map((acc) => {
-                  const accountName = acc.name || acc.username || acc.email.split('@')[0];
-                  const rawUsername = acc.username || acc.email.split('@')[0];
-                  const displayUsername = rawUsername.startsWith('@') ? rawUsername : `@${rawUsername}`;
-
-                  return (
-                    <div
-                      key={acc.email}
-                      className={`flex items-center justify-between p-4 rounded-[1.75rem] border transition-all ${
-                        isDark 
-                          ? 'border-zinc-800/80 bg-zinc-900/40 shadow-[0_4px_25px_rgba(0,0,0,0.3)]' 
-                          : 'border-gray-200/80 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
+              <div className="space-y-4">
+                {[
+                  { key: 'syncName', title: 'Sync Name & Display Username', desc: 'Keep name identical on all linked accounts' },
+                  { key: 'syncBio', title: 'Sync Bio Description', desc: 'Sync bio updates across all profiles' },
+                  { key: 'syncAvatar', title: 'Sync Profile Picture', desc: 'Sync avatar photo changes instantly' },
+                ].map((item) => (
+                  <div key={item.key} className="flex items-center justify-between py-2 border-b border-zinc-500/10">
+                    <div>
+                      <div className="text-xs font-bold">{item.title}</div>
+                      <div className={`text-[11px] ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>{item.desc}</div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const cur = overviewData?.profileSync?.[item.key] ?? true;
+                        await updateProfileSyncAction({
+                          syncPolicy: 'FULL_SYNC',
+                          syncName: item.key === 'syncName' ? !cur : (overviewData?.profileSync?.syncName ?? true),
+                          syncBio: item.key === 'syncBio' ? !cur : (overviewData?.profileSync?.syncBio ?? true),
+                          syncAvatar: item.key === 'syncAvatar' ? !cur : (overviewData?.profileSync?.syncAvatar ?? true),
+                        });
+                        loadOverview();
+                        showToast('Profile sync settings updated');
+                      }}
+                      className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
+                        overviewData?.profileSync?.[item.key] !== false ? 'bg-blue-600' : isDark ? 'bg-zinc-800' : 'bg-gray-300'
                       }`}
                     >
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        {acc.image ? (
-                          <img
-                            src={acc.image}
-                            alt={accountName}
-                            className={`w-12 h-12 rounded-full border object-cover flex-shrink-0 ${
-                              isDark ? 'border-zinc-700' : 'border-gray-200'
-                            }`}
-                          />
-                        ) : (
-                          <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-bold text-sm flex-shrink-0 uppercase ${
-                            isDark 
-                              ? 'bg-zinc-800 border-zinc-700 text-zinc-300' 
-                              : 'bg-gray-100 border-gray-200 text-gray-700'
-                          }`}>
-                            {getInitials(acc)}
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <p className={`text-sm font-bold truncate ${
-                            isDark ? 'text-zinc-100' : 'text-gray-900'
-                          }`}>
-                            {accountName}
-                          </p>
-                          <p className={`text-xs truncate mt-0.5 font-medium ${
-                            isDark ? 'text-zinc-400' : 'text-gray-500'
-                          }`}>{displayUsername}</p>
-                        </div>
-                      </div>
-
-                      {/* Right "Remove" button with subtle, natural rose styling */}
-                      <button
-                        onClick={() => handleRemoveAccount(acc.email)}
-                        className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-500/90 dark:text-rose-400/90 dark:bg-rose-500/15 border border-rose-500/20 dark:border-rose-500/30 transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 flex-shrink-0"
-                        title="Remove from device"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-rose-400/80" />
-                        Remove
-                      </button>
-                    </div>
-                  );
-                })
-              )}
+                      <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                        overviewData?.profileSync?.[item.key] !== false ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-
-            <button
-              onClick={() => setViewMode('list')}
-              className={`w-full py-3.5 rounded-full text-sm font-semibold border transition-all active:scale-98 cursor-pointer ${
-                isDark 
-                  ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white' 
-                  : 'bg-gray-100 border-gray-200 text-gray-700 hover:text-gray-950'
-              }`}
-            >
-              Done
-            </button>
           </div>
         )}
-      </div>
-    );
-  };
 
-  return (
-    <div className={`min-h-[100dvh] w-full flex flex-col justify-center items-center relative overflow-hidden select-none font-sans transition-colors duration-500 ${
-      isDark ? 'bg-[#050505] text-white' : 'bg-[#f3f4f6] text-gray-900'
-    }`}>
-      {/* Decorative Blur Spheres */}
-      <div className={`absolute top-[-20%] left-[-10%] w-[60%] aspect-square rounded-full blur-[120px] pointer-events-none transition-colors duration-1000 ${
-        isDark ? 'bg-violet-600/10' : 'bg-violet-400/10'
-      }`} />
-      <div className={`absolute bottom-[-20%] right-[-10%] w-[60%] aspect-square rounded-full blur-[120px] pointer-events-none transition-colors duration-1000 ${
-        isDark ? 'bg-amber-600/10' : 'bg-amber-400/10'
-      }`} />
-
-      {/* Desktop split card view */}
-      <div className="hidden lg:grid lg:grid-cols-2 w-full h-full relative z-10 transition-all duration-500 overflow-hidden"
-        style={{ 
-          backgroundColor: isDark ? 'transparent' : 'transparent'
-        }}
-      >
-        {renderLeft()}
-        <div className={`h-full overflow-hidden flex flex-col ${isDark ? 'bg-[#0E0E11]' : 'bg-white'}`}>
-          {renderAccountCenterContent()}
-        </div>
-      </div>
-
-      {/* Mobile view layout */}
-      <div className={`lg:hidden relative w-full h-full flex flex-col overflow-hidden z-10 transition-colors duration-500 ${
-        isDark ? 'bg-[#0E0E11]' : 'bg-white'
-      }`}>
-        {renderAccountCenterContent()}
-      </div>
-
-      {/* ── PASSWORD DIALOG MODAL ── */}
-      {selectedAccount && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300">
-          <div className="absolute inset-0" onClick={() => !loading && setSelectedAccount(null)} />
-          
-          <div className={`relative w-full max-w-md border-t sm:border rounded-t-[2.5rem] sm:rounded-[2rem] p-8 pb-12 sm:pb-8 shadow-2xl z-10 transform animate-in slide-in-from-bottom sm:zoom-in-95 duration-300 ${
-            isDark ? 'bg-[#121214] border-zinc-800/80' : 'bg-white border-gray-200'
-          }`}>
-            <div className={`w-12 h-1 rounded-full mx-auto mb-6 sm:hidden ${isDark ? 'bg-zinc-800' : 'bg-gray-200'}`} />
-            
-            <button
-              disabled={loading}
-              onClick={() => setSelectedAccount(null)}
-              className={`absolute top-6 right-6 p-1.5 rounded-full border transition-colors disabled:opacity-50 cursor-pointer ${
-                isDark 
-                  ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800' 
-                  : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-950 hover:bg-gray-200'
-              }`}
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="text-center mb-6">
-              <div className={`w-16 h-16 rounded-full border flex items-center justify-center mx-auto mb-4 overflow-hidden ${
-                isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-150 border-gray-200'
-              }`}>
-                {selectedAccount.image ? (
-                  <img src={selectedAccount.image} alt={selectedAccount.username} className="w-full h-full object-cover" />
-                ) : (
-                  <span className={`font-bold text-xl uppercase ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>{getInitials(selectedAccount)}</span>
-                )}
+        {/* MODULE 2: SECURITY & SESSION HUB */}
+        {activeTab === 'security' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* 2FA Section */}
+            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold">Two-Factor Authentication (2FA)</h2>
+                  <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                    Protect all linked accounts with TOTP authenticator apps or security keys.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    const current = overviewData?.securitySetting?.isTwoFactorEnabled ?? false;
+                    await toggleTwoFactorAction(!current);
+                    loadOverview();
+                    showToast(!current ? '2FA Enabled successfully' : '2FA Disabled');
+                  }}
+                  className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition-all ${
+                    overviewData?.securitySetting?.isTwoFactorEnabled
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-blue-600 text-white hover:bg-blue-500'
+                  }`}
+                >
+                  {overviewData?.securitySetting?.isTwoFactorEnabled ? '2FA Active' : 'Enable 2FA'}
+                </button>
               </div>
-              <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-950'}`}>Enter Password</h2>
-              <p className={`text-xs mt-1 ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>Sign in as {selectedAccount.name || selectedAccount.username || selectedAccount.email}</p>
             </div>
 
-            {error && (
-              <div className={`text-xs border rounded-2xl px-4 py-3.5 mb-4 animate-in shake duration-300 ${
-                isDark ? 'text-rose-400 bg-rose-500/10 border-rose-500/20' : 'text-rose-600 bg-rose-50 border-rose-200'
-              }`}>
-                {error}
-              </div>
-            )}
+            {/* Global Sessions Manager */}
+            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <h2 className="text-base font-bold mb-1">Where You&apos;re Logged In</h2>
+              <p className={`text-xs mb-5 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                Review active device sessions and revoke unauthorized access remotely.
+              </p>
 
-            <form onSubmit={handlePasswordLogin} className="space-y-4">
-              <div className="space-y-1 relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  disabled={loading}
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={`w-full rounded-full border px-5 py-3 focus:outline-none transition-colors text-sm pr-12 ${
-                    isDark 
-                      ? 'bg-[#1c1c1e] text-white placeholder:text-zinc-500 border-zinc-800 focus:border-zinc-500' 
-                      : 'bg-gray-50 text-gray-900 placeholder:text-gray-400 border-gray-200 focus:border-gray-400'
-                  }`}
-                  autoFocus
-                />
+              <div className="space-y-3">
+                {overviewData?.activeSessions?.map((sess: any) => (
+                  <div key={sess.id} className={`flex items-center justify-between p-4 rounded-2xl border ${isDark ? 'border-zinc-800 bg-zinc-900/60' : 'border-gray-200 bg-gray-50'}`}>
+                    <div className="flex items-center gap-3">
+                      <Smartphone className="w-5 h-5 text-blue-500" />
+                      <div>
+                        <div className="flex items-center gap-2 text-xs font-bold">
+                          {sess.deviceName}
+                          {sess.isCurrent && (
+                            <span className="text-[9px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full">
+                              This Device
+                            </span>
+                          )}
+                        </div>
+                        <div className={`text-[11px] ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                          {sess.locationCity}, {sess.locationCountry} • IP: {sess.ipAddress}
+                        </div>
+                      </div>
+                    </div>
+
+                    {!sess.isCurrent && (
+                      <button
+                        onClick={async () => {
+                          await revokeActiveSessionAction(sess.id);
+                          loadOverview();
+                          showToast('Session revoked remotely');
+                        }}
+                        className="text-xs font-bold text-rose-400 hover:text-rose-300 px-3 py-1.5 rounded-xl border border-rose-500/20 hover:bg-rose-500/10 transition-colors"
+                      >
+                        Revoke Access
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODULE 3: USER DATA & PRIVACY CONTROLS */}
+        {activeTab === 'privacy' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Off-Platform Activity */}
+            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-base font-bold">Off-Platform Data & Telemetry</h2>
+                  <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                    Clear history of activity shared by partners off Meta services.
+                  </p>
+                </div>
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                  onClick={async () => {
+                    await clearOffPlatformDataAction();
+                    loadOverview();
+                    showToast('Off-platform telemetry cleared');
+                  }}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-2xl transition-all"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  Clear Off-Platform History
+                </button>
+              </div>
+            </div>
+
+            {/* Unified Search History */}
+            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-base font-bold">Unified Search History</h2>
+                  <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                    Logs of searches performed across linked Instagram and Facebook accounts.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    await clearSearchHistoryAction();
+                    loadOverview();
+                    showToast('Search history cleared');
+                  }}
+                  className={`px-4 py-2 border rounded-2xl text-xs font-bold transition-all ${
+                    isDark ? 'border-zinc-700 hover:bg-zinc-800 text-zinc-300' : 'border-gray-300 hover:bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  Clear All Search Logs
+                </button>
+              </div>
+            </div>
+
+            {/* Data Export & Portability */}
+            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <h2 className="text-base font-bold mb-1">Download Your Information</h2>
+              <p className={`text-xs mb-4 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                Export a copy of your posts, media, messages, and settings.
+              </p>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={async () => {
+                    await requestDataExportAction('JSON');
+                    loadOverview();
+                    showToast('JSON Export job initiated');
+                  }}
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-2xl transition-all flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Request JSON Archive
+                </button>
+                <button
+                  onClick={async () => {
+                    await requestDataExportAction('HTML');
+                    loadOverview();
+                    showToast('HTML Export job initiated');
+                  }}
+                  className={`px-4 py-2.5 border text-xs font-bold rounded-2xl transition-all flex items-center gap-2 ${
+                    isDark ? 'border-zinc-700 hover:bg-zinc-800 text-zinc-300' : 'border-gray-300 hover:bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  <Download className="w-4 h-4" />
+                  Request HTML Archive
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODULE 4: AD PREFERENCES & META PAY */}
+        {activeTab === 'preferences' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Sensitive Ad Topics Filter */}
+            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <h2 className="text-base font-bold mb-1">Cross-Account Ad Topics</h2>
+              <p className={`text-xs mb-4 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                Filter sensitive ad topics across linked Instagram and Facebook accounts.
+              </p>
+
+              <div className="flex flex-wrap gap-2 mb-4">
+                {['Gambling', 'Politics', 'Alcohol', 'Financial Services', 'Pets'].map((topic) => {
+                  const isHidden = overviewData?.adPreference?.sensitiveTopicsHidden?.includes(topic);
+                  return (
+                    <button
+                      key={topic}
+                      onClick={async () => {
+                        const currentList: string[] = overviewData?.adPreference?.sensitiveTopicsHidden || [];
+                        const newList = isHidden ? currentList.filter(t => t !== topic) : [...currentList, topic];
+                        await updateAdPreferencesAction(newList, overviewData?.adPreference?.usePartnerData ?? true);
+                        loadOverview();
+                        showToast(`Ad topic preference updated: ${topic}`);
+                      }}
+                      className={`px-3.5 py-2 rounded-2xl text-xs font-extrabold border transition-all ${
+                        isHidden
+                          ? 'bg-rose-600 border-rose-500 text-white'
+                          : isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-gray-100 border-gray-200 text-gray-700'
+                      }`}
+                    >
+                      {isHidden ? `Hidden: ${topic}` : `Show: ${topic}`}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Meta Pay Vaulted Tokens */}
+            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-base font-bold">Meta Pay Token Vault</h2>
+                  <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                    Vaulted payment tokens synced across Instagram Shop and Meta Horizon.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    await addPaymentVaultTokenAction({ cardBrand: 'Visa', cardLast4: '4242', expiryMonth: 12, expiryYear: 2028 });
+                    loadOverview();
+                    showToast('Vaulted new payment method');
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-2xl transition-all"
+                >
+                  + Add Payment Method
                 </button>
               </div>
 
+              <div className="space-y-3">
+                {overviewData?.paymentTokens?.map((tok: any) => (
+                  <div key={tok.id} className={`flex items-center justify-between p-4 rounded-2xl border ${isDark ? 'border-zinc-800 bg-zinc-900/60' : 'border-gray-200 bg-gray-50'}`}>
+                    <div className="flex items-center gap-3">
+                      <CreditCard className="w-5 h-5 text-blue-500" />
+                      <div>
+                        <div className="text-xs font-bold">{tok.cardBrand} ending in •••• {tok.cardLast4}</div>
+                        <div className={`text-[11px] ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+                          Expires {tok.expiryMonth}/{tok.expiryYear} • Vault ID: {tok.vaultedTokenId}
+                        </div>
+                      </div>
+                    </div>
+                    {tok.isDefault && (
+                      <span className="text-[10px] bg-blue-600 text-white font-extrabold px-2.5 py-1 rounded-full uppercase">
+                        Default Meta Pay
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Password Modal */}
+      {selectedAccount && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className={`w-full max-w-sm border rounded-3xl p-6 shadow-2xl relative ${isDark ? 'bg-[#16161a] border-zinc-800' : 'bg-white border-gray-200'}`}>
+            <button
+              onClick={() => setSelectedAccount(null)}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-base font-bold mb-4">Enter Password for @{selectedAccount.username}</h3>
+            {error && <div className="text-rose-400 text-xs font-bold mb-3">{error}</div>}
+            <form onSubmit={handlePasswordLogin} className="space-y-3">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                className={`w-full p-3 rounded-2xl border text-xs outline-none ${
+                  isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-gray-100 border-gray-200 text-gray-900'
+                }`}
+              />
               <button
                 type="submit"
-                disabled={loading || !password}
-                className={`w-full transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer ${
-                  isDark ? 'bg-white text-black hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-zinc-800'
-                }`}
+                disabled={loading}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-2xl transition-all"
               >
-                {loading ? (
-                  <div className={`w-4 h-4 border-2 rounded-full animate-spin ${
-                    isDark ? 'border-black/20 border-t-black' : 'border-white/20 border-t-white'
-                  }`} />
-                ) : 'Sign In'}
+                {loading ? 'Logging in...' : 'Log In'}
               </button>
             </form>
           </div>
