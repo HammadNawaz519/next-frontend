@@ -183,24 +183,30 @@ export default function AccountsPage() {
   return (
     <div className={`min-h-screen transition-colors duration-500 font-sans ${isDark ? 'bg-[#09090b] text-white' : 'bg-[#f8f9fa] text-gray-900'}`}>
       <div className="max-w-xl mx-auto px-4 pt-12 pb-10 md:pt-16">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-500/15">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className={`p-2 rounded-full transition-all active:scale-95 ${
-                isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-              }`}
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">Account Center</h1>
-              <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                Manage accounts on this device
-              </p>
-            </div>
-          </div>
+        {/* Top App Logo & Title */}
+        <div className="text-center mb-6">
+          <img
+            src="/logo.png"
+            alt="Connect Logo"
+            className="w-14 h-14 object-contain rounded-2xl mx-auto mb-3 bg-black p-1 shadow-md"
+          />
+          <h1 className="text-2xl font-extrabold tracking-tight">Log Into Existing Account</h1>
+          <p className={`text-xs mt-1 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+            Select a saved account from your device to switch
+          </p>
+        </div>
+
+        {/* Top Header Controls */}
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-500/15">
+          <button
+            onClick={() => router.push('/dashboard')}
+            className={`p-2 rounded-full transition-all active:scale-95 flex items-center gap-1.5 text-xs font-semibold ${
+              isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+            }`}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
 
           <div className="relative" ref={dropdownRef}>
             <button
@@ -235,21 +241,19 @@ export default function AccountsPage() {
           </div>
         </div>
 
-        {/* Clean Simple Accounts List Container */}
-        <div className="divide-y divide-zinc-500/15">
-          <div className="flex items-center justify-between py-2 mb-1">
-            <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-              Saved Accounts ({displayAccounts.length})
-            </span>
-            {(viewMode === 'remove' || viewMode === 'removeSaved') && (
+        {/* Clean Simple Accounts List Container — Uniform & Clean */}
+        <div className="divide-y divide-zinc-500/15 mb-6">
+          {(viewMode === 'remove' || viewMode === 'removeSaved') && (
+            <div className="flex items-center justify-between py-2">
+              <span className="text-xs font-bold text-amber-500">Managing Saved Accounts</span>
               <button
                 onClick={() => setViewMode('list')}
                 className="text-xs font-bold text-blue-500 hover:text-blue-400 transition-colors"
               >
                 Done
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {displayAccounts.length === 0 && (
             <p className={`text-sm text-center py-8 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
@@ -260,37 +264,29 @@ export default function AccountsPage() {
           {displayAccounts.map((acc) => {
             const accountName = acc.displayName || acc.username || acc.email.split('@')[0];
             const displayUsername = acc.username || acc.email.split('@')[0];
-            const isActive = acc.isCurrent;
             const isSaved = acc.isSavedOnDevice;
             const isSwitchingThis = switchingId === acc.userId;
 
             return (
               <div
                 key={acc.userId || acc.email}
-                onClick={() => viewMode === 'list' && !isActive && handleAccountClick(acc)}
-                className={`flex items-center justify-between py-3.5 px-2 border-b transition-colors ${
+                onClick={() => viewMode === 'list' && handleAccountClick(acc)}
+                className={`flex items-center justify-between py-3.5 px-2 border-b transition-colors cursor-pointer ${
                   isDark ? 'border-zinc-800/80 hover:bg-white/5' : 'border-gray-100 hover:bg-black/5'
-                } ${isActive ? '' : 'cursor-pointer'}`}
+                }`}
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   {acc.profilePicture ? (
                     <img src={acc.profilePicture} alt={accountName} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
                   ) : (
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0 ${
-                      isActive ? 'bg-blue-600 text-white' : isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-gray-200 text-gray-700'
+                      isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-gray-200 text-gray-700'
                     }`}>
                       {getInitials(acc)}
                     </div>
                   )}
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold truncate">{accountName}</span>
-                      {isActive && (
-                        <span className="text-[10px] font-bold bg-blue-600 text-white px-2 py-0.5 rounded-full">
-                          Active
-                        </span>
-                      )}
-                    </div>
+                    <span className="text-sm font-semibold truncate block">{accountName}</span>
                     <span className={`text-xs truncate block ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>@{displayUsername}</span>
                   </div>
                 </div>
@@ -298,7 +294,7 @@ export default function AccountsPage() {
                 <div className="flex items-center gap-2 flex-shrink-0 pl-2">
                   {isSwitchingThis ? (
                     <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                  ) : viewMode === 'remove' && !isActive ? (
+                  ) : viewMode === 'remove' ? (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleRemoveAccount(acc.userId); }}
                       className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
@@ -306,7 +302,7 @@ export default function AccountsPage() {
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
-                  ) : viewMode === 'removeSaved' && isSaved && !isActive ? (
+                  ) : viewMode === 'removeSaved' && isSaved ? (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleRemoveSavedLogin(acc.userId); }}
                       className="p-1.5 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors"
@@ -314,8 +310,6 @@ export default function AccountsPage() {
                     >
                       <Key className="w-4 h-4" />
                     </button>
-                  ) : isActive ? (
-                    <span className="text-xs font-semibold text-blue-500">✓ Logged In</span>
                   ) : (
                     <ChevronRight className={`w-4 h-4 ${isDark ? 'text-zinc-600' : 'text-gray-400'}`} />
                   )}
@@ -325,16 +319,24 @@ export default function AccountsPage() {
           })}
         </div>
 
-        {/* Add Account Button */}
-        <div className="mt-8">
+        {/* Bottom Action Buttons in Matching Theme */}
+        <div className="flex flex-col gap-3">
           <button
             onClick={() => router.push('/?sheet=signIn')}
-            className={`w-full py-3.5 rounded-2xl font-bold text-xs border flex items-center justify-center gap-2 transition-all active:scale-98 ${
-              isDark ? 'bg-zinc-900 border-zinc-800 text-white hover:bg-zinc-800' : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50'
+            className={`w-full py-3.5 rounded-full font-bold text-xs border flex items-center justify-center gap-2 transition-all active:scale-98 ${
+              isDark ? 'bg-zinc-900 border-zinc-800 text-white hover:bg-zinc-800' : 'bg-gray-100 border-gray-200 text-gray-900 hover:bg-gray-200'
             }`}
           >
-            <UserPlus className="w-4 h-4 text-blue-500" />
-            Add Another Account
+            Log Into Another Account
+          </button>
+
+          <button
+            onClick={() => router.push('/?sheet=signUp')}
+            className={`w-full py-3.5 rounded-full font-bold text-xs border flex items-center justify-center gap-2 transition-all active:scale-98 ${
+              isDark ? 'bg-zinc-900 border-zinc-800 text-white hover:bg-zinc-800' : 'bg-gray-100 border-gray-200 text-gray-900 hover:bg-gray-200'
+            }`}
+          >
+            Create a New Account
           </button>
         </div>
       </div>

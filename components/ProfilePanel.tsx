@@ -2171,19 +2171,18 @@ export default function ProfilePanel({
           {/* IF SAVED ACCOUNTS EXIST & NOT MANUAL SIGN IN MODE -> SHOW ACCOUNT CENTER LIST */}
           {displayAccounts.length > 0 && !showManualSignIn ? (
             <div>
-              <div style={{
-                width: 64, height: 64, borderRadius: '50%', background: 'rgba(59, 130, 246, 0.12)',
-                color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 16px', border: '1.5px solid rgba(59, 130, 246, 0.25)'
-              }}>
-                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
+              <img
+                src="/logo.png"
+                alt="Connect Logo"
+                style={{
+                  width: 56, height: 56, objectFit: 'contain', borderRadius: 16,
+                  margin: '0 auto 16px', background: '#000', padding: 4
+                }}
+              />
 
               <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Log Into Existing Account</h1>
               <p style={{ fontSize: 13, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 24 }}>
-                Select a saved account from Account Center to switch instantly
+                Select a saved account from your device to switch
               </p>
 
               {switchError && (
@@ -2192,23 +2191,22 @@ export default function ProfilePanel({
                 </div>
               )}
 
-              {/* Account Center Saved Accounts List */}
+              {/* Account Center Saved Accounts List — Uniform & Clean */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, maxHeight: 320, overflowY: 'auto' }}>
                 {displayAccounts.map((acc) => {
-                  const isActive = acc.isCurrent;
                   const accountName = acc.displayName || acc.username || acc.email.split('@')[0];
                   const username = acc.username || acc.email.split('@')[0];
                   return (
                     <div
                       key={acc.userId || acc.email}
-                      onClick={() => !isActive && handleAccountSwitch(acc)}
+                      onClick={() => handleAccountSwitch(acc)}
                       style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '14px 18px', borderRadius: '20px',
-                        background: isActive ? (isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)') : (isDark ? '#16161a' : '#ffffff'),
-                        border: isActive ? '1.5px solid #3b82f6' : (isDark ? '1px solid #27272a' : '1px solid #e5e7eb'),
-                        cursor: isActive ? 'default' : 'pointer', transition: 'all 0.2s',
-                        boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.04)'
+                        padding: '14px 18px', borderRadius: '18px',
+                        background: isDark ? '#16161a' : '#f9fafb',
+                        border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                        cursor: 'pointer', transition: 'all 0.2s',
+                        boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.03)'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -2220,48 +2218,45 @@ export default function ProfilePanel({
                           )}
                         </div>
                         <div style={{ textAlign: 'left' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 14, fontWeight: 700 }}>{accountName}</span>
-                            {isActive && (
-                              <span style={{ fontSize: 9, fontWeight: 800, background: '#3b82f6', color: '#fff', padding: '2px 7px', borderRadius: 10 }}>
-                                Active
-                              </span>
-                            )}
-                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 700, display: 'block' }}>{accountName}</span>
                           <span style={{ fontSize: 12, color: isDark ? '#a1a1aa' : '#6b7280' }}>@{username}</span>
                         </div>
                       </div>
 
-                      {isActive ? (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#3b82f6' }}>✓ Logged In</span>
-                      ) : (
-                        <button
-                          type="button"
-                          style={{
-                            padding: '8px 16px', background: '#3b82f6', color: '#fff',
-                            border: 'none', borderRadius: '100px', fontWeight: 700, fontSize: 12, cursor: 'pointer'
-                          }}
-                        >
-                          Log In
-                        </button>
-                      )}
+                      <svg width="18" height="18" fill="none" stroke={isDark ? '#a1a1aa' : '#6b7280'} strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Button to show manual username & password fields */}
-              <button
-                type="button"
-                onClick={() => setShowManualSignIn(true)}
-                style={{
-                  width: '100%', padding: '14px 0', background: isDark ? '#1c1c22' : '#f3f4f6',
-                  color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
-                  borderRadius: '100px', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s'
-                }}
-              >
-                Log Into Another Account
-              </button>
+              {/* Bottom Action Buttons in Same Theme */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowManualSignIn(true)}
+                  style={{
+                    width: '100%', padding: '14px 0', background: isDark ? '#1c1c22' : '#f3f4f6',
+                    color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                    borderRadius: '100px', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                >
+                  Log Into Another Account
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => triggerAccountSheetTransition('signUp')}
+                  style={{
+                    width: '100%', padding: '14px 0', background: isDark ? '#1c1c22' : '#f3f4f6',
+                    color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                    borderRadius: '100px', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                >
+                  Create a New Account
+                </button>
+              </div>
             </div>
           ) : (
             /* IF NO SAVED ACCOUNTS OR USER CLICKED "LOG INTO ANOTHER ACCOUNT" -> SHOW CENTERED INPUT FIELDS */
