@@ -2328,7 +2328,15 @@ export default function ProfilePanel({
                   onClick={() => triggerAccountSheetTransition('signUp')}
                   className="w-full bg-zinc-900/80 hover:bg-zinc-800 text-white border border-zinc-800 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-sm"
                 >
-                  C      {/* Manual Sign In - Glassmorphism Card Popup */}
+                  Create a New Account
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Manual Sign In - Glassmorphism Card Popup */}
       <div 
         className={`fixed inset-0 z-[500] flex items-center justify-center p-4 transition-opacity duration-500 ${(showManualSignIn || activeAccountSheet === 'signIn') ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       >
