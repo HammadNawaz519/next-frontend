@@ -1315,9 +1315,15 @@ export default function ProfilePanel({
                 background: isDark ? 'rgba(255,255,255,0.02)' : '#fff',
                 border: `1px solid ${border}`, borderRadius: 20, overflow: 'hidden'
               }}>
-                {/* Sign Out Row */}
                 <div 
-                  onClick={() => signOut({ callbackUrl: '/accounts' })}
+                  onClick={() => {
+                    try {
+                      localStorage.removeItem('has_active_session');
+                      localStorage.removeItem('last_logged_user');
+                      localStorage.removeItem('social_messages_cache');
+                    } catch (e) {}
+                    signOut({ callbackUrl: '/accounts' });
+                  }}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '16px 18px', cursor: 'pointer'

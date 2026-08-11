@@ -623,7 +623,14 @@ export default function DashboardPage() {
           </div>
             
           <button
-            onClick={() => signOut({ callbackUrl: '/accounts' })}
+            onClick={() => {
+              try {
+                localStorage.removeItem('has_active_session');
+                localStorage.removeItem('last_logged_user');
+                localStorage.removeItem('social_messages_cache');
+              } catch (e) {}
+              signOut({ callbackUrl: '/accounts' });
+            }}
             className="w-full flex items-center justify-start gap-0 group-hover:gap-4 px-1 py-2 transition-[gap] duration-500 ease-[var(--ease-premium)] rounded-full overflow-hidden"
             style={{ color: 'var(--dm-text-muted)', border: '1px solid transparent' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444'; (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.05)'; (e.currentTarget as HTMLElement).style.borderColor = isDark ? 'rgba(239,68,68,0.3)' : '#fecaca'; }}

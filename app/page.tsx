@@ -87,6 +87,21 @@ export default function LoginPage() {
     setHasMounted(true);
   }, []);
 
+  // Track active session state in localStorage to eliminate mobile sign-in page flash on app open
+  useEffect(() => {
+    if (sessStatus === 'authenticated' && session?.user) {
+      try {
+        localStorage.setItem('has_active_session', 'true');
+        localStorage.setItem('last_logged_user', JSON.stringify(session.user));
+      } catch (e) {}
+    } else if (sessStatus === 'unauthenticated') {
+      try {
+        localStorage.removeItem('has_active_session');
+        localStorage.removeItem('last_logged_user');
+      } catch (e) {}
+    }
+  }, [sessStatus, session]);
+
   // Handle initial load status
   useEffect(() => {
     if (sessStatus !== 'loading') {
@@ -720,14 +735,30 @@ export default function LoginPage() {
   }
 
   const isLikelyLoggedIn = (() => {
+    if (typeof window === 'undefined') return false;
     try {
+      if (localStorage.getItem('has_active_session') === 'true') return true;
+      if (localStorage.getItem('last_logged_user')) return true;
       const stored = localStorage.getItem('connected_accounts');
-      return stored && JSON.parse(stored).length > 0;
+      if (stored && JSON.parse(stored).length > 0) return true;
+      return false;
     } catch { return false; }
   })();
 
-  if (sessStatus === 'authenticated' || (initialLoading && isLikelyLoggedIn)) {
+  if (sessStatus === 'authenticated' || (sessStatus === 'loading' && isLikelyLoggedIn)) {
     return <DashboardPage />;
+  }
+
+  if (sessStatus === 'loading') {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#0c0c0e] flex flex-col items-center justify-center font-sans">
+        <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-zinc-800 to-zinc-900 border border-zinc-700/50 flex items-center justify-center shadow-2xl animate-pulse">
+          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        </div>
+      </div>
+    );
   }
 
   return (
