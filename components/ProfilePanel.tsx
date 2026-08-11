@@ -2379,9 +2379,9 @@ export default function ProfilePanel({
 
           <form onSubmit={handleSwitchLogin} className="space-y-4">
             <div className="space-y-2 text-left">
-              <Label htmlFor="switch-email" className="text-white/90 text-xs font-semibold">
+              <label htmlFor="switch-email" className="text-white/90 text-xs font-semibold block">
                 Email
-              </Label>
+              </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
                 <Input
@@ -2397,9 +2397,9 @@ export default function ProfilePanel({
             </div>
 
             <div className="space-y-2 text-left">
-              <Label htmlFor="switch-password" className="text-white/90 text-xs font-semibold">
+              <label htmlFor="switch-password" className="text-white/90 text-xs font-semibold block">
                 Password
-              </Label>
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
                 <Input
@@ -2470,9 +2470,9 @@ export default function ProfilePanel({
 
           <form onSubmit={handleSwitchSignup} className="space-y-4">
             <div className="space-y-2 text-left">
-              <Label htmlFor="signup-name" className="text-white/90 text-xs font-semibold">
+              <label htmlFor="signup-name" className="text-white/90 text-xs font-semibold block">
                 Username / Full Name
-              </Label>
+              </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
                 <Input
@@ -2488,9 +2488,9 @@ export default function ProfilePanel({
             </div>
 
             <div className="space-y-2 text-left">
-              <Label htmlFor="signup-email" className="text-white/90 text-xs font-semibold">
+              <label htmlFor="signup-email" className="text-white/90 text-xs font-semibold block">
                 Email
-              </Label>
+              </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
                 <Input
@@ -2506,9 +2506,9 @@ export default function ProfilePanel({
             </div>
 
             <div className="space-y-2 text-left">
-              <Label htmlFor="signup-phone" className="text-white/90 text-xs font-semibold">
+              <label htmlFor="signup-phone" className="text-white/90 text-xs font-semibold block">
                 Phone Number
-              </Label>
+              </label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
                 <Input
@@ -2524,9 +2524,9 @@ export default function ProfilePanel({
             </div>
 
             <div className="space-y-2 text-left">
-              <Label htmlFor="signup-password" className="text-white/90 text-xs font-semibold">
+              <label htmlFor="signup-password" className="text-white/90 text-xs font-semibold block">
                 Password
-              </Label>
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
                 <Input
