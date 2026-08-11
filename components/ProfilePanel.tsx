@@ -2122,7 +2122,7 @@ export default function ProfilePanel({
                 }}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '12px 16px', borderRadius: '18px',
+                  padding: '12px 18px', borderRadius: '100px',
                   background: isDark ? '#16161a' : '#f9fafb',
                   border: isActive ? (isDark ? '1.5px solid #52525b' : '1.5px solid #18181b') : (isDark ? '1px solid #27272a' : '1px solid #e5e7eb'),
                   cursor: isActive ? 'default' : 'pointer',
@@ -2266,7 +2266,7 @@ export default function ProfilePanel({
                       onClick={() => handleAccountSwitch(acc)}
                       style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '14px 18px', borderRadius: '18px',
+                        padding: '14px 20px', borderRadius: '100px',
                         background: isDark ? '#16161a' : '#f9fafb',
                         border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
                         cursor: 'pointer', transition: 'all 0.2s',
