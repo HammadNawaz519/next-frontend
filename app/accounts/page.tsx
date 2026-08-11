@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { MoreVertical, Trash2, UserPlus, LogIn, Lock, Eye, EyeOff, X, ArrowLeft, ChevronRight } from 'lucide-react';
+import { MoreVertical, Trash2, UserPlus, LogIn, Lock, Eye, EyeOff, X, ArrowLeft, ChevronRight, Check } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useTheme } from '@/app/components/ThemeProvider';
 
@@ -18,12 +18,14 @@ interface SavedAccount {
   name?: string;
   image?: string;
   provider?: string;
+  isCurrent?: boolean;
 }
 
 export default function AccountsPage() {
   const router = useRouter();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const { data: session } = useSession();
   
   const [mounted, setMounted] = useState(false);
   const [accounts, setAccounts] = useState<SavedAccount[]>([]);
@@ -60,6 +62,34 @@ export default function AccountsPage() {
       console.error('Failed to load accounts:', e);
     }
   }, []);
+
+  const curEmail = session?.user?.email ? session.user.email.toLowerCase().trim() : '';
+
+  const displayAccounts = React.useMemo(() => {
+    const map = new Map<string, SavedAccount>();
+    if (session?.user?.email) {
+      const email = session.user.email.toLowerCase().trim();
+      const username = (session.user as any).username || email.split('@')[0];
+      map.set(email, {
+        email,
+        username,
+        name: session.user.name || 'User',
+        image: session.user.image || '',
+        isCurrent: true
+      });
+    }
+    accounts.forEach((acc) => {
+      if (!acc || !acc.email) return;
+      const key = acc.email.toLowerCase().trim();
+      const isCurrent = key === curEmail;
+      if (!map.has(key)) {
+        map.set(key, { ...acc, isCurrent });
+      } else {
+        map.set(key, { ...acc, ...map.get(key), isCurrent: true });
+      }
+    });
+    return Array.from(map.values());
+  }, [session, accounts, curEmail]);
 
   // Dropdown close listener
   useEffect(() => {
@@ -284,7 +314,7 @@ export default function AccountsPage() {
         {viewMode === 'list' && (
           <>
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 mb-6 relative z-10 min-h-[180px] flex flex-col justify-start">
-              {accounts.length === 0 ? (
+              {displayAccounts.length === 0 ? (
                 <div className="text-center py-10 my-auto">
                   <div className={`w-14 h-14 rounded-full border flex items-center justify-center mx-auto mb-4 ${
                     isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-gray-100 border-gray-200'
@@ -295,19 +325,24 @@ export default function AccountsPage() {
                   <p className={`text-xs mt-1 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>Sign in below to save your profile to Account Center</p>
                 </div>
               ) : (
-                accounts.map((acc) => {
+                displayAccounts.map((acc) => {
                   const accountName = acc.name || acc.username || acc.email.split('@')[0];
                   const rawUsername = acc.username || acc.email.split('@')[0];
                   const displayUsername = rawUsername.startsWith('@') ? rawUsername : `@${rawUsername}`;
+                  const isActive = acc.isCurrent;
 
                   return (
                     <div
                       key={acc.email}
-                      onClick={() => handleAccountClick(acc)}
+                      onClick={() => {
+                        if (!isActive) handleAccountClick(acc);
+                      }}
                       className={`group flex items-center justify-between p-4 rounded-[1.75rem] border backdrop-blur-xl transition-all duration-300 ${
-                        isDark
-                          ? 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 shadow-[0_4px_25px_rgba(0,0,0,0.3)] cursor-pointer active:scale-[0.98]'
-                          : 'border-gray-200/80 bg-white/80 hover:bg-white hover:border-gray-300 shadow-[0_4px_20px_rgba(0,0,0,0.03)] cursor-pointer active:scale-[0.98]'
+                        isActive
+                          ? (isDark ? 'border-blue-500/50 bg-blue-500/10 shadow-[0_4px_25px_rgba(59,130,246,0.15)]' : 'border-blue-300 bg-blue-50/70 shadow-[0_4px_20px_rgba(59,130,246,0.1)]')
+                          : (isDark
+                            ? 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 shadow-[0_4px_25px_rgba(0,0,0,0.3)] cursor-pointer active:scale-[0.98]'
+                            : 'border-gray-200/80 bg-white/80 hover:bg-white hover:border-gray-300 shadow-[0_4px_20px_rgba(0,0,0,0.03)] cursor-pointer active:scale-[0.98]')
                       }`}
                     >
                       <div className="flex items-center gap-3.5 min-w-0">
@@ -316,24 +351,33 @@ export default function AccountsPage() {
                             src={acc.image}
                             alt={accountName}
                             className={`w-12 h-12 rounded-full border object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${
-                              isDark ? 'border-zinc-700' : 'border-gray-200'
+                              isActive ? 'border-blue-500' : (isDark ? 'border-zinc-700' : 'border-gray-200')
                             }`}
                           />
                         ) : (
                           <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-bold text-sm flex-shrink-0 uppercase transition-transform duration-300 group-hover:scale-105 ${
-                            isDark 
-                              ? 'bg-zinc-800 border-zinc-700 text-zinc-300' 
-                              : 'bg-gray-100 border-gray-200 text-gray-700'
+                            isActive
+                              ? 'bg-blue-600 border-blue-500 text-white'
+                              : (isDark 
+                                ? 'bg-zinc-800 border-zinc-700 text-zinc-300' 
+                                : 'bg-gray-100 border-gray-200 text-gray-700')
                           }`}>
                             {getInitials(acc)}
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className={`text-sm font-bold truncate transition-colors ${
-                            isDark ? 'text-zinc-100 group-hover:text-white' : 'text-gray-900 group-hover:text-gray-950'
-                          }`}>
-                            {accountName}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className={`text-sm font-bold truncate transition-colors ${
+                              isDark ? 'text-zinc-100 group-hover:text-white' : 'text-gray-900 group-hover:text-gray-950'
+                            }`}>
+                              {accountName}
+                            </p>
+                            {isActive && (
+                              <span className="text-[10px] font-extrabold bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                Logged In
+                              </span>
+                            )}
+                          </div>
                           <p className={`text-xs truncate mt-0.5 font-medium ${
                             isDark ? 'text-zinc-400' : 'text-gray-500'
                           }`}>{displayUsername}</p>
@@ -341,7 +385,13 @@ export default function AccountsPage() {
                       </div>
 
                       <div className="flex items-center gap-2 flex-shrink-0 pl-2">
-                        <ChevronRight className={`w-4 h-4 transition-colors ${isDark ? 'text-zinc-600 group-hover:text-zinc-400' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                        {isActive ? (
+                          <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white">
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          </div>
+                        ) : (
+                          <ChevronRight className={`w-4 h-4 transition-colors ${isDark ? 'text-zinc-600 group-hover:text-zinc-400' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                        )}
                       </div>
                     </div>
                   );

@@ -171,6 +171,35 @@ export default function ProfilePanel({
     }
   }, [fullUser, session]);
 
+  const curEmail = (fullUser?.email || session?.user?.email || '').toLowerCase().trim();
+  const curUsername = fullUser?.username || session?.user?.username || (curEmail ? curEmail.split('@')[0] : 'user');
+  const curName = fullUser?.name || session?.user?.name || 'User';
+  const curImage = fullUser?.image || session?.user?.image || '';
+
+  const displayAccounts = React.useMemo(() => {
+    const map = new Map<string, any>();
+    if (curEmail) {
+      map.set(curEmail, {
+        email: curEmail,
+        username: curUsername,
+        name: curName,
+        image: curImage,
+        isCurrent: true
+      });
+    }
+    savedAccounts.forEach((acc: any) => {
+      if (!acc || !acc.email) return;
+      const key = acc.email.toLowerCase().trim();
+      const isCurrent = key === curEmail;
+      if (!map.has(key)) {
+        map.set(key, { ...acc, isCurrent });
+      } else {
+        map.set(key, { ...acc, ...map.get(key), isCurrent: true });
+      }
+    });
+    return Array.from(map.values());
+  }, [curEmail, curUsername, curName, curImage, savedAccounts]);
+
   // Sync sheet state with parent is handled below variables declaration
 
   // Transition helper
@@ -1987,25 +2016,33 @@ export default function ProfilePanel({
         <div style={{ width: 48, height: 4, background: '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
         <h2 style={{ fontSize: 18, fontWeight: 800, color: '#121214', marginBottom: 16, textAlign: 'center' }}>Switch Account</h2>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20, maxHeight: 220, overflowY: 'auto' }}>
-          {savedAccounts.map((acc, idx) => {
-            const curUsername = fullUser?.username || session?.user?.username || (fullUser?.email || session?.user?.email || '').split('@')[0] || 'user';
-            const isActive = acc.username === curUsername;
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20, maxHeight: 260, overflowY: 'auto' }}>
+          {displayAccounts.map((acc, idx) => {
+            const isActive = acc.isCurrent;
             return (
               <div 
                 key={idx}
-                onClick={() => handleAccountSwitch(acc)}
+                onClick={() => {
+                  if (isActive) {
+                    setActiveAccountSheet('none');
+                  } else {
+                    handleAccountSwitch(acc);
+                  }
+                }}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '12px 16px', borderRadius: '16px', background: '#f9fafb',
-                  cursor: 'pointer', border: isActive ? '1px solid #121214' : '1px solid transparent',
+                  padding: '12px 16px', borderRadius: '16px',
+                  background: isActive ? (isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)') : (isDark ? '#1a1a1e' : '#f9fafb'),
+                  cursor: 'pointer',
+                  border: isActive ? '1.5px solid #3b82f6' : (isDark ? '1px solid #27272a' : '1px solid transparent'),
                   transition: 'all 0.2s',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{
-                    width: 38, height: 38, borderRadius: '50%', background: '#e5e7eb',
+                    width: 40, height: 40, borderRadius: '50%', background: '#e5e7eb',
                     overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: isActive ? '2px solid #3b82f6' : 'none'
                   }}>
                     {acc.image 
                       ? <img src={acc.image} alt={acc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -2013,13 +2050,26 @@ export default function ProfilePanel({
                     }
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#121214' }}>{acc.name || 'User'}</span>
-                    <span style={{ fontSize: 11, color: '#6b7280' }}>@{acc.username}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#ffffff' : '#121214' }}>{acc.name || 'User'}</span>
+                      {isActive && (
+                        <span style={{ fontSize: 10, fontWeight: 700, background: '#3b82f6', color: '#fff', padding: '1px 6px', borderRadius: 10 }}>
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 11, color: isDark ? '#a1a1aa' : '#6b7280' }}>@{acc.username}</span>
                   </div>
                 </div>
-                {isActive && (
-                  <svg width="18" height="18" fill="none" stroke="#121214" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                {isActive ? (
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="12" height="12" fill="none" stroke="#ffffff" strokeWidth="3" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                ) : (
+                  <svg width="16" height="16" fill="none" stroke={isDark ? '#71717a' : '#9ca3af'} strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 )}
               </div>
