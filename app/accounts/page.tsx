@@ -444,10 +444,10 @@ export default function AccountsPage() {
 
       {/* Log Into Another Account - Charcoal Black Bottom Popup Sheet */}
       <div 
-        className={`fixed inset-0 z-[9999] transition-opacity duration-500 ${showLoginSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-[500] transition-opacity duration-500 ${showLoginSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       >
         <div 
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+          className="absolute inset-0 bg-black/60 backdrop-blur-md" 
           onClick={() => setShowLoginSheet(false)}
         />
         <div 
@@ -524,10 +524,10 @@ export default function AccountsPage() {
 
       {/* Create New Account - Bottom Popup Sheet (Matching Welcome Screen UI) */}
       <div 
-        className={`fixed inset-0 z-[9999] transition-opacity duration-500 ${showSignupSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-[500] transition-opacity duration-500 ${showSignupSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       >
         <div 
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+          className="absolute inset-0 bg-black/60 backdrop-blur-md" 
           onClick={() => setShowSignupSheet(false)}
         />
         <div 

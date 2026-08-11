@@ -2339,10 +2339,10 @@ export default function ProfilePanel({
 
       {/* Manual Sign In - Charcoal Black Bottom Popup Sheet */}
       <div 
-        className={`fixed inset-0 z-[9999] transition-opacity duration-500 ${showManualSignIn && activeAccountSheet === 'signIn' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-[500] transition-opacity duration-500 ${showManualSignIn && activeAccountSheet === 'signIn' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       >
         <div 
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+          className="absolute inset-0 bg-black/60 backdrop-blur-md" 
           onClick={() => setShowManualSignIn(false)}
         />
         <div 
@@ -2401,10 +2401,10 @@ export default function ProfilePanel({
 
       {/* 4. Create New Account — Charcoal Black Bottom Popup Sheet */}
       <div
-        className={`fixed inset-0 z-[9999] transition-opacity duration-500 ${activeAccountSheet === 'signUp' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-[500] transition-opacity duration-500 ${activeAccountSheet === 'signUp' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       >
         <div 
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+          className="absolute inset-0 bg-black/60 backdrop-blur-md" 
           onClick={() => triggerAccountSheetTransition('signIn')}
         />
         <div 
