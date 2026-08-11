@@ -231,7 +231,7 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 font-sans ${isDark ? 'bg-[#09090b] text-white' : 'bg-[#f8f9fa] text-gray-900'}`}>
+    <div className={`min-h-screen transition-colors duration-500 font-sans ${isDark ? 'bg-[#09090b] text-white' : 'bg-white text-gray-900'}`}>
       <div className="max-w-xl mx-auto px-5 pt-8 pb-10 md:pt-12">
         {/* Top Header Controls */}
         <div className="flex items-center justify-between mb-4">
@@ -364,7 +364,7 @@ export default function AccountsPage() {
         </div>
 
         {/* Bottom Action Buttons: Log Into Another Account */}
-        <div className="flex flex-col gap-3.5 pt-2">
+        <div className="flex flex-col gap-3.5 pt-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Button
             onClick={() => { setShowLoginSheet(true); setShowSignupSheet(false); }}
             className="w-full bg-[#1c1c1e] hover:bg-zinc-800 text-white border border-zinc-800 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-md"
