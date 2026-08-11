@@ -2249,8 +2249,8 @@ export default function ProfilePanel({
         {/* Centered Card Content */}
         <div style={{ width: '100%', maxWidth: 400, margin: '0 auto', display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-          {/* IF SAVED ACCOUNTS EXIST & NOT MANUAL SIGN IN MODE -> SHOW ACCOUNT CENTER LIST */}
-          {displayAccounts.length > 0 && !showManualSignIn ? (
+          {/* IF SAVED ACCOUNTS EXIST -> SHOW ACCOUNT CENTER LIST */}
+          {displayAccounts.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               
               {/* Account Center Header (Shifted Up, Left-Aligned 2-Line) */}
@@ -2339,14 +2339,14 @@ export default function ProfilePanel({
 
       {/* Manual Sign In - Charcoal Black Bottom Popup Sheet */}
       <div 
-        className={`fixed inset-0 z-[500] transition-opacity duration-500 ${showManualSignIn && activeAccountSheet === 'signIn' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-[500] transition-opacity duration-500 ${showManualSignIn ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       >
         <div 
           className="absolute inset-0 bg-black/60 backdrop-blur-md" 
           onClick={() => setShowManualSignIn(false)}
         />
         <div 
-          className={`absolute bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${showManualSignIn && activeAccountSheet === 'signIn' ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
+          className={`absolute bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${showManualSignIn ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
         >
           {/* Top bar back button */}
           <div className="flex items-center justify-between mb-8">
