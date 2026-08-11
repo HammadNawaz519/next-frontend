@@ -120,7 +120,7 @@ export default function ProfilePanel({
   };
   const [savedAccounts, setSavedAccounts] = useState<DeviceAccountMeta[]>([]);
 
-  // Switch account form fields
+  const [showManualSignIn, setShowManualSignIn] = useState(false);
   const [switchEmail, setSwitchEmail] = useState('');
   const [switchPassword, setSwitchPassword] = useState('');
   const [switchUsername, setSwitchUsername] = useState('');
@@ -128,7 +128,6 @@ export default function ProfilePanel({
   const [switchError, setSwitchError] = useState('');
   const [switchLoading, setSwitchLoading] = useState(false);
   const [switchCooldown, setSwitchCooldown] = useState(0);
-
   const switchOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const curUserId = (session?.user as any)?.id || '';
@@ -774,7 +773,7 @@ export default function ProfilePanel({
             </button>
 
             <span 
-              onClick={() => triggerAccountSheetTransition('accounts')}
+              onClick={() => triggerAccountSheetTransition('options')}
               style={{
                 fontWeight: 700,
                 fontSize: 16,
@@ -794,7 +793,7 @@ export default function ProfilePanel({
                 strokeWidth="2.5" 
                 viewBox="0 0 24 24" 
                 style={{ 
-                  transform: activeAccountSheet === 'accounts' ? 'rotate(180deg)' : 'none', 
+                  transform: (activeAccountSheet === 'options' || activeAccountSheet === 'accounts') ? 'rotate(180deg)' : 'none', 
                   transition: 'transform 0.25s ease' 
                 }}
               >
@@ -2132,152 +2131,346 @@ export default function ProfilePanel({
         </div>
       </div>
 
-      {/* 3. Sign In form sheet */}
+      {/* 3. Log into Existing Account — FULL PAGE View */}
       <div
         style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
-          background: '#ffffff', borderTop: '1px solid #e5e7eb', borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
-          padding: '24px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.15)',
-          transform: activeAccountSheet === 'signIn' ? 'translateY(0)' : 'translateY(100%)',
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: isDark ? '#09090b' : '#ffffff',
+          color: isDark ? '#ffffff' : '#121214',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          padding: '24px', overflowY: 'auto',
+          transform: activeAccountSheet === 'signIn' ? 'scale(1)' : 'scale(0.95)',
           opacity: activeAccountSheet === 'signIn' ? 1 : 0,
-          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
+          transition: 'transform 0.3s ease, opacity 0.3s ease',
           pointerEvents: activeAccountSheet === 'signIn' ? 'auto' : 'none',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        {/* Top Header Back Button */}
+        <div style={{ position: 'absolute', top: 24, left: 24, zIndex: 10 }}>
           <button 
             type="button"
-            onClick={() => triggerAccountSheetTransition('options')}
-            style={{ background: 'none', border: 'none', color: '#121214', cursor: 'pointer', padding: 0 }}
+            onClick={() => { setShowManualSignIn(false); triggerAccountSheetTransition('options'); }}
+            style={{
+              background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6',
+              border: 'none', color: isDark ? '#fff' : '#121214',
+              borderRadius: '50%', width: 42, height: 42, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.2s'
+            }}
           >
             <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </button>
-          <div style={{ width: 48, height: 4, background: '#e5e7eb', borderRadius: 2 }} />
-          <div style={{ width: 22 }} />
         </div>
 
-        <form onSubmit={handleSwitchLogin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#121214', marginBottom: 4 }}>Sign In</h2>
-          {switchError && <div style={{ color: '#ef4444', fontSize: 12, fontWeight: 600 }}>{switchError}</div>}
+        {/* Centered Card Content */}
+        <div style={{ width: '100%', maxWidth: 400, margin: '0 auto', textAlign: 'center' }}>
           
-          <input
-            type="email"
-            placeholder="Email Address"
-            required
-            value={switchEmail}
-            onChange={e => setSwitchEmail(e.target.value)}
-            style={{
-              width: '100%', borderRadius: '100px', background: '#f9fafb', color: '#121214', border: '1px solid #e5e7eb',
-              padding: '12px 20px', outline: 'none', fontSize: 13
-            }}
-          />
+          {/* IF SAVED ACCOUNTS EXIST & NOT MANUAL SIGN IN MODE -> SHOW ACCOUNT CENTER LIST */}
+          {displayAccounts.length > 0 && !showManualSignIn ? (
+            <div>
+              <div style={{
+                width: 64, height: 64, borderRadius: '50%', background: 'rgba(59, 130, 246, 0.12)',
+                color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px', border: '1.5px solid rgba(59, 130, 246, 0.25)'
+              }}>
+                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
 
-          <input
-            type="password"
-            placeholder="Password"
-            required
-            value={switchPassword}
-            onChange={e => setSwitchPassword(e.target.value)}
-            style={{
-              width: '100%', borderRadius: '100px', background: '#f9fafb', color: '#121214', border: '1px solid #e5e7eb',
-              padding: '12px 20px', outline: 'none', fontSize: 13
-            }}
-          />
+              <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Log Into Existing Account</h1>
+              <p style={{ fontSize: 13, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 24 }}>
+                Select a saved account from Account Center to switch instantly
+              </p>
 
-          <button
-            type="submit"
-            disabled={switchLoading}
-            style={{
-              width: '100%', padding: '14px 0', background: '#121214', color: '#fff',
-              borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 13,
-              opacity: switchLoading ? 0.6 : 1, transition: 'all 0.2s', marginTop: 10
-            }}
-          >
-            {switchLoading ? 'Signing In...' : 'Sign In'}
-          </button>
-        </form>
+              {switchError && (
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '10px 16px', borderRadius: 14, fontSize: 12, fontWeight: 600, marginBottom: 16 }}>
+                  {switchError}
+                </div>
+              )}
+
+              {/* Account Center Saved Accounts List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, maxHeight: 320, overflowY: 'auto' }}>
+                {displayAccounts.map((acc) => {
+                  const isActive = acc.isCurrent;
+                  const accountName = acc.displayName || acc.username || acc.email.split('@')[0];
+                  const username = acc.username || acc.email.split('@')[0];
+                  return (
+                    <div
+                      key={acc.userId || acc.email}
+                      onClick={() => !isActive && handleAccountSwitch(acc)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '14px 18px', borderRadius: '20px',
+                        background: isActive ? (isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)') : (isDark ? '#16161a' : '#ffffff'),
+                        border: isActive ? '1.5px solid #3b82f6' : (isDark ? '1px solid #27272a' : '1px solid #e5e7eb'),
+                        cursor: isActive ? 'default' : 'pointer', transition: 'all 0.2s',
+                        boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.04)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
+                          {acc.profilePicture ? (
+                            <img src={acc.profilePicture} alt={accountName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <DefaultAvatarSvg size={28} color="#374151" />
+                          )}
+                        </div>
+                        <div style={{ textAlign: 'left' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 14, fontWeight: 700 }}>{accountName}</span>
+                            {isActive && (
+                              <span style={{ fontSize: 9, fontWeight: 800, background: '#3b82f6', color: '#fff', padding: '2px 7px', borderRadius: 10 }}>
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: 12, color: isDark ? '#a1a1aa' : '#6b7280' }}>@{username}</span>
+                        </div>
+                      </div>
+
+                      {isActive ? (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#3b82f6' }}>✓ Logged In</span>
+                      ) : (
+                        <button
+                          type="button"
+                          style={{
+                            padding: '8px 16px', background: '#3b82f6', color: '#fff',
+                            border: 'none', borderRadius: '100px', fontWeight: 700, fontSize: 12, cursor: 'pointer'
+                          }}
+                        >
+                          Log In
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Button to show manual username & password fields */}
+              <button
+                type="button"
+                onClick={() => setShowManualSignIn(true)}
+                style={{
+                  width: '100%', padding: '14px 0', background: isDark ? '#1c1c22' : '#f3f4f6',
+                  color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                  borderRadius: '100px', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s'
+                }}
+              >
+                Log Into Another Account
+              </button>
+            </div>
+          ) : (
+            /* IF NO SAVED ACCOUNTS OR USER CLICKED "LOG INTO ANOTHER ACCOUNT" -> SHOW CENTERED INPUT FIELDS */
+            <div>
+              <div style={{
+                width: 64, height: 64, borderRadius: '50%', background: 'rgba(59, 130, 246, 0.12)',
+                color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px', border: '1.5px solid rgba(59, 130, 246, 0.25)'
+              }}>
+                <svg width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+              </div>
+
+              <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Log Into Existing Account</h1>
+              <p style={{ fontSize: 13, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 24 }}>
+                Enter your username or email and password
+              </p>
+
+              {switchError && (
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '10px 16px', borderRadius: 14, fontSize: 12, fontWeight: 600, marginBottom: 16 }}>
+                  {switchError}
+                </div>
+              )}
+
+              <form onSubmit={handleSwitchLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ textAlign: 'left' }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#a1a1aa' : '#4b5563', marginBottom: 6, display: 'block' }}>Username or Email</label>
+                  <input
+                    type="text"
+                    placeholder="Username or email address"
+                    required
+                    value={switchEmail}
+                    onChange={e => setSwitchEmail(e.target.value)}
+                    style={{
+                      width: '100%', borderRadius: '16px', background: isDark ? '#16161a' : '#f9fafb',
+                      color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                      padding: '14px 18px', outline: 'none', fontSize: 14
+                    }}
+                  />
+                </div>
+
+                <div style={{ textAlign: 'left' }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#a1a1aa' : '#4b5563', marginBottom: 6, display: 'block' }}>Password</label>
+                  <input
+                    type="password"
+                    placeholder="Enter password"
+                    required
+                    value={switchPassword}
+                    onChange={e => setSwitchPassword(e.target.value)}
+                    style={{
+                      width: '100%', borderRadius: '16px', background: isDark ? '#16161a' : '#f9fafb',
+                      color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                      padding: '14px 18px', outline: 'none', fontSize: 14
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={switchLoading}
+                  style={{
+                    width: '100%', padding: '16px 0', background: '#3b82f6', color: '#ffffff',
+                    borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 14,
+                    opacity: switchLoading ? 0.6 : 1, transition: 'all 0.2s', marginTop: 10,
+                    boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)'
+                  }}
+                >
+                  {switchLoading ? 'Signing In...' : 'Log In'}
+                </button>
+              </form>
+
+              {displayAccounts.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowManualSignIn(false)}
+                  style={{
+                    background: 'none', border: 'none', color: '#3b82f6', fontSize: 13,
+                    fontWeight: 600, cursor: 'pointer', marginTop: 20
+                  }}
+                >
+                  ← Back to Account Center saved accounts
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* 4. Sign Up form sheet */}
+      {/* 4. Create New Account — FULL PAGE View */}
       <div
         style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
-          background: '#ffffff', borderTop: '1px solid #e5e7eb', borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
-          padding: '24px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.15)',
-          transform: activeAccountSheet === 'signUp' ? 'translateY(0)' : 'translateY(100%)',
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: isDark ? '#09090b' : '#ffffff',
+          color: isDark ? '#ffffff' : '#121214',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          padding: '24px', overflowY: 'auto',
+          transform: activeAccountSheet === 'signUp' ? 'scale(1)' : 'scale(0.95)',
           opacity: activeAccountSheet === 'signUp' ? 1 : 0,
-          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
+          transition: 'transform 0.3s ease, opacity 0.3s ease',
           pointerEvents: activeAccountSheet === 'signUp' ? 'auto' : 'none',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        {/* Top Header Back Button */}
+        <div style={{ position: 'absolute', top: 24, left: 24, zIndex: 10 }}>
           <button 
             type="button"
             onClick={() => triggerAccountSheetTransition('options')}
-            style={{ background: 'none', border: 'none', color: '#121214', cursor: 'pointer', padding: 0 }}
+            style={{
+              background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6',
+              border: 'none', color: isDark ? '#fff' : '#121214',
+              borderRadius: '50%', width: 42, height: 42, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.2s'
+            }}
           >
             <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </button>
-          <div style={{ width: 48, height: 4, background: '#e5e7eb', borderRadius: 2 }} />
-          <div style={{ width: 22 }} />
         </div>
 
-        <form onSubmit={handleSwitchSignup} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#121214', marginBottom: 4 }}>Sign Up</h2>
-          {switchError && <div style={{ color: '#ef4444', fontSize: 12, fontWeight: 600 }}>{switchError}</div>}
+        {/* Centered Form Content (NO Account Center list) */}
+        <div style={{ width: '100%', maxWidth: 400, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: '50%', background: 'rgba(34, 197, 94, 0.12)',
+            color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 16px', border: '1.5px solid rgba(34, 197, 94, 0.25)'
+          }}>
+            <svg width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+          </div>
 
-          <input
-            type="text"
-            placeholder="Username"
-            required
-            value={switchUsername}
-            onChange={e => setSwitchUsername(e.target.value)}
-            style={{
-              width: '100%', borderRadius: '100px', background: '#f9fafb', color: '#121214', border: '1px solid #e5e7eb',
-              padding: '12px 20px', outline: 'none', fontSize: 13
-            }}
-          />
+          <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Create New Account</h1>
+          <p style={{ fontSize: 13, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 24 }}>
+            Enter your details to create a new Connect profile
+          </p>
 
-          <input
-            type="email"
-            placeholder="Email Address"
-            required
-            value={switchEmail}
-            onChange={e => setSwitchEmail(e.target.value)}
-            style={{
-              width: '100%', borderRadius: '100px', background: '#f9fafb', color: '#121214', border: '1px solid #e5e7eb',
-              padding: '12px 20px', outline: 'none', fontSize: 13
-            }}
-          />
+          {switchError && (
+            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '10px 16px', borderRadius: 14, fontSize: 12, fontWeight: 600, marginBottom: 16 }}>
+              {switchError}
+            </div>
+          )}
 
-          <input
-            type="password"
-            placeholder="Password"
-            required
-            value={switchPassword}
-            onChange={e => setSwitchPassword(e.target.value)}
-            style={{
-              width: '100%', borderRadius: '100px', background: '#f9fafb', color: '#121214', border: '1px solid #e5e7eb',
-              padding: '12px 20px', outline: 'none', fontSize: 13
-            }}
-          />
+          <form onSubmit={handleSwitchSignup} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ textAlign: 'left' }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#a1a1aa' : '#4b5563', marginBottom: 6, display: 'block' }}>Username</label>
+              <input
+                type="text"
+                placeholder="Choose a username"
+                required
+                value={switchUsername}
+                onChange={e => setSwitchUsername(e.target.value)}
+                style={{
+                  width: '100%', borderRadius: '16px', background: isDark ? '#16161a' : '#f9fafb',
+                  color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                  padding: '14px 18px', outline: 'none', fontSize: 14
+                }}
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={switchLoading}
-            style={{
-              width: '100%', padding: '14px 0', background: '#121214', color: '#fff',
-              borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 13,
-              opacity: switchLoading ? 0.6 : 1, transition: 'all 0.2s', marginTop: 10
-            }}
-          >
-            {switchLoading ? 'Creating Account...' : 'Sign Up'}
-          </button>
-        </form>
+            <div style={{ textAlign: 'left' }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#a1a1aa' : '#4b5563', marginBottom: 6, display: 'block' }}>Email Address</label>
+              <input
+                type="email"
+                placeholder="name@example.com"
+                required
+                value={switchEmail}
+                onChange={e => setSwitchEmail(e.target.value)}
+                style={{
+                  width: '100%', borderRadius: '16px', background: isDark ? '#16161a' : '#f9fafb',
+                  color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                  padding: '14px 18px', outline: 'none', fontSize: 14
+                }}
+              />
+            </div>
+
+            <div style={{ textAlign: 'left' }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#a1a1aa' : '#4b5563', marginBottom: 6, display: 'block' }}>Password</label>
+              <input
+                type="password"
+                placeholder="Create a strong password"
+                required
+                value={switchPassword}
+                onChange={e => setSwitchPassword(e.target.value)}
+                style={{
+                  width: '100%', borderRadius: '16px', background: isDark ? '#16161a' : '#f9fafb',
+                  color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+                  padding: '14px 18px', outline: 'none', fontSize: 14
+                }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={switchLoading}
+              style={{
+                width: '100%', padding: '16px 0', background: '#22c55e', color: '#ffffff',
+                borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 14,
+                opacity: switchLoading ? 0.6 : 1, transition: 'all 0.2s', marginTop: 10,
+                boxShadow: '0 4px 14px rgba(34, 197, 94, 0.35)'
+              }}
+            >
+              {switchLoading ? 'Creating Account...' : 'Create Account'}
+            </button>
+          </form>
+        </div>
       </div>
 
       {/* 5. OTP verification sheet */}
