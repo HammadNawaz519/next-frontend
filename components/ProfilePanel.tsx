@@ -2190,7 +2190,7 @@ export default function ProfilePanel({
         {/* Action buttons under the accounts list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
           <button
-            onClick={() => { window.location.href = '/?sheet=signIn'; }}
+            onClick={() => { setShowManualSignIn(true); triggerAccountSheetTransition('signIn'); }}
             style={{
               width: '100%', padding: '14px 0',
               background: '#1c1c1e',
@@ -2202,7 +2202,7 @@ export default function ProfilePanel({
           </button>
 
           <button
-            onClick={() => { window.location.href = '/?sheet=signUp'; }}
+            onClick={() => triggerAccountSheetTransition('signUp')}
             style={{
               width: '100%', padding: '14px 0',
               background: '#ffffff',
@@ -2314,7 +2314,10 @@ export default function ProfilePanel({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 'auto', paddingBottom: '24px' }}>
                 <Button
                   type="button"
-                  onClick={() => { window.location.href = '/?sheet=signIn'; }}
+                  onClick={() => {
+                    setShowManualSignIn(true);
+                    triggerAccountSheetTransition('signIn');
+                  }}
                   className="w-full bg-[#1c1c1e] hover:bg-zinc-800 text-white border border-zinc-800 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-md"
                 >
                   Log Into Existing Account
@@ -2322,7 +2325,7 @@ export default function ProfilePanel({
 
                 <Button
                   type="button"
-                  onClick={() => { window.location.href = '/?sheet=signUp'; }}
+                  onClick={() => triggerAccountSheetTransition('signUp')}
                   className="w-full bg-white hover:bg-zinc-100 text-[#121214] border border-gray-200 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-sm"
                 >
                   Create a New Account
@@ -2331,6 +2334,196 @@ export default function ProfilePanel({
             </div>
           ) : null}
         </div>
+      </div>
+
+      {/* ── SIGN IN BOTTOM SHEET (Copied 1-to-1 from login menu in app/page.tsx) ── */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-[500] bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+          (showManualSignIn || activeAccountSheet === 'signIn') 
+            ? 'translate-y-0 opacity-100 pointer-events-auto' 
+            : 'translate-y-full opacity-0 pointer-events-none'
+        }`}
+      >
+        {/* Backdrop overlay */}
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-md -z-10" 
+          onClick={() => {
+            setShowManualSignIn(false);
+            if (activeAccountSheet === 'signIn') triggerAccountSheetTransition('none');
+          }}
+        />
+
+        {/* Top bar back button */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            type="button"
+            onClick={() => {
+              setShowManualSignIn(false);
+              if (activeAccountSheet === 'signIn') triggerAccountSheetTransition('none');
+            }}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
+            title="Back"
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </button>
+          <div className="w-12 h-1 bg-[#27272a] rounded-full" />
+          <div className="w-10" />
+        </div>
+
+        {switchError && (
+          <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4 text-center font-semibold">
+            {switchError}
+          </div>
+        )}
+
+        <form onSubmit={handleSwitchLogin} className="space-y-3">
+          <input
+            type="email"
+            placeholder="Email Address"
+            required
+            value={switchEmail}
+            onChange={(e) => setSwitchEmail(e.target.value)}
+            className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
+          />
+
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Password"
+              required
+              value={switchPassword}
+              onChange={(e) => setSwitchPassword(e.target.value)}
+              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 pr-12 focus:outline-none transition-colors text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              {showPassword ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 113.682 3.682M21 12a9.96 9.96 0 01-1.557 3.018m-3.437-1.42A3 3 0 0012 10.012c-.29 0-.57.04-.833.115M17.657 16.657L13.414 12.414m0 0L9 7.999M3 3l18 18" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          <button
+            type="submit"
+            disabled={switchLoading}
+            className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
+          >
+            {switchLoading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+      </div>
+
+      {/* ── SIGN UP BOTTOM SHEET (Copied 1-to-1 from login menu in app/page.tsx) ── */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-[500] bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+          activeAccountSheet === 'signUp' 
+            ? 'translate-y-0 opacity-100 pointer-events-auto' 
+            : 'translate-y-full opacity-0 pointer-events-none'
+        }`}
+      >
+        {/* Backdrop overlay */}
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-md -z-10" 
+          onClick={() => triggerAccountSheetTransition('none')}
+        />
+
+        {/* Top bar back button */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            type="button"
+            onClick={() => triggerAccountSheetTransition('none')}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
+            title="Back"
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </button>
+          <div className="w-12 h-1 bg-[#27272a] rounded-full" />
+          <div className="w-10" />
+        </div>
+
+        {switchError && (
+          <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4 text-center font-semibold">
+            {switchError}
+          </div>
+        )}
+
+        <form onSubmit={handleSwitchSignup} className="space-y-3">
+          <input
+            type="text"
+            placeholder="Username"
+            required
+            value={switchUsername}
+            onChange={(e) => setSwitchUsername(e.target.value)}
+            className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
+          />
+
+          <input
+            type="email"
+            placeholder="Email Address"
+            required
+            value={switchEmail}
+            onChange={(e) => setSwitchEmail(e.target.value)}
+            className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
+          />
+
+          <input
+            type="tel"
+            placeholder="+92 300 0000000"
+            required
+            value={switchPhone}
+            onChange={(e) => setSwitchPhone(e.target.value)}
+            className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
+          />
+
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Password"
+              required
+              value={switchPassword}
+              onChange={(e) => setSwitchPassword(e.target.value)}
+              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 pr-12 focus:outline-none transition-colors text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              {showPassword ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 113.682 3.682M21 12a9.96 9.96 0 01-1.557 3.018m-3.437-1.42A3 3 0 0012 10.012c-.29 0-.57.04-.833.115M17.657 16.657L13.414 12.414m0 0L9 7.999M3 3l18 18" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          <button
+            type="submit"
+            disabled={switchLoading}
+            className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
+          >
+            {switchLoading ? 'Creating Account...' : 'Sign Up'}
+          </button>
+        </form>
       </div>
 
       {/* 5. OTP verification sheet */}

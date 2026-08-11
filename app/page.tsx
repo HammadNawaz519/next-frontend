@@ -752,9 +752,7 @@ export default function LoginPage() {
     } catch { return false; }
   })();
 
-  const hasExplicitSheetQuery = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('sheet');
-
-  if ((sessStatus === 'authenticated' || (sessStatus === 'loading' && isLikelyLoggedIn)) && !hasExplicitSheetQuery) {
+  if (sessStatus === 'authenticated' || (sessStatus === 'loading' && isLikelyLoggedIn)) {
     return <DashboardPage />;
   }
 

@@ -366,14 +366,14 @@ export default function AccountsPage() {
         {/* Bottom Action Buttons: Log Into Another Account */}
         <div className="flex flex-col gap-3.5 pt-2">
           <Button
-            onClick={() => { window.location.href = '/?sheet=signIn'; }}
+            onClick={() => setShowLoginSheet(true)}
             className="w-full bg-[#1c1c1e] hover:bg-zinc-800 text-white border border-zinc-800 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-md"
           >
             Log Into Existing Account
           </Button>
 
           <Button
-            onClick={() => { window.location.href = '/?sheet=signUp'; }}
+            onClick={() => setShowSignupSheet(true)}
             className="w-full bg-white hover:bg-zinc-100 text-[#121214] border border-gray-200 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-sm"
           >
             Create a New Account
@@ -383,60 +383,52 @@ export default function AccountsPage() {
 
       {/* Password Prompt Modal for Non-Saved Credentials */}
       {selectedAccount && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className={`w-full max-w-sm border rounded-3xl p-6 shadow-2xl relative ${isDark ? 'bg-[#16161a] border-zinc-800 text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
-            <button
-              onClick={() => { setSelectedAccount(null); setError(''); }}
-              className={`absolute top-4 right-4 p-1.5 rounded-full ${isDark ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <div className="w-12 h-12 rounded-full bg-blue-600/10 text-blue-500 border border-blue-500/20 flex items-center justify-center mx-auto mb-3">
-              <Lock className="w-6 h-6" />
-            </div>
-            <h3 className="text-base font-bold text-center mb-1">Sign In Required</h3>
-            <p className={`text-xs text-center mb-4 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-              Log into <strong className="text-blue-500">@{selectedAccount.username}</strong>.<br />
-              Your login info will be saved on this device.
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#18181b] border border-zinc-800 rounded-3xl p-6 w-full max-w-sm text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold mb-1">Enter Password</h3>
+            <p className="text-xs text-zinc-400 mb-4">
+              Enter password for <span className="text-white font-semibold">{selectedAccount.email}</span>
             </p>
 
-            {error && <div className="text-rose-400 text-xs font-bold mb-3 text-center bg-rose-500/10 px-3 py-2 rounded-xl">{error}</div>}
-
-            <form onSubmit={handlePasswordLogin} className="space-y-3">
+            <form onSubmit={handlePasswordLogin} className="space-y-4">
               <div className="relative">
-                <input
+                <Input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Password"
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-[#27272a] border-zinc-700 text-white placeholder:text-zinc-500 pr-10 h-11 rounded-xl text-sm"
+                  autoFocus
                   required
-                  className={`w-full p-3.5 pr-10 rounded-2xl border text-sm outline-none ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500' : 'bg-gray-100 border-gray-200 text-gray-900 placeholder:text-gray-400'
-                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3.5 text-zinc-400 hover:text-zinc-200"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
 
-              <button
-                type="submit"
-                disabled={loading || !password}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-sm rounded-2xl transition-all shadow-md active:scale-98 flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <LogIn className="w-4 h-4" />
-                    Log In & Save on Device
-                  </>
-                )}
-              </button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setSelectedAccount(null);
+                    setPassword('');
+                  }}
+                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 h-10 rounded-full font-semibold text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 bg-white hover:bg-zinc-200 text-black h-10 rounded-full font-bold text-xs"
+                >
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </Button>
+              </div>
             </form>
           </div>
         </div>
