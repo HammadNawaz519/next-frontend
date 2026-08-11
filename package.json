@@ -67,10 +67,4 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "pnpm": {
-    "patchedDependencies": {
-      "@mediapipe/selfie_segmentation@0.1.1675465747": "patches/@mediapipe__selfie_segmentation.patch"
-    }
-  }
 }

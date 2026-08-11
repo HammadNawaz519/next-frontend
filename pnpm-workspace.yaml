@@ -3,5 +3,3 @@ allowBuilds:
   prisma: true
   sharp: true
   unrs-resolver: true
-patchedDependencies:
-  '@mediapipe/selfie_segmentation': patches/@mediapipe__selfie_segmentation.patch
