@@ -2109,7 +2109,7 @@ export default function ProfilePanel({
             const isActive = acc.isCurrent;
             const displayHandle = acc.displayName
               ? acc.displayName
-              : (acc.username ? `@${acc.username.replace(/^@/, '').split('@')[0]}` : (acc.email ? acc.email.split('@')[0] : 'User'));
+              : (acc.username ? acc.username.replace(/^@/, '').split('@')[0] : (acc.email ? acc.email.split('@')[0] : 'User'));
 
             return (
               <div

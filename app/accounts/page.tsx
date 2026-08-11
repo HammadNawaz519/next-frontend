@@ -306,7 +306,7 @@ export default function AccountsPage() {
           {displayAccounts.map((acc) => {
             const displayHandle = acc.displayName 
               ? acc.displayName 
-              : (acc.username ? `@${acc.username.replace(/^@/, '').split('@')[0]}` : (acc.email ? acc.email.split('@')[0] : 'User'));
+              : (acc.username ? acc.username.replace(/^@/, '').split('@')[0] : (acc.email ? acc.email.split('@')[0] : 'User'));
             const isSaved = acc.isSavedOnDevice;
             const isSwitchingThis = switchingId === acc.userId;
 
