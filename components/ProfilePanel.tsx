@@ -2336,7 +2336,7 @@ export default function ProfilePanel({
 
       {/* ── SIGN IN BOTTOM SHEET (Copied 1-to-1 from login menu in app/page.tsx) ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-[500] bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-[10000] bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeAuthSheet === 'signIn'
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
             : 'translate-y-full opacity-0 pointer-events-none'
@@ -2419,7 +2419,7 @@ export default function ProfilePanel({
 
       {/* ── SIGN UP BOTTOM SHEET (Copied 1-to-1 from login menu in app/page.tsx) ── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-[500] bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
+        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-[10000] bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
           activeAuthSheet === 'signUp' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
             : 'translate-y-full opacity-0 pointer-events-none'
