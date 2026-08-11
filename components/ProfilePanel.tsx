@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { signOut, signIn } from 'next-auth/react';
 import { useTheme } from '@/app/components/ThemeProvider';
 import { DeviceAccountStore, DeviceAccountMeta } from '@/lib/deviceAccountStore';
+import { Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
 import {
   updateProfileDetails,
   updateProfileImageAction,
@@ -125,6 +126,7 @@ export default function ProfilePanel({
   const [switchPassword, setSwitchPassword] = useState('');
   const [switchUsername, setSwitchUsername] = useState('');
   const [switchPhone, setSwitchPhone] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [switchOtp, setSwitchOtp] = useState(['', '', '', '', '', '']);
   const [switchError, setSwitchError] = useState('');
   const [switchLoading, setSwitchLoading] = useState(false);
@@ -2349,7 +2351,7 @@ export default function ProfilePanel({
           className={`absolute bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${showManualSignIn ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
         >
           {/* Top bar back button */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => setShowManualSignIn(false)}
               className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
@@ -2363,35 +2365,61 @@ export default function ProfilePanel({
             <div className="w-10" />
           </div>
 
+          <h2 className="text-xl font-extrabold text-white mb-2">Log Into Existing Account</h2>
+          <p className="text-xs text-white/50 mb-6">Enter your email and password to sign in</p>
+
           {switchError && (
             <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
               {switchError}
             </div>
           )}
 
-          <form onSubmit={handleSwitchLogin} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Username or Email Address"
-              required
-              value={switchEmail}
-              onChange={e => setSwitchEmail(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
-            />
+          <form onSubmit={handleSwitchLogin} className="space-y-4">
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-semibold text-white/90">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <input
+                  type="email"
+                  value={switchEmail}
+                  onChange={(e) => setSwitchEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+            </div>
 
-            <input
-              type="password"
-              placeholder="Password"
-              required
-              value={switchPassword}
-              onChange={e => setSwitchPassword(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
-            />
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-semibold text-white/90">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={switchPassword}
+                  onChange={(e) => setSwitchPassword(e.target.value)}
+                  className="w-full pl-10 pr-10 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/80"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
 
             <button
               type="submit"
               disabled={switchLoading}
-              className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
+              className="w-full bg-white text-black hover:bg-white/90 transition-all active:scale-98 rounded-xl py-3.5 font-bold text-center text-sm shadow-md mt-4"
             >
               {switchLoading ? 'Signing In...' : 'Sign In'}
             </button>
@@ -2411,7 +2439,7 @@ export default function ProfilePanel({
           className={`absolute bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${activeAccountSheet === 'signUp' ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
         >
           {/* Top bar back button */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-6">
             <button
               type="button"
               onClick={() => triggerAccountSheetTransition('signIn')}
@@ -2426,55 +2454,97 @@ export default function ProfilePanel({
             <div className="w-10" />
           </div>
 
+          <h2 className="text-xl font-extrabold text-white mb-2">Create New Account</h2>
+          <p className="text-xs text-white/50 mb-6">Fill in details below to sign up and verify your account</p>
+
           {switchError && (
             <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
               {switchError}
             </div>
           )}
 
-          <form onSubmit={handleSwitchSignup} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Username / Full Name"
-              required
-              value={switchUsername}
-              onChange={e => setSwitchUsername(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
-            />
+          <form onSubmit={handleSwitchSignup} className="space-y-4">
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-semibold text-white/90">
+                Username / Full Name
+              </label>
+              <div className="relative">
+                <User className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <input
+                  type="text"
+                  value={switchUsername}
+                  onChange={(e) => setSwitchUsername(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  placeholder="Enter your username or name"
+                  required
+                />
+              </div>
+            </div>
 
-            <input
-              type="email"
-              placeholder="Email Address"
-              required
-              value={switchEmail}
-              onChange={e => setSwitchEmail(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
-            />
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-semibold text-white/90">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <input
+                  type="email"
+                  value={switchEmail}
+                  onChange={(e) => setSwitchEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+            </div>
 
-            <input
-              type="tel"
-              placeholder="+92 300 0000000"
-              required
-              value={switchPhone}
-              onChange={e => setSwitchPhone(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
-            />
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-semibold text-white/90">
+                Phone Number
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <input
+                  type="tel"
+                  value={switchPhone}
+                  onChange={(e) => setSwitchPhone(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  placeholder="Enter your phone number (+92...)"
+                  required
+                />
+              </div>
+            </div>
 
-            <input
-              type="password"
-              placeholder="Password"
-              required
-              value={switchPassword}
-              onChange={e => setSwitchPassword(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
-            />
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-semibold text-white/90">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={switchPassword}
+                  onChange={(e) => setSwitchPassword(e.target.value)}
+                  className="w-full pl-10 pr-10 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/80"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
 
             <button
               type="submit"
               disabled={switchLoading}
-              className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
+              className="w-full bg-white text-black hover:bg-white/90 transition-all active:scale-98 rounded-xl py-3.5 font-bold text-center text-sm shadow-md mt-4"
             >
-              {switchLoading ? 'Creating Account...' : 'Sign Up'}
+              {switchLoading ? 'Creating Account...' : 'Continue to Verification'}
             </button>
           </form>
         </div>

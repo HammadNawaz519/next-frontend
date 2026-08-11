@@ -5,7 +5,7 @@ import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
   MoreVertical, Trash2, UserPlus, Lock, Eye, EyeOff, X, ArrowLeft,
-  ChevronRight, Check, Key, Shield, LogIn
+  ChevronRight, Check, Key, Shield, LogIn, Mail, User, Phone
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useTheme } from '@/app/components/ThemeProvider';
@@ -454,7 +454,7 @@ export default function AccountsPage() {
           className={`absolute bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${showLoginSheet ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
         >
           {/* Top bar back button */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => setShowLoginSheet(false)}
               className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
@@ -468,53 +468,61 @@ export default function AccountsPage() {
             <div className="w-10" />
           </div>
 
+          <h2 className="text-xl font-extrabold text-white mb-2">Log Into Existing Account</h2>
+          <p className="text-xs text-white/50 mb-6">Enter your email and password to sign in</p>
+
           {loginError && (
             <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
               {loginError}
             </div>
           )}
 
-          <form onSubmit={handleManualLoginSubmit} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Username or Email Address"
-              required
-              value={loginEmail}
-              onChange={(e) => setLoginEmail(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 focus:outline-none transition-colors text-sm"
-            />
+          <form onSubmit={handleManualLoginSubmit} className="space-y-4">
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-semibold text-white/90">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+            </div>
 
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Password"
-                required
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3.5 pr-12 focus:outline-none transition-colors text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                {showPassword ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 113.682 3.682M21 12a9.96 9.96 0 01-1.557 3.018m-3.437-1.42A3 3 0 0012 10.012c-.29 0-.57.04-.833.115M17.657 16.657L13.414 12.414m0 0L9 7.999M3 3l18 18" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                )}
-              </button>
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-semibold text-white/90">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="w-full pl-10 pr-10 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/80"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loginLoading}
-              className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
+              className="w-full bg-white text-black hover:bg-white/90 transition-all active:scale-98 rounded-xl py-3.5 font-bold text-center text-sm shadow-md mt-4"
             >
               {loginLoading ? 'Signing In...' : 'Sign In'}
             </button>
@@ -534,7 +542,7 @@ export default function AccountsPage() {
           className={`absolute bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${showSignupSheet ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
         >
           {/* Top bar back button */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => setShowSignupSheet(false)}
               className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
@@ -548,67 +556,91 @@ export default function AccountsPage() {
             <div className="w-10" />
           </div>
 
-          <form onSubmit={handleSignupSubmit} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Username / Full Name"
-              required
-              value={signupName}
-              onChange={(e) => setSignupName(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-            />
+          <h2 className="text-xl font-extrabold text-white mb-2">Create New Account</h2>
+          <p className="text-xs text-white/50 mb-6">Fill in details below to sign up and verify your account</p>
 
-            <input
-              type="email"
-              placeholder="Email Address"
-              required
-              value={signupEmail}
-              onChange={(e) => setSignupEmail(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-            />
+          <form onSubmit={handleSignupSubmit} className="space-y-4">
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-semibold text-white/90">
+                Username / Full Name
+              </label>
+              <div className="relative">
+                <User className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <input
+                  type="text"
+                  value={signupName}
+                  onChange={(e) => setSignupName(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  placeholder="Enter your username or name"
+                  required
+                />
+              </div>
+            </div>
 
-            <input
-              type="tel"
-              placeholder="+92 300 0000000"
-              required
-              value={signupPhone}
-              onChange={(e) => setSignupPhone(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-            />
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-semibold text-white/90">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <input
+                  type="email"
+                  value={signupEmail}
+                  onChange={(e) => setSignupEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+            </div>
 
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Password"
-                required
-                value={signupPassword}
-                onChange={(e) => setSignupPassword(e.target.value)}
-                className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 pr-12 focus:outline-none transition-colors text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                {showPassword ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 113.682 3.682M21 12a9.96 9.96 0 01-1.557 3.018m-3.437-1.42A3 3 0 0012 10.012c-.29 0-.57.04-.833.115M17.657 16.657L13.414 12.414m0 0L9 7.999M3 3l18 18" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                )}
-              </button>
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-semibold text-white/90">
+                Phone Number
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <input
+                  type="tel"
+                  value={signupPhone}
+                  onChange={(e) => setSignupPhone(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  placeholder="Enter your phone number (+92...)"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-semibold text-white/90">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={signupPassword}
+                  onChange={(e) => setSignupPassword(e.target.value)}
+                  className="w-full pl-10 pr-10 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/80"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={signupLoading}
-              className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
+              className="w-full bg-white text-black hover:bg-white/90 transition-all active:scale-98 rounded-xl py-3.5 font-bold text-center text-sm shadow-md mt-4"
             >
-              {signupLoading ? 'Creating Account...' : 'Sign Up'}
+              {signupLoading ? 'Creating Account...' : 'Continue to Verification'}
             </button>
           </form>
         </div>
