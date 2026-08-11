@@ -101,6 +101,7 @@ export default function ProfilePanel({
 
   // Switch account state
   const [activeAccountSheet, setActiveAccountSheet] = useState<'none' | 'accounts' | 'options' | 'signIn' | 'signUp' | 'verify' | 'success'>('none');
+  const [activeAuthSheet, setActiveAuthSheet] = useState<'none' | 'signIn' | 'signUp'>('none');
   const [targetAccountSheet, setTargetAccountSheet] = useState<'none' | 'accounts' | 'options' | 'signIn' | 'signUp' | 'verify' | 'success'>('none');
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarInputUrl, setAvatarInputUrl] = useState('');
@@ -167,8 +168,6 @@ export default function ProfilePanel({
     });
   }, [savedAccounts, curUserId, curEmail]);
 
-
-  // Sync sheet state with parent is handled below variables declaration
 
   // Transition helper
   const triggerAccountSheetTransition = (nextSheet: typeof activeAccountSheet) => {
@@ -341,6 +340,26 @@ export default function ProfilePanel({
 
   /* Multi-page Navigation States */
   const [subView, setSubView] = useState<'profile' | 'followers' | 'following' | 'edit_profile' | 'follow_requests' | 'settings' | 'notifications' | 'saved'>('profile');
+
+  /* Profile ownership */
+  const isOwnProfile = !targetUser || targetUser.isCurrentUser;
+
+  // Sync sheet state with parent (accounts sheet, avatar picker sheet, subviews, target profile)
+  useEffect(() => {
+    if (onAccountSheetChange) {
+      if (isClosing) {
+        onAccountSheetChange(false);
+      } else {
+        const shouldHideBottomNav =
+          activeAuthSheet !== 'none' ||
+          showAvatarModal ||
+          subView !== 'profile' ||
+          !isOwnProfile;
+        onAccountSheetChange(shouldHideBottomNav);
+      }
+    }
+  }, [activeAuthSheet, showAvatarModal, subView, isOwnProfile, isClosing, onAccountSheetChange]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [longPressedPostId, setLongPressedPostId] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -381,25 +400,6 @@ export default function ProfilePanel({
       setEditWebsite(fullUser.website || '');
     }
   }, [fullUser]);
-
-  /* Profile ownership */
-  const isOwnProfile = !targetUser || targetUser.isCurrentUser;
-
-  // Sync sheet state with parent (accounts sheet, avatar picker sheet, subviews, target profile)
-  useEffect(() => {
-    if (onAccountSheetChange) {
-      if (isClosing) {
-        onAccountSheetChange(false);
-      } else {
-        const shouldHideBottomNav =
-          activeAccountSheet !== 'none' ||
-          showAvatarModal ||
-          subView !== 'profile' ||
-          !isOwnProfile;
-        onAccountSheetChange(shouldHideBottomNav);
-      }
-    }
-  }, [activeAccountSheet, showAvatarModal, subView, isOwnProfile, isClosing, onAccountSheetChange]);
 
   /* Derived profile data from Database */
   const name = fullUser?.name || session?.user?.name || 'User';
@@ -2190,7 +2190,7 @@ export default function ProfilePanel({
         {/* Action buttons under the accounts list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
           <button
-            onClick={() => { setShowManualSignIn(true); triggerAccountSheetTransition('signIn'); }}
+            onClick={() => setActiveAuthSheet('signIn')}
             style={{
               width: '100%', padding: '14px 0',
               background: '#1c1c1e',
@@ -2202,7 +2202,7 @@ export default function ProfilePanel({
           </button>
 
           <button
-            onClick={() => triggerAccountSheetTransition('signUp')}
+            onClick={() => setActiveAuthSheet('signUp')}
             style={{
               width: '100%', padding: '14px 0',
               background: '#ffffff',
@@ -2235,7 +2235,7 @@ export default function ProfilePanel({
         <div style={{ position: 'absolute', top: 36, left: 24, zIndex: 10 }}>
           <button
             type="button"
-            onClick={() => { setShowManualSignIn(false); triggerAccountSheetTransition('options'); }}
+            onClick={() => { setActiveAuthSheet('none'); triggerAccountSheetTransition('options'); }}
             style={{
               background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6',
               border: 'none', color: isDark ? '#fff' : '#121214',
@@ -2314,10 +2314,7 @@ export default function ProfilePanel({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 'auto', paddingBottom: '24px' }}>
                 <Button
                   type="button"
-                  onClick={() => {
-                    setShowManualSignIn(true);
-                    triggerAccountSheetTransition('signIn');
-                  }}
+                  onClick={() => setActiveAuthSheet('signIn')}
                   className="w-full bg-[#1c1c1e] hover:bg-zinc-800 text-white border border-zinc-800 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-md"
                 >
                   Log Into Existing Account
@@ -2325,7 +2322,7 @@ export default function ProfilePanel({
 
                 <Button
                   type="button"
-                  onClick={() => triggerAccountSheetTransition('signUp')}
+                  onClick={() => setActiveAuthSheet('signUp')}
                   className="w-full bg-white hover:bg-zinc-100 text-[#121214] border border-gray-200 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-sm"
                 >
                   Create a New Account
@@ -2339,7 +2336,7 @@ export default function ProfilePanel({
       {/* ── SIGN IN BOTTOM SHEET (Copied 1-to-1 from login menu in app/page.tsx) ── */}
       <div
         className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-[500] bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
-          (showManualSignIn || activeAccountSheet === 'signIn') 
+          activeAuthSheet === 'signIn'
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
             : 'translate-y-full opacity-0 pointer-events-none'
         }`}
@@ -2347,20 +2344,14 @@ export default function ProfilePanel({
         {/* Backdrop overlay */}
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-md -z-10" 
-          onClick={() => {
-            setShowManualSignIn(false);
-            if (activeAccountSheet === 'signIn') triggerAccountSheetTransition('none');
-          }}
+          onClick={() => setActiveAuthSheet('none')}
         />
 
         {/* Top bar back button */}
         <div className="flex items-center justify-between mb-4">
           <button
             type="button"
-            onClick={() => {
-              setShowManualSignIn(false);
-              if (activeAccountSheet === 'signIn') triggerAccountSheetTransition('none');
-            }}
+            onClick={() => setActiveAuthSheet('none')}
             className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
             title="Back"
           >
@@ -2428,7 +2419,7 @@ export default function ProfilePanel({
       {/* ── SIGN UP BOTTOM SHEET (Copied 1-to-1 from login menu in app/page.tsx) ── */}
       <div
         className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-[500] bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
-          activeAccountSheet === 'signUp' 
+          activeAuthSheet === 'signUp' 
             ? 'translate-y-0 opacity-100 pointer-events-auto' 
             : 'translate-y-full opacity-0 pointer-events-none'
         }`}
@@ -2436,14 +2427,14 @@ export default function ProfilePanel({
         {/* Backdrop overlay */}
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-md -z-10" 
-          onClick={() => triggerAccountSheetTransition('none')}
+          onClick={() => setActiveAuthSheet('none')}
         />
 
         {/* Top bar back button */}
         <div className="flex items-center justify-between mb-4">
           <button
             type="button"
-            onClick={() => triggerAccountSheetTransition('none')}
+            onClick={() => setActiveAuthSheet('none')}
             className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
             title="Back"
           >
