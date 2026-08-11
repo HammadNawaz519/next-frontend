@@ -3,8 +3,13 @@
 import { signIn, useSession } from 'next-auth/react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { GrainGradient } from '@paper-design/shaders-react';
+import dynamic from 'next/dynamic';
 import DashboardPage from './dashboard/page';
+
+const GrainGradient = dynamic(
+  () => import('@paper-design/shaders-react').then((mod) => mod.GrainGradient),
+  { ssr: false }
+);
 
 type SheetState = 
   | 'welcome' 

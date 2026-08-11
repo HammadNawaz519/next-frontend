@@ -4,8 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { MoreVertical, Trash2, UserPlus, LogIn, Lock, Eye, EyeOff, X, ArrowLeft, ChevronRight } from 'lucide-react';
-import { GrainGradient } from '@paper-design/shaders-react';
+import dynamic from 'next/dynamic';
 import { useTheme } from '@/app/components/ThemeProvider';
+
+const GrainGradient = dynamic(
+  () => import('@paper-design/shaders-react').then((mod) => mod.GrainGradient),
+  { ssr: false }
+);
 
 interface SavedAccount {
   email: string;
