@@ -2190,7 +2190,7 @@ export default function ProfilePanel({
         {/* Action buttons under the accounts list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
           <button
-            onClick={() => triggerAccountSheetTransition('signIn')}
+            onClick={() => { window.location.href = '/?sheet=signIn'; }}
             style={{
               width: '100%', padding: '14px 0',
               background: '#1c1c1e',
@@ -2202,7 +2202,7 @@ export default function ProfilePanel({
           </button>
 
           <button
-            onClick={() => triggerAccountSheetTransition('signUp')}
+            onClick={() => { window.location.href = '/?sheet=signUp'; }}
             style={{
               width: '100%', padding: '14px 0',
               background: '#ffffff',
@@ -2314,10 +2314,7 @@ export default function ProfilePanel({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 'auto', paddingBottom: '24px' }}>
                 <Button
                   type="button"
-                  onClick={() => {
-                    setShowManualSignIn(true);
-                    triggerAccountSheetTransition('signIn');
-                  }}
+                  onClick={() => { window.location.href = '/?sheet=signIn'; }}
                   className="w-full bg-[#1c1c1e] hover:bg-zinc-800 text-white border border-zinc-800 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-md"
                 >
                   Log Into Existing Account
@@ -2325,7 +2322,7 @@ export default function ProfilePanel({
 
                 <Button
                   type="button"
-                  onClick={() => triggerAccountSheetTransition('signUp')}
+                  onClick={() => { window.location.href = '/?sheet=signUp'; }}
                   className="w-full bg-white hover:bg-zinc-100 text-[#121214] border border-gray-200 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-sm"
                 >
                   Create a New Account
@@ -2333,238 +2330,6 @@ export default function ProfilePanel({
               </div>
             </div>
           ) : null}
-        </div>
-      </div>
-
-      {/* Manual Sign In - Bottom Sheet (Sliding up from bottom) */}
-      <div 
-        className={`fixed inset-0 z-[500] transition-all duration-500 ${(showManualSignIn || activeAccountSheet === 'signIn') ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-      >
-        <div 
-          className="absolute inset-0 bg-black/60 backdrop-blur-md" 
-          onClick={() => {
-            setShowManualSignIn(false);
-            if (activeAccountSheet === 'signIn') triggerAccountSheetTransition('none');
-          }}
-        />
-        <div 
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.35)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${(showManualSignIn || activeAccountSheet === 'signIn') ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'}`}
-        >
-          {/* Top handle bar */}
-          <div className="w-12 h-1 bg-[#27272a] rounded-full mx-auto mb-6" />
-
-          {/* Content */}
-          <div className="relative h-full flex flex-col space-y-6">
-            {/* Top bar back button */}
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowManualSignIn(false);
-                  if (activeAccountSheet === 'signIn') triggerAccountSheetTransition('none');
-                }}
-                className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-                title="Back"
-              >
-                <ArrowLeft className="w-4 h-4 text-white" />
-              </button>
-            </div>
-
-            <div className="text-center space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Welcome Back</h1>
-              <p className="text-white/70">Sign in to your account</p>
-            </div>
-
-            {switchError && (
-              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-center font-semibold">
-                {switchError}
-              </div>
-            )}
-
-            <form onSubmit={handleSwitchLogin} className="space-y-4">
-              <div className="space-y-2 text-left">
-                <label htmlFor="switch-email" className="text-white/90 text-sm font-medium block">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                  <Input
-                    id="switch-email"
-                    type="email"
-                    value={switchEmail}
-                    onChange={(e) => setSwitchEmail(e.target.value)}
-                    className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2 text-left">
-                <label htmlFor="switch-password" className="text-white/90 text-sm font-medium block">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                  <Input
-                    id="switch-password"
-                    type={showPassword ? "text" : "password"}
-                    value={switchPassword}
-                    onChange={(e) => setSwitchPassword(e.target.value)}
-                    className="pl-10 pr-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                    placeholder="Enter your password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={switchLoading}
-                className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4"
-              >
-                {switchLoading ? "Signing in..." : "Sign In"}
-              </Button>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Create New Account — Bottom Sheet (Sliding up from bottom) */}
-      <div
-        className={`fixed inset-0 z-[500] transition-all duration-500 ${activeAccountSheet === 'signUp' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-      >
-        <div 
-          className="absolute inset-0 bg-black/60 backdrop-blur-md" 
-          onClick={() => triggerAccountSheetTransition('none')}
-        />
-        <div 
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.35)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${activeAccountSheet === 'signUp' ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'}`}
-        >
-          {/* Top handle bar */}
-          <div className="w-12 h-1 bg-[#27272a] rounded-full mx-auto mb-6" />
-
-          {/* Content */}
-          <div className="relative h-full flex flex-col space-y-6">
-            {/* Top bar back button */}
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => triggerAccountSheetTransition('none')}
-                className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-                title="Back"
-              >
-                <ArrowLeft className="w-4 h-4 text-white" />
-              </button>
-            </div>
-
-            <div className="text-center space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Create Account</h1>
-              <p className="text-white/70">Join us today</p>
-            </div>
-
-            {switchError && (
-              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-center font-semibold">
-                {switchError}
-              </div>
-            )}
-
-            <form onSubmit={handleSwitchSignup} className="space-y-4">
-              <div className="space-y-2 text-left">
-                <label htmlFor="signup-name" className="text-white/90 text-sm font-medium block">
-                  Username
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    value={switchUsername}
-                    onChange={(e) => setSwitchUsername(e.target.value)}
-                    className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                    placeholder="Username"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2 text-left">
-                <label htmlFor="signup-email" className="text-white/90 text-sm font-medium block">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    value={switchEmail}
-                    onChange={(e) => setSwitchEmail(e.target.value)}
-                    className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2 text-left">
-                <label htmlFor="signup-phone" className="text-white/90 text-sm font-medium block">
-                  Phone Number
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                  <Input
-                    id="signup-phone"
-                    type="tel"
-                    value={switchPhone}
-                    onChange={(e) => setSwitchPhone(e.target.value)}
-                    className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                    placeholder="Enter your phone number (+92...)"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2 text-left">
-                <label htmlFor="signup-password" className="text-white/90 text-sm font-medium block">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                  <Input
-                    id="signup-password"
-                    type={showPassword ? "text" : "password"}
-                    value={switchPassword}
-                    onChange={(e) => setSwitchPassword(e.target.value)}
-                    className="pl-10 pr-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                    placeholder="Create a password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={switchLoading}
-                className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4"
-              >
-                {switchLoading ? "Creating account..." : "Sign Up"}
-              </Button>
-            </form>
-          </div>
         </div>
       </div>
 

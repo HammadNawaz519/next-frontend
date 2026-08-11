@@ -2320,22 +2320,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   };
 
-  // Auto swipe / scroll to bottom on new messages, typing, or chat selection
+  // Auto swipe / scroll to bottom on new messages, typing, or chat selection (NOT when loading older messages)
   const lastMsgId = messages.length > 0 ? messages[messages.length - 1]?.id : null;
   const isOtherUserTyping = typingUsers.has(selectedUser?.email || '');
 
   useEffect(() => {
-    if (selectedUser?.id && messages.length > 0) {
+    if (selectedUser?.id && messages.length > 0 && !isLoadingOlder) {
       const timer = setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [selectedUser?.id, lastMsgId, messages.length, isOtherUserTyping]);
+  }, [selectedUser?.id, lastMsgId, isOtherUserTyping]);
 
   // Scroll to bottom when user is typing in the input box
   useEffect(() => {
-    if (inputValue && selectedUser?.id) {
+    if (inputValue && selectedUser?.id && !isLoadingOlder) {
       const timer = setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 50);

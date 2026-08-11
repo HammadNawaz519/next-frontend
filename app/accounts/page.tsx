@@ -366,14 +366,14 @@ export default function AccountsPage() {
         {/* Bottom Action Buttons: Log Into Another Account */}
         <div className="flex flex-col gap-3.5 pt-2">
           <Button
-            onClick={() => setShowLoginSheet(true)}
+            onClick={() => { window.location.href = '/?sheet=signIn'; }}
             className="w-full bg-[#1c1c1e] hover:bg-zinc-800 text-white border border-zinc-800 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-md"
           >
             Log Into Existing Account
           </Button>
 
           <Button
-            onClick={() => setShowSignupSheet(true)}
+            onClick={() => { window.location.href = '/?sheet=signUp'; }}
             className="w-full bg-white hover:bg-zinc-100 text-[#121214] border border-gray-200 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-sm"
           >
             Create a New Account
