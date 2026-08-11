@@ -4,10 +4,9 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { signOut, signIn } from 'next-auth/react';
 import { useTheme } from '@/app/components/ThemeProvider';
 import { DeviceAccountStore, DeviceAccountMeta } from '@/lib/deviceAccountStore';
-import { Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   updateProfileDetails,
   updateProfileImageAction,

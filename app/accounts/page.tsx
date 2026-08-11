@@ -10,6 +10,8 @@ import {
 import dynamic from 'next/dynamic';
 import { useTheme } from '@/app/components/ThemeProvider';
 import { DeviceAccountStore, DeviceAccountMeta } from '@/lib/deviceAccountStore';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 // Extend DeviceAccountMeta with computed UI property
 type AccountDisplay = DeviceAccountMeta & { isCurrent: boolean };
