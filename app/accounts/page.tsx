@@ -39,7 +39,27 @@ export default function AccountsPage() {
   const [loading, setLoading] = useState(false);
   const [switchingId, setSwitchingId] = useState<string | null>(null);
 
+  // Signup Modal State
+  const [showSignupSheet, setShowSignupSheet] = useState(false);
+  const [signupName, setSignupName] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPhone, setSignupPhone] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupLoading, setSignupLoading] = useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleSignupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignupLoading(true);
+    // TODO: Connect to backend for signup
+    setTimeout(() => {
+      setSignupLoading(false);
+      setShowSignupSheet(false);
+      // Reset form
+      setSignupName(''); setSignupEmail(''); setSignupPhone(''); setSignupPassword('');
+    }, 1500);
+  };
 
   const curUserId = (session?.user as any)?.id || '';
   const curEmail = session?.user?.email?.toLowerCase().trim() || '';
@@ -323,7 +343,7 @@ export default function AccountsPage() {
           </button>
 
           <button
-            onClick={() => router.push('/?sheet=signUp')}
+            onClick={() => setShowSignupSheet(true)}
             className={`w-full py-3.5 rounded-full font-bold text-xs border flex items-center justify-center gap-2 transition-all active:scale-98 ${
               isDark ? 'bg-zinc-900 border-zinc-800 text-white hover:bg-zinc-800' : 'bg-gray-100 border-gray-200 text-gray-900 hover:bg-gray-200'
             }`}
@@ -393,6 +413,98 @@ export default function AccountsPage() {
           </div>
         </div>
       )}
+
+      {/* Create New Account - Bottom Popup Sheet (Matching Welcome Screen UI) */}
+      <div 
+        className={`fixed inset-0 z-[9999] transition-opacity duration-500 ${showSignupSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+      >
+        <div 
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+          onClick={() => setShowSignupSheet(false)}
+        />
+        <div 
+          className={`absolute bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${showSignupSheet ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
+        >
+          {/* Top bar back button */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => setShowSignupSheet(false)}
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
+              title="Back"
+            >
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+            <div className="w-12 h-1 bg-[#27272a] rounded-full" />
+            <div className="w-10" />
+          </div>
+
+          <form onSubmit={handleSignupSubmit} className="space-y-3">
+            <input
+              type="text"
+              placeholder="Username / Full Name"
+              required
+              value={signupName}
+              onChange={(e) => setSignupName(e.target.value)}
+              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
+            />
+
+            <input
+              type="email"
+              placeholder="Email Address"
+              required
+              value={signupEmail}
+              onChange={(e) => setSignupEmail(e.target.value)}
+              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
+            />
+
+            <input
+              type="tel"
+              placeholder="+92 300 0000000"
+              required
+              value={signupPhone}
+              onChange={(e) => setSignupPhone(e.target.value)}
+              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
+            />
+
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                required
+                value={signupPassword}
+                onChange={(e) => setSignupPassword(e.target.value)}
+                className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 pr-12 focus:outline-none transition-colors text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                {showPassword ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 113.682 3.682M21 12a9.96 9.96 0 01-1.557 3.018m-3.437-1.42A3 3 0 0012 10.012c-.29 0-.57.04-.833.115M17.657 16.657L13.414 12.414m0 0L9 7.999M3 3l18 18" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              disabled={signupLoading}
+              className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
+            >
+              {signupLoading ? 'Creating Account...' : 'Sign Up'}
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
