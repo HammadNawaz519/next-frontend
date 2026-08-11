@@ -262,8 +262,9 @@ export default function AccountsPage() {
           )}
 
           {displayAccounts.map((acc) => {
-            const accountName = acc.displayName || acc.username || acc.email.split('@')[0];
-            const displayUsername = acc.username || acc.email.split('@')[0];
+            const usernameOnly = acc.username 
+              ? (acc.username.startsWith('@') ? acc.username : `@${acc.username}`)
+              : (acc.displayName || (acc.email ? `@${acc.email.split('@')[0]}` : 'user'));
             const isSaved = acc.isSavedOnDevice;
             const isSwitchingThis = switchingId === acc.userId;
 
@@ -277,7 +278,7 @@ export default function AccountsPage() {
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   {acc.profilePicture ? (
-                    <img src={acc.profilePicture} alt={accountName} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                    <img src={acc.profilePicture} alt={usernameOnly} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
                   ) : (
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0 ${
                       isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-gray-200 text-gray-700'
@@ -286,8 +287,7 @@ export default function AccountsPage() {
                     </div>
                   )}
                   <div className="min-w-0">
-                    <span className="text-sm font-semibold truncate block">{accountName}</span>
-                    <span className={`text-xs truncate block ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>@{displayUsername}</span>
+                    <span className="text-sm font-semibold truncate block">{usernameOnly}</span>
                   </div>
                 </div>
 

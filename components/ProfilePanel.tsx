@@ -2106,8 +2106,10 @@ export default function ProfilePanel({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20, maxHeight: 260, overflowY: 'auto' }}>
           {displayAccounts.map((acc) => {
             const isActive = acc.isCurrent;
-            const accountName = acc.displayName || acc.username || acc.email.split('@')[0];
-            const username = acc.username || acc.email.split('@')[0];
+            const usernameOnly = acc.username 
+              ? (acc.username.startsWith('@') ? acc.username : `@${acc.username}`)
+              : (acc.displayName || (acc.email ? `@${acc.email.split('@')[0]}` : 'user'));
+
             return (
               <div 
                 key={acc.userId || acc.email}
@@ -2132,16 +2134,17 @@ export default function ProfilePanel({
                   <div style={{
                     width: 40, height: 40, borderRadius: '50%', background: '#27272a',
                     overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: isActive ? '2px solid #71717a' : 'none'
+                    border: 'none'
                   }}>
                     {acc.profilePicture 
-                      ? <img src={acc.profilePicture} alt={accountName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ? <img src={acc.profilePicture} alt={usernameOnly} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : <DefaultAvatarSvg size={24} color={isActive ? '#e4e4e7' : '#374151'} />
                     }
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? '#ffffff' : (isDark ? '#ffffff' : '#121214') }}>{accountName}</span>
-                    <span style={{ fontSize: 11, color: isActive ? '#a1a1aa' : (isDark ? '#a1a1aa' : '#6b7280') }}>@{username}</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? '#ffffff' : (isDark ? '#ffffff' : '#121214') }}>
+                      {usernameOnly}
+                    </span>
                   </div>
                 </div>
 
@@ -2255,8 +2258,9 @@ export default function ProfilePanel({
               {/* Account Center Saved Accounts List — Uniform & Clean */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, maxHeight: 320, overflowY: 'auto' }}>
                 {displayAccounts.map((acc) => {
-                  const accountName = acc.displayName || acc.username || acc.email.split('@')[0];
-                  const username = acc.username || acc.email.split('@')[0];
+                  const usernameOnly = acc.username 
+                    ? (acc.username.startsWith('@') ? acc.username : `@${acc.username}`)
+                    : (acc.displayName || (acc.email ? `@${acc.email.split('@')[0]}` : 'user'));
                   return (
                     <div
                       key={acc.userId || acc.email}
@@ -2271,16 +2275,15 @@ export default function ProfilePanel({
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                        <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: 'none' }}>
                           {acc.profilePicture ? (
-                            <img src={acc.profilePicture} alt={accountName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={acc.profilePicture} alt={usernameOnly} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
                             <DefaultAvatarSvg size={28} color="#374151" />
                           )}
                         </div>
                         <div style={{ textAlign: 'left' }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, display: 'block' }}>{accountName}</span>
-                          <span style={{ fontSize: 12, color: isDark ? '#a1a1aa' : '#6b7280' }}>@{username}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, display: 'block' }}>{usernameOnly}</span>
                         </div>
                       </div>
 
