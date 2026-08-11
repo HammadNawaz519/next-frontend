@@ -2111,8 +2111,8 @@ export default function ProfilePanel({
       >
         <div style={{ width: 48, height: 4, background: '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
         <h2 style={{ fontSize: 18, fontWeight: 800, color: '#121214', marginBottom: 4, textAlign: 'center' }}>Add Account</h2>
-        <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 20, textAlign: 'center' }}>
-          Choose whether to log in to an existing account or create a new one.
+        <p style={{ fontSize: 12, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 20, textAlign: 'center' }}>
+          Log into existing account or create new one
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
