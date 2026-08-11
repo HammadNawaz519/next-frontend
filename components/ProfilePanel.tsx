@@ -2121,38 +2121,32 @@ export default function ProfilePanel({
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '12px 16px', borderRadius: '18px',
-                  background: isActive ? (isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)') : (isDark ? '#222228' : '#f9fafb'),
-                  border: isActive ? '1.5px solid #3b82f6' : (isDark ? '1px solid #27272a' : '1px solid #e5e7eb'),
+                  background: isActive ? '#1c1c22' : (isDark ? '#16161a' : '#f9fafb'),
+                  border: isActive ? '1.5px solid #3f3f46' : (isDark ? '1px solid #27272a' : '1px solid #e5e7eb'),
                   cursor: isActive ? 'default' : 'pointer',
                   transition: 'all 0.2s',
+                  boxShadow: isActive ? '0 4px 14px rgba(0,0,0,0.25)' : 'none',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{
-                    width: 40, height: 40, borderRadius: '50%', background: '#e5e7eb',
+                    width: 40, height: 40, borderRadius: '50%', background: '#27272a',
                     overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: isActive ? '2px solid #3b82f6' : 'none'
+                    border: isActive ? '2px solid #71717a' : 'none'
                   }}>
                     {acc.profilePicture 
                       ? <img src={acc.profilePicture} alt={accountName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <DefaultAvatarSvg size={24} color="#374151" />
+                      : <DefaultAvatarSvg size={24} color={isActive ? '#e4e4e7' : '#374151'} />
                     }
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#ffffff' : '#121214' }}>{accountName}</span>
-                      {isActive && (
-                        <span style={{ fontSize: 9, fontWeight: 800, background: '#3b82f6', color: '#fff', padding: '1px 6px', borderRadius: 10 }}>
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <span style={{ fontSize: 11, color: isDark ? '#a1a1aa' : '#6b7280' }}>@{username}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? '#ffffff' : (isDark ? '#ffffff' : '#121214') }}>{accountName}</span>
+                    <span style={{ fontSize: 11, color: isActive ? '#a1a1aa' : (isDark ? '#a1a1aa' : '#6b7280') }}>@{username}</span>
                   </div>
                 </div>
 
                 {isActive ? (
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#3f3f46', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="12" height="12" fill="none" stroke="#ffffff" strokeWidth="3" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
