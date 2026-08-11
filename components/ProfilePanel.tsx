@@ -5,6 +5,9 @@ import { signOut, signIn } from 'next-auth/react';
 import { useTheme } from '@/app/components/ThemeProvider';
 import { DeviceAccountStore, DeviceAccountMeta } from '@/lib/deviceAccountStore';
 import { Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   updateProfileDetails,
   updateProfileImageAction,
@@ -2301,38 +2304,26 @@ export default function ProfilePanel({
                       </div>
 
                       <svg width="18" height="18" fill="none" stroke={isDark ? '#a1a1aa' : '#6b7280'} strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Bottom Action Buttons (Pushed to bottom) */}
+                        <path strokeLinecap="round" strokeLinejoin="round" d="              {/* Bottom Action Buttons (Pushed to bottom) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 'auto', paddingBottom: '24px' }}>
-                <button
+                <Button
                   type="button"
-                  onClick={() => setShowManualSignIn(true)}
-                  style={{
-                    width: '100%', padding: '16px 0', background: '#1c1c22',
-                    color: '#ffffff', border: 'none',
-                    borderRadius: '100px', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s'
+                  onClick={() => {
+                    setShowManualSignIn(true);
+                    triggerAccountSheetTransition('signIn');
                   }}
+                  className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/40 h-12 rounded-full font-bold text-xs transition-all duration-200 backdrop-blur-sm shadow-md"
                 >
                   Log Into Another Account
-                </button>
+                </Button>
 
-                <button
+                <Button
                   type="button"
                   onClick={() => triggerAccountSheetTransition('signUp')}
-                  style={{
-                    width: '100%', padding: '16px 0', background: isDark ? '#1c1c22' : '#f3f4f6',
-                    color: isDark ? '#ffffff' : '#121214', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
-                    borderRadius: '100px', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s'
-                  }}
+                  className="w-full bg-zinc-900/80 hover:bg-zinc-800 text-white border border-zinc-800 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-sm"
                 >
                   Create a New Account
-                </button>
+                </Button>
               </div>
             </div>
           ) : null}
@@ -2341,51 +2332,58 @@ export default function ProfilePanel({
 
       {/* Manual Sign In - Charcoal Black Bottom Popup Sheet */}
       <div 
-        className={`fixed inset-0 z-[500] transition-opacity duration-500 ${showManualSignIn ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-[500] transition-opacity duration-500 ${(showManualSignIn || activeAccountSheet === 'signIn') ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       >
         <div 
           className="absolute inset-0 bg-black/60 backdrop-blur-md" 
-          onClick={() => setShowManualSignIn(false)}
+          onClick={() => {
+            setShowManualSignIn(false);
+            if (activeAccountSheet === 'signIn') triggerAccountSheetTransition('none');
+          }}
         />
         <div 
-          className={`absolute bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${showManualSignIn ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
+          className={`absolute bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${(showManualSignIn || activeAccountSheet === 'signIn') ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
         >
           {/* Top bar back button */}
           <div className="flex items-center justify-between mb-6">
             <button
-              onClick={() => setShowManualSignIn(false)}
+              onClick={() => {
+                setShowManualSignIn(false);
+                if (activeAccountSheet === 'signIn') triggerAccountSheetTransition('none');
+              }}
               className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
               title="Back"
             >
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
+              <ArrowLeft className="w-4 h-4 text-white" />
             </button>
             <div className="w-12 h-1 bg-[#27272a] rounded-full" />
             <div className="w-10" />
           </div>
 
-          <h2 className="text-xl font-extrabold text-white mb-2">Log Into Existing Account</h2>
-          <p className="text-xs text-white/50 mb-6">Enter your email and password to sign in</p>
+          <div className="text-center space-y-1 mb-6">
+            <h1 className="text-2xl font-semibold text-white">Welcome Back</h1>
+            <p className="text-sm text-white/70">Sign in to your existing account</p>
+          </div>
 
           {switchError && (
-            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
+            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4 text-center font-semibold">
               {switchError}
             </div>
           )}
 
           <form onSubmit={handleSwitchLogin} className="space-y-4">
             <div className="space-y-2 text-left">
-              <label className="text-xs font-semibold text-white/90">
+              <Label htmlFor="switch-email" className="text-white/90 text-xs font-semibold">
                 Email
-              </label>
+              </Label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                <input
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <Input
+                  id="switch-email"
                   type="email"
                   value={switchEmail}
                   onChange={(e) => setSwitchEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
                   placeholder="Enter your email"
                   required
                 />
@@ -2393,36 +2391,37 @@ export default function ProfilePanel({
             </div>
 
             <div className="space-y-2 text-left">
-              <label className="text-xs font-semibold text-white/90">
+              <Label htmlFor="switch-password" className="text-white/90 text-xs font-semibold">
                 Password
-              </label>
+              </Label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                <input
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <Input
+                  id="switch-password"
                   type={showPassword ? "text" : "password"}
                   value={switchPassword}
                   onChange={(e) => setSwitchPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
                   placeholder="Enter your password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/80"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={switchLoading}
-              className="w-full bg-white text-black hover:bg-white/90 transition-all active:scale-98 rounded-xl py-3.5 font-bold text-center text-sm shadow-md mt-4"
+              className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/40 h-11 rounded-xl font-medium transition-all duration-200 backdrop-blur-sm shadow-md mt-4"
             >
-              {switchLoading ? 'Signing In...' : 'Sign In'}
-            </button>
+              {switchLoading ? "Signing in..." : "Sign In"}
+            </Button>
           </form>
         </div>
       </div>
@@ -2433,7 +2432,7 @@ export default function ProfilePanel({
       >
         <div 
           className="absolute inset-0 bg-black/60 backdrop-blur-md" 
-          onClick={() => triggerAccountSheetTransition('signIn')}
+          onClick={() => triggerAccountSheetTransition('none')}
         />
         <div 
           className={`absolute bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${activeAccountSheet === 'signUp' ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
@@ -2442,39 +2441,40 @@ export default function ProfilePanel({
           <div className="flex items-center justify-between mb-6">
             <button
               type="button"
-              onClick={() => triggerAccountSheetTransition('signIn')}
+              onClick={() => triggerAccountSheetTransition('none')}
               className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
               title="Back"
             >
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
+              <ArrowLeft className="w-4 h-4 text-white" />
             </button>
             <div className="w-12 h-1 bg-[#27272a] rounded-full" />
             <div className="w-10" />
           </div>
 
-          <h2 className="text-xl font-extrabold text-white mb-2">Create New Account</h2>
-          <p className="text-xs text-white/50 mb-6">Fill in details below to sign up and verify your account</p>
+          <div className="text-center space-y-1 mb-6">
+            <h1 className="text-2xl font-semibold text-white">Create Account</h1>
+            <p className="text-sm text-white/70">Join us today</p>
+          </div>
 
           {switchError && (
-            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
+            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4 text-center font-semibold">
               {switchError}
             </div>
           )}
 
           <form onSubmit={handleSwitchSignup} className="space-y-4">
             <div className="space-y-2 text-left">
-              <label className="text-xs font-semibold text-white/90">
+              <Label htmlFor="signup-name" className="text-white/90 text-xs font-semibold">
                 Username / Full Name
-              </label>
+              </Label>
               <div className="relative">
-                <User className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                <input
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <Input
+                  id="signup-name"
                   type="text"
                   value={switchUsername}
                   onChange={(e) => setSwitchUsername(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
                   placeholder="Enter your username or name"
                   required
                 />
@@ -2482,16 +2482,17 @@ export default function ProfilePanel({
             </div>
 
             <div className="space-y-2 text-left">
-              <label className="text-xs font-semibold text-white/90">
+              <Label htmlFor="signup-email" className="text-white/90 text-xs font-semibold">
                 Email
-              </label>
+              </Label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                <input
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <Input
+                  id="signup-email"
                   type="email"
                   value={switchEmail}
                   onChange={(e) => setSwitchEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
                   placeholder="Enter your email"
                   required
                 />
@@ -2499,16 +2500,17 @@ export default function ProfilePanel({
             </div>
 
             <div className="space-y-2 text-left">
-              <label className="text-xs font-semibold text-white/90">
+              <Label htmlFor="signup-phone" className="text-white/90 text-xs font-semibold">
                 Phone Number
-              </label>
+              </Label>
               <div className="relative">
-                <Phone className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                <input
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <Input
+                  id="signup-phone"
                   type="tel"
                   value={switchPhone}
                   onChange={(e) => setSwitchPhone(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
+                  className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
                   placeholder="Enter your phone number (+92...)"
                   required
                 />
@@ -2516,36 +2518,37 @@ export default function ProfilePanel({
             </div>
 
             <div className="space-y-2 text-left">
-              <label className="text-xs font-semibold text-white/90">
+              <Label htmlFor="signup-password" className="text-white/90 text-xs font-semibold">
                 Password
-              </label>
+              </Label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                <input
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                <Input
+                  id="signup-password"
                   type={showPassword ? "text" : "password"}
                   value={switchPassword}
                   onChange={(e) => setSwitchPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 focus:border-white/40 focus:ring-1 focus:ring-white/20 outline-none text-sm transition-all"
-                  placeholder="Enter your password"
+                  className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
+                  placeholder="Create a password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/80"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={switchLoading}
-              className="w-full bg-white text-black hover:bg-white/90 transition-all active:scale-98 rounded-xl py-3.5 font-bold text-center text-sm shadow-md mt-4"
+              className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/40 h-11 rounded-xl font-medium transition-all duration-200 backdrop-blur-sm shadow-md mt-4"
             >
-              {switchLoading ? 'Creating Account...' : 'Continue to Verification'}
-            </button>
+              {switchLoading ? "Creating Account..." : "Continue to Verification"}
+            </Button>
           </form>
         </div>
       </div>

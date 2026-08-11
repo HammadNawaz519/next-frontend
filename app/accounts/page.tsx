@@ -361,23 +361,21 @@ export default function AccountsPage() {
           })}
         </div>
 
-        {/* Bottom Action Buttons: Log Into Another Account is Charcoal Black */}
+        {/* Bottom Action Buttons: Log Into Another Account */}
         <div className="flex flex-col gap-3.5 pt-2">
-          <button
+          <Button
             onClick={() => setShowLoginSheet(true)}
-            className="w-full py-3.5 rounded-full font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-98 bg-[#1c1c22] text-white hover:bg-[#27272a] shadow-md border-none"
+            className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/40 h-12 rounded-full font-bold text-xs transition-all duration-200 backdrop-blur-sm shadow-md"
           >
             Log Into Another Account
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={() => setShowSignupSheet(true)}
-            className={`w-full py-3.5 rounded-full font-bold text-xs border flex items-center justify-center gap-2 transition-all active:scale-98 ${
-              isDark ? 'bg-zinc-900 border-zinc-800 text-white hover:bg-zinc-800' : 'bg-gray-100 border-gray-200 text-gray-900 hover:bg-gray-200'
-            }`}
+            className="w-full bg-zinc-900/80 hover:bg-zinc-800 text-white border border-zinc-800 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-sm"
           >
             Create a New Account
-          </button>
+          </Button>
         </div>
       </div>
 
