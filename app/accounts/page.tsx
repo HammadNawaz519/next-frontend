@@ -184,7 +184,7 @@ export default function AccountsPage() {
     <div className={`min-h-screen transition-colors duration-500 font-sans ${isDark ? 'bg-[#09090b] text-white' : 'bg-[#f8f9fa] text-gray-900'}`}>
       <div className="max-w-xl mx-auto px-5 pt-8 pb-10 md:pt-12">
         {/* Top Header Controls */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => router.push('/dashboard')}
             className={`p-2 px-3 rounded-full transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold ${
@@ -228,18 +228,15 @@ export default function AccountsPage() {
           </div>
         </div>
 
-        {/* Left-Aligned 2-Line Charcoal Black Modern Header (NO LOGO) */}
-        <div className="text-left mb-6 pt-1">
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight leading-[1.15] text-[#1c1c22] dark:text-zinc-100">
+        {/* Top-Left Charcoal Black 2-Line Header (NO LOGO, NO SUBTITLE) */}
+        <div className="text-left mb-8 pt-3">
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.08] text-[#1c1c22] dark:text-zinc-100 font-sans">
             Account<br />Center
           </h1>
-          <p className={`text-xs mt-2 font-medium ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-            Select a saved account from your device to switch
-          </p>
         </div>
 
-        {/* Clean Simple Accounts List Container — Fully Rounded Rows */}
-        <div className="flex flex-col gap-2.5 mb-8">
+        {/* Clean Simple Accounts List Container — Fully Rounded Rows (Shifted Down) */}
+        <div className="flex flex-col gap-3 mb-10">
           {(viewMode === 'remove' || viewMode === 'removeSaved') && (
             <div className="flex items-center justify-between py-2 px-1">
               <span className="text-xs font-bold text-amber-500">Managing Saved Accounts</span>
@@ -259,9 +256,9 @@ export default function AccountsPage() {
           )}
 
           {displayAccounts.map((acc) => {
-            const usernameOnly = acc.username 
-              ? `@${acc.username.replace(/^@/, '')}`
-              : (acc.displayName ? `@${acc.displayName.replace(/\s+/g, '_').toLowerCase()}` : '@user');
+            const displayHandle = acc.displayName 
+              ? acc.displayName 
+              : (acc.username ? `@${acc.username.replace(/^@/, '').split('@')[0]}` : (acc.email ? acc.email.split('@')[0] : 'User'));
             const isSaved = acc.isSavedOnDevice;
             const isSwitchingThis = switchingId === acc.userId;
 
@@ -275,7 +272,7 @@ export default function AccountsPage() {
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   {acc.profilePicture ? (
-                    <img src={acc.profilePicture} alt={usernameOnly} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                    <img src={acc.profilePicture} alt={displayHandle} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
                   ) : (
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0 ${
                       isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-gray-200 text-gray-700'
@@ -284,7 +281,7 @@ export default function AccountsPage() {
                     </div>
                   )}
                   <div className="min-w-0 text-left">
-                    <span className="text-sm font-bold truncate block">{usernameOnly}</span>
+                    <span className="text-sm font-bold truncate block">{displayHandle}</span>
                   </div>
                 </div>
 
@@ -316,13 +313,11 @@ export default function AccountsPage() {
           })}
         </div>
 
-        {/* Bottom Action Buttons in Matching Theme */}
-        <div className="flex flex-col gap-3">
+        {/* Bottom Action Buttons: Log Into Another Account is Charcoal Black */}
+        <div className="flex flex-col gap-3.5 pt-2">
           <button
             onClick={() => router.push('/?sheet=signIn')}
-            className={`w-full py-3.5 rounded-full font-bold text-xs border flex items-center justify-center gap-2 transition-all active:scale-98 ${
-              isDark ? 'bg-zinc-900 border-zinc-800 text-white hover:bg-zinc-800' : 'bg-gray-100 border-gray-200 text-gray-900 hover:bg-gray-200'
-            }`}
+            className="w-full py-3.5 rounded-full font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-98 bg-[#1c1c22] text-white hover:bg-[#27272a] shadow-md border-none"
           >
             Log Into Another Account
           </button>
