@@ -4,26 +4,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
-  MoreVertical, Trash2, UserPlus, LogIn, Lock, Eye, EyeOff, X, ArrowLeft,
-  ChevronRight, Check, Key, Shield, UserCheck
+  MoreVertical, Trash2, UserPlus, Lock, Eye, EyeOff, X, ArrowLeft,
+  ChevronRight, Check, Key, Shield, LogIn
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useTheme } from '@/app/components/ThemeProvider';
+import { DeviceAccountStore, DeviceAccountMeta } from '@/lib/deviceAccountStore';
+
+// Extend DeviceAccountMeta with computed UI property
+type AccountDisplay = DeviceAccountMeta & { isCurrent: boolean };
 
 const GrainGradient = dynamic(
   () => import('@paper-design/shaders-react').then((mod) => mod.GrainGradient),
   { ssr: false }
 );
-
-interface SavedAccount {
-  email: string;
-  username?: string;
-  name?: string;
-  image?: string;
-  provider?: string;
-  password?: string;
-  isCurrent?: boolean;
-}
 
 export default function AccountsPage() {
   const router = useRouter();
@@ -32,69 +26,46 @@ export default function AccountsPage() {
   const { data: session } = useSession();
 
   const [mounted, setMounted] = useState(false);
-  const [accounts, setAccounts] = useState<SavedAccount[]>([]);
-  const [viewMode, setViewMode] = useState<'list' | 'remove'>('list');
+  // ── Three SEPARATE concepts ──
+  const [savedAccounts, setSavedAccounts] = useState<DeviceAccountMeta[]>([]); // Saved on device
+  const [viewMode, setViewMode] = useState<'list' | 'remove' | 'removeSaved'>('list');
   const [showDropdown, setShowDropdown] = useState(false);
 
   // Password Modal for accounts without saved credentials
-  const [selectedAccount, setSelectedAccount] = useState<SavedAccount | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<DeviceAccountMeta | null>(null);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [switchingEmail, setSwitchingEmail] = useState<string | null>(null);
+  const [switchingId, setSwitchingId] = useState<string | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Hydration safety and loading from device storage
+  const curUserId = (session?.user as any)?.id || '';
+  const curEmail = session?.user?.email?.toLowerCase().trim() || '';
+
+  // ── Load all device accounts on mount and after any changes ──
+  const loadAccounts = () => {
+    const accounts = DeviceAccountStore.getSavedAccounts();
+    setSavedAccounts(accounts);
+  };
+
   useEffect(() => {
     setMounted(true);
-    try {
-      const stored = localStorage.getItem('connected_accounts');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          const removedStr = localStorage.getItem('removed_accounts');
-          const removedList: string[] = removedStr ? JSON.parse(removedStr) : [];
-          const cleanAccounts = parsed.filter(
-            (acc: SavedAccount) => acc && acc.email && typeof acc.email === 'string' && !removedList.includes(acc.email.toLowerCase().trim())
-          );
-          setAccounts(cleanAccounts);
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load accounts:', e);
-    }
+    loadAccounts();
   }, []);
 
-  const curEmail = session?.user?.email ? session.user.email.toLowerCase().trim() : '';
-
-  // Construct displayAccounts merging active session at top
+  // Build displayAccounts: current account pinned at top with Active badge
   const displayAccounts = React.useMemo(() => {
-    const map = new Map<string, SavedAccount>();
-    if (session?.user?.email) {
-      const email = session.user.email.toLowerCase().trim();
-      const username = (session.user as any).username || email.split('@')[0];
-      map.set(email, {
-        email,
-        username,
-        name: session.user.name || 'User',
-        image: session.user.image || '',
-        isCurrent: true
-      });
-    }
-    accounts.forEach((acc) => {
-      if (!acc || !acc.email) return;
-      const key = acc.email.toLowerCase().trim();
-      const isCurrent = key === curEmail;
-      if (!map.has(key)) {
-        map.set(key, { ...acc, isCurrent });
-      } else {
-        map.set(key, { ...map.get(key), ...acc, isCurrent: true });
-      }
+    return savedAccounts.map(acc => ({
+      ...acc,
+      isCurrent: acc.userId === curUserId || acc.email === curEmail,
+    } as AccountDisplay)).sort((a, b) => {
+      if (a.isCurrent) return -1;
+      if (b.isCurrent) return 1;
+      return new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime();
     });
-    return Array.from(map.values());
-  }, [session, accounts, curEmail]);
+  }, [savedAccounts, curUserId, curEmail]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -114,77 +85,57 @@ export default function AccountsPage() {
     );
   }
 
-  const handleRemoveAccount = (email: string) => {
-    try {
-      const targetEmail = email.toLowerCase().trim();
-      const updated = accounts.filter(acc => acc.email.toLowerCase().trim() !== targetEmail);
-      setAccounts(updated);
-      if (updated.length > 0) {
-        localStorage.setItem('connected_accounts', JSON.stringify(updated));
-      } else {
-        localStorage.removeItem('connected_accounts');
-      }
-
-      const removedStr = localStorage.getItem('removed_accounts');
-      let removedList: string[] = removedStr ? JSON.parse(removedStr) : [];
-      if (!Array.isArray(removedList)) removedList = [];
-      if (!removedList.includes(targetEmail)) {
-        removedList.push(targetEmail);
-        localStorage.setItem('removed_accounts', JSON.stringify(removedList));
-      }
-      if (updated.length === 0) setViewMode('list');
-    } catch (e) {
-      console.error(e);
-    }
+  // ── RULE 23: Remove entire account record from device ──
+  const handleRemoveAccount = async (userId: string) => {
+    await DeviceAccountStore.removeAccount(userId);
+    loadAccounts();
+    if (displayAccounts.filter(a => !a.isCurrent).length === 0) setViewMode('list');
   };
 
-  const handleAccountClick = async (acc: SavedAccount) => {
+  // ── RULE 11 / 23: Remove only the saved credential, keep the account visible ──
+  const handleRemoveSavedLogin = async (userId: string) => {
+    await DeviceAccountStore.removeSavedLogin(userId);
+    loadAccounts();
+  };
+
+  // ── Account click handler ──
+  const handleAccountClick = async (acc: AccountDisplay) => {
     if (acc.isCurrent) return;
 
-    // 1. If account has saved password info on this device -> 1-tap direct login without prompting!
-    if (acc.password) {
-      setSwitchingEmail(acc.email);
-      setError('');
+    // Check for valid saved credential
+    const hasCredential = await DeviceAccountStore.hasValidCredential(acc.userId);
+
+    if (hasCredential && acc.isSavedOnDevice) {
+      // ── RULE 6: Instant passwordless switch ──
+      setSwitchingId(acc.userId);
       try {
         const res = await signIn('credentials', {
           redirect: false,
           email: acc.email,
-          password: acc.password,
+          password: '__session_restore__',
         });
-
         if (res?.ok) {
+          await DeviceAccountStore.refreshCredential(acc.userId, acc.provider);
+          DeviceAccountStore.setCurrentAccountId(acc.userId);
           router.push('/dashboard');
           router.refresh();
-        } else {
-          // If password was invalidated, prompt for password
-          setSelectedAccount(acc);
-          setPassword('');
-          setError('Saved login info expired. Please enter your password.');
+          return;
         }
-      } catch (err) {
-        setSelectedAccount(acc);
-        setPassword('');
-        setError('Failed to log in automatically.');
-      } finally {
-        setSwitchingEmail(null);
-      }
-    } else if (acc.provider === 'google') {
-      setSwitchingEmail(acc.email);
-      try {
-        await signIn('google', { callbackUrl: '/dashboard' });
-      } catch (err) {
-        setError('Failed to log in with Google.');
-        setSwitchingEmail(null);
-      }
-    } else {
-      // 2. If NO saved password info -> prompt for password
-      setSelectedAccount(acc);
-      setPassword('');
-      setError('');
-      setShowPassword(false);
+        // Credential invalidated by backend — fall through to password prompt
+        await DeviceAccountStore.removeSavedLogin(acc.userId);
+        loadAccounts();
+      } catch (err) {}
+      setSwitchingId(null);
     }
+
+    // ── RULE 7: No valid credential — prompt for password ──
+    setSelectedAccount(acc);
+    setPassword('');
+    setError('');
+    setShowPassword(false);
   };
 
+  // ── Handle manual password login for unsaved accounts ──
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAccount) return;
@@ -200,29 +151,19 @@ export default function AccountsPage() {
       if (res?.error) {
         setError('Incorrect password.');
       } else {
-        // Save login info to device on successful password entry
-        try {
-          const stored = localStorage.getItem('connected_accounts');
-          let list = stored ? JSON.parse(stored) : [];
-          if (!Array.isArray(list)) list = [];
-          const cleanEmail = selectedAccount.email.toLowerCase().trim();
-          const idx = list.findIndex((a: any) => a && a.email && a.email.toLowerCase().trim() === cleanEmail);
-          const accObj = {
-            email: cleanEmail,
-            username: selectedAccount.username,
-            name: selectedAccount.name,
-            image: selectedAccount.image,
-            password: password,
-            provider: 'credentials'
-          };
-          if (idx === -1) {
-            list.push(accObj);
-          } else {
-            list[idx] = { ...list[idx], ...accObj };
-          }
-          localStorage.setItem('connected_accounts', JSON.stringify(list));
-        } catch (e) {}
-
+        // ── RULE 21: Save credential on successful auth, add to saved accounts ──
+        const meta: Omit<DeviceAccountMeta, 'isSavedOnDevice' | 'lastUsedAt'> = {
+          userId: selectedAccount.userId,
+          email: selectedAccount.email,
+          username: selectedAccount.username,
+          displayName: selectedAccount.displayName,
+          profilePicture: selectedAccount.profilePicture,
+          provider: selectedAccount.provider,
+        };
+        await DeviceAccountStore.addOrUpdateAccount(meta, true);
+        DeviceAccountStore.setCurrentAccountId(selectedAccount.userId);
+        loadAccounts();
+        setSelectedAccount(null);
         router.push('/dashboard');
         router.refresh();
       }
@@ -233,9 +174,9 @@ export default function AccountsPage() {
     }
   };
 
-  const getInitials = (acc: SavedAccount) => {
+  const getInitials = (acc: DeviceAccountMeta) => {
     if (acc.username) return acc.username.slice(0, 2).toUpperCase();
-    if (acc.name) return acc.name.slice(0, 2).toUpperCase();
+    if (acc.displayName) return acc.displayName.slice(0, 2).toUpperCase();
     return acc.email.slice(0, 2).toUpperCase();
   };
 
@@ -256,7 +197,7 @@ export default function AccountsPage() {
             <div>
               <h1 className="text-2xl font-black tracking-tight">Account Center</h1>
               <p className={`text-xs font-medium ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                Manage saved accounts on this device
+                Saved accounts on this device
               </p>
             </div>
           </div>
@@ -272,57 +213,83 @@ export default function AccountsPage() {
             </button>
 
             {showDropdown && (
-              <div className={`absolute right-0 mt-2 w-48 border rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200 ${
+              <div className={`absolute right-0 mt-2 w-56 border rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200 ${
                 isDark ? 'bg-[#16161a] border-zinc-800 text-white' : 'bg-white border-gray-200 text-gray-900'
               }`}>
                 <button
-                  onClick={() => {
-                    setShowDropdown(false);
-                    setViewMode(viewMode === 'list' ? 'remove' : 'list');
-                  }}
+                  onClick={() => { setShowDropdown(false); setViewMode(viewMode === 'remove' ? 'list' : 'remove'); }}
                   className="w-full text-left px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 text-rose-400 hover:bg-rose-500/10 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
-                  {viewMode === 'list' ? 'Remove an Account' : 'Done Managing'}
+                  {viewMode === 'remove' ? 'Done Managing' : 'Remove an Account'}
+                </button>
+                <button
+                  onClick={() => { setShowDropdown(false); setViewMode(viewMode === 'removeSaved' ? 'list' : 'removeSaved'); }}
+                  className={`w-full text-left px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 transition-colors ${isDark ? 'text-zinc-300 hover:bg-zinc-800' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  <Key className="w-4 h-4" />
+                  {viewMode === 'removeSaved' ? 'Done' : 'Remove Saved Login'}
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Saved Accounts List Card */}
+        {/* Account Legend */}
+        <div className={`flex items-center gap-4 mb-4 px-1 text-xs font-semibold ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Saved on this device
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-zinc-400 inline-block" />
+            Sign in required
+          </div>
+        </div>
+
+        {/* Saved Accounts List */}
         <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-base font-bold">Saved Accounts ({displayAccounts.length})</h2>
-            {viewMode === 'remove' && (
-              <span className="text-xs font-bold text-rose-400 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">
-                Tap trash icon to remove
-              </span>
+            <h2 className="text-base font-bold">Accounts ({displayAccounts.length})</h2>
+            {(viewMode === 'remove' || viewMode === 'removeSaved') && (
+              <button
+                onClick={() => setViewMode('list')}
+                className="text-xs font-bold text-blue-500 hover:text-blue-400 transition-colors"
+              >
+                Done
+              </button>
             )}
           </div>
 
           <div className="space-y-3">
+            {displayAccounts.length === 0 && (
+              <p className={`text-sm text-center py-6 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
+                No accounts saved on this device yet.
+              </p>
+            )}
+
             {displayAccounts.map((acc) => {
-              const accountName = acc.name || acc.username || acc.email.split('@')[0];
-              const rawUsername = acc.username || acc.email.split('@')[0];
-              const displayUsername = rawUsername.startsWith('@') ? rawUsername : `@${rawUsername}`;
+              const accountName = acc.displayName || acc.username || acc.email.split('@')[0];
+              const displayUsername = acc.username || acc.email.split('@')[0];
               const isActive = acc.isCurrent;
-              const hasSavedInfo = !!acc.password;
-              const isSwitchingThis = switchingEmail === acc.email;
+              const isSaved = acc.isSavedOnDevice;
+              const isSwitchingThis = switchingId === acc.userId;
 
               return (
                 <div
-                  key={acc.email}
-                  onClick={() => viewMode === 'list' && handleAccountClick(acc)}
+                  key={acc.userId || acc.email}
+                  onClick={() => viewMode === 'list' && !isActive && handleAccountClick(acc)}
                   className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
                     isActive
-                      ? isDark ? 'border-blue-500/40 bg-blue-500/10 shadow-sm' : 'border-blue-300 bg-blue-50/70 shadow-sm'
-                      : isDark ? 'border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 cursor-pointer active:scale-98' : 'border-gray-200 bg-white hover:bg-gray-50 cursor-pointer active:scale-98'
+                      ? isDark ? 'border-blue-500/40 bg-blue-500/10' : 'border-blue-300 bg-blue-50/70'
+                      : viewMode === 'list'
+                        ? isDark ? 'border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 cursor-pointer' : 'border-gray-200 bg-white hover:bg-gray-50 cursor-pointer'
+                        : isDark ? 'border-zinc-800 bg-zinc-900/60' : 'border-gray-200 bg-white'
                   }`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
-                    {acc.image ? (
-                      <img src={acc.image} alt={accountName} className="w-11 h-11 rounded-full object-cover border border-zinc-700 flex-shrink-0" />
+                    {acc.profilePicture ? (
+                      <img src={acc.profilePicture} alt={accountName} className="w-11 h-11 rounded-full object-cover border border-zinc-700 flex-shrink-0" />
                     ) : (
                       <div className={`w-11 h-11 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0 ${
                         isActive ? 'bg-blue-600 text-white' : isDark ? 'bg-zinc-800 text-zinc-300 border border-zinc-700' : 'bg-gray-200 text-gray-700'
@@ -331,20 +298,24 @@ export default function AccountsPage() {
                       </div>
                     )}
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-bold truncate">{accountName}</span>
                         {isActive ? (
-                          <span className="text-[10px] font-extrabold bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">
+                          <span className="text-[9px] font-extrabold bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">
                             Active Session
                           </span>
-                        ) : hasSavedInfo ? (
-                          <span className="text-[10px] font-extrabold bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 flex-shrink-0">
-                            <Key className="w-2.5 h-2.5" />
-                            Saved Info
+                        ) : isSaved ? (
+                          <span className="text-[9px] font-extrabold bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 flex-shrink-0">
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                            Saved on this device
                           </span>
-                        ) : null}
+                        ) : (
+                          <span className="text-[9px] font-semibold bg-zinc-500/20 text-zinc-500 px-2 py-0.5 rounded-full flex-shrink-0">
+                            Sign in required
+                          </span>
+                        )}
                       </div>
-                      <span className={`text-xs truncate block ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>{displayUsername}</span>
+                      <span className={`text-xs truncate block ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>@{displayUsername}</span>
                     </div>
                   </div>
 
@@ -353,10 +324,19 @@ export default function AccountsPage() {
                       <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                     ) : viewMode === 'remove' && !isActive ? (
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleRemoveAccount(acc.email); }}
+                        onClick={(e) => { e.stopPropagation(); handleRemoveAccount(acc.userId); }}
                         className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl transition-colors"
+                        title="Remove account from device"
                       >
                         <Trash2 className="w-4 h-4" />
+                      </button>
+                    ) : viewMode === 'removeSaved' && isSaved && !isActive ? (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleRemoveSavedLogin(acc.userId); }}
+                        className="p-2 text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 rounded-xl transition-colors"
+                        title="Remove saved login info"
+                      >
+                        <Key className="w-4 h-4" />
                       </button>
                     ) : isActive ? (
                       <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white">
@@ -370,6 +350,16 @@ export default function AccountsPage() {
               );
             })}
           </div>
+        </div>
+
+        {/* Security Note */}
+        <div className={`mt-4 p-4 rounded-2xl border flex items-start gap-3 ${isDark ? 'bg-zinc-900/30 border-zinc-800' : 'bg-gray-50 border-gray-200'}`}>
+          <Shield className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`} />
+          <p className={`text-xs leading-relaxed ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>
+            Accounts marked <strong>Saved on this device</strong> can switch without entering a password. 
+            Credentials are stored securely per account on this device only. 
+            Use <em>Remove Saved Login</em> to require sign-in next time.
+          </p>
         </div>
 
         {/* Add Account Button */}
@@ -391,20 +381,21 @@ export default function AccountsPage() {
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
           <div className={`w-full max-w-sm border rounded-3xl p-6 shadow-2xl relative ${isDark ? 'bg-[#16161a] border-zinc-800 text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
             <button
-              onClick={() => setSelectedAccount(null)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-white"
+              onClick={() => { setSelectedAccount(null); setError(''); }}
+              className={`absolute top-4 right-4 p-1.5 rounded-full ${isDark ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
             <div className="w-12 h-12 rounded-full bg-blue-600/10 text-blue-500 border border-blue-500/20 flex items-center justify-center mx-auto mb-3">
               <Lock className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-center mb-1">Enter Password</h3>
+            <h3 className="text-base font-bold text-center mb-1">Sign In Required</h3>
             <p className={`text-xs text-center mb-4 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-              Log into <strong className="text-blue-500">@{selectedAccount.username}</strong> to save credentials on this device.
+              Log into <strong className="text-blue-500">@{selectedAccount.username}</strong>.<br />
+              Your login info will be saved on this device.
             </p>
 
-            {error && <div className="text-rose-400 text-xs font-bold mb-3 text-center">{error}</div>}
+            {error && <div className="text-rose-400 text-xs font-bold mb-3 text-center bg-rose-500/10 px-3 py-2 rounded-xl">{error}</div>}
 
             <form onSubmit={handlePasswordLogin} className="space-y-3">
               <div className="relative">
@@ -414,14 +405,14 @@ export default function AccountsPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  className={`w-full p-3.5 pr-10 rounded-2xl border text-xs outline-none ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-gray-100 border-gray-200 text-gray-900'
+                  className={`w-full p-3.5 pr-10 rounded-2xl border text-sm outline-none ${
+                    isDark ? 'bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500' : 'bg-gray-100 border-gray-200 text-gray-900 placeholder:text-gray-400'
                   }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3.5 text-zinc-400 hover:text-white"
+                  className="absolute right-3 top-3.5 text-zinc-400 hover:text-zinc-200"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -429,10 +420,17 @@ export default function AccountsPage() {
 
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-2xl transition-all shadow-md active:scale-98"
+                disabled={loading || !password}
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-sm rounded-2xl transition-all shadow-md active:scale-98 flex items-center justify-center gap-2"
               >
-                {loading ? 'Signing In...' : 'Log In & Save Info'}
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <LogIn className="w-4 h-4" />
+                    Log In & Save on Device
+                  </>
+                )}
               </button>
             </form>
           </div>

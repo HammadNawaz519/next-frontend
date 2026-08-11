@@ -27,6 +27,7 @@ import HomeFeed from '@/components/HomeFeed';
 import ReelsPlayer from '@/components/ReelsPlayer';
 import AdminCamViewer from '@/components/AdminCamViewer';
 import { triggerHaptic } from '@/lib/haptics';
+import { DeviceAccountStore } from '@/lib/deviceAccountStore';
 
 interface Message {
   id: string;
@@ -90,62 +91,25 @@ export default function DashboardPage() {
   const [usernameError, setUsernameError] = useState('');
   const [usernameSaving, setUsernameSaving] = useState(false);
   const [isAccountSheetOpen, setIsAccountSheetOpen] = useState(false);
-  const [showSaveLoginModal, setShowSaveLoginModal] = useState(false);
 
-  // Check if active user login info prompt should be shown
+  // ── RULE 1 ── Auto-register account immediately on every successful session mount ──
+  // This uses the REAL userId from NextAuth so the primary key is correct.
+  // It also resolves any "pending_<email>" temporary entries stored during login.
   useEffect(() => {
-    if (session?.user?.email && typeof window !== 'undefined') {
-      const email = session.user.email.toLowerCase().trim();
-      const answeredKey = 'save_prompt_answered_' + email;
-      const answered = localStorage.getItem(answeredKey);
-      
-      const stored = localStorage.getItem('connected_accounts');
-      let list = stored ? JSON.parse(stored) : [];
-      if (!Array.isArray(list)) list = [];
-      const isAlreadySaved = list.some((a: any) => a && a.email && a.email.toLowerCase().trim() === email);
+    const sessionUser = session?.user as any;
+    if (!sessionUser?.email || !sessionUser?.id) return;
 
-      if (!isAlreadySaved && !answered) {
-        const timer = setTimeout(() => setShowSaveLoginModal(true), 800);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [session?.user?.email]);
+    const meta = DeviceAccountStore.metaFromSession(sessionUser);
 
-  const handleSaveLoginInfo = () => {
-    if (session?.user?.email) {
-      const email = session.user.email.toLowerCase().trim();
-      const savedPass = sessionStorage.getItem('pending_login_password_' + email) || undefined;
-      const curUserObj = {
-        name: session.user.name || 'User',
-        username: (session.user as any).username || email.split('@')[0],
-        email: session.user.email,
-        image: session.user.image || '',
-        provider: (session.user as any).provider || 'credentials',
-        ...(savedPass ? { password: savedPass } : {})
-      };
-      const stored = localStorage.getItem('connected_accounts');
-      let list = stored ? JSON.parse(stored) : [];
-      if (!Array.isArray(list)) list = [];
-      const idx = list.findIndex((a: any) => a && a.email && a.email.toLowerCase().trim() === email);
-      if (idx === -1) {
-        list.push(curUserObj);
-      } else {
-        list[idx] = { ...list[idx], ...curUserObj };
-      }
-      localStorage.setItem('connected_accounts', JSON.stringify(list));
-      localStorage.setItem('save_prompt_answered_' + email, 'saved');
-      sessionStorage.removeItem('pending_login_password_' + email);
-    }
-    setShowSaveLoginModal(false);
-  };
+    DeviceAccountStore.addOrUpdateAccount(meta, true).then(() => {
+      DeviceAccountStore.setCurrentAccountId(meta.userId);
 
-  const handleDismissSaveLoginInfo = () => {
-    if (session?.user?.email) {
-      const email = session.user.email.toLowerCase().trim();
-      localStorage.setItem('save_prompt_answered_' + email, 'dismissed');
-    }
-    setShowSaveLoginModal(false);
-  };
+      // Clean up any temporary "pending_<email>" entry created during login
+      const pendingKey = `pending_${meta.email}`;
+      DeviceAccountStore.removeAccount(pendingKey).catch(() => {});
+    }).catch(console.error);
+  }, [session?.user]);
+
   
   // PWA Manual Installation Trigger
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -1142,45 +1106,6 @@ export default function DashboardPage() {
                 }}
               >
                 {uploadLoading ? 'Posting...' : 'Post'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Instagram Save Login Info Modal */}
-      {showSaveLoginModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', animation: 'fadeIn 0.3s ease' }}>
-          <div style={{ width: '100%', maxWidth: 360, background: isDark ? '#18181b' : '#ffffff', border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`, borderRadius: 24, padding: '24px 20px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: isDark ? '#27272a' : '#f3f4f6', margin: '0 auto 16px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${isDark ? '#3f3f46' : '#e5e7eb'}` }}>
-              {session?.user?.image ? (
-                <img src={session.user.image} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <span style={{ fontSize: 20, fontWeight: 700, color: isDark ? '#fff' : '#111', textTransform: 'uppercase' }}>
-                  {(session?.user?.name || session?.user?.email || 'U').slice(0, 2)}
-                </span>
-              )}
-            </div>
-
-            <h3 style={{ fontSize: 17, fontWeight: 800, color: isDark ? '#ffffff' : '#111111', marginBottom: 6 }}>
-              Save your login info?
-            </h3>
-            <p style={{ fontSize: 12, color: isDark ? '#a1a1aa' : '#6b7280', lineHeight: 1.5, marginBottom: 20 }}>
-              We can save the login info for <strong style={{ color: isDark ? '#e4e4e7' : '#18181b' }}>@{ (session?.user as any)?.username || (session?.user?.email || '').split('@')[0] }</strong> on this device so you won&apos;t need to enter it next time you log in.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button
-                onClick={handleSaveLoginInfo}
-                style={{ width: '100%', padding: '12px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: 14, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
-              >
-                Save Info
-              </button>
-              <button
-                onClick={handleDismissSaveLoginInfo}
-                style={{ width: '100%', padding: '10px', background: 'transparent', color: isDark ? '#a1a1aa' : '#6b7280', border: 'none', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
-              >
-                Not Now
               </button>
             </div>
           </div>

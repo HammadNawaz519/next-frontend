@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import DashboardPage from './dashboard/page';
+import { DeviceAccountStore } from '@/lib/deviceAccountStore';
 
 const GrainGradient = dynamic(
   () => import('@paper-design/shaders-react').then((mod) => mod.GrainGradient),
@@ -276,9 +277,24 @@ export default function LoginPage() {
         setError('Invalid email or password. Please try again.');
         setLoading(false);
       } else if (res?.ok) {
+        // ── RULE 1: Register account immediately on first successful login ──
+        // We must fetch the updated session to get the userId from the backend.
+        // We use a small delay + window.__NEXT_DATA__ approach: just store
+        // what we know right now and let dashboard mount complete the upsert.
         try {
           const cleanEmail = email.toLowerCase().trim();
-          sessionStorage.setItem('pending_login_password_' + cleanEmail, password);
+          // Store a temporary pre-session record so the account appears immediately
+          // even before the NextAuth session propagates. The dashboard will do a
+          // full upsert with the real userId once the session is available.
+          const tempMeta = {
+            userId: `pending_${cleanEmail}`,
+            email: cleanEmail,
+            username: cleanEmail.split('@')[0],
+            displayName: cleanEmail.split('@')[0],
+            profilePicture: '',
+            provider: 'credentials' as const,
+          };
+          await DeviceAccountStore.addOrUpdateAccount(tempMeta, true);
         } catch (e) {}
 
         router.push('/dashboard');
@@ -344,17 +360,18 @@ export default function LoginPage() {
         const signInRes = await signIn('credentials', { redirect: false, email, password });
         setLoading(false);
         if (signInRes?.ok) {
+          // ── RULE 1: Register new account immediately after OTP verification ──
           try {
-            const stored = localStorage.getItem('connected_accounts');
-            let list = stored ? JSON.parse(stored) : [];
-            if (!Array.isArray(list)) list = [];
-            const idx = list.findIndex((acc: any) => acc.email === email);
-            if (idx !== -1) {
-              list[idx].password = password;
-            } else {
-              list.push({ email, password, provider: 'credentials' });
-            }
-            localStorage.setItem('connected_accounts', JSON.stringify(list));
+            const cleanEmail = email.toLowerCase().trim();
+            const tempMeta = {
+              userId: `pending_${cleanEmail}`,
+              email: cleanEmail,
+              username: username || cleanEmail.split('@')[0],
+              displayName: username || cleanEmail.split('@')[0],
+              profilePicture: '',
+              provider: 'credentials' as const,
+            };
+            await DeviceAccountStore.addOrUpdateAccount(tempMeta, true);
           } catch (e) {}
 
           setSuccessUser({ email, username });
