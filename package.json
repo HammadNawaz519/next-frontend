@@ -4,10 +4,10 @@
   "private": true,
   "packageManager": "pnpm@11.1.2",
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail false -n \"Next,Flask\" -c \"cyan,magenta\" \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev": "concurrently --kill-others-on-fail false -n \"Next,Server\" -c \"cyan,green\" \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "next dev",
     "dev:next": "next dev",
-    "dev:backend": "python ../Backend/server.py",
+    "dev:backend": "node ../Server/index.js",
     "build": "npx prisma generate && npx next build",
     "start": "next start",
     "lint": "eslint",
