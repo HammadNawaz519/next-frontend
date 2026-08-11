@@ -140,9 +140,16 @@ export default function ProfilePanel({
 
   // ── Load saved accounts from DeviceAccountStore on mount and when session changes ──
   useEffect(() => {
+    if (session?.user && curUserId) {
+      const meta = DeviceAccountStore.metaFromSession(session.user);
+      if (curUsername) meta.username = curUsername;
+      if (curName) meta.displayName = curName;
+      if (curImage) meta.profilePicture = curImage;
+      DeviceAccountStore.addOrUpdateAccount(meta, false);
+    }
     const accounts = DeviceAccountStore.getSavedAccounts();
     setSavedAccounts(accounts);
-  }, [curUserId, curEmail]);
+  }, [curUserId, curEmail, curUsername, curName, curImage]);
 
   // ── displayAccounts: current account first (active badge), then rest sorted by lastUsedAt ──
   const displayAccounts = React.useMemo(() => {
@@ -424,6 +431,16 @@ export default function ProfilePanel({
       if (res.error) {
         setProfileError(res.error);
       } else {
+        if (curUserId) {
+          const existing = DeviceAccountStore.getSavedAccount(curUserId);
+          if (existing) {
+            DeviceAccountStore.addOrUpdateAccount({
+              ...existing,
+              username: editUsername,
+              displayName: editName,
+            }, existing.isSavedOnDevice);
+          }
+        }
         if (refreshProfile) refreshProfile();
         setSubView('profile');
       }
@@ -2252,9 +2269,9 @@ export default function ProfilePanel({
               {/* Account Center Saved Accounts List — Uniform & Clean */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
                 {displayAccounts.map((acc) => {
-                  const displayHandle = acc.displayName
-                    ? acc.displayName
-                    : (acc.username ? `@${acc.username.replace(/^@/, '').split('@')[0]}` : (acc.email ? acc.email.split('@')[0] : 'User'));
+                  const displayHandle = acc.username
+                    ? acc.username.replace(/^@/, '').split('@')[0]
+                    : (acc.displayName ? acc.displayName : (acc.email ? acc.email.split('@')[0] : 'User'));
                   return (
                     <div
                       key={acc.userId || acc.email}
