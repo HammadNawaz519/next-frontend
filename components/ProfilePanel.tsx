@@ -130,51 +130,46 @@ export default function ProfilePanel({
 
   const switchOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Sync saved accounts
-  useEffect(() => {
-    if (typeof window !== 'undefined' && (fullUser || session?.user)) {
-      const curUsername = fullUser?.username || session?.user?.username || (fullUser?.email || session?.user?.email || '').split('@')[0] || 'user';
-      const curEmail = (fullUser?.email || session?.user?.email || '').toLowerCase().trim();
-      const curImage = fullUser?.image || session?.user?.image || '';
-      const curName = fullUser?.name || session?.user?.name || 'User';
-      const curProvider = session?.user?.provider || 'credentials';
-
-      try {
-        const removedStr = localStorage.getItem('removed_accounts');
-        let removedList: string[] = removedStr ? JSON.parse(removedStr) : [];
-        if (!Array.isArray(removedList)) removedList = [];
-
-        const stored = localStorage.getItem('connected_accounts');
-        let list = stored ? JSON.parse(stored) : [];
-        if (!Array.isArray(list)) list = [];
-        
-        // Filter out any blacklisted removed emails safely
-        list = list.filter((a: any) => a && a.email && typeof a.email === 'string' && !removedList.includes(a.email.toLowerCase().trim()));
-
-        const idx = list.findIndex((acc: any) => acc && acc.email && typeof acc.email === 'string' && acc.email.toLowerCase().trim() === curEmail);
-        const accInfo = { username: curUsername, email: curEmail, image: curImage, name: curName, provider: curProvider };
-
-        // Only add if not blacklisted as removed
-        if (curEmail && !removedList.includes(curEmail)) {
-          if (idx === -1) {
-            list.push(accInfo);
-          } else {
-            list[idx] = { ...list[idx], ...accInfo };
-          }
-        }
-
-        localStorage.setItem('connected_accounts', JSON.stringify(list));
-        setSavedAccounts(list);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  }, [fullUser, session]);
-
   const curEmail = (fullUser?.email || session?.user?.email || '').toLowerCase().trim();
   const curUsername = fullUser?.username || session?.user?.username || (curEmail ? curEmail.split('@')[0] : 'user');
   const curName = fullUser?.name || session?.user?.name || 'User';
   const curImage = fullUser?.image || session?.user?.image || '';
+  const curProvider = (session?.user as any)?.provider || 'credentials';
+
+  const saveCurrentAccountToDevice = useCallback(() => {
+    if (!curEmail || typeof window === 'undefined') return;
+    try {
+      const removedStr = localStorage.getItem('removed_accounts');
+      let removedList: string[] = removedStr ? JSON.parse(removedStr) : [];
+      if (!Array.isArray(removedList)) removedList = [];
+      if (removedList.includes(curEmail)) return;
+
+      const stored = localStorage.getItem('connected_accounts');
+      let list = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(list)) list = [];
+      
+      list = list.filter((a: any) => a && a.email && typeof a.email === 'string' && !removedList.includes(a.email.toLowerCase().trim()));
+
+      const idx = list.findIndex((acc: any) => acc && acc.email && typeof acc.email === 'string' && acc.email.toLowerCase().trim() === curEmail);
+      const accInfo = { username: curUsername, email: curEmail, image: curImage, name: curName, provider: curProvider };
+
+      if (idx === -1) {
+        list.push(accInfo);
+      } else {
+        list[idx] = { ...list[idx], ...accInfo };
+      }
+
+      localStorage.setItem('connected_accounts', JSON.stringify(list));
+      setSavedAccounts(list);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [curEmail, curUsername, curName, curImage, curProvider]);
+
+  // Sync current logged in user to device storage on mount / update
+  useEffect(() => {
+    saveCurrentAccountToDevice();
+  }, [saveCurrentAccountToDevice]);
 
   const displayAccounts = React.useMemo(() => {
     const map = new Map<string, any>();
@@ -212,8 +207,8 @@ export default function ProfilePanel({
   };
 
   const handleAccountSwitch = async (acc: any) => {
-    const curUsername = fullUser?.username || session?.user?.username || (fullUser?.email || session?.user?.email || '').split('@')[0] || 'user';
-    if (acc.username === curUsername) {
+    saveCurrentAccountToDevice();
+    if (acc.username === curUsername || acc.email?.toLowerCase().trim() === curEmail) {
       triggerAccountSheetTransition('none');
       return;
     }
@@ -247,6 +242,7 @@ export default function ProfilePanel({
 
   const handleSwitchLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    saveCurrentAccountToDevice();
     setSwitchLoading(true);
     setSwitchError('');
     try {
