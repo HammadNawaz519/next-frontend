@@ -2190,7 +2190,7 @@ export default function ProfilePanel({
         {/* Action buttons under the accounts list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
           <button
-            onClick={() => setActiveAuthSheet('signIn')}
+            onClick={() => triggerAccountSheetTransition('signIn')}
             style={{
               width: '100%', padding: '14px 0',
               background: '#1c1c1e',
@@ -2202,7 +2202,7 @@ export default function ProfilePanel({
           </button>
 
           <button
-            onClick={() => setActiveAuthSheet('signUp')}
+            onClick={() => triggerAccountSheetTransition('signUp')}
             style={{
               width: '100%', padding: '14px 0',
               background: '#ffffff',
