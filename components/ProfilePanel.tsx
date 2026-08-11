@@ -2107,8 +2107,8 @@ export default function ProfilePanel({
           {displayAccounts.map((acc) => {
             const isActive = acc.isCurrent;
             const usernameOnly = acc.username 
-              ? (acc.username.startsWith('@') ? acc.username : `@${acc.username}`)
-              : (acc.displayName || (acc.email ? `@${acc.email.split('@')[0]}` : 'user'));
+              ? `@${acc.username.replace(/^@/, '')}`
+              : (acc.displayName ? `@${acc.displayName.replace(/\s+/g, '_').toLowerCase()}` : '@user');
 
             return (
               <div 
@@ -2258,8 +2258,8 @@ export default function ProfilePanel({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, maxHeight: 320, overflowY: 'auto' }}>
                 {displayAccounts.map((acc) => {
                   const usernameOnly = acc.username 
-                    ? (acc.username.startsWith('@') ? acc.username : `@${acc.username}`)
-                    : (acc.displayName || (acc.email ? `@${acc.email.split('@')[0]}` : 'user'));
+                    ? `@${acc.username.replace(/^@/, '')}`
+                    : (acc.displayName ? `@${acc.displayName.replace(/\s+/g, '_').toLowerCase()}` : '@user');
                   return (
                     <div
                       key={acc.userId || acc.email}

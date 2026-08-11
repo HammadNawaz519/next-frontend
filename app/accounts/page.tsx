@@ -182,26 +182,13 @@ export default function AccountsPage() {
 
   return (
     <div className={`min-h-screen transition-colors duration-500 font-sans ${isDark ? 'bg-[#09090b] text-white' : 'bg-[#f8f9fa] text-gray-900'}`}>
-      <div className="max-w-xl mx-auto px-4 pt-12 pb-10 md:pt-16">
-        {/* Top App Logo & Title */}
-        <div className="text-center mb-6">
-          <img
-            src="/logo.png"
-            alt="Connect Logo"
-            className="w-14 h-14 object-contain rounded-2xl mx-auto mb-3 bg-black p-1 shadow-md"
-          />
-          <h1 className="text-2xl font-extrabold tracking-tight">Log Into Existing Account</h1>
-          <p className={`text-xs mt-1 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-            Select a saved account from your device to switch
-          </p>
-        </div>
-
+      <div className="max-w-xl mx-auto px-5 pt-8 pb-10 md:pt-12">
         {/* Top Header Controls */}
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-500/15">
+        <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => router.push('/dashboard')}
-            className={`p-2 rounded-full transition-all active:scale-95 flex items-center gap-1.5 text-xs font-semibold ${
-              isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+            className={`p-2 px-3 rounded-full transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold ${
+              isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300' : 'bg-gray-200/80 hover:bg-gray-200 text-gray-800'
             }`}
           >
             <ArrowLeft className="w-4 h-4" />
@@ -212,7 +199,7 @@ export default function AccountsPage() {
             <button
               onClick={() => setShowDropdown(!showDropdown)}
               className={`p-2 rounded-full transition-all active:scale-95 ${
-                isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300' : 'bg-gray-200/80 hover:bg-gray-200 text-gray-800'
               }`}
             >
               <MoreVertical className="w-5 h-5" />
@@ -241,10 +228,20 @@ export default function AccountsPage() {
           </div>
         </div>
 
-        {/* Clean Simple Accounts List Container — Uniform & Clean */}
-        <div className="divide-y divide-zinc-500/15 mb-6">
+        {/* Left-Aligned 2-Line Charcoal Black Modern Header (NO LOGO) */}
+        <div className="text-left mb-6 pt-1">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight leading-[1.15] text-[#1c1c22] dark:text-zinc-100">
+            Account<br />Center
+          </h1>
+          <p className={`text-xs mt-2 font-medium ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+            Select a saved account from your device to switch
+          </p>
+        </div>
+
+        {/* Clean Simple Accounts List Container — Fully Rounded Rows */}
+        <div className="flex flex-col gap-2.5 mb-8">
           {(viewMode === 'remove' || viewMode === 'removeSaved') && (
-            <div className="flex items-center justify-between py-2">
+            <div className="flex items-center justify-between py-2 px-1">
               <span className="text-xs font-bold text-amber-500">Managing Saved Accounts</span>
               <button
                 onClick={() => setViewMode('list')}
@@ -263,8 +260,8 @@ export default function AccountsPage() {
 
           {displayAccounts.map((acc) => {
             const usernameOnly = acc.username 
-              ? (acc.username.startsWith('@') ? acc.username : `@${acc.username}`)
-              : (acc.displayName || (acc.email ? `@${acc.email.split('@')[0]}` : 'user'));
+              ? `@${acc.username.replace(/^@/, '')}`
+              : (acc.displayName ? `@${acc.displayName.replace(/\s+/g, '_').toLowerCase()}` : '@user');
             const isSaved = acc.isSavedOnDevice;
             const isSwitchingThis = switchingId === acc.userId;
 
@@ -272,8 +269,8 @@ export default function AccountsPage() {
               <div
                 key={acc.userId || acc.email}
                 onClick={() => viewMode === 'list' && handleAccountClick(acc)}
-                className={`flex items-center justify-between py-3.5 px-2 border-b transition-colors cursor-pointer ${
-                  isDark ? 'border-zinc-800/80 hover:bg-white/5' : 'border-gray-100 hover:bg-black/5'
+                className={`flex items-center justify-between py-3.5 px-5 rounded-full border transition-all cursor-pointer ${
+                  isDark ? 'border-zinc-800 bg-[#16161a] hover:bg-zinc-800/50' : 'border-gray-200 bg-[#f9fafb] hover:bg-gray-100'
                 }`}
               >
                 <div className="flex items-center gap-3.5 min-w-0">
@@ -286,8 +283,8 @@ export default function AccountsPage() {
                       {getInitials(acc)}
                     </div>
                   )}
-                  <div className="min-w-0">
-                    <span className="text-sm font-semibold truncate block">{usernameOnly}</span>
+                  <div className="min-w-0 text-left">
+                    <span className="text-sm font-bold truncate block">{usernameOnly}</span>
                   </div>
                 </div>
 
