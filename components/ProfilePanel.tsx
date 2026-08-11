@@ -2304,7 +2304,14 @@ export default function ProfilePanel({
                       </div>
 
                       <svg width="18" height="18" fill="none" stroke={isDark ? '#a1a1aa' : '#6b7280'} strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="              {/* Bottom Action Buttons (Pushed to bottom) */}
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Bottom Action Buttons (Pushed to bottom) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 'auto', paddingBottom: '24px' }}>
                 <Button
                   type="button"
