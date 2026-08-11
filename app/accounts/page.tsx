@@ -5,22 +5,10 @@ import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
   MoreVertical, Trash2, UserPlus, LogIn, Lock, Eye, EyeOff, X, ArrowLeft,
-  ChevronRight, Check, ShieldCheck, Smartphone, Key, History, Activity,
-  Download, CreditCard, Sliders, Globe, RefreshCw, AlertCircle
+  ChevronRight, Check, Key, Shield, UserCheck
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useTheme } from '@/app/components/ThemeProvider';
-import {
-  getAccountsCenterOverview,
-  updateProfileSyncAction,
-  toggleTwoFactorAction,
-  revokeActiveSessionAction,
-  clearOffPlatformDataAction,
-  clearSearchHistoryAction,
-  requestDataExportAction,
-  updateAdPreferencesAction,
-  addPaymentVaultTokenAction,
-} from './actions';
 
 const GrainGradient = dynamic(
   () => import('@paper-design/shaders-react').then((mod) => mod.GrainGradient),
@@ -33,6 +21,7 @@ interface SavedAccount {
   name?: string;
   image?: string;
   provider?: string;
+  password?: string;
   isCurrent?: boolean;
 }
 
@@ -43,25 +32,21 @@ export default function AccountsPage() {
   const { data: session } = useSession();
 
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'accounts' | 'security' | 'privacy' | 'preferences'>('accounts');
   const [accounts, setAccounts] = useState<SavedAccount[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'remove'>('list');
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Backend state from Prisma
-  const [overviewData, setOverviewData] = useState<any>(null);
-  const [loadingOverview, setLoadingOverview] = useState(true);
-
-  // Form states
+  // Password Modal for accounts without saved credentials
   const [selectedAccount, setSelectedAccount] = useState<SavedAccount | null>(null);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [actionSuccess, setActionSuccess] = useState('');
+  const [switchingEmail, setSwitchingEmail] = useState<string | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Hydration safety and loading from device storage
   useEffect(() => {
     setMounted(true);
     try {
@@ -82,27 +67,9 @@ export default function AccountsPage() {
     }
   }, []);
 
-  const loadOverview = async () => {
-    if (!session?.user?.email) return;
-    setLoadingOverview(true);
-    try {
-      const data = await getAccountsCenterOverview();
-      setOverviewData(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingOverview(false);
-    }
-  };
-
-  useEffect(() => {
-    if (session?.user?.email) {
-      loadOverview();
-    }
-  }, [session?.user?.email]);
-
   const curEmail = session?.user?.email ? session.user.email.toLowerCase().trim() : '';
 
+  // Construct displayAccounts merging active session at top
   const displayAccounts = React.useMemo(() => {
     const map = new Map<string, SavedAccount>();
     if (session?.user?.email) {
@@ -123,7 +90,7 @@ export default function AccountsPage() {
       if (!map.has(key)) {
         map.set(key, { ...acc, isCurrent });
       } else {
-        map.set(key, { ...acc, ...map.get(key), isCurrent: true });
+        map.set(key, { ...map.get(key), ...acc, isCurrent: true });
       }
     });
     return Array.from(map.values());
@@ -172,16 +139,45 @@ export default function AccountsPage() {
   };
 
   const handleAccountClick = async (acc: SavedAccount) => {
-    if (acc.provider === 'google') {
-      setLoading(true);
+    if (acc.isCurrent) return;
+
+    // 1. If account has saved password info on this device -> 1-tap direct login without prompting!
+    if (acc.password) {
+      setSwitchingEmail(acc.email);
       setError('');
+      try {
+        const res = await signIn('credentials', {
+          redirect: false,
+          email: acc.email,
+          password: acc.password,
+        });
+
+        if (res?.ok) {
+          router.push('/dashboard');
+          router.refresh();
+        } else {
+          // If password was invalidated, prompt for password
+          setSelectedAccount(acc);
+          setPassword('');
+          setError('Saved login info expired. Please enter your password.');
+        }
+      } catch (err) {
+        setSelectedAccount(acc);
+        setPassword('');
+        setError('Failed to log in automatically.');
+      } finally {
+        setSwitchingEmail(null);
+      }
+    } else if (acc.provider === 'google') {
+      setSwitchingEmail(acc.email);
       try {
         await signIn('google', { callbackUrl: '/dashboard' });
       } catch (err) {
         setError('Failed to log in with Google.');
-        setLoading(false);
+        setSwitchingEmail(null);
       }
     } else {
+      // 2. If NO saved password info -> prompt for password
       setSelectedAccount(acc);
       setPassword('');
       setError('');
@@ -204,6 +200,29 @@ export default function AccountsPage() {
       if (res?.error) {
         setError('Incorrect password.');
       } else {
+        // Save login info to device on successful password entry
+        try {
+          const stored = localStorage.getItem('connected_accounts');
+          let list = stored ? JSON.parse(stored) : [];
+          if (!Array.isArray(list)) list = [];
+          const cleanEmail = selectedAccount.email.toLowerCase().trim();
+          const idx = list.findIndex((a: any) => a && a.email && a.email.toLowerCase().trim() === cleanEmail);
+          const accObj = {
+            email: cleanEmail,
+            username: selectedAccount.username,
+            name: selectedAccount.name,
+            image: selectedAccount.image,
+            password: password,
+            provider: 'credentials'
+          };
+          if (idx === -1) {
+            list.push(accObj);
+          } else {
+            list[idx] = { ...list[idx], ...accObj };
+          }
+          localStorage.setItem('connected_accounts', JSON.stringify(list));
+        } catch (e) {}
+
         router.push('/dashboard');
         router.refresh();
       }
@@ -220,25 +239,11 @@ export default function AccountsPage() {
     return acc.email.slice(0, 2).toUpperCase();
   };
 
-  const showToast = (msg: string) => {
-    setActionSuccess(msg);
-    setTimeout(() => setActionSuccess(''), 3000);
-  };
-
   return (
     <div className={`min-h-screen transition-colors duration-500 font-sans ${isDark ? 'bg-[#09090b] text-white' : 'bg-[#f8f9fa] text-gray-900'}`}>
-      {/* Toast Notification */}
-      {actionSuccess && (
-        <div className="fixed top-5 right-5 z-[999] bg-blue-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2 text-xs font-bold animate-in fade-in slide-in-from-top-4 duration-300">
-          <Check className="w-4 h-4 stroke-[3]" />
-          {actionSuccess}
-        </div>
-      )}
-
-      {/* Main Container */}
-      <div className="max-w-5xl mx-auto px-4 py-8 md:py-12">
-        {/* Header Navigation */}
-        <div className="flex items-center justify-between mb-8 pb-6 border-b border-zinc-500/20">
+      <div className="max-w-xl mx-auto px-4 py-8 md:py-12">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-500/15">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push('/dashboard')}
@@ -249,435 +254,185 @@ export default function AccountsPage() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-black tracking-tight">Accounts Center</h1>
+              <h1 className="text-2xl font-black tracking-tight">Account Center</h1>
               <p className={`text-xs font-medium ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                Manage connected experiences, security, privacy & Meta Pay across linked accounts.
+                Manage saved accounts on this device
               </p>
             </div>
           </div>
-        </div>
 
-        {/* System Module Navigation Tabs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-8">
-          {[
-            { id: 'accounts', label: 'Profiles & Sync', icon: Globe },
-            { id: 'security', label: 'Security & Sessions', icon: ShieldCheck },
-            { id: 'privacy', label: 'Data & Privacy', icon: History },
-            { id: 'preferences', label: 'Ads & Payments', icon: CreditCard },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl text-xs font-extrabold transition-all active:scale-98 border ${
-                  isActive
-                    ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/25'
-                    : isDark
-                      ? 'bg-zinc-900/40 border-zinc-800/80 text-zinc-400 hover:text-white hover:bg-zinc-900'
-                      : 'bg-white border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              className={`p-2.5 rounded-full border transition-all active:scale-95 ${
+                isDark ? 'border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300' : 'border-gray-200 bg-white hover:bg-gray-100 text-gray-700'
+              }`}
+            >
+              <MoreVertical className="w-5 h-5" />
+            </button>
 
-        {/* MODULE 1: PROFILES & CONNECTED EXPERIENCES */}
-        {activeTab === 'accounts' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-bold">Connected Profiles ({displayAccounts.length})</h2>
+            {showDropdown && (
+              <div className={`absolute right-0 mt-2 w-48 border rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200 ${
+                isDark ? 'bg-[#16161a] border-zinc-800 text-white' : 'bg-white border-gray-200 text-gray-900'
+              }`}>
                 <button
-                  onClick={() => setViewMode(viewMode === 'list' ? 'remove' : 'list')}
-                  className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${
-                    isDark ? 'border-zinc-700 hover:bg-zinc-800 text-zinc-300' : 'border-gray-300 hover:bg-gray-100 text-gray-700'
-                  }`}
-                >
-                  {viewMode === 'list' ? 'Manage Devices' : 'Done'}
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {displayAccounts.map((acc) => {
-                  const accountName = acc.name || acc.username || acc.email.split('@')[0];
-                  const rawUsername = acc.username || acc.email.split('@')[0];
-                  const displayUsername = rawUsername.startsWith('@') ? rawUsername : `@${rawUsername}`;
-                  const isActive = acc.isCurrent;
-
-                  return (
-                    <div
-                      key={acc.email}
-                      onClick={() => !isActive && handleAccountClick(acc)}
-                      className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                        isActive
-                          ? isDark ? 'border-blue-500/40 bg-blue-500/10' : 'border-blue-300 bg-blue-50'
-                          : isDark ? 'border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 cursor-pointer' : 'border-gray-200 bg-white hover:bg-gray-50 cursor-pointer'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        {acc.image ? (
-                          <img src={acc.image} alt={accountName} className="w-11 h-11 rounded-full object-cover border border-zinc-700" />
-                        ) : (
-                          <div className="w-11 h-11 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs">
-                            {getInitials(acc)}
-                          </div>
-                        )}
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold">{accountName}</span>
-                            {isActive && (
-                              <span className="text-[10px] font-extrabold bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase">
-                                Active Session
-                              </span>
-                            )}
-                          </div>
-                          <span className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>{displayUsername}</span>
-                        </div>
-                      </div>
-
-                      {viewMode === 'remove' && !isActive ? (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleRemoveAccount(acc.email); }}
-                          className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      ) : (
-                        isActive && (
-                          <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white">
-                            <Check className="w-3.5 h-3.5 stroke-[3]" />
-                          </div>
-                        )
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Profile Metadata Sync Control */}
-            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-              <h2 className="text-base font-bold mb-1">Profile Metadata Syncing</h2>
-              <p className={`text-xs mb-5 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                Automatically sync your Name, Bio, and Avatar across Instagram, Facebook, and Threads.
-              </p>
-
-              <div className="space-y-4">
-                {[
-                  { key: 'syncName', title: 'Sync Name & Display Username', desc: 'Keep name identical on all linked accounts' },
-                  { key: 'syncBio', title: 'Sync Bio Description', desc: 'Sync bio updates across all profiles' },
-                  { key: 'syncAvatar', title: 'Sync Profile Picture', desc: 'Sync avatar photo changes instantly' },
-                ].map((item) => (
-                  <div key={item.key} className="flex items-center justify-between py-2 border-b border-zinc-500/10">
-                    <div>
-                      <div className="text-xs font-bold">{item.title}</div>
-                      <div className={`text-[11px] ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>{item.desc}</div>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        const cur = overviewData?.profileSync?.[item.key] ?? true;
-                        await updateProfileSyncAction({
-                          syncPolicy: 'FULL_SYNC',
-                          syncName: item.key === 'syncName' ? !cur : (overviewData?.profileSync?.syncName ?? true),
-                          syncBio: item.key === 'syncBio' ? !cur : (overviewData?.profileSync?.syncBio ?? true),
-                          syncAvatar: item.key === 'syncAvatar' ? !cur : (overviewData?.profileSync?.syncAvatar ?? true),
-                        });
-                        loadOverview();
-                        showToast('Profile sync settings updated');
-                      }}
-                      className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                        overviewData?.profileSync?.[item.key] !== false ? 'bg-blue-600' : isDark ? 'bg-zinc-800' : 'bg-gray-300'
-                      }`}
-                    >
-                      <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                        overviewData?.profileSync?.[item.key] !== false ? 'translate-x-5' : 'translate-x-0'
-                      }`} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MODULE 2: SECURITY & SESSION HUB */}
-        {activeTab === 'security' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            {/* 2FA Section */}
-            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold">Two-Factor Authentication (2FA)</h2>
-                  <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                    Protect all linked accounts with TOTP authenticator apps or security keys.
-                  </p>
-                </div>
-                <button
-                  onClick={async () => {
-                    const current = overviewData?.securitySetting?.isTwoFactorEnabled ?? false;
-                    await toggleTwoFactorAction(!current);
-                    loadOverview();
-                    showToast(!current ? '2FA Enabled successfully' : '2FA Disabled');
+                  onClick={() => {
+                    setShowDropdown(false);
+                    setViewMode(viewMode === 'list' ? 'remove' : 'list');
                   }}
-                  className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition-all ${
-                    overviewData?.securitySetting?.isTwoFactorEnabled
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-blue-600 text-white hover:bg-blue-500'
-                  }`}
+                  className="w-full text-left px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 text-rose-400 hover:bg-rose-500/10 transition-colors"
                 >
-                  {overviewData?.securitySetting?.isTwoFactorEnabled ? '2FA Active' : 'Enable 2FA'}
+                  <Trash2 className="w-4 h-4" />
+                  {viewMode === 'list' ? 'Remove an Account' : 'Done Managing'}
                 </button>
               </div>
-            </div>
+            )}
+          </div>
+        </div>
 
-            {/* Global Sessions Manager */}
-            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-              <h2 className="text-base font-bold mb-1">Where You&apos;re Logged In</h2>
-              <p className={`text-xs mb-5 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                Review active device sessions and revoke unauthorized access remotely.
-              </p>
+        {/* Saved Accounts List Card */}
+        <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-base font-bold">Saved Accounts ({displayAccounts.length})</h2>
+            {viewMode === 'remove' && (
+              <span className="text-xs font-bold text-rose-400 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">
+                Tap trash icon to remove
+              </span>
+            )}
+          </div>
 
-              <div className="space-y-3">
-                {overviewData?.activeSessions?.map((sess: any) => (
-                  <div key={sess.id} className={`flex items-center justify-between p-4 rounded-2xl border ${isDark ? 'border-zinc-800 bg-zinc-900/60' : 'border-gray-200 bg-gray-50'}`}>
-                    <div className="flex items-center gap-3">
-                      <Smartphone className="w-5 h-5 text-blue-500" />
-                      <div>
-                        <div className="flex items-center gap-2 text-xs font-bold">
-                          {sess.deviceName}
-                          {sess.isCurrent && (
-                            <span className="text-[9px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full">
-                              This Device
-                            </span>
-                          )}
-                        </div>
-                        <div className={`text-[11px] ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                          {sess.locationCity}, {sess.locationCountry} • IP: {sess.ipAddress}
-                        </div>
+          <div className="space-y-3">
+            {displayAccounts.map((acc) => {
+              const accountName = acc.name || acc.username || acc.email.split('@')[0];
+              const rawUsername = acc.username || acc.email.split('@')[0];
+              const displayUsername = rawUsername.startsWith('@') ? rawUsername : `@${rawUsername}`;
+              const isActive = acc.isCurrent;
+              const hasSavedInfo = !!acc.password;
+              const isSwitchingThis = switchingEmail === acc.email;
+
+              return (
+                <div
+                  key={acc.email}
+                  onClick={() => viewMode === 'list' && handleAccountClick(acc)}
+                  className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                    isActive
+                      ? isDark ? 'border-blue-500/40 bg-blue-500/10 shadow-sm' : 'border-blue-300 bg-blue-50/70 shadow-sm'
+                      : isDark ? 'border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 cursor-pointer active:scale-98' : 'border-gray-200 bg-white hover:bg-gray-50 cursor-pointer active:scale-98'
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    {acc.image ? (
+                      <img src={acc.image} alt={accountName} className="w-11 h-11 rounded-full object-cover border border-zinc-700 flex-shrink-0" />
+                    ) : (
+                      <div className={`w-11 h-11 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0 ${
+                        isActive ? 'bg-blue-600 text-white' : isDark ? 'bg-zinc-800 text-zinc-300 border border-zinc-700' : 'bg-gray-200 text-gray-700'
+                      }`}>
+                        {getInitials(acc)}
                       </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold truncate">{accountName}</span>
+                        {isActive ? (
+                          <span className="text-[10px] font-extrabold bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">
+                            Active Session
+                          </span>
+                        ) : hasSavedInfo ? (
+                          <span className="text-[10px] font-extrabold bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 flex-shrink-0">
+                            <Key className="w-2.5 h-2.5" />
+                            Saved Info
+                          </span>
+                        ) : null}
+                      </div>
+                      <span className={`text-xs truncate block ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>{displayUsername}</span>
                     </div>
+                  </div>
 
-                    {!sess.isCurrent && (
+                  <div className="flex items-center gap-2 flex-shrink-0 pl-2">
+                    {isSwitchingThis ? (
+                      <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    ) : viewMode === 'remove' && !isActive ? (
                       <button
-                        onClick={async () => {
-                          await revokeActiveSessionAction(sess.id);
-                          loadOverview();
-                          showToast('Session revoked remotely');
-                        }}
-                        className="text-xs font-bold text-rose-400 hover:text-rose-300 px-3 py-1.5 rounded-xl border border-rose-500/20 hover:bg-rose-500/10 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); handleRemoveAccount(acc.email); }}
+                        className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl transition-colors"
                       >
-                        Revoke Access
+                        <Trash2 className="w-4 h-4" />
                       </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MODULE 3: USER DATA & PRIVACY CONTROLS */}
-        {activeTab === 'privacy' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Off-Platform Activity */}
-            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-base font-bold">Off-Platform Data & Telemetry</h2>
-                  <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                    Clear history of activity shared by partners off Meta services.
-                  </p>
-                </div>
-                <button
-                  onClick={async () => {
-                    await clearOffPlatformDataAction();
-                    loadOverview();
-                    showToast('Off-platform telemetry cleared');
-                  }}
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-2xl transition-all"
-                >
-                  Clear Off-Platform History
-                </button>
-              </div>
-            </div>
-
-            {/* Unified Search History */}
-            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-base font-bold">Unified Search History</h2>
-                  <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                    Logs of searches performed across linked Instagram and Facebook accounts.
-                  </p>
-                </div>
-                <button
-                  onClick={async () => {
-                    await clearSearchHistoryAction();
-                    loadOverview();
-                    showToast('Search history cleared');
-                  }}
-                  className={`px-4 py-2 border rounded-2xl text-xs font-bold transition-all ${
-                    isDark ? 'border-zinc-700 hover:bg-zinc-800 text-zinc-300' : 'border-gray-300 hover:bg-gray-100 text-gray-700'
-                  }`}
-                >
-                  Clear All Search Logs
-                </button>
-              </div>
-            </div>
-
-            {/* Data Export & Portability */}
-            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-              <h2 className="text-base font-bold mb-1">Download Your Information</h2>
-              <p className={`text-xs mb-4 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                Export a copy of your posts, media, messages, and settings.
-              </p>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={async () => {
-                    await requestDataExportAction('JSON');
-                    loadOverview();
-                    showToast('JSON Export job initiated');
-                  }}
-                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-2xl transition-all flex items-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Request JSON Archive
-                </button>
-                <button
-                  onClick={async () => {
-                    await requestDataExportAction('HTML');
-                    loadOverview();
-                    showToast('HTML Export job initiated');
-                  }}
-                  className={`px-4 py-2.5 border text-xs font-bold rounded-2xl transition-all flex items-center gap-2 ${
-                    isDark ? 'border-zinc-700 hover:bg-zinc-800 text-zinc-300' : 'border-gray-300 hover:bg-gray-100 text-gray-700'
-                  }`}
-                >
-                  <Download className="w-4 h-4" />
-                  Request HTML Archive
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MODULE 4: AD PREFERENCES & META PAY */}
-        {activeTab === 'preferences' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Sensitive Ad Topics Filter */}
-            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-              <h2 className="text-base font-bold mb-1">Cross-Account Ad Topics</h2>
-              <p className={`text-xs mb-4 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                Filter sensitive ad topics across linked Instagram and Facebook accounts.
-              </p>
-
-              <div className="flex flex-wrap gap-2 mb-4">
-                {['Gambling', 'Politics', 'Alcohol', 'Financial Services', 'Pets'].map((topic) => {
-                  const isHidden = overviewData?.adPreference?.sensitiveTopicsHidden?.includes(topic);
-                  return (
-                    <button
-                      key={topic}
-                      onClick={async () => {
-                        const currentList: string[] = overviewData?.adPreference?.sensitiveTopicsHidden || [];
-                        const newList = isHidden ? currentList.filter(t => t !== topic) : [...currentList, topic];
-                        await updateAdPreferencesAction(newList, overviewData?.adPreference?.usePartnerData ?? true);
-                        loadOverview();
-                        showToast(`Ad topic preference updated: ${topic}`);
-                      }}
-                      className={`px-3.5 py-2 rounded-2xl text-xs font-extrabold border transition-all ${
-                        isHidden
-                          ? 'bg-rose-600 border-rose-500 text-white'
-                          : isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-gray-100 border-gray-200 text-gray-700'
-                      }`}
-                    >
-                      {isHidden ? `Hidden: ${topic}` : `Show: ${topic}`}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Meta Pay Vaulted Tokens */}
-            <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-base font-bold">Meta Pay Token Vault</h2>
-                  <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                    Vaulted payment tokens synced across Instagram Shop and Meta Horizon.
-                  </p>
-                </div>
-                <button
-                  onClick={async () => {
-                    await addPaymentVaultTokenAction({ cardBrand: 'Visa', cardLast4: '4242', expiryMonth: 12, expiryYear: 2028 });
-                    loadOverview();
-                    showToast('Vaulted new payment method');
-                  }}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-2xl transition-all"
-                >
-                  + Add Payment Method
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {overviewData?.paymentTokens?.map((tok: any) => (
-                  <div key={tok.id} className={`flex items-center justify-between p-4 rounded-2xl border ${isDark ? 'border-zinc-800 bg-zinc-900/60' : 'border-gray-200 bg-gray-50'}`}>
-                    <div className="flex items-center gap-3">
-                      <CreditCard className="w-5 h-5 text-blue-500" />
-                      <div>
-                        <div className="text-xs font-bold">{tok.cardBrand} ending in •••• {tok.cardLast4}</div>
-                        <div className={`text-[11px] ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
-                          Expires {tok.expiryMonth}/{tok.expiryYear} • Vault ID: {tok.vaultedTokenId}
-                        </div>
+                    ) : isActive ? (
+                      <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white">
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
                       </div>
-                    </div>
-                    {tok.isDefault && (
-                      <span className="text-[10px] bg-blue-600 text-white font-extrabold px-2.5 py-1 rounded-full uppercase">
-                        Default Meta Pay
-                      </span>
+                    ) : (
+                      <ChevronRight className={`w-4 h-4 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`} />
                     )}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
+
+        {/* Add Account Button */}
+        <div className="mt-6">
+          <button
+            onClick={() => router.push('/?sheet=signIn')}
+            className={`w-full py-4 rounded-3xl font-extrabold text-sm border flex items-center justify-center gap-2 transition-all active:scale-98 ${
+              isDark ? 'bg-zinc-900 border-zinc-800 text-white hover:bg-zinc-800' : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50 shadow-sm'
+            }`}
+          >
+            <UserPlus className="w-4 h-4 text-blue-500" />
+            Add Another Account
+          </button>
+        </div>
       </div>
 
-      {/* Password Modal */}
+      {/* Password Prompt Modal for Non-Saved Credentials */}
       {selectedAccount && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className={`w-full max-w-sm border rounded-3xl p-6 shadow-2xl relative ${isDark ? 'bg-[#16161a] border-zinc-800' : 'bg-white border-gray-200'}`}>
+          <div className={`w-full max-w-sm border rounded-3xl p-6 shadow-2xl relative ${isDark ? 'bg-[#16161a] border-zinc-800 text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
             <button
               onClick={() => setSelectedAccount(null)}
               className="absolute top-4 right-4 text-zinc-400 hover:text-white"
             >
               <X className="w-5 h-5" />
             </button>
-            <h3 className="text-base font-bold mb-4">Enter Password for @{selectedAccount.username}</h3>
-            {error && <div className="text-rose-400 text-xs font-bold mb-3">{error}</div>}
+            <div className="w-12 h-12 rounded-full bg-blue-600/10 text-blue-500 border border-blue-500/20 flex items-center justify-center mx-auto mb-3">
+              <Lock className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-center mb-1">Enter Password</h3>
+            <p className={`text-xs text-center mb-4 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
+              Log into <strong className="text-blue-500">@{selectedAccount.username}</strong> to save credentials on this device.
+            </p>
+
+            {error && <div className="text-rose-400 text-xs font-bold mb-3 text-center">{error}</div>}
+
             <form onSubmit={handlePasswordLogin} className="space-y-3">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                className={`w-full p-3 rounded-2xl border text-xs outline-none ${
-                  isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-gray-100 border-gray-200 text-gray-900'
-                }`}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  className={`w-full p-3.5 pr-10 rounded-2xl border text-xs outline-none ${
+                    isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-gray-100 border-gray-200 text-gray-900'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3.5 text-zinc-400 hover:text-white"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-2xl transition-all"
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-2xl transition-all shadow-md active:scale-98"
               >
-                {loading ? 'Logging in...' : 'Log In'}
+                {loading ? 'Signing In...' : 'Log In & Save Info'}
               </button>
             </form>
           </div>
