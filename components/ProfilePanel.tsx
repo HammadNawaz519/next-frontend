@@ -2124,9 +2124,9 @@ export default function ProfilePanel({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20, maxHeight: 260, overflowY: 'auto' }}>
           {displayAccounts.map((acc) => {
             const isActive = acc.isCurrent;
-            const displayHandle = acc.displayName
-              ? acc.displayName
-              : (acc.username ? acc.username.replace(/^@/, '').split('@')[0] : (acc.email ? acc.email.split('@')[0] : 'User'));
+            const displayHandle = acc.username
+              ? acc.username.replace(/^@/, '').split('@')[0]
+              : (acc.displayName ? acc.displayName : (acc.email ? acc.email.split('@')[0] : 'User'));
 
             return (
               <div
