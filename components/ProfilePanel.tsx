@@ -351,6 +351,7 @@ export default function ProfilePanel({
         onAccountSheetChange(false);
       } else {
         const shouldHideBottomNav =
+          activeAccountSheet !== 'none' ||
           activeAuthSheet !== 'none' ||
           showAvatarModal ||
           subView !== 'profile' ||
@@ -358,7 +359,7 @@ export default function ProfilePanel({
         onAccountSheetChange(shouldHideBottomNav);
       }
     }
-  }, [activeAuthSheet, showAvatarModal, subView, isOwnProfile, isClosing, onAccountSheetChange]);
+  }, [activeAccountSheet, activeAuthSheet, showAvatarModal, subView, isOwnProfile, isClosing, onAccountSheetChange]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [longPressedPostId, setLongPressedPostId] = useState<string | null>(null);
