@@ -2082,51 +2082,118 @@ export default function ProfilePanel({
         </div>
       </div>
 
-      {/* 2. Options (SignIn/SignUp chooser) sheet */}
+      {/* 2. Options Popup Sheet — Accounts List + Log into existing + Create new */}
       <div
         style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
-          background: '#ffffff', borderTop: '1px solid #e5e7eb', borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
-          padding: '24px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.15)',
+          background: isDark ? '#16161a' : '#ffffff',
+          color: isDark ? '#ffffff' : '#121214',
+          borderTop: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
+          borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
+          padding: '24px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.3)',
           transform: activeAccountSheet === 'options' ? 'translateY(0)' : 'translateY(100%)',
           opacity: activeAccountSheet === 'options' ? 1 : 0,
           transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
           pointerEvents: activeAccountSheet === 'options' ? 'auto' : 'none',
         }}
       >
-        <div style={{ width: 48, height: 4, background: '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
-        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#121214', marginBottom: 4, textAlign: 'center' }}>Add Account</h2>
-        <p style={{ fontSize: 12, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 20, textAlign: 'center' }}>
-          Log into existing account or create new one
-        </p>
+        <div style={{ width: 48, height: 4, background: isDark ? '#3f3f46' : '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: isDark ? '#ffffff' : '#121214', marginBottom: 16, textAlign: 'center' }}>
+          Switch Account
+        </h2>
 
+        {/* Accounts List in Bottom Menu */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20, maxHeight: 260, overflowY: 'auto' }}>
+          {displayAccounts.map((acc) => {
+            const isActive = acc.isCurrent;
+            const accountName = acc.displayName || acc.username || acc.email.split('@')[0];
+            const username = acc.username || acc.email.split('@')[0];
+            return (
+              <div 
+                key={acc.userId || acc.email}
+                onClick={() => {
+                  if (isActive) {
+                    setActiveAccountSheet('none');
+                  } else {
+                    handleAccountSwitch(acc);
+                  }
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 16px', borderRadius: '18px',
+                  background: isActive ? (isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)') : (isDark ? '#222228' : '#f9fafb'),
+                  border: isActive ? '1.5px solid #3b82f6' : (isDark ? '1px solid #27272a' : '1px solid #e5e7eb'),
+                  cursor: isActive ? 'default' : 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: '50%', background: '#e5e7eb',
+                    overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: isActive ? '2px solid #3b82f6' : 'none'
+                  }}>
+                    {acc.profilePicture 
+                      ? <img src={acc.profilePicture} alt={accountName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <DefaultAvatarSvg size={24} color="#374151" />
+                    }
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#ffffff' : '#121214' }}>{accountName}</span>
+                      {isActive && (
+                        <span style={{ fontSize: 9, fontWeight: 800, background: '#3b82f6', color: '#fff', padding: '1px 6px', borderRadius: 10 }}>
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 11, color: isDark ? '#a1a1aa' : '#6b7280' }}>@{username}</span>
+                  </div>
+                </div>
+
+                {isActive ? (
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="12" height="12" fill="none" stroke="#ffffff" strokeWidth="3" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                ) : switchLoading ? (
+                  <div style={{ width: 18, height: 18, border: '2px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                ) : (
+                  <svg width="16" height="16" fill="none" stroke={isDark ? '#71717a' : '#9ca3af'} strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Action buttons under the accounts list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
           <button
             onClick={() => triggerAccountSheetTransition('signIn')}
             style={{
-              width: '100%', padding: '14px 0', background: '#121214', color: '#fff',
+              width: '100%', padding: '14px 0',
+              background: isDark ? '#27272a' : '#121214',
+              color: '#ffffff',
               borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 13,
             }}
           >
             Log into Existing Account
           </button>
+
           <button
             onClick={() => triggerAccountSheetTransition('signUp')}
             style={{
-              width: '100%', padding: '14px 0', background: '#f3f4f6', color: '#121214',
-              borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: '1px solid #e5e7eb', fontSize: 13,
+              width: '100%', padding: '14px 0',
+              background: isDark ? '#1c1c22' : '#f3f4f6',
+              color: isDark ? '#ffffff' : '#121214',
+              borderRadius: '100px', fontWeight: 700, cursor: 'pointer',
+              border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`, fontSize: 13,
             }}
           >
             Create New Account
-          </button>
-          <button
-            onClick={() => triggerAccountSheetTransition('accounts')}
-            style={{
-              width: '100%', padding: '10px 0', background: 'none', color: '#6b7280',
-              borderRadius: '100px', fontWeight: 600, cursor: 'pointer', border: 'none', fontSize: 12,
-            }}
-          >
-            Cancel
           </button>
         </div>
       </div>
