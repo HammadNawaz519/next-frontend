@@ -2971,7 +2971,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           </aside>
 
           <section
-            className={`chat-area ${selectedUser ? 'active ig-chat-enter' : ''} ${selectedUser ? 'show-on-mobile' : 'hide-on-mobile'}`}
+            className={`chat-area ${selectedUser ? 'active ig-chat-enter' : ''} ${selectedUser ? 'show-on-mobile' : 'hide-on-mobile'} theme-${activeTheme.id}`}
             style={{ background: activeTheme.chatBg, transition: 'background 300ms ease' }}
           >
             {selectedUser ? (
