@@ -524,8 +524,32 @@ const IGMessageOverlay = ({
 
 // ─── MessageItem ────────────────────────────────────────────────────────────
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker, onOpenThemePicker }: any) => {
   if (msg.type === 'system') {
+    const isThemeSystemMsg = msg.content.toLowerCase().includes('theme to') || msg.content.toLowerCase().includes('customize chat');
+    
+    if (isThemeSystemMsg) {
+      let baseText = msg.content.replace(/\.\s*Customize chat$/i, '').replace(/\s*Customize chat$/i, '');
+      baseText = baseText.replace(/set theme to/i, 'changed the theme to');
+
+      return (
+        <div className="w-full flex justify-center my-2 text-center px-4 animate-in fade-in duration-300 pointer-events-none">
+          <span className="text-[11px] font-medium text-[var(--dm-text-muted)] pointer-events-auto">
+            {baseText}.{' '}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onOpenThemePicker) onOpenThemePicker();
+              }}
+              className="font-bold underline hover:opacity-80 cursor-pointer text-[var(--dm-text-primary)]"
+            >
+              Customize chat
+            </button>
+          </span>
+        </div>
+      );
+    }
+
     return (
       <div className="w-full flex justify-center my-2 text-center px-4 animate-in fade-in duration-300 pointer-events-none">
         <span className="text-[11px] font-medium text-[var(--dm-text-muted)]">
@@ -1355,7 +1379,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       });
     }
 
-    const systemText = `${currentUserName} set theme to ${theme.name}`;
+    const cleanThemeName = theme.name.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+    const systemText = `${currentUserName} changed the theme to ${cleanThemeName}. Customize chat`;
     const stableId = 'system-theme-' + Date.now() + Math.random().toString(36).substring(7);
     const systemMsg: Message = {
       id: stableId,
@@ -3029,6 +3054,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               onPreviewImage={setLightboxImageSrc}
                               msgTag={msgTags[msg.id]}
                               onOpenTagPicker={setOpenTagPickerMsg}
+                              onOpenThemePicker={() => setShowThemePicker(true)}
                             />
                           </div>
                         </React.Fragment>
