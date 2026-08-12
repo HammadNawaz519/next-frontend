@@ -767,7 +767,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
 
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 6) {
         setIsSwiping(true);
-        const clampedOffset = diffX > 0 ? Math.min(diffX * 0.65, 100) : Math.max(diffX * 0.75, -95);
+        const clampedOffset = diffX > 0 ? Math.min(diffX * 0.6, 85) : 0;
         setSwipeOffset(clampedOffset);
       }
     };
@@ -778,7 +778,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
       window.removeEventListener('mouseup', handleMouseUpWindow);
       handlePointerUp();
       setSwipeOffset(prev => {
-        if (prev > 45) {
+        if (prev > 40) {
           if (navigator.vibrate) navigator.vibrate(30);
           onReply(msg);
         }
@@ -816,23 +816,19 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
     if (isSwipingHorizontally.current) {
       if (diffX > 0) {
         setIsSwiping(true);
-        const clampedOffset = Math.min(diffX * 0.65, 100);
+        const clampedOffset = Math.min(diffX * 0.6, 85);
         setSwipeOffset(clampedOffset);
-        if (clampedOffset > 50 && (e.currentTarget as any)._hapticsTriggered !== true) {
+        if (clampedOffset > 40 && (e.currentTarget as any)._hapticsTriggered !== true) {
           if (navigator.vibrate) navigator.vibrate(30);
           (e.currentTarget as any)._hapticsTriggered = true;
         }
-      } else if (diffX < 0) {
-        setIsSwiping(true);
-        const clampedOffset = Math.max(diffX * 0.75, -95);
-        setSwipeOffset(clampedOffset);
       }
     }
   };
 
   const handleTouchEnd = () => {
     handlePointerUp();
-    if (swipeOffset > 45) {
+    if (swipeOffset > 40) {
       if (navigator.vibrate) navigator.vibrate(30);
       onReply(msg);
     }
@@ -879,45 +875,14 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         padding: isSent ? '0 2px 0 8px' : '0 8px 0 2px',
         userSelect: 'none',
         position: 'relative',
-        transition: (isSwiping || (chatSwipeOffset && chatSwipeOffset !== 0))
+        transition: isSwiping
           ? 'none'
-          : 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.18s',
-        transform: effectiveSwipeOffset !== 0
+          : 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        transform: effectiveSwipeOffset > 0
           ? `translateX(${effectiveSwipeOffset}px)`
           : 'none',
       }}
     >
-      {/* Drag to reply visual animation indicator */}
-      {Math.abs(effectiveSwipeOffset) > 4 && (
-        <div
-          className="swipe-reply-indicator"
-          style={{
-            position: 'absolute',
-            left: isSent ? 'auto' : '-34px',
-            right: isSent ? '-34px' : 'auto',
-            top: '50%',
-            transform: `translateY(-50%) scale(${Math.min(Math.abs(effectiveSwipeOffset) / 40, 1.15)}) rotate(${effectiveSwipeOffset > 0 ? Math.min(effectiveSwipeOffset * 1.5, 45) : 0}deg)`,
-            opacity: Math.min(Math.abs(effectiveSwipeOffset) / 30, 1),
-            transition: isSwiping ? 'none' : 'all 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
-            width: '28px',
-            height: '28px',
-            borderRadius: '50%',
-            background: 'var(--dm-bg-active, #262626)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#ffffff',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-            pointerEvents: 'none',
-            zIndex: 10,
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 14 4 9 9 4"></polyline>
-            <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
-          </svg>
-        </div>
-      )}
       {!isSent && !isAI && (
         <img
           src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.avif'}
