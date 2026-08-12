@@ -133,7 +133,7 @@ export const formatDateSeparator = (date: Date): string => {
 };
 
 export const FONT_OPTIONS = [
-  { id: 'default', name: 'Default', family: 'inherit' },
+  { id: 'default', name: 'Default', family: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
   { id: 'bubble', name: 'Bubble', family: "'Comfortaa', 'Fredoka', cursive, sans-serif" },
   { id: 'deco', name: 'Deco', family: "'Playfair Display', 'Cinzel', serif" },
   { id: 'editor', name: 'Editor', family: "'Fira Code', 'Courier New', monospace" },
@@ -4413,7 +4413,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           ? 'bg-[#3a3a3c] text-white shadow-md'
                           : 'bg-[var(--dm-bg-hover)] text-[var(--dm-text-primary)] hover:opacity-80'
                       }`}
-                      style={{ fontFamily: font.family }}
+                      style={{ fontFamily: font.id === 'default' ? 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' : font.family }}
                     >
                       <span className="text-base font-semibold">{font.name}</span>
                     </div>
