@@ -4071,7 +4071,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           />
         </div>
       )}
-      {/* --- INSTAGRAM-STYLE PREMIUM CONVERSATION THEME PICKER BOTTOM SHEET --- */}
+      {/* --- INSTAGRAM-STYLE PREMIUM CONVERSATION THEME & FONT CUSTOMIZER MODAL --- */}
       {showThemePicker && selectedUser && (
         <div
           className="fixed inset-0 z-[1600] flex items-end justify-center bg-black/60 backdrop-blur-xl animate-in fade-in duration-300"
@@ -4081,80 +4081,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           }}
         >
           <div
-            className="w-full max-w-xl bg-[var(--dm-bg-sidebar)] border-t border-x border-[var(--dm-border)] rounded-t-[2.5rem] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom duration-300 font-sans"
+            className="w-full max-w-md bg-[#121212] border-t border-x border-[#262626] rounded-t-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom zoom-in-95 duration-300 font-sans text-white"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Sheet Handle Bar */}
             <div className="w-full pt-3 pb-1 flex items-center justify-center">
-              <div className="w-12 h-1.5 rounded-full bg-[var(--dm-border)]" />
+              <div className="w-12 h-1.5 rounded-full bg-[#262626]" />
             </div>
 
             {/* Header */}
-            <div className="px-6 py-3 flex items-center justify-between border-b border-[var(--dm-border)]">
+            <div className="px-6 py-3 flex items-center justify-between border-b border-[#262626]">
               <div>
-                <h3 className="text-lg font-extrabold text-[var(--dm-text-primary)] tracking-tight">Theme Gallery</h3>
-                <p className="text-[11px] text-[var(--dm-text-secondary)] font-medium">Select a theme for this conversation</p>
-              </div>
-              <button
-                onClick={() => {
-                  setLiveThemeId(null);
-                  setShowThemePicker(false);
-                }}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* ── LARGE LIVE CONVERSATION PREVIEW BANNER ── */}
-            {(() => {
-              const currentPreviewThemeId = liveThemeId || chatThemes[selectedUser.id] || 'default';
-              const previewTheme = INSTAGRAM_THEMES.find(t => t.id === currentPreviewThemeId) || INSTAGRAM_THEMES[0];
-              return (
-                <div className="px-6 pt-4 pb-2 flex-shrink-0">
-                  <div
-                    className="w-full h-36 rounded-2xl p-4 flex flex-col justify-between overflow-hidden shadow-2xl relative transition-all duration-300 border border-white/10"
-                    style={{ background: previewTheme.previewWallpaper }}
-                  >
-                    {/* Header Mini Profile Bar */}
-                    <div className="flex items-center gap-2 pb-2 border-b border-white/10">
-                      <div className="w-6 h-6 rounded-full overflow-hidden bg-white/20 flex-shrink-0">
-                        {selectedUser.image && selectedUser.image.length > 5 ? (
-                          <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <img src="/Avatar.avif" alt="avatar" className="w-full h-full object-cover" />
-                        )}
-                      </div>
-                      <span className="text-xs font-bold text-white drop-shadow-sm truncate">{selectedUser.name}</span>
-                      <span className="ml-auto text-[9px] font-semibold text-emerald-400 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Active now
-                      </span>
-                    </div>
-
-                    {/* Dummy Message Stream Preview */}
-                    <div className="flex flex-col gap-2 my-auto">
-                      {/* Incoming Bubble */}
-                      <div
-                        className="self-start max-w-[80%] px-3 py-1.5 rounded-2xl text-[11px] font-medium shadow-md transition-all duration-300"
-                        style={{ background: previewTheme.incomingBubbleColor, color: previewTheme.incomingTextColor }}
-                      >
-                        How does this theme look? ✨
-                      </div>
-
-                      {/* Outgoing Bubble */}
-                      <div
-                        className="self-end max-w-[80%] px-3 py-1.5 rounded-2xl text-[11px] font-medium shadow-md transition-all duration-300"
-                        style={{ background: previewTheme.outgoingGradient, color: previewTheme.outgoingTextColor }}
-                      >
-                        Looks amazing! Super clean 🚀
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Category Filter Pills & Search */}
                 <h3 className="text-base font-extrabold text-white tracking-tight">Customize</h3>
               </div>
               <button
@@ -4162,7 +4099,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   setLiveThemeId(null);
                   setShowThemePicker(false);
                 }}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-[#262626] text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-[#262626] text-zinc-400 hover:text-white transition-colors cursor-pointer text-xs"
               >
                 ✕
               </button>
@@ -4196,7 +4133,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             {customizerTab === 'themes' && (
               <div className="px-6 py-4 overflow-y-auto grid grid-cols-3 gap-3 no-scrollbar max-h-[50vh]">
                 {INSTAGRAM_THEMES.map(theme => {
-                  const isSelected = (liveThemeId || chatThemes[selectedUser.id] || 'default') === theme.id;
+                  const isSelected = (liveThemeId || (selectedUser ? chatThemes[selectedUser.id] : null) || 'default') === theme.id;
                   const cleanName = theme.name.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
                   return (
                     <div
@@ -4260,7 +4197,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </button>
               <button
                 onClick={() => {
-                  const targetThemeId = liveThemeId || chatThemes[selectedUser.id] || 'default';
+                  const targetThemeId = liveThemeId || (selectedUser ? chatThemes[selectedUser.id] : null) || 'default';
                   const themeObj = INSTAGRAM_THEMES.find(t => t.id === targetThemeId) || INSTAGRAM_THEMES[0];
                   handleSelectTheme(themeObj);
                   setLiveThemeId(null);
