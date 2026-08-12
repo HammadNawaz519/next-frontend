@@ -3277,24 +3277,29 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           </svg>
                         </button>
                       ) : (
-                        <button
-                          className={`ig-send-btn ${isRecording ? 'recording-pulse' : ''}`}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if ((e.currentTarget as any)._touchHandled) { (e.currentTarget as any)._touchHandled = false; return; }
-                            if (isVoiceToText) stopVoiceToText();
-                            if (inputValue.trim()) { handleSendMessage(); } else if (isRecording) { stopRecording(); } else { startRecording(); }
-                          }}
-                          onTouchEnd={(e) => {
-                            e.preventDefault();
-                            (e.currentTarget as any)._touchHandled = true;
-                            if (isVoiceToText) stopVoiceToText();
-                            if (inputValue.trim()) { handleSendMessage(); } else if (isRecording) { stopRecording(); } else { startRecording(); }
-                          }}
-                          title={isRecording ? 'Send voice note' : 'Send'}
-                        >
-                          Send
-                        </button>
+                        <div className="ig-send-container">
+                          <button
+                            className={`ig-send-btn ${isRecording ? 'recording-pulse' : ''}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if ((e.currentTarget as any)._touchHandled) { (e.currentTarget as any)._touchHandled = false; return; }
+                              if (isVoiceToText) stopVoiceToText();
+                              if (inputValue.trim()) { handleSendMessage(); } else if (isRecording) { stopRecording(); } else { startRecording(); }
+                            }}
+                            onTouchEnd={(e) => {
+                              e.preventDefault();
+                              (e.currentTarget as any)._touchHandled = true;
+                              if (isVoiceToText) stopVoiceToText();
+                              if (inputValue.trim()) { handleSendMessage(); } else if (isRecording) { stopRecording(); } else { startRecording(); }
+                            }}
+                            title={isRecording ? 'Send voice note' : 'Send'}
+                          >
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '-1px', marginTop: '1px' }}>
+                              <line x1="22" y1="2" x2="11" y2="13" />
+                              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                            </svg>
+                          </button>
+                        </div>
                       )}
                     </div>
                   </footer>

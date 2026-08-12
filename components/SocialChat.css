@@ -1986,7 +1986,8 @@
 }
 
 /* Elements */
-.social-chat-container .ig-cam-container {
+.social-chat-container .ig-cam-container,
+.social-chat-container .ig-send-container {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -1997,7 +1998,8 @@
   margin-left: 2px;
 }
 
-.social-chat-container .ig-cam-btn {
+.social-chat-container .ig-cam-btn,
+.social-chat-container .ig-send-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2005,6 +2007,18 @@
   border: none;
   cursor: pointer;
   padding: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.social-chat-container .ig-send-btn:hover {
+  opacity: 0.9;
+}
+
+.social-chat-container .ig-send-btn:active {
+  transform: scale(0.92);
 }
 
 .social-chat-container .ig-textarea {
@@ -2025,8 +2039,7 @@
   display: none;
 }
 
-.social-chat-container .ig-mic-btn,
-.social-chat-container .ig-send-btn {
+.social-chat-container .ig-mic-btn {
   width: 40px;
   height: 40px;
   background: transparent;
@@ -2056,11 +2069,13 @@
   border: none !important;
 }
 
-.social-chat-container .ig-cam-container {
+.social-chat-container .ig-cam-container,
+.social-chat-container .ig-send-container {
   background: #262626 !important;
 }
 
-.social-chat-container .ig-cam-btn {
+.social-chat-container .ig-cam-btn,
+.social-chat-container .ig-send-btn {
   color: #FFFFFF !important;
 }
 
