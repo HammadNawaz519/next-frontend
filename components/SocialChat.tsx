@@ -128,6 +128,16 @@ export const formatDateSeparator = (date: Date): string => {
   return `${monthStr} ${d.getDate()}, ${timeStr}`;
 };
 
+export const FONT_OPTIONS = [
+  { id: 'default', name: 'Default', family: 'inherit' },
+  { id: 'bubble', name: 'Bubble', family: "'Comfortaa', 'Fredoka', cursive, sans-serif" },
+  { id: 'deco', name: 'Deco', family: "'Playfair Display', 'Cinzel', serif" },
+  { id: 'editor', name: 'Editor', family: "'Fira Code', 'Courier New', monospace" },
+  { id: 'poster', name: 'Poster', family: "'Oswald', 'Impact', sans-serif" },
+  { id: 'serif', name: 'Serif', family: "'Georgia', 'Merriweather', serif" },
+  { id: 'signature', name: 'Signature', family: "'Caveat', 'Dancing Script', cursive" }
+];
+
 
 
 // ─── Instagram DM-style Message Overlay ────────────────────────────────────
@@ -1285,6 +1295,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [mutedChats, setMutedChats] = useState<Set<string>>(new Set());
   const [acceptedContactIds, setAcceptedContactIds] = useState<Set<string>>(new Set());
   const acceptedContactIdsRef = useRef<Set<string>>(new Set());
+
+  // Global App-Wide Font Application Effect
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const selected = FONT_OPTIONS.find(f => f.id === activeFont);
+      if (selected && selected.family !== 'inherit') {
+        document.body.style.fontFamily = selected.family;
+      } else {
+        document.body.style.fontFamily = '';
+      }
+    }
+  }, [activeFont]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -2787,16 +2809,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     window.open(url, '_blank', 'width=1000,height=800');
   };
 
-  const FONT_OPTIONS = [
-    { id: 'default', name: 'Default', family: 'inherit' },
-    { id: 'bubble', name: 'Bubble', family: "'Comfortaa', 'Fredoka', cursive, sans-serif" },
-    { id: 'deco', name: 'Deco', family: "'Playfair Display', 'Cinzel', serif" },
-    { id: 'editor', name: 'Editor', family: "'Fira Code', 'Courier New', monospace" },
-    { id: 'poster', name: 'Poster', family: "'Oswald', 'Impact', sans-serif" },
-    { id: 'serif', name: 'Serif', family: "'Georgia', 'Merriweather', serif" },
-    { id: 'signature', name: 'Signature', family: "'Caveat', 'Dancing Script', cursive" }
-  ];
-
   const currentFontFamily = FONT_OPTIONS.find(f => f.id === activeFont)?.family || 'inherit';
 
   return (
@@ -4129,9 +4141,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </button>
             </div>
 
-            {/* Tab 1: Themes (3 Columns Grid, ~1.2 inches / 115px height per box) */}
+            {/* Tab 1: Themes (3 Columns Grid, 160px height per box, outline removed) */}
             {customizerTab === 'themes' && (
-              <div className="px-6 py-4 overflow-y-auto grid grid-cols-3 gap-3 no-scrollbar max-h-[50vh]">
+              <div className="px-6 py-3 overflow-y-auto grid grid-cols-3 gap-3 no-scrollbar max-h-[55vh]">
                 {INSTAGRAM_THEMES.map(theme => {
                   const isSelected = (liveThemeId || (selectedUser ? chatThemes[selectedUser.id] : null) || 'default') === theme.id;
                   const cleanName = theme.name.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
@@ -4142,10 +4154,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         if (navigator.vibrate) navigator.vibrate(20);
                         setLiveThemeId(theme.id);
                       }}
-                      className={`h-[115px] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all border ${
+                      className={`h-[160px] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all ${
                         isSelected
-                          ? 'border-2 border-white bg-[#262626]'
-                          : 'border-[#262626] bg-[#18181b] hover:border-zinc-500'
+                          ? 'bg-[#3a3a3c] text-white shadow-lg'
+                          : 'bg-[#1c1c1e] text-zinc-300 hover:bg-[#252528]'
                       }`}
                     >
                       <span className="text-xs font-semibold text-white">{cleanName}</span>
@@ -4155,9 +4167,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </div>
             )}
 
-            {/* Tab 2: Fonts (2 Columns Grid, ~0.6 inches / 58px height per box) */}
+            {/* Tab 2: Fonts (2 Columns Grid, 100px height per box, outline removed) */}
             {customizerTab === 'fonts' && (
-              <div className="px-6 py-4 overflow-y-auto grid grid-cols-2 gap-3 no-scrollbar max-h-[50vh]">
+              <div className="px-6 py-3 overflow-y-auto grid grid-cols-2 gap-3 no-scrollbar max-h-[55vh]">
                 {FONT_OPTIONS.map(font => {
                   const isSelected = activeFont === font.id;
                   return (
@@ -4170,28 +4182,28 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           localStorage.setItem('chat_font', font.id);
                         }
                       }}
-                      className={`h-[58px] rounded-2xl flex items-center justify-center cursor-pointer transition-all border ${
+                      className={`h-[100px] rounded-2xl flex items-center justify-center cursor-pointer transition-all ${
                         isSelected
-                          ? 'border-2 border-white bg-[#262626]'
-                          : 'border-[#262626] bg-[#18181b] hover:border-zinc-500'
+                          ? 'bg-[#3a3a3c] text-white shadow-lg'
+                          : 'bg-[#1c1c1e] text-zinc-300 hover:bg-[#252528]'
                       }`}
                       style={{ fontFamily: font.family }}
                     >
-                      <span className="text-sm font-semibold text-white">{font.name}</span>
+                      <span className="text-base font-semibold text-white">{font.name}</span>
                     </div>
                   );
                 })}
               </div>
             )}
 
-            {/* Bottom Action Footer */}
-            <div className="p-4 border-t border-[#262626] bg-[#121212] flex items-center gap-3">
+            {/* Bottom Action Footer (Shifted higher up with clean spacing) */}
+            <div className="px-6 pt-2 pb-5 bg-[#121212] flex items-center gap-3">
               <button
                 onClick={() => {
                   setLiveThemeId(null);
                   setShowThemePicker(false);
                 }}
-                className="flex-1 py-3 px-4 rounded-full text-xs font-bold text-zinc-400 bg-[#1e1e1e] hover:bg-[#262626] transition-all cursor-pointer"
+                className="flex-1 py-3 px-4 rounded-full text-xs font-bold text-zinc-400 bg-[#1c1c1e] hover:bg-[#2c2c2e] transition-all cursor-pointer"
               >
                 Cancel
               </button>
