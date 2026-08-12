@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, Check, Shield, X } from "lucide-react"
 
-type AuthStep = "login" | "signup" | "forgot-password" | "reset-password" | "otp" | "success"
+type AuthStep = "login" | "signup" | "forgot-password" | "reset-otp" | "otp" | "success"
 type AuthMode = "login" | "signup"
 
 interface PasswordRequirement {
@@ -37,6 +37,19 @@ export default function AuthenticationCard() {
     name: "",
     otp: ["", "", "", "", "", ""],
   })
+
+  // ── Reset password specific state ──
+  const [resetEmail, setResetEmail] = useState("")
+  const [resetOtp, setResetOtp] = useState(["", "", "", "", "", ""])
+  const [resetNewPw, setResetNewPw] = useState("")
+  const [resetConfirmPw, setResetConfirmPw] = useState("")
+  const [resetShowPw, setResetShowPw] = useState(false)
+  const [resetShowConfirm, setResetShowConfirm] = useState(false)
+  const [resetError, setResetError] = useState("")
+
+  // ── Login / Signup error state ──
+  const [loginError, setLoginError] = useState("")
+  const [signupError, setSignupError] = useState("")
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -106,20 +119,147 @@ export default function AuthenticationCard() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    if (step === "login") {
+      setLoginError("")
+      try {
+        const { signIn } = await import("next-auth/react")
+        const res = await signIn("credentials", {
+          redirect: false,
+          email: formData.email,
+          password: formData.password,
+        })
+        if (res?.error) {
+          setLoginError("Invalid email or password. Please try again.")
+        } else {
+          window.location.href = "/dashboard"
+          return
+        }
+      } catch (err) {
+        setLoginError("An unexpected error occurred.")
+      }
+      setIsLoading(false)
+      return
+    }
 
-    if (step === "login" || step === "signup") {
-      setStep("otp")
-    } else if (step === "forgot-password") {
-      setStep("reset-password")
-    } else if (step === "reset-password") {
-      setStep("success")
-    } else if (step === "otp") {
-      setStep("success")
+    if (step === "signup") {
+      setSignupError("")
+      try {
+        const res = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: formData.name,
+            email: formData.email,
+            password: formData.password,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          setSignupError(data.message || "Registration failed.")
+        } else {
+          setStep("otp")
+        }
+      } catch (err) {
+        setSignupError("An unexpected error occurred.")
+      }
+      setIsLoading(false)
+      return
+    }
+
+    if (step === "otp") {
+      // Verify OTP after signup
+      try {
+        const res = await fetch("/api/verify-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: formData.email, code: formData.otp.join("") }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          setSignupError(data.message || "Verification failed.")
+        } else {
+          setStep("success")
+        }
+      } catch (err) {
+        setSignupError("Verification failed. Please try again.")
+      }
+      setIsLoading(false)
+      return
+    }
+
+    if (step === "forgot-password") {
+      setResetError("")
+      try {
+        const res = await fetch("/api/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: resetEmail }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          setResetError(data.message || "Failed to send reset code.")
+        } else {
+          setResetOtp(["", "", "", "", "", ""])
+          setResetNewPw("")
+          setResetConfirmPw("")
+          setStep("reset-otp")
+        }
+      } catch (err) {
+        setResetError("An unexpected error occurred.")
+      }
+      setIsLoading(false)
+      return
+    }
+
+    if (step === "reset-otp") {
+      setResetError("")
+      if (resetNewPw !== resetConfirmPw) {
+        setResetError("Passwords do not match.")
+        setIsLoading(false)
+        return
+      }
+      try {
+        const res = await fetch("/api/reset-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: resetEmail,
+            code: resetOtp.join(""),
+            newPassword: resetNewPw,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          setResetError(data.message || "Failed to reset password.")
+        } else {
+          setStep("success")
+        }
+      } catch (err) {
+        setResetError("An unexpected error occurred.")
+      }
+      setIsLoading(false)
+      return
     }
 
     setIsLoading(false)
+  }
+
+  const handleResetOtpChange = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, "").slice(-1)
+    const newOtp = [...resetOtp]
+    newOtp[index] = digit
+    setResetOtp(newOtp)
+    if (digit && index < 5) {
+      const next = document.getElementById(`reset-otp-${index + 1}`)
+      next?.focus()
+    }
+  }
+
+  const handleResetOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !resetOtp[index] && index > 0) {
+      const prev = document.getElementById(`reset-otp-${index - 1}`)
+      prev?.focus()
+    }
   }
 
   const switchMode = (newMode: AuthMode) => {
@@ -147,8 +287,8 @@ export default function AuthenticationCard() {
         return "h-[680px]"
       case "forgot-password":
         return "h-[380px]"
-      case "reset-password":
-        return "h-[520px]"
+      case "reset-otp":
+        return "h-[620px]"
       case "otp":
         return "h-[380px]"
       case "success":
@@ -185,6 +325,12 @@ export default function AuthenticationCard() {
                 <p className="text-white/70">Sign in to your account</p>
               </div>
 
+              {loginError && (
+                <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-center font-semibold">
+                  {loginError}
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-white/90">
@@ -196,7 +342,7 @@ export default function AuthenticationCard() {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      onChange={(e) => { handleInputChange("email", e.target.value); setLoginError("") }}
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
                       placeholder="Enter your email"
                       required
@@ -214,7 +360,7 @@ export default function AuthenticationCard() {
                       id="password"
                       type={showPassword ? "text" : "password"}
                       value={formData.password}
-                      onChange={(e) => handleInputChange("password", e.target.value)}
+                      onChange={(e) => { handleInputChange("password", e.target.value); setLoginError("") }}
                       className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
                       placeholder="Enter your password"
                       required
@@ -430,8 +576,14 @@ export default function AuthenticationCard() {
 
               <div className="text-center space-y-2">
                 <h1 className="text-2xl font-semibold text-white">Reset Password</h1>
-                <p className="text-white/70">Enter your email to receive reset instructions</p>
+                <p className="text-white/70">Enter your email to receive a reset code</p>
               </div>
+
+              {resetError && (
+                <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-center font-semibold">
+                  {resetError}
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -443,8 +595,8 @@ export default function AuthenticationCard() {
                     <Input
                       id="reset-email"
                       type="email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      value={resetEmail}
+                      onChange={(e) => { setResetEmail(e.target.value); setResetError("") }}
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
                       placeholder="Enter your email"
                       required
@@ -457,93 +609,112 @@ export default function AuthenticationCard() {
                   disabled={isLoading}
                   className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/40 h-11 rounded-xl font-medium transition-all duration-200 backdrop-blur-sm"
                 >
-                  {isLoading ? "Sending..." : "Send Reset Link"}
+                  {isLoading ? "Sending code..." : "Send Reset Code"}
                 </Button>
               </form>
             </div>
           )}
 
-          {step === "reset-password" && (
-            <div className="flex-1 flex flex-col justify-center space-y-6">
+          {step === "reset-otp" && (
+            <div className="flex-1 flex flex-col justify-center space-y-5">
               <button
-                onClick={() => setStep("forgot-password")}
+                onClick={() => { setStep("forgot-password"); setResetError("") }}
                 className="absolute top-6 left-6 text-white/70 hover:text-white transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
 
-              <div className="text-center space-y-2">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full flex items-center justify-center mx-auto">
+              <div className="text-center space-y-1">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full flex items-center justify-center mx-auto mb-2">
                   <Shield className="w-6 h-6 text-white" />
                 </div>
-                <h1 className="text-2xl font-semibold text-white">Create New Password</h1>
-                <p className="text-white/70">Enter your new password below</p>
+                <h1 className="text-2xl font-semibold text-white">Check your email</h1>
+                <p className="text-white/60 text-sm">We sent a 6-digit code to</p>
+                <p className="text-white font-medium text-sm">{resetEmail}</p>
               </div>
 
+              {resetError && (
+                <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-center font-semibold">
+                  {resetError}
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* OTP inputs */}
+                <div className="flex justify-center space-x-2">
+                  {resetOtp.map((digit, index) => (
+                    <input
+                      key={index}
+                      id={`reset-otp-${index}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleResetOtpChange(index, e.target.value)}
+                      onKeyDown={(e) => handleResetOtpKeyDown(index, e)}
+                      className="w-10 h-12 text-center text-lg font-bold bg-white/10 border border-white/20 text-white rounded-xl focus:outline-none focus:border-white/50 transition-colors"
+                      autoFocus={index === 0}
+                    />
+                  ))}
+                </div>
+
+                {/* New password */}
                 <div className="space-y-2">
-                  <Label htmlFor="new-password" className="text-white/90">
-                    New Password
-                  </Label>
+                  <Label htmlFor="reset-new-pw" className="text-white/90">New Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
                     <Input
-                      id="new-password"
-                      type={showPassword ? "text" : "password"}
-                      value={formData.password}
-                      onChange={(e) => handleInputChange("password", e.target.value)}
+                      id="reset-new-pw"
+                      type={resetShowPw ? "text" : "password"}
+                      value={resetNewPw}
+                      onChange={(e) => { setResetNewPw(e.target.value); setResetError("") }}
                       className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
                       placeholder="Enter new password"
                       required
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    <button type="button" onClick={() => setResetShowPw(!resetShowPw)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70">
+                      {resetShowPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
+                {/* Confirm new password */}
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-new-password" className="text-white/90">
-                    Confirm New Password
-                  </Label>
+                  <Label htmlFor="reset-confirm-pw" className="text-white/90">Confirm New Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
                     <Input
-                      id="confirm-new-password"
-                      type={showConfirmPassword ? "text" : "password"}
-                      value={formData.confirmPassword}
-                      onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                      id="reset-confirm-pw"
+                      type={resetShowConfirm ? "text" : "password"}
+                      value={resetConfirmPw}
+                      onChange={(e) => { setResetConfirmPw(e.target.value); setResetError("") }}
                       className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
                       placeholder="Confirm new password"
                       required
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    <button type="button" onClick={() => setResetShowConfirm(!resetShowConfirm)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70">
+                      {resetShowConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                  {resetConfirmPw && resetNewPw !== resetConfirmPw && (
                     <p className="text-xs text-red-400">Passwords do not match</p>
                   )}
                 </div>
 
                 <Button
                   type="submit"
-                  disabled={isLoading || !formData.password || formData.password !== formData.confirmPassword}
+                  disabled={isLoading || resetOtp.join("").length < 6 || !resetNewPw || resetNewPw !== resetConfirmPw}
                   className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/40 h-11 rounded-xl font-medium transition-all duration-200 backdrop-blur-sm disabled:opacity-50"
                 >
-                  {isLoading ? "Updating..." : "Update Password"}
+                  {isLoading ? "Resetting..." : "Reset Password"}
                 </Button>
               </form>
             </div>
           )}
+
+
 
           {step === "otp" && (
             <div className="flex-1 flex flex-col justify-center space-y-6">
@@ -615,20 +786,20 @@ export default function AuthenticationCard() {
 
               <div className="text-center space-y-2">
                 <h1 className="text-2xl font-semibold text-white">
-                  {step === "success" && mode === "signup" ? "Welcome!" : "Success!"}
+                  {mode === "signup" ? "Welcome!" : "Password Reset!"}
                 </h1>
                 <p className="text-white/70">
-                  {step === "success" && mode === "signup"
-                    ? "Your account has been verified successfully"
-                    : "Your password has been reset successfully"}
+                  {mode === "signup"
+                    ? "Your account has been verified. You can now sign in."
+                    : "Your password has been reset successfully. Sign in with your new password."}
                 </p>
               </div>
 
               <Button
-                onClick={() => window.open("https://www.youtube.com/@diecastbydollar", "_blank")}
+                onClick={resetToLogin}
                 className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/40 h-11 rounded-xl font-medium transition-all duration-200 backdrop-blur-sm"
               >
-                Subscribe on YouTube
+                {mode === "signup" ? "Go to Sign In" : "Sign In"}
               </Button>
             </div>
           )}

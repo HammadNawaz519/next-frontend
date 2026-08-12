@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { signOut, signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '@/app/components/ThemeProvider';
 import { DeviceAccountStore, DeviceAccountMeta } from '@/lib/deviceAccountStore';
 import { Mail, Lock, User, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react';
@@ -94,6 +95,7 @@ export default function ProfilePanel({
   onOpenUpload,
 }: Props) {
   const { theme, toggleTheme } = useTheme();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'tagged'>('grid');
   const [copyToast, setCopyToast] = useState(false);
   const [savedPostsList, setSavedPostsList] = useState<any[]>([]);
@@ -1227,7 +1229,7 @@ export default function ProfilePanel({
 
                 {/* Password & Security */}
                 <div
-                  onClick={() => alert('Password & Security settings are synchronized with Prisma DB.')}
+                  onClick={() => router.push('/security')}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '16px 18px', cursor: 'pointer'
