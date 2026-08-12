@@ -781,7 +781,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         }
       } else if (diffX < 0) {
         setIsSwiping(true);
-        const clampedOffset = Math.max(diffX * 0.65, -65);
+        const clampedOffset = Math.max(diffX * 0.75, -95);
         setSwipeOffset(clampedOffset);
       }
     }
@@ -838,6 +838,13 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         width: '100%',
         padding: '0 8px',
         userSelect: 'none',
+        position: 'relative',
+        transition: (isSwiping || (chatSwipeOffset && chatSwipeOffset !== 0))
+          ? 'none'
+          : 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.18s',
+        transform: effectiveSwipeOffset !== 0
+          ? `translateX(${effectiveSwipeOffset}px)`
+          : 'none',
       }}
     >
       {!isSent && !isAI && (
@@ -870,7 +877,6 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
 
         const isMedia = msg.type === 'image' || msg.type === 'video';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
-        const effectiveSwipeOffset = swipeOffset !== 0 ? swipeOffset : (chatSwipeOffset || 0);
 
         return (
           <div
@@ -882,12 +888,8 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
               maxWidth: '70%',
               borderRadius: isMedia ? '1.25rem' : bubbleBorderRadius,
               marginTop: isPrevSameSender ? '2px' : '6px',
-              transition: (isSwiping || (chatSwipeOffset && chatSwipeOffset !== 0))
-                ? 'none'
-                : 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.18s, background 0.3s ease, color 0.3s ease',
-              transform: effectiveSwipeOffset !== 0
-                ? `translateX(${effectiveSwipeOffset}px)`
-                : isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
+              transition: isSelected ? 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28)' : 'none',
+              transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
               background: isMedia ? 'transparent' : (isSent
                 ? (activeTheme?.id !== 'default' ? activeTheme?.outgoingGradient : 'linear-gradient(135deg, #3797F0 0%, #833AB4 50%, #C13584 100%)')
                 : (activeTheme?.id !== 'default' ? activeTheme?.incomingBubbleColor : undefined)),
@@ -969,7 +971,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         );
       })()}
 
-      {/* Instagram DM Swipe-Left Revealed Timestamp Label */}
+      {/* Instagram DM Revealed Timestamp (Spacious positioning) */}
       {(() => {
         const effectiveSwipeOffset = swipeOffset !== 0 ? swipeOffset : (chatSwipeOffset || 0);
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
@@ -978,16 +980,16 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
             className="ig-time-reveal"
             style={{
               position: 'absolute',
-              right: '10px',
+              right: '16px',
               top: '50%',
-              transform: `translateY(-50%) translateX(${Math.max(0, 60 + (effectiveSwipeOffset < 0 ? effectiveSwipeOffset : 0))}px)`,
-              opacity: effectiveSwipeOffset < 0 ? Math.min(1, Math.abs(effectiveSwipeOffset) / 28) : 0,
-              fontSize: '0.72rem',
+              transform: `translateY(-50%) translateX(${Math.max(0, 95 + (effectiveSwipeOffset < 0 ? effectiveSwipeOffset : -effectiveSwipeOffset))}px)`,
+              opacity: Math.min(1, Math.abs(effectiveSwipeOffset) / 28),
+              fontSize: '0.73rem',
               fontWeight: 600,
               color: 'var(--dm-text-muted)',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
+              gap: '5px',
               pointerEvents: 'none',
               transition: (isSwiping || (chatSwipeOffset && chatSwipeOffset !== 0))
                 ? 'none'
@@ -1458,8 +1460,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const handleContainerTouchMove = (e: React.TouchEvent) => {
     const diffX = e.touches[0].clientX - chatTouchStartX.current;
     const diffY = e.touches[0].clientY - chatTouchStartY.current;
-    if (Math.abs(diffX) > Math.abs(diffY) && diffX < -6) {
-      const offset = Math.max(diffX * 0.7, -65);
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 6) {
+      const offset = Math.max(-95, Math.min(95, diffX * 0.75));
       setChatSwipeOffset(offset);
     }
   };
