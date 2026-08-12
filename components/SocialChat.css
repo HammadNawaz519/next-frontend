@@ -1987,7 +1987,8 @@
 
 /* Elements */
 .social-chat-container .ig-cam-container,
-.social-chat-container .ig-send-container {
+.social-chat-container .ig-send-container,
+.social-chat-container .ig-mic-container {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -1995,11 +1996,11 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-left: 2px;
 }
 
 .social-chat-container .ig-cam-btn,
-.social-chat-container .ig-send-btn {
+.social-chat-container .ig-send-btn,
+.social-chat-container .ig-mic-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2007,17 +2008,27 @@
   border: none;
   cursor: pointer;
   padding: 0;
+  margin: 0;
   width: 100%;
   height: 100%;
   border-radius: 50%;
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
-.social-chat-container .ig-send-btn:hover {
+.social-chat-container .ig-cam-btn svg,
+.social-chat-container .ig-send-btn svg,
+.social-chat-container .ig-mic-btn svg {
+  display: block;
+  margin: auto;
+}
+
+.social-chat-container .ig-send-btn:hover,
+.social-chat-container .ig-mic-btn:hover {
   opacity: 0.9;
 }
 
-.social-chat-container .ig-send-btn:active {
+.social-chat-container .ig-send-btn:active,
+.social-chat-container .ig-mic-btn:active {
   transform: scale(0.92);
 }
 
@@ -2039,23 +2050,6 @@
   display: none;
 }
 
-.social-chat-container .ig-mic-btn {
-  width: 40px;
-  height: 40px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  padding: 0;
-  margin-right: 2px;
-  font-weight: 600;
-  font-size: 15px;
-}
-
-
 .social-chat-container .ig-type-box {
   border: none !important;
 }
@@ -2070,7 +2064,8 @@
 }
 
 .social-chat-container .ig-cam-container,
-.social-chat-container .ig-send-container {
+.social-chat-container .ig-send-container,
+.social-chat-container .ig-mic-container {
   background: #262626 !important;
 }
 
