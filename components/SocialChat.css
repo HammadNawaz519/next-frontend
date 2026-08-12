@@ -2101,15 +2101,8 @@
    ========================================================================== */
 
 /* Wallpapers */
-.social-chat-container .theme-love .messages,
-.social-chat-container .theme-love.chat-area {
-  background-image: url("/Love.jpg") !important;
-  background-size: cover !important;
-  background-position: center !important;
-  background-attachment: fixed !important;
-  background-repeat: no-repeat !important;
-}
-
+.social-chat-container .theme-default .messages,
+.social-chat-container .theme-default.chat-area,
 .social-chat-container .theme-whale .messages,
 .social-chat-container .theme-whale.chat-area {
   background-image: url("/Whale.jpg") !important;
@@ -2119,9 +2112,17 @@
   background-repeat: no-repeat !important;
 }
 
+.social-chat-container .theme-love .messages,
+.social-chat-container .theme-love.chat-area {
+  background-image: url("/Love.jpg") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
 /* Header Glassmorphic Blur so wallpaper is visible behind top bar */
-.social-chat-container .theme-love .chat-header,
-.social-chat-container .theme-whale .chat-header {
+.social-chat-container .chat-header {
   background: rgba(255, 255, 255, 0.28) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
