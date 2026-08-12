@@ -2153,26 +2153,26 @@
 
 .social-chat-container .theme-love .chat-header,
 .social-chat-container .theme-love-u .chat-header {
-  background: rgba(255, 225, 235, 0.4) !important;
+  background: rgba(255, 225, 235, 0.2) !important;
   color: #590d22 !important;
   border-bottom: none !important;
 }
 
 [data-theme="dark"] .social-chat-container .theme-love .chat-header,
 [data-theme="dark"] .social-chat-container .theme-love-u .chat-header {
-  background: rgba(65, 20, 36, 0.5) !important;
+  background: rgba(65, 20, 36, 0.2) !important;
   color: #ffffff !important;
   border-bottom: none !important;
 }
 
 .social-chat-container .theme-whale .chat-header {
-  background: rgba(210, 235, 248, 0.4) !important;
+  background: rgba(210, 235, 248, 0.2) !important;
   color: #073b68 !important;
   border-bottom: none !important;
 }
 
 [data-theme="dark"] .social-chat-container .theme-whale .chat-header {
-  background: rgba(18, 38, 58, 0.5) !important;
+  background: rgba(18, 38, 58, 0.2) !important;
   color: #ffffff !important;
   border-bottom: none !important;
 }
