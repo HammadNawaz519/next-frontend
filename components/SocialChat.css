@@ -2079,31 +2079,46 @@
   color: #FFFFFF !important;
 }
 
-.social-chat-container .msg.sent,
+/* Default Mode Bubble Colors (Charcoal Black Sent, Grey Received) */
+.social-chat-container .theme-default .msg.sent,
+.social-chat-container .msg.sent {
+  background: #262626 !important;
+  color: #ffffff !important;
+}
+
+.social-chat-container .theme-default .msg.received,
+.social-chat-container .theme-default .msg.ai,
 .social-chat-container .msg.received,
 .social-chat-container .msg.ai {
-  border: none !important;
-  box-shadow: none !important;
+  background: #e5e5ea !important;
+  color: #000000 !important;
 }
 
-.social-chat-container .date-separator span {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+[data-theme="dark"] .social-chat-container .theme-default .msg.received,
+[data-theme="dark"] .social-chat-container .theme-default .msg.ai,
+[data-theme="dark"] .social-chat-container .msg.received,
+[data-theme="dark"] .social-chat-container .msg.ai {
+  background: #2c2c2e !important;
+  color: #ffffff !important;
 }
-
-
 
 /* ==========================================================================
-   LOVE & WHALE THEME CUSTOM STYLES (LIGHT & DARK MODE)
+   LOVE, LOVE U & WHALE THEME CUSTOM STYLES (LIGHT & DARK MODE)
    ========================================================================== */
 
 /* Wallpapers (Applied ONLY when custom wallpaper theme is active) */
 .social-chat-container .theme-love .messages,
 .social-chat-container .theme-love.chat-area {
   background-image: url("/Love.jpg") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+.social-chat-container .theme-love-u .messages,
+.social-chat-container .theme-love-u.chat-area {
+  background-image: url("/Love-2.jpg") !important;
   background-size: cover !important;
   background-position: center !important;
   background-attachment: fixed !important;
@@ -2135,13 +2150,15 @@
   color: inherit !important;
 }
 
-.social-chat-container .theme-love .chat-header {
+.social-chat-container .theme-love .chat-header,
+.social-chat-container .theme-love-u .chat-header {
   background: rgba(255, 225, 235, 0.4) !important;
   color: #590d22 !important;
   border-bottom: 1px solid rgba(89, 13, 34, 0.15) !important;
 }
 
-[data-theme="dark"] .social-chat-container .theme-love .chat-header {
+[data-theme="dark"] .social-chat-container .theme-love .chat-header,
+[data-theme="dark"] .social-chat-container .theme-love-u .chat-header {
   background: rgba(65, 20, 36, 0.5) !important;
   color: #ffffff !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -2165,6 +2182,87 @@
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   LOVE U THEME (LIGHT & DARK MODE)
+   -------------------------------------------------------------------------- */
+.social-chat-container .theme-love-u .msg.sent {
+  background: linear-gradient(135deg, #a4133c 0%, #800f2f 100%) !important;
+  color: #ffffff !important;
+}
+
+.social-chat-container .theme-love-u .msg.received,
+.social-chat-container .theme-love-u .msg.ai {
+  background: rgba(255, 229, 236, 0.92) !important;
+  color: #590d22 !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+.social-chat-container .theme-love-u .ig-type-box {
+  background: rgba(245, 218, 226, 0.92) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+.social-chat-container .theme-love-u .ig-textarea {
+  color: #590d22 !important;
+}
+
+.social-chat-container .theme-love-u .ig-textarea::placeholder {
+  color: rgba(89, 13, 34, 0.6) !important;
+}
+
+.social-chat-container .theme-love-u .ig-cam-container,
+.social-chat-container .theme-love-u .ig-send-container {
+  background: #800f2f !important;
+  border: 1px solid #800f2f !important;
+}
+
+.social-chat-container .theme-love-u .ig-cam-btn,
+.social-chat-container .theme-love-u .ig-send-btn,
+.social-chat-container .theme-love-u .ig-mic-btn {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-love-u .msg.sent {
+  background: linear-gradient(135deg, #ff4d6d 0%, #c9184a 100%) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-love-u .msg.received,
+[data-theme="dark"] .social-chat-container .theme-love-u .msg.ai {
+  background: rgba(89, 13, 34, 0.85) !important;
+  color: #ffffff !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-love-u .ig-type-box {
+  background: rgba(65, 18, 35, 0.88) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-love-u .ig-textarea {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-love-u .ig-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-love-u .ig-cam-container,
+[data-theme="dark"] .social-chat-container .theme-love-u .ig-send-container {
+  background: #ff4d6d !important;
+  border: 1px solid #ff4d6d !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-love-u .ig-cam-btn,
+[data-theme="dark"] .social-chat-container .theme-love-u .ig-send-btn,
+[data-theme="dark"] .social-chat-container .theme-love-u .ig-mic-btn {
+  color: #590d22 !important;
 }
 
 /* --------------------------------------------------------------------------

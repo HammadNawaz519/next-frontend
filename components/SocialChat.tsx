@@ -73,6 +73,7 @@ export interface ChatTheme {
 export const INSTAGRAM_THEMES: ChatTheme[] = [
   { id: 'default', name: 'Default', category: 'Ambient', outgoingGradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'var(--dm-bg-hover)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#6366f1', inputBorderColor: 'var(--dm-border)', reactionAccent: '#6366f1', previewWallpaper: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' },
   { id: 'love', name: 'Love', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #ff7597 0%, #e63946 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: '#4d0522', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#ff7597', inputBorderColor: '#ff7597', reactionAccent: '#ff7597', previewWallpaper: '/Love.jpg', wallpaperUrl: '/Love.jpg' },
+  { id: 'love-u', name: 'Love U', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #ff4d6d 0%, #c9184a 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: '#590d22', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#ff4d6d', inputBorderColor: '#ff4d6d', reactionAccent: '#ff4d6d', previewWallpaper: '/Love-2.jpg', wallpaperUrl: '/Love-2.jpg' },
   { id: 'whale', name: 'Whale', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: '#092038', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#38bdf8', inputBorderColor: '#38bdf8', reactionAccent: '#38bdf8', previewWallpaper: '/Whale.jpg', wallpaperUrl: '/Whale.jpg' },
 ];
 
@@ -1655,10 +1656,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return prev;
         });
 
-        // 1. Update Message Stream
+        // 1. Update Message Stream safely without duplicates
         setMessages((prev) => {
           if (selectedUserRef.current?.id !== partnerId) return prev; // Only append if we are looking at this user's chat!
-          if (prev.some(m => m.id === msg.id)) return prev;
+          const isDup = prev.some(m =>
+            m.id === msg.id ||
+            (m.content === msg.content && String(m.senderId) === String(msg.senderId) && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 15000)
+          );
+          if (isDup) {
+            return prev.map(m =>
+              (m.id === msg.id || (m.content === msg.content && String(m.senderId) === String(msg.senderId) && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 15000))
+                ? { ...msg, id: msg.id || m.id }
+                : m
+            );
+          }
           return [...prev, msg];
         });
 
@@ -1778,10 +1789,23 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return prev;
         });
 
-        // 3. Update Cache
+        // 3. Update Cache safely without duplicates
         setMessagesCache(prev => {
           const current = prev[partnerId] || [];
-          if (current.some(m => m.id === msg.id)) return prev;
+          const isDup = current.some(m =>
+            m.id === msg.id ||
+            (m.content === msg.content && String(m.senderId) === String(msg.senderId) && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 15000)
+          );
+          if (isDup) {
+            return {
+              ...prev,
+              [partnerId]: current.map(m =>
+                (m.id === msg.id || (m.content === msg.content && String(m.senderId) === String(msg.senderId) && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 15000))
+                  ? { ...msg, id: msg.id || m.id }
+                  : m
+              )
+            };
+          }
           return { ...prev, [partnerId]: [...current, msg] };
         });
 
