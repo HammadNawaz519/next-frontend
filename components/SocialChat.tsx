@@ -837,7 +837,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         justifyContent: isSent ? 'flex-end' : 'flex-start',
         gap: '8px',
         width: '100%',
-        padding: '0 8px',
+        padding: isSent ? '0 2px 0 8px' : '0 8px 0 2px',
         userSelect: 'none',
         position: 'relative',
         transition: (isSwiping || (chatSwipeOffset && chatSwipeOffset !== 0))

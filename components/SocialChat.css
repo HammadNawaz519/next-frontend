@@ -256,11 +256,12 @@
 /* MESSAGES */
 .social-chat-container .messages {
   flex: 1;
-  padding: 32px;
+  padding: 16px 12px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 10px;
   background-color: transparent;
 }
 
@@ -274,6 +275,7 @@
 
 .social-chat-container .msg-wrapper.sent {
   margin-left: auto;
+  margin-right: 0;
   align-items: flex-end;
 }
 
