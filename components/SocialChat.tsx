@@ -541,7 +541,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                 e.stopPropagation();
                 if (onOpenThemePicker) onOpenThemePicker();
               }}
-              className="font-bold underline hover:opacity-80 cursor-pointer text-[var(--dm-text-primary)]"
+              className="font-semibold no-underline hover:opacity-80 cursor-pointer text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] ml-1 transition-colors"
             >
               Customize chat
             </button>
@@ -1263,6 +1263,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   // Instagram-style Chat Details, Theme, Tagging & Lightbox State
   const [showChatDetails, setShowChatDetails] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [customizerTab, setCustomizerTab] = useState<'themes' | 'fonts'>('themes');
+  const [activeFont, setActiveFont] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('chat_font') || 'default';
+    }
+    return 'default';
+  });
   const [liveThemeId, setLiveThemeId] = useState<string | null>(null);
   const [themeSearchQuery, setThemeSearchQuery] = useState('');
   const [themeCategoryFilter, setThemeCategoryFilter] = useState<'All' | 'Gradients' | 'Ambient' | 'Nature' | 'Special'>('All');
@@ -2780,9 +2787,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     window.open(url, '_blank', 'width=1000,height=800');
   };
 
+  const FONT_OPTIONS = [
+    { id: 'default', name: 'Default', family: 'inherit' },
+    { id: 'bubble', name: 'Bubble', family: "'Comfortaa', 'Fredoka', cursive, sans-serif" },
+    { id: 'deco', name: 'Deco', family: "'Playfair Display', 'Cinzel', serif" },
+    { id: 'editor', name: 'Editor', family: "'Fira Code', 'Courier New', monospace" },
+    { id: 'poster', name: 'Poster', family: "'Oswald', 'Impact', sans-serif" },
+    { id: 'serif', name: 'Serif', family: "'Georgia', 'Merriweather', serif" },
+    { id: 'signature', name: 'Signature', family: "'Caveat', 'Dancing Script', cursive" }
+  ];
+
+  const currentFontFamily = FONT_OPTIONS.find(f => f.id === activeFont)?.family || 'inherit';
+
   return (
     <>
-      <div className="social-chat-container" style={{ display: isActive ? 'flex' : 'none', width: '100%', height: '100%' }}>
+      <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Comfortaa:wght@600&family=Fira+Code:wght@500&family=Oswald:wght@600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet" />
+      <div className="social-chat-container" style={{ display: isActive ? 'flex' : 'none', width: '100%', height: '100%', fontFamily: currentFontFamily }}>
         <div className="main-wrap">
           <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'}`}>
             <div className="search-wrap relative">
@@ -4135,41 +4155,47 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             })()}
 
             {/* Category Filter Pills & Search */}
-            <div className="px-6 py-2 space-y-2 flex-shrink-0">
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-                {(['All', 'Gradients', 'Ambient', 'Nature', 'Special'] as const).map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setThemeCategoryFilter(cat)}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      themeCategoryFilter === cat
-                        ? 'bg-indigo-600 text-white shadow-md'
-                        : 'bg-[var(--dm-bg-hover)] text-[var(--dm-text-secondary)] hover:text-[var(--dm-text-primary)]'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+                <h3 className="text-base font-extrabold text-white tracking-tight">Customize</h3>
               </div>
-
-              <input
-                type="text"
-                placeholder="Search 30+ themes..."
-                value={themeSearchQuery}
-                onChange={(e) => setThemeSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 text-xs rounded-full border border-[var(--dm-border)] bg-[var(--dm-bg-input)] text-[var(--dm-text-primary)] focus:outline-none"
-              />
+              <button
+                onClick={() => {
+                  setLiveThemeId(null);
+                  setShowThemePicker(false);
+                }}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-[#262626] text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
 
-            {/* Themes Simple List */}
-            <div className="px-4 py-4 overflow-y-auto flex flex-col no-scrollbar" style={{ maxHeight: '52vh' }}>
-              {INSTAGRAM_THEMES
-                .filter(t => {
-                  const matchesCat = themeCategoryFilter === 'All' || t.category === themeCategoryFilter;
-                  const matchesQuery = t.name.toLowerCase().includes(themeSearchQuery.toLowerCase());
-                  return matchesCat && matchesQuery;
-                })
-                .map(theme => {
+            {/* Two Box Slider Tabs */}
+            <div className="mx-6 my-3 p-1 rounded-2xl bg-[#1a1a1a] border border-[#262626] flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={() => setCustomizerTab('themes')}
+                className={`flex-1 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                  customizerTab === 'themes'
+                    ? 'bg-[#262626] text-white shadow-md'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Themes
+              </button>
+              <button
+                onClick={() => setCustomizerTab('fonts')}
+                className={`flex-1 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                  customizerTab === 'fonts'
+                    ? 'bg-[#262626] text-white shadow-md'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Fonts
+              </button>
+            </div>
+
+            {/* Tab 1: Themes (3 Columns Grid, ~1.2 inches / 115px height per box) */}
+            {customizerTab === 'themes' && (
+              <div className="px-6 py-4 overflow-y-auto grid grid-cols-3 gap-3 no-scrollbar max-h-[50vh]">
+                {INSTAGRAM_THEMES.map(theme => {
                   const isSelected = (liveThemeId || chatThemes[selectedUser.id] || 'default') === theme.id;
                   const cleanName = theme.name.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
                   return (
@@ -4179,40 +4205,56 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         if (navigator.vibrate) navigator.vibrate(20);
                         setLiveThemeId(theme.id);
                       }}
-                      className={`flex items-center gap-3.5 py-3 px-4 rounded-2xl cursor-pointer transition-all ${
+                      className={`h-[115px] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all border ${
                         isSelected
-                          ? 'bg-[#262626] text-white'
-                          : 'hover:bg-[var(--dm-bg-hover)]'
+                          ? 'border-2 border-white bg-[#262626]'
+                          : 'border-[#262626] bg-[#18181b] hover:border-zinc-500'
                       }`}
                     >
-                      {/* Swatch */}
-                      <div
-                        className="w-9 h-9 rounded-full flex-shrink-0 shadow-sm border border-white/20"
-                        style={{ background: theme.previewWallpaper }}
-                      />
-                      {/* Name */}
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-semibold truncate ${isSelected ? 'text-white' : 'text-[var(--dm-text-primary)]'}`}>{cleanName}</p>
-                      </div>
-                      {/* Check */}
-                      {isSelected && (
-                        <div className="w-5 h-5 rounded-full bg-white text-black flex items-center justify-center text-[10px] font-extrabold flex-shrink-0 animate-in zoom-in-75 duration-200">
-                          ✓
-                        </div>
-                      )}
+                      <span className="text-xs font-semibold text-white">{cleanName}</span>
                     </div>
                   );
                 })}
-            </div>
+              </div>
+            )}
+
+            {/* Tab 2: Fonts (2 Columns Grid, ~0.6 inches / 58px height per box) */}
+            {customizerTab === 'fonts' && (
+              <div className="px-6 py-4 overflow-y-auto grid grid-cols-2 gap-3 no-scrollbar max-h-[50vh]">
+                {FONT_OPTIONS.map(font => {
+                  const isSelected = activeFont === font.id;
+                  return (
+                    <div
+                      key={font.id}
+                      onClick={() => {
+                        if (navigator.vibrate) navigator.vibrate(20);
+                        setActiveFont(font.id);
+                        if (typeof window !== 'undefined') {
+                          localStorage.setItem('chat_font', font.id);
+                        }
+                      }}
+                      className={`h-[58px] rounded-2xl flex items-center justify-center cursor-pointer transition-all border ${
+                        isSelected
+                          ? 'border-2 border-white bg-[#262626]'
+                          : 'border-[#262626] bg-[#18181b] hover:border-zinc-500'
+                      }`}
+                      style={{ fontFamily: font.family }}
+                    >
+                      <span className="text-sm font-semibold text-white">{font.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Bottom Action Footer */}
-            <div className="p-4 border-t border-[var(--dm-border)] bg-[var(--dm-bg-sidebar)] flex items-center gap-3">
+            <div className="p-4 border-t border-[#262626] bg-[#121212] flex items-center gap-3">
               <button
                 onClick={() => {
                   setLiveThemeId(null);
                   setShowThemePicker(false);
                 }}
-                className="flex-1 py-3 px-4 rounded-full text-xs font-bold text-[var(--dm-text-secondary)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] transition-all cursor-pointer"
+                className="flex-1 py-3 px-4 rounded-full text-xs font-bold text-zinc-400 bg-[#1e1e1e] hover:bg-[#262626] transition-all cursor-pointer"
               >
                 Cancel
               </button>
