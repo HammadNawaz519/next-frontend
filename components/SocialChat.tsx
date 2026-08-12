@@ -2971,8 +2971,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     {/* Monochrome Video Call Button */}
                     <button onClick={() => handleCall('video')} title="Video Call" style={{ background: 'transparent', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', marginLeft: '12px' }}>
                       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="2" y="6" width="14" height="12" rx="3" ry="3" />
-                        <path d="M16 10l5-3v10l-5-3" />
+                        <path d="M23 7l-7 5 7 5V7z" />
+                        <rect x="1" y="5" width="15" height="14" rx="3" ry="3" />
                       </svg>
                     </button>
                   </div>
