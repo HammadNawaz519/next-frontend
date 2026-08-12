@@ -865,6 +865,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         }
 
         const isMedia = msg.type === 'image' || msg.type === 'video';
+        const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
         return (
           <div
@@ -938,7 +939,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                   }}
                 >
                   <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                  {isSent && (
+                  {isSent && !isDeletedMsg && (
                     <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`} style={{ color: msg.isSeen ? '#38bdf8' : '#ffffff' }}>
                       <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
                         <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
@@ -971,7 +972,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                     <span style={{ flex: '1 1 auto' }}>{msg.content}</span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', opacity: 0.75, flexShrink: 0, marginLeft: 'auto', alignSelf: 'flex-end', paddingBottom: '1px' }}>
                       <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                      {isSent && (
+                      {isSent && !isDeletedMsg && (
                         <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
                           <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                             <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
@@ -983,7 +984,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                 ) : (
                   <div className="time-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '3px', fontSize: '0.68rem', opacity: 0.75 }}>
                     <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                    {isSent && (
+                    {isSent && !isDeletedMsg && (
                       <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                           <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
@@ -2109,6 +2110,53 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
       });
 
+      newSocket.on('receive_social_reaction', ({ messageId, emoji, userId }: any) => {
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id === messageId) {
+              const existingReactions = m.reactions || [];
+              const userHasReacted = existingReactions.find(
+                (r: any) => String(r.userId) === String(userId) && r.emoji === emoji
+              );
+              let newReactions;
+              if (userHasReacted) {
+                newReactions = existingReactions.filter(
+                  (r: any) => !(String(r.userId) === String(userId) && r.emoji === emoji)
+                );
+              } else {
+                newReactions = [...existingReactions, { emoji, userId }];
+              }
+              return { ...m, reactions: newReactions };
+            }
+            return m;
+          })
+        );
+        setMessagesCache((prev) => {
+          const updated = { ...prev };
+          Object.keys(updated).forEach((key) => {
+            updated[key] = updated[key].map((m) => {
+              if (m.id === messageId) {
+                const existingReactions = m.reactions || [];
+                const userHasReacted = existingReactions.find(
+                  (r: any) => String(r.userId) === String(userId) && r.emoji === emoji
+                );
+                let newReactions;
+                if (userHasReacted) {
+                  newReactions = existingReactions.filter(
+                    (r: any) => !(String(r.userId) === String(userId) && r.emoji === emoji)
+                  );
+                } else {
+                  newReactions = [...existingReactions, { emoji, userId }];
+                }
+                return { ...m, reactions: newReactions };
+              }
+              return m;
+            });
+          });
+          return updated;
+        });
+      });
+
       newSocket.on('receive_chat_theme', ({ themeId, senderId, senderEmail }: any) => {
         if (themeId) {
           setChatThemes(prev => {
@@ -3017,24 +3065,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const handleReact = async (msgId: string, emoji: string) => {
+    const myId = (session?.user as any)?.id || (session?.user as any)?.email;
+
     // Local optimistic update
     setMessages(prev => prev.map(m => {
       if (m.id === msgId) {
         const existingReactions = m.reactions || [];
-        const userHasReacted = existingReactions.find((r: any) => r.userId === (session?.user as any)?.id && r.emoji === emoji);
+        const userHasReacted = existingReactions.find((r: any) => String(r.userId) === String(myId) && r.emoji === emoji);
         let newReactions;
         if (userHasReacted) {
           // Remove reaction
-          newReactions = existingReactions.filter((r: any) => !(r.userId === (session?.user as any)?.id && r.emoji === emoji));
+          newReactions = existingReactions.filter((r: any) => !(String(r.userId) === String(myId) && r.emoji === emoji));
         } else {
           // Add reaction
-          newReactions = [...existingReactions, { emoji, userId: (session?.user as any)?.id }];
+          newReactions = [...existingReactions, { emoji, userId: myId }];
         }
         return { ...m, reactions: newReactions };
       }
       return m;
     }));
-    socket?.emit('react_social_message', { messageId: msgId, emoji, receiverEmail: selectedUser?.email });
+    socket?.emit('react_social_message', { messageId: msgId, emoji, userId: myId, receiverEmail: selectedUser?.email, receiverId: selectedUser?.id });
     await reactToSocialMessage(msgId, emoji);
   };
 
