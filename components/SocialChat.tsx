@@ -708,6 +708,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
   const isSwipingHorizontally = useRef<boolean | null>(null);
+  const effectiveSwipeOffset = swipeOffset !== 0 ? swipeOffset : (chatSwipeOffset || 0);
 
   // Long-press
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
