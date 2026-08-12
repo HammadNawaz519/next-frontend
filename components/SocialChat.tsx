@@ -122,14 +122,13 @@ export const formatDateSeparator = (date: Date): string => {
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase();
-  if (diffDays === 0) return timeStr;
+  if (diffDays === 0) return 'TODAY';
+  if (diffDays === 1) return 'YESTERDAY';
   if (diffDays < 7) {
-    const dayStr = d.toLocaleDateString([], { weekday: 'short' }).toUpperCase();
-    return `${dayStr} ${timeStr}`;
+    return d.toLocaleDateString([], { weekday: 'short' }).toUpperCase();
   }
   const monthStr = d.toLocaleDateString([], { month: 'short' }).toUpperCase();
-  return `${monthStr} ${d.getDate()}, ${timeStr}`;
+  return `${monthStr} ${d.getDate()}`;
 };
 
 export const FONT_OPTIONS = [
@@ -749,6 +748,49 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
     if (longPressTimeout.current) { clearTimeout(longPressTimeout.current); longPressTimeout.current = null; }
   };
 
+  const mouseStartX = useRef(0);
+  const mouseStartY = useRef(0);
+  const isDraggingMouse = useRef(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (isInSelectionMode || e.button !== 0) return;
+    handlePointerDown(e);
+    isDraggingMouse.current = true;
+    mouseStartX.current = e.clientX;
+    mouseStartY.current = e.clientY;
+
+    const handleMouseMoveWindow = (moveEv: MouseEvent) => {
+      handlePointerMove();
+      if (!isDraggingMouse.current) return;
+      const diffX = moveEv.clientX - mouseStartX.current;
+      const diffY = moveEv.clientY - mouseStartY.current;
+
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 6) {
+        setIsSwiping(true);
+        const clampedOffset = diffX > 0 ? Math.min(diffX * 0.65, 100) : Math.max(diffX * 0.75, -95);
+        setSwipeOffset(clampedOffset);
+      }
+    };
+
+    const handleMouseUpWindow = () => {
+      isDraggingMouse.current = false;
+      window.removeEventListener('mousemove', handleMouseMoveWindow);
+      window.removeEventListener('mouseup', handleMouseUpWindow);
+      handlePointerUp();
+      setSwipeOffset(prev => {
+        if (prev > 45) {
+          if (navigator.vibrate) navigator.vibrate(30);
+          onReply(msg);
+        }
+        return 0;
+      });
+      setIsSwiping(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMoveWindow);
+    window.addEventListener('mouseup', handleMouseUpWindow);
+  };
+
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -790,7 +832,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
 
   const handleTouchEnd = () => {
     handlePointerUp();
-    if (swipeOffset > 50) {
+    if (swipeOffset > 45) {
       if (navigator.vibrate) navigator.vibrate(30);
       onReply(msg);
     }
@@ -822,10 +864,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
     <div
       className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${isSelected ? 'selected-item' : ''} animate-in slide-in-from-bottom-2 duration-300 relative`}
       onClick={handleMessageClick}
-      onMouseDown={handlePointerDown}
-      onMouseMove={handlePointerMove}
-      onMouseUp={handlePointerUp}
-      onMouseLeave={handlePointerUp}
+      onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -848,6 +887,37 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           : 'none',
       }}
     >
+      {/* Drag to reply visual animation indicator */}
+      {Math.abs(effectiveSwipeOffset) > 4 && (
+        <div
+          className="swipe-reply-indicator"
+          style={{
+            position: 'absolute',
+            left: isSent ? 'auto' : '-34px',
+            right: isSent ? '-34px' : 'auto',
+            top: '50%',
+            transform: `translateY(-50%) scale(${Math.min(Math.abs(effectiveSwipeOffset) / 40, 1.15)}) rotate(${effectiveSwipeOffset > 0 ? Math.min(effectiveSwipeOffset * 1.5, 45) : 0}deg)`,
+            opacity: Math.min(Math.abs(effectiveSwipeOffset) / 30, 1),
+            transition: isSwiping ? 'none' : 'all 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            background: 'var(--dm-bg-active, #262626)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#ffffff',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+            pointerEvents: 'none',
+            zIndex: 10,
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 14 4 9 9 4"></polyline>
+            <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+          </svg>
+        </div>
+      )}
       {!isSent && !isAI && (
         <img
           src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.avif'}
@@ -3419,16 +3489,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </div>
                   )}
                   {(() => {
-                    let lastMsgTime: number | null = null;
                     const filteredMessages = messages.filter(msg => msg.type !== 'accepted');
                     return filteredMessages.map((msg, index) => {
                       const prevMsg = filteredMessages[index - 1];
                       const nextMsg = filteredMessages[index + 1];
                       const isPrevSameSender = prevMsg && String(prevMsg.senderId) === String(msg.senderId);
                       const isNextSameSender = nextMsg && String(nextMsg.senderId) === String(msg.senderId);
-                      const msgTime = new Date(msg.createdAt).getTime();
-                      const showSep = lastMsgTime === null || (msgTime - lastMsgTime) > 15 * 60 * 1000;
-                      if (showSep) lastMsgTime = msgTime;
+                      const showSep = !prevMsg || new Date(prevMsg.createdAt).toDateString() !== new Date(msg.createdAt).toDateString();
                       return (
                         <React.Fragment key={msg.id}>
                           {showSep && (
@@ -3630,7 +3697,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             }}
                             title={isRecording ? 'Send voice note' : 'Send'}
                           >
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '-1px', marginTop: '1px' }}>
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                               <line x1="22" y1="2" x2="11" y2="13" />
                               <polygon points="22 2 15 22 11 13 2 9 22 2" />
                             </svg>

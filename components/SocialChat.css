@@ -2075,12 +2075,15 @@
   max-width: 100% !important;
   margin-right: 0 !important;
   border: none !important;
+  align-items: center !important;
 }
 
 .social-chat-container .ig-cam-container,
 .social-chat-container .ig-send-container,
 .social-chat-container .ig-mic-container {
   background: #262626 !important;
+  align-self: center !important;
+  margin: auto 0 !important;
 }
 
 .social-chat-container .ig-cam-btn,
