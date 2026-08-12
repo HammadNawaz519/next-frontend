@@ -548,14 +548,14 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
 
       return (
         <div className="w-full flex justify-center my-2 text-center px-4 animate-in fade-in duration-300 pointer-events-none">
-          <span className="text-[11px] font-medium text-[var(--dm-text-muted)] pointer-events-auto">
+          <span className="text-[11px] font-semibold text-[var(--dm-text-primary)] pointer-events-auto">
             {baseText}.{' '}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 if (onOpenThemePicker) onOpenThemePicker();
               }}
-              className="font-semibold no-underline hover:opacity-80 cursor-pointer text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] ml-1 transition-colors"
+              className="font-bold underline hover:opacity-80 cursor-pointer text-[var(--dm-text-primary)] ml-1 transition-colors"
             >
               Customize chat
             </button>

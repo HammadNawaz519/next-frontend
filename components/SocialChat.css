@@ -2134,14 +2134,15 @@
   background-repeat: no-repeat !important;
 }
 
-/* Glassmorphic Top Header (Translucent overlay tint, backdrop blur & contrast luminance) */
+/* Glassmorphic Top Header (Translucent overlay tint, backdrop blur, contrast luminance & no bottom line) */
 .social-chat-container .chat-header {
   position: sticky;
   top: 0;
   z-index: 50;
+  border-bottom: none !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
-  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 .social-chat-container .chat-header .header-action-btn,
@@ -2154,26 +2155,26 @@
 .social-chat-container .theme-love-u .chat-header {
   background: rgba(255, 225, 235, 0.4) !important;
   color: #590d22 !important;
-  border-bottom: 1px solid rgba(89, 13, 34, 0.15) !important;
+  border-bottom: none !important;
 }
 
 [data-theme="dark"] .social-chat-container .theme-love .chat-header,
 [data-theme="dark"] .social-chat-container .theme-love-u .chat-header {
   background: rgba(65, 20, 36, 0.5) !important;
   color: #ffffff !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-bottom: none !important;
 }
 
 .social-chat-container .theme-whale .chat-header {
   background: rgba(210, 235, 248, 0.4) !important;
   color: #073b68 !important;
-  border-bottom: 1px solid rgba(7, 59, 104, 0.15) !important;
+  border-bottom: none !important;
 }
 
 [data-theme="dark"] .social-chat-container .theme-whale .chat-header {
   background: rgba(18, 38, 58, 0.5) !important;
   color: #ffffff !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-bottom: none !important;
 }
 
 /* Footer Chrome Container (Completely transparent background — no white behind typebox) */
