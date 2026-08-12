@@ -929,6 +929,34 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                     onContextMenu={e => { e.preventDefault(); e.stopPropagation(); handleContextMenu(e); }}
                   />
                 )}
+                <div
+                  className="time-row media-time-row"
+                  style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    right: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.65rem',
+                    color: '#ffffff',
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    padding: '3px 7px',
+                    borderRadius: '12px',
+                    backdropFilter: 'blur(6px)',
+                    pointerEvents: 'none',
+                    zIndex: 2,
+                  }}
+                >
+                  <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                  {isSent && !isDeletedMsg && (
+                    <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`} style={{ color: msg.isSeen ? '#38bdf8' : '#ffffff' }}>
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                        <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+                      </svg>
+                    </span>
+                  )}
+                </div>
               </div>
             ) : (
               <>
@@ -949,9 +977,30 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                     </div>
                   </div>
                 )}
-                {msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' && (
-                  <div style={{ fontSize: '0.98rem', lineHeight: '1.45', wordBreak: 'break-word' }}>
-                    <span>{msg.content}</span>
+                {msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
+                  <div style={{ fontSize: '0.98rem', lineHeight: '1.45', wordBreak: 'break-word', display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: '8px', justifyContent: 'space-between' }}>
+                    <span style={{ flex: '1 1 auto' }}>{msg.content}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', opacity: 0.75, flexShrink: 0, marginLeft: 'auto', alignSelf: 'flex-end', paddingBottom: '1px' }}>
+                      <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                      {isSent && !isDeletedMsg && (
+                        <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                            <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+                          </svg>
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="time-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '3px', fontSize: '0.68rem', opacity: 0.75 }}>
+                    <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                    {isSent && !isDeletedMsg && (
+                      <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                          <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+                        </svg>
+                      </span>
+                    )}
                   </div>
                 )}
               </>
@@ -972,44 +1021,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         );
       })()}
 
-      {/* Instagram DM Revealed Timestamp (Spacious positioning) */}
-      {(() => {
-        const effectiveSwipeOffset = swipeOffset !== 0 ? swipeOffset : (chatSwipeOffset || 0);
-        const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
-        return (
-          <div
-            className="ig-time-reveal"
-            style={{
-              position: 'absolute',
-              right: '16px',
-              top: '50%',
-              transform: `translateY(-50%) translateX(${Math.max(0, 95 + (effectiveSwipeOffset < 0 ? effectiveSwipeOffset : -effectiveSwipeOffset))}px)`,
-              opacity: Math.min(1, Math.abs(effectiveSwipeOffset) / 28),
-              fontSize: '0.73rem',
-              fontWeight: 600,
-              color: 'var(--dm-text-muted)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              pointerEvents: 'none',
-              transition: (isSwiping || (chatSwipeOffset && chatSwipeOffset !== 0))
-                ? 'none'
-                : 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.2s ease',
-              whiteSpace: 'nowrap',
-              zIndex: 5,
-            }}
-          >
-            <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-            {isSent && !isDeletedMsg && (
-              <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`} style={{ color: msg.isSeen ? '#38bdf8' : 'currentColor' }}>
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                  <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-                </svg>
-              </span>
-            )}
-          </div>
-        );
-      })()}
+
 
       {/* Reaction bubbles (below the message) */}
       {Object.keys(reactionCounts).length > 0 && (
