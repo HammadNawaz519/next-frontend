@@ -2119,34 +2119,60 @@
   background-repeat: no-repeat !important;
 }
 
-/* Glassmorphic Top Header (Transparent + Blur so wallpaper picture is visible behind) */
+/* Glassmorphic Top Header (Translucent overlay tint, backdrop blur & contrast luminance) */
 .social-chat-container .chat-header {
-  background: transparent !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
-[data-theme="dark"] .social-chat-container .chat-header {
-  background: transparent !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+.social-chat-container .chat-header .header-action-btn,
+.social-chat-container .chat-header .name,
+.social-chat-container .chat-header svg {
+  color: inherit !important;
 }
 
-/* Footer Chrome Container (Remove any white background behind type box) */
+.social-chat-container .theme-love .chat-header {
+  background: rgba(255, 225, 235, 0.4) !important;
+  color: #590d22 !important;
+  border-bottom: 1px solid rgba(89, 13, 34, 0.15) !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-love .chat-header {
+  background: rgba(65, 20, 36, 0.5) !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.social-chat-container .theme-whale .chat-header {
+  background: rgba(210, 235, 248, 0.4) !important;
+  color: #073b68 !important;
+  border-bottom: 1px solid rgba(7, 59, 104, 0.15) !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-whale .chat-header {
+  background: rgba(18, 38, 58, 0.5) !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Footer Chrome Container (Completely transparent background — no white behind typebox) */
 .social-chat-container .footer {
   padding: 8px 16px 16px !important;
   background: transparent !important;
-  border-top: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 /* --------------------------------------------------------------------------
    LOVE THEME (LIGHT MODE - DEFAULT)
    - Sent msg: Dark color of picture (#700b2b)
    - Recv msg: Light color of picture (#ffe5ec)
-   - Typebox: Light color of picture (#ffe5ec)
-   - Cam & Send buttons: Dark color (#700b2b)
+   - Typebox: Light color mixed with grey (rgba(245, 218, 226, 0.92))
+   - Cam & Send buttons: Dark color of picture (#700b2b)
    - Cam & Send SVGs: Light color (#ffffff)
    -------------------------------------------------------------------------- */
 .social-chat-container .theme-love .msg.sent {
@@ -2163,7 +2189,7 @@
 }
 
 .social-chat-container .theme-love .ig-type-box {
-  background: rgba(255, 225, 235, 0.92) !important;
+  background: rgba(245, 218, 226, 0.92) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
 }
@@ -2179,6 +2205,7 @@
 .social-chat-container .theme-love .ig-cam-container,
 .social-chat-container .theme-love .ig-send-container {
   background: #700b2b !important;
+  border: 1px solid #700b2b !important;
 }
 
 .social-chat-container .theme-love .ig-cam-btn,
@@ -2191,7 +2218,7 @@
    LOVE THEME (DARK MODE)
    - Sent msg: Light color of picture (#ff7597)
    - Recv msg: Dark color of picture (#4d0522)
-   - Typebox: Dark color of picture (#4d0522 / rgba(77, 5, 34, 0.85))
+   - Typebox: Dark color of picture mixed with grey (rgba(65, 20, 36, 0.88))
    - Cam & Send buttons: Light color (#ff7597)
    - Cam & Send SVGs: Dark color (#4d0522)
    -------------------------------------------------------------------------- */
@@ -2209,7 +2236,7 @@
 }
 
 [data-theme="dark"] .social-chat-container .theme-love .ig-type-box {
-  background: rgba(77, 5, 34, 0.85) !important;
+  background: rgba(65, 20, 36, 0.88) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
 }
@@ -2225,6 +2252,7 @@
 [data-theme="dark"] .social-chat-container .theme-love .ig-cam-container,
 [data-theme="dark"] .social-chat-container .theme-love .ig-send-container {
   background: #ff7597 !important;
+  border: 1px solid #ff7597 !important;
 }
 
 [data-theme="dark"] .social-chat-container .theme-love .ig-cam-btn,
@@ -2238,7 +2266,7 @@
    WHALE THEME (LIGHT MODE - DEFAULT)
    - Sent msg: Dark color of picture (#073b68)
    - Recv msg: Light color of picture (#e0f2fe)
-   - Typebox: Light color of picture (#e0f2fe)
+   - Typebox: Light color mixed with grey (rgba(210, 235, 248, 0.92))
    - Cam & Send buttons: Dark color (#073b68)
    - Cam & Send SVGs: Light color (#ffffff)
    -------------------------------------------------------------------------- */
@@ -2256,7 +2284,7 @@
 }
 
 .social-chat-container .theme-whale .ig-type-box {
-  background: rgba(215, 242, 255, 0.92) !important;
+  background: rgba(210, 235, 248, 0.92) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
 }
@@ -2272,6 +2300,7 @@
 .social-chat-container .theme-whale .ig-cam-container,
 .social-chat-container .theme-whale .ig-send-container {
   background: #073b68 !important;
+  border: 1px solid #073b68 !important;
 }
 
 .social-chat-container .theme-whale .ig-cam-btn,
@@ -2284,7 +2313,7 @@
    WHALE THEME (DARK MODE)
    - Sent msg: Light color of picture (#38bdf8)
    - Recv msg: Dark color of picture (#092038)
-   - Typebox: Dark color of picture (#092038 / rgba(9, 32, 56, 0.85))
+   - Typebox: Dark color of picture mixed with grey (rgba(18, 38, 58, 0.88))
    - Cam & Send buttons: Light color (#38bdf8)
    - Cam & Send SVGs: Dark color (#061729)
    -------------------------------------------------------------------------- */
@@ -2302,7 +2331,7 @@
 }
 
 [data-theme="dark"] .social-chat-container .theme-whale .ig-type-box {
-  background: rgba(9, 32, 56, 0.85) !important;
+  background: rgba(18, 38, 58, 0.88) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
 }
@@ -2318,6 +2347,7 @@
 [data-theme="dark"] .social-chat-container .theme-whale .ig-cam-container,
 [data-theme="dark"] .social-chat-container .theme-whale .ig-send-container {
   background: #38bdf8 !important;
+  border: 1px solid #38bdf8 !important;
 }
 
 [data-theme="dark"] .social-chat-container .theme-whale .ig-cam-btn,

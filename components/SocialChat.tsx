@@ -2973,7 +2973,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     title="View Chat Info & Details"
                   >
                     <button
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', marginRight: '10px', flexShrink: 0 }}
+                      className="header-action-btn"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', marginRight: '10px', flexShrink: 0 }}
                       onClick={(e) => { e.stopPropagation(); handleChatBack(e); }}
                     >
                       <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -3009,7 +3010,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           const ago = formatLastSeenAgo(lastSeenVal);
                           if (!ago) return null;
                           return (
-                            <span style={{ fontSize: '11px', color: 'var(--dm-text-muted)' }}>
+                            <span style={{ fontSize: '11px', opacity: 0.75 }}>
                               Active {ago}
                             </span>
                           );
@@ -3022,6 +3023,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <button
                         title="Accept Request"
                         onClick={handleAcceptRequest}
+                        className="header-action-btn"
                         style={{
                           width: '40px',
                           height: '40px',
@@ -3031,7 +3033,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           justifyContent: 'center',
                           background: 'var(--dm-bg-hover)',
                           border: '1px solid var(--dm-border)',
-                          color: 'var(--dm-text-primary)',
                           cursor: 'pointer',
                           flexShrink: 0,
                           transition: 'all 0.2s'
@@ -3046,13 +3047,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       </button>
                     )}
                     {/* Monochrome Audio Call Button */}
-                    <button onClick={() => handleCall('audio')} title="Audio Call" style={{ background: 'transparent', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', marginLeft: '12px' }}>
+                    <button onClick={() => handleCall('audio')} title="Audio Call" className="header-action-btn" style={{ background: 'transparent', border: 'none', cursor: 'pointer', marginLeft: '12px' }}>
                       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                       </svg>
                     </button>
                     {/* Monochrome Video Call Button */}
-                    <button onClick={() => handleCall('video')} title="Video Call" style={{ background: 'transparent', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', marginLeft: '12px' }}>
+                    <button onClick={() => handleCall('video')} title="Video Call" className="header-action-btn" style={{ background: 'transparent', border: 'none', cursor: 'pointer', marginLeft: '12px' }}>
                       <svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M23 7l-7 5 7 5V7z" />
                         <rect x="1" y="5" width="15" height="14" rx="3" ry="3" />
