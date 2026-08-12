@@ -370,6 +370,8 @@ const IGMessageOverlay = ({
     </button>
   );
 
+  const isMedia = msg.type === 'image' || msg.type === 'video';
+
   return (
     <div
       ref={overlayRef}
@@ -407,10 +409,12 @@ const IGMessageOverlay = ({
           transformOrigin: isSent ? 'right center' : 'left center',
           transition: 'transform 0.22s ease-out',
           borderRadius: '1.25rem',
-          background: isSent
-            ? outgoingGradient
-            : incomingBubbleColor,
-          boxShadow: `0 12px 35px ${accentColor}40, 0 4px 15px rgba(0,0,0,0.25)`,
+          background: isMedia
+            ? 'transparent'
+            : (isSent ? outgoingGradient : incomingBubbleColor),
+          boxShadow: isMedia
+            ? '0 8px 30px rgba(0,0,0,0.3)'
+            : `0 12px 35px ${accentColor}40, 0 4px 15px rgba(0,0,0,0.25)`,
           opacity: 0.95,
           zIndex: 1,
         }}
@@ -423,17 +427,17 @@ const IGMessageOverlay = ({
           position: 'absolute',
           top: reactionBarTop,
           left: reactionBarLeft,
-          maxWidth: 'calc(100vw - 24px)',
+          maxWidth: 'min(390px, calc(100vw - 24px))',
           width: 'fit-content',
-          height: '52px',
+          height: '48px',
           background: reactionBg,
-          borderRadius: '26px',
+          borderRadius: '24px',
           border: `1.5px solid ${menuBorder}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '3px',
-          padding: '0 10px',
+          gap: '2px',
+          padding: '0 8px',
           boxShadow: `0 14px 38px rgba(0,0,0,0.3), 0 0 20px ${accentColor}30`,
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
@@ -456,9 +460,9 @@ const IGMessageOverlay = ({
                 border: alreadyReacted ? `1.5px solid ${accentColor}` : '1.5px solid transparent',
                 color: alreadyReacted ? '#ffffff' : 'inherit',
                 borderRadius: '50%',
-                width: '40px',
-                height: '40px',
-                fontSize: '21px',
+                width: '36px',
+                height: '36px',
+                fontSize: '18px',
                 lineHeight: 1,
                 display: 'flex',
                 alignItems: 'center',
@@ -468,9 +472,9 @@ const IGMessageOverlay = ({
                 flexShrink: 0,
                 boxShadow: alreadyReacted ? `0 4px 12px ${accentColor}50` : 'none',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.3)'; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
-              onTouchStart={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.3)'; }}
+              onTouchStart={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)'; }}
               onTouchEnd={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
             >
               {emoji}
@@ -481,11 +485,11 @@ const IGMessageOverlay = ({
         <button
           onClick={() => setShowPicker(p => !p)}
           style={{
-            background: 'transparent',
-            border: '1.5px solid transparent',
+            background: showPicker ? `${accentColor}30` : 'transparent',
+            border: showPicker ? `1.5px solid ${accentColor}` : '1.5px solid transparent',
             borderRadius: '50%',
-            width: '40px',
-            height: '40px',
+            width: '36px',
+            height: '36px',
             fontSize: '18px',
             lineHeight: 1,
             display: 'flex',
@@ -503,6 +507,73 @@ const IGMessageOverlay = ({
           ＋
         </button>
       </div>
+
+      {/* Extended Emoji Picker Grid Modal */}
+      {showPicker && (
+        <div
+          style={{
+            position: 'absolute',
+            top: reactionBarTop + REACTION_BAR_H + 8 > vh - 220 ? Math.max(10, reactionBarTop - 215) : reactionBarTop + REACTION_BAR_H + 8,
+            left: Math.max(12, Math.min(reactionBarLeft, vw - 312)),
+            width: '300px',
+            maxHeight: '210px',
+            background: menuBg,
+            borderRadius: '20px',
+            border: `1.5px solid ${menuBorder}`,
+            boxShadow: `0 20px 50px rgba(0,0,0,0.35), 0 0 20px ${accentColor}25`,
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            padding: '10px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7, 1fr)',
+            gap: '6px',
+            overflowY: 'auto',
+            zIndex: 10,
+          }}
+          className="no-scrollbar animate-in zoom-in-95 duration-150"
+        >
+          {[
+            '❤️', '😂', '😮', '😢', '😡', '👍', '🙏', '🔥',
+            '🥳', '✨', '💯', '🎉', '🤩', '😍', '😭', '💀',
+            '💩', '🤡', '👏', '🙌', '🤝', '💡', '💎', '🚀',
+            '👑', '🦄', '🌈', '🌸', '⚡', '🎯', '🖤', '💜',
+            '💙', '💚', '💛', '🧡', '💖', '🤍', '💘', '💌',
+            '🤐', '🤔', '🧐', '🫠', '😈', '😇', '👀', '🤙',
+            '💪', '🧠', '⭐', '🎈', '🍾', '🥂', '🍹', '🍕'
+          ].map(emoji => (
+            <button
+              key={emoji}
+              onClick={() => {
+                onReact(msg.id, emoji);
+                handleClose();
+              }}
+              style={{
+                width: '36px',
+                height: '36px',
+                fontSize: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'transform 0.15s ease, background 0.15s',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)';
+                (e.currentTarget as HTMLElement).style.background = hoverBg;
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
+                (e.currentTarget as HTMLElement).style.background = 'transparent';
+              }}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Action Menu */}
       <div
@@ -4288,7 +4359,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         >
           <button
             onClick={() => setLightboxImageSrc(null)}
-            className="absolute top-6 left-5 md:top-8 md:left-8 w-11 h-11 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 text-white flex items-center justify-center cursor-pointer transition-all active:scale-90 backdrop-blur-md shadow-lg z-10"
+            className="absolute top-12 left-5 md:top-14 md:left-8 w-11 h-11 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 text-white flex items-center justify-center cursor-pointer transition-all active:scale-90 backdrop-blur-md shadow-lg z-10"
             title="Go back"
           >
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
