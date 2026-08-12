@@ -888,6 +888,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.avif'}
           alt=""
           className="msg-small-avatar"
+          style={{ visibility: isNextSameSender ? 'hidden' : 'visible' }}
           referrerPolicy="no-referrer"
         />
       )}

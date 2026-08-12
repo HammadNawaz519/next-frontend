@@ -282,8 +282,8 @@
 .social-chat-container .msg-wrapper.received,
 .social-chat-container .msg-wrapper.ai {
   margin-right: auto;
-  margin-left: 36px;
-  align-items: flex-start;
+  margin-left: 0;
+  align-items: flex-end;
   position: relative;
 }
 
@@ -1853,16 +1853,18 @@
    SMALL SENDER AVATAR BESIDE RECEIVED MESSAGES
    ========================================= */
 .social-chat-container .msg-small-avatar {
-  position: absolute;
-  left: -33px;
-  top: 4px;
-  width: 26px;
-  height: 26px;
+  position: relative;
+  left: 0;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
   border-radius: 50%;
   object-fit: cover;
   display: block;
   flex-shrink: 0;
-  overflow: hidden;
+  align-self: flex-end;
+  margin-bottom: 2px;
   background: var(--dm-bg-active);
 }
 
@@ -1929,10 +1931,6 @@
   .social-chat-container .footer {
     padding: 6px 10px 12px;
     gap: 6px;
-  }
-  .social-chat-container .msg-wrapper.received,
-  .social-chat-container .msg-wrapper.ai {
-    margin-left: 34px;
   }
 }
 
