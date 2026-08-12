@@ -142,7 +142,30 @@ export const FONT_OPTIONS = [
   { id: 'signature', name: 'Signature', family: "'Caveat', 'Dancing Script', cursive" }
 ];
 
-
+export const detectThemeIdFromMessages = (msgs: any[]): string | null => {
+  if (!Array.isArray(msgs) || msgs.length === 0) return null;
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i];
+    if (!m || !m.content) continue;
+    const content = String(m.content);
+    const isThemeMsg = m.type === 'system' || content.toLowerCase().includes('changed the theme to') || content.toLowerCase().includes('set theme to');
+    if (isThemeMsg) {
+      const tagMatch = content.match(/\[theme:([a-zA-Z0-9_-]+)\]/i);
+      if (tagMatch && tagMatch[1]) {
+        return tagMatch[1];
+      }
+      const lowerContent = content.toLowerCase();
+      const sortedThemes = [...INSTAGRAM_THEMES].sort((a, b) => b.name.length - a.name.length);
+      for (const theme of sortedThemes) {
+        const cleanName = theme.name.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim().toLowerCase();
+        if (cleanName && lowerContent.includes(cleanName)) {
+          return theme.id;
+        }
+      }
+    }
+  }
+  return null;
+};
 
 // ─── Instagram DM-style Message Overlay ────────────────────────────────────
 
@@ -543,7 +566,11 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
     const isThemeSystemMsg = msg.content.toLowerCase().includes('theme to') || msg.content.toLowerCase().includes('customize chat');
     
     if (isThemeSystemMsg) {
-      let baseText = msg.content.replace(/\.\s*Customize chat$/i, '').replace(/\s*Customize chat$/i, '');
+      let baseText = msg.content
+        .replace(/\[theme:[a-zA-Z0-9_-]+\]/gi, '')
+        .replace(/\.\s*Customize chat$/i, '')
+        .replace(/\s*Customize chat$/i, '')
+        .trim();
       baseText = baseText.replace(/set theme to/i, 'changed the theme to');
 
       return (
@@ -743,24 +770,30 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           else bubbleBorderRadius = '18px 18px 18px 4px';
         }
 
+        const isMedia = msg.type === 'image' || msg.type === 'video';
+
         return (
           <div
             ref={bubbleRef}
-            className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''}`}
+            className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''} ${isMedia ? 'media-msg' : ''}`}
             style={{
               order: isSent ? 2 : 1,
               width: 'fit-content',
               maxWidth: '70%',
-              borderRadius: bubbleBorderRadius,
+              borderRadius: isMedia ? '1.25rem' : bubbleBorderRadius,
               marginTop: isPrevSameSender ? '2px' : '6px',
               transition: isSwiping ? 'none' : 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.18s, background 0.3s ease, color 0.3s ease',
               transform: swipeOffset > 0
                 ? `translateX(${swipeOffset}px)`
                 : isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
-              background: isSent
+              background: isMedia ? 'transparent' : (isSent
                 ? (activeTheme?.id !== 'default' ? activeTheme?.outgoingGradient : 'linear-gradient(135deg, #3797F0 0%, #833AB4 50%, #C13584 100%)')
-                : (activeTheme?.id !== 'default' ? activeTheme?.incomingBubbleColor : undefined),
+                : (activeTheme?.id !== 'default' ? activeTheme?.incomingBubbleColor : undefined)),
               color: isSent ? '#ffffff' : (activeTheme?.id !== 'default' ? activeTheme?.incomingTextColor : undefined),
+              border: isMedia ? 'none' : undefined,
+              boxShadow: isMedia ? 'none' : undefined,
+              padding: isMedia ? '0px' : undefined,
+              position: 'relative',
             }}
           >
             {msg.replyTo && (
@@ -770,57 +803,92 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
               </div>
             )}
             {isAI && <div className="system-sender">AI Assistant</div>}
-            {msg.type === 'image' && (
-              <img
-                src={msg.content}
-                alt="media"
-                className="cursor-pointer hover:opacity-95 transition-opacity"
-                onClick={e => { e.stopPropagation(); if (onPreviewImage) onPreviewImage(msg.content); else window.open(msg.content, '_blank'); }}
-              />
-            )}
-            {msg.type === 'video' && <video src={msg.content} controls />}
-            {msg.type === 'voice' && <audio src={msg.content} controls />}
-            {msg.type === 'call' && (
-              <div className="call-log-msg">
-                <div className={`call-icon ${msg.content.includes('Missed') ? 'missed' : msg.content.includes('rejected') ? 'rejected' : 'completed'}`}>
-                  {msg.content.includes('video') ? (
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
-                  )}
-                  {(msg.content.includes('Missed') || msg.content.includes('rejected')) && <div className="call-status-badge">!</div>}
-                </div>
-                <div className="call-details">
-                  <span className="call-title">{msg.content.split(' • ')[0]}</span>
-                  {msg.content.includes(' • ') && <span className="call-duration">{msg.content.split(' • ')[1]}</span>}
-                </div>
-              </div>
-            )}
-            {msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
-              <div style={{ fontSize: '0.98rem', lineHeight: '1.45', wordBreak: 'break-word', display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: '8px', justifyContent: 'space-between' }}>
-                <span style={{ flex: '1 1 auto' }}>{msg.content}</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', opacity: 0.75, flexShrink: 0, marginLeft: 'auto', alignSelf: 'flex-end', paddingBottom: '1px' }}>
+            {isMedia ? (
+              <div className="relative group rounded-[1.25rem] overflow-hidden" style={{ width: 'fit-content' }}>
+                {msg.type === 'image' && (
+                  <img
+                    src={msg.content}
+                    alt="media"
+                    className="cursor-pointer hover:opacity-95 transition-opacity"
+                    onClick={e => { e.stopPropagation(); if (onPreviewImage) onPreviewImage(msg.content); else window.open(msg.content, '_blank'); }}
+                  />
+                )}
+                {msg.type === 'video' && <video src={msg.content} controls />}
+                <div
+                  className="time-row media-time-row"
+                  style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    right: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.65rem',
+                    color: '#ffffff',
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    padding: '3px 7px',
+                    borderRadius: '12px',
+                    backdropFilter: 'blur(6px)',
+                    pointerEvents: 'none',
+                    zIndex: 2,
+                  }}
+                >
                   <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
                   {isSent && (
-                    <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`} style={{ color: msg.isSeen ? '#38bdf8' : '#ffffff' }}>
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
                         <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
                       </svg>
                     </span>
                   )}
-                </span>
+                </div>
               </div>
             ) : (
-              <div className="time-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '3px', fontSize: '0.68rem', opacity: 0.75 }}>
-                <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                {isSent && (
-                  <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                      <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-                    </svg>
-                  </span>
+              <>
+                {msg.type === 'voice' && <audio src={msg.content} controls />}
+                {msg.type === 'call' && (
+                  <div className="call-log-msg">
+                    <div className={`call-icon ${msg.content.includes('Missed') ? 'missed' : msg.content.includes('rejected') ? 'rejected' : 'completed'}`}>
+                      {msg.content.includes('video') ? (
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
+                      )}
+                      {(msg.content.includes('Missed') || msg.content.includes('rejected')) && <div className="call-status-badge">!</div>}
+                    </div>
+                    <div className="call-details">
+                      <span className="call-title">{msg.content.split(' • ')[0]}</span>
+                      {msg.content.includes(' • ') && <span className="call-duration">{msg.content.split(' • ')[1]}</span>}
+                    </div>
+                  </div>
                 )}
-              </div>
+                {msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
+                  <div style={{ fontSize: '0.98rem', lineHeight: '1.45', wordBreak: 'break-word', display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: '8px', justifyContent: 'space-between' }}>
+                    <span style={{ flex: '1 1 auto' }}>{msg.content}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', opacity: 0.75, flexShrink: 0, marginLeft: 'auto', alignSelf: 'flex-end', paddingBottom: '1px' }}>
+                      <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                      {isSent && (
+                        <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                            <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+                          </svg>
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="time-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '3px', fontSize: '0.68rem', opacity: 0.75 }}>
+                    <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                    {isSent && (
+                      <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                          <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+                        </svg>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </>
             )}
 
             {msgTag && (
@@ -1436,7 +1504,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
 
     const cleanThemeName = theme.name.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
-    const systemText = `${currentUserName} changed the theme to ${cleanThemeName}. Customize chat`;
+    const systemText = `${currentUserName} changed the theme to ${cleanThemeName} [theme:${theme.id}]. Customize chat`;
     const stableId = 'system-theme-' + Date.now() + Math.random().toString(36).substring(7);
     const systemMsg: Message = {
       id: stableId,
@@ -1655,6 +1723,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           }
           return prev;
         });
+
+        // Check for theme change system messages coming via socket
+        const detectedSocketTheme = detectThemeIdFromMessages([msg]);
+        if (detectedSocketTheme && partnerId) {
+          setChatThemes(prev => {
+            const updated = {
+              ...prev,
+              [partnerId]: detectedSocketTheme,
+              ...(selectedUserRef.current?.id === partnerId && selectedUserRef.current?.email ? { [selectedUserRef.current.email.toLowerCase().trim()]: detectedSocketTheme } : {})
+            };
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('chat_themes', JSON.stringify(updated));
+            }
+            return updated;
+          });
+        }
 
         // 1. Update Message Stream safely without duplicates
         setMessages((prev) => {
@@ -2330,6 +2414,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           .filter(m => !deletedMessageIds.has(m.id))
           .filter(m => !m.content || !m.content.startsWith('blob:'));
         setMessages(filteredCached);
+        const detectedCachedTheme = detectThemeIdFromMessages(filteredCached);
+        if (detectedCachedTheme && selectedUser) {
+          setChatThemes(prev => {
+            if (prev[selectedUser.id] === detectedCachedTheme) return prev;
+            const updated = {
+              ...prev,
+              [selectedUser.id]: detectedCachedTheme,
+              ...(selectedUser.email ? { [selectedUser.email.toLowerCase().trim()]: detectedCachedTheme } : {})
+            };
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('chat_themes', JSON.stringify(updated));
+            }
+            return updated;
+          });
+        }
         setIsLoadingMessages(false);
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
@@ -2355,6 +2454,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         setMessages(fresh);
         setMessagesCache(prev => ({ ...prev, [selectedUser.id]: fresh }));
+
+        const detectedFreshTheme = detectThemeIdFromMessages(fresh);
+        if (detectedFreshTheme && selectedUser) {
+          setChatThemes(prev => {
+            if (prev[selectedUser.id] === detectedFreshTheme) return prev;
+            const updated = {
+              ...prev,
+              [selectedUser.id]: detectedFreshTheme,
+              ...(selectedUser.email ? { [selectedUser.email.toLowerCase().trim()]: detectedFreshTheme } : {})
+            };
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('chat_themes', JSON.stringify(updated));
+            }
+            return updated;
+          });
+        }
 
         markMessagesAsSeen(selectedUser.id);
         socket?.emit('mark_as_seen', { senderEmail: selectedUser.email });

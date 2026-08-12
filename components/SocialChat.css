@@ -355,16 +355,26 @@
   color: var(--charcoal);
 }
 
+.social-chat-container .msg.media-msg {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 .social-chat-container .msg img,
 .social-chat-container .msg video {
   width: 100%;
   max-width: 320px;
-  aspect-ratio: 1 / 1;
+  height: calc(320px + 0.2in);
+  max-height: calc(320px + 0.2in);
   object-fit: cover;
-  border-radius: 0.75rem;
-  margin-bottom: 8px;
+  border-radius: 1.25rem;
+  border: none !important;
+  outline: none !important;
+  margin-bottom: 0;
   display: block;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
   background: var(--dm-bg-active);
 }
 
@@ -372,7 +382,9 @@
   .social-chat-container .msg img,
   .social-chat-container .msg video {
     max-width: 240px;
-    border-radius: 0.75rem;
+    height: calc(240px + 0.2in);
+    max-height: calc(240px + 0.2in);
+    border-radius: 1rem;
   }
 }
 
