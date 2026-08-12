@@ -2097,129 +2097,227 @@
 
 
 /* ==========================================================================
-   INSTAGRAM-STYLE CHAT UI OVERRIDES: WALLPAPER, GLASS, MESSAGES & MOTION
+   LOVE & WHALE THEME CUSTOM STYLES (LIGHT & DARK MODE)
    ========================================================================== */
 
-/* 1. Viewport & Stationary Wallpaper */
-.social-chat-container .chat-area,
-.social-chat-container .messages {
-  background-image: url("/bg-light.png") !important;
+/* Wallpapers */
+.social-chat-container .theme-love .messages,
+.social-chat-container .theme-love.chat-area {
+  background-image: url("/Love.jpg") !important;
   background-size: cover !important;
   background-position: center !important;
   background-attachment: fixed !important;
   background-repeat: no-repeat !important;
 }
 
-[data-theme="dark"] .social-chat-container .chat-area,
-[data-theme="dark"] .social-chat-container .messages {
-  background-image: url("/bg-dark.png") !important;
+.social-chat-container .theme-whale .messages,
+.social-chat-container .theme-whale.chat-area {
+  background-image: url("/Whale.jpg") !important;
   background-size: cover !important;
   background-position: center !important;
   background-attachment: fixed !important;
   background-repeat: no-repeat !important;
 }
 
-/* 2. Sent & Received Message Bubbles */
-.social-chat-container .msg.sent {
-  background: linear-gradient(135deg, #3797F0 0%, #833AB4 50%, #C13584 100%) !important;
-  color: #FFFFFF !important;
-  max-width: 70% !important;
-  border-radius: 18px 18px 4px 18px !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-.social-chat-container .msg.received,
-.social-chat-container .msg.ai {
-  background: rgba(240, 240, 240, 0.85) !important;
-  color: #000000 !important;
-  max-width: 70% !important;
-  border-radius: 18px 18px 18px 4px !important;
-  border: none !important;
-  box-shadow: none !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-}
-
-[data-theme="dark"] .social-chat-container .msg.received,
-[data-theme="dark"] .social-chat-container .msg.ai {
-  background: rgba(38, 38, 38, 0.75) !important;
-  color: #FFFFFF !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-}
-
-/* 3. Frosted Glass Header & Typebox Chrome */
-.social-chat-container .chat-header {
-  height: 56px !important;
-  min-height: 56px !important;
-  padding: 0 16px !important;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(255, 255, 255, 0.65) !important;
+/* Header Glassmorphic Blur so wallpaper is visible behind top bar */
+.social-chat-container .theme-love .chat-header,
+.social-chat-container .theme-whale .chat-header {
+  background: rgba(255, 255, 255, 0.28) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
-  position: sticky;
-  top: 0;
-  z-index: 50;
 }
 
-[data-theme="dark"] .social-chat-container .chat-header {
-  background: rgba(18, 18, 18, 0.65) !important;
+[data-theme="dark"] .social-chat-container .theme-love .chat-header,
+[data-theme="dark"] .social-chat-container .theme-whale .chat-header {
+  background: rgba(12, 12, 12, 0.35) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
-.social-chat-container .footer {
-  padding: 8px 16px 16px !important;
-  background: transparent !important;
-  border-top: none !important;
+/* --------------------------------------------------------------------------
+   LOVE THEME (LIGHT MODE - DEFAULT)
+   - Sent msg: Dark color of picture (#700b2b)
+   - Recv msg: Light color of picture (#ffe5ec)
+   - Typebox: Light color of picture (#ffe5ec)
+   - Cam & Send buttons: Dark color (#700b2b)
+   - Cam & Send SVGs: Light color (#ffffff)
+   -------------------------------------------------------------------------- */
+.social-chat-container .theme-love .msg.sent {
+  background: linear-gradient(135deg, #990f3d 0%, #700b2b 100%) !important;
+  color: #ffffff !important;
 }
 
-.social-chat-container .ig-type-box {
-  background: rgba(230, 230, 230, 0.85) !important;
+.social-chat-container .theme-love .msg.received,
+.social-chat-container .theme-love .msg.ai {
+  background: rgba(255, 229, 236, 0.92) !important;
+  color: #590d22 !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+.social-chat-container .theme-love .ig-type-box {
+  background: rgba(255, 225, 235, 0.9) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
-  border-radius: 28px !important;
-  border: none !important;
 }
 
-[data-theme="dark"] .social-chat-container .ig-type-box {
-  background: rgba(26, 26, 26, 0.85) !important;
+.social-chat-container .theme-love .ig-textarea {
+  color: #590d22 !important;
+}
+
+.social-chat-container .theme-love .ig-textarea::placeholder {
+  color: rgba(89, 13, 34, 0.6) !important;
+}
+
+.social-chat-container .theme-love .ig-cam-container,
+.social-chat-container .theme-love .ig-send-container {
+  background: #700b2b !important;
+}
+
+.social-chat-container .theme-love .ig-cam-btn,
+.social-chat-container .theme-love .ig-send-btn,
+.social-chat-container .theme-love .ig-mic-btn {
+  color: #ffffff !important;
+}
+
+/* --------------------------------------------------------------------------
+   LOVE THEME (DARK MODE)
+   - Sent msg: Light color of picture (#ff7597)
+   - Recv msg: Dark color of picture (#4d0522)
+   - Typebox: Dark color of picture (#3d041b)
+   - Cam & Send buttons: Light color (#ff7597)
+   - Cam & Send SVGs: Dark color (#4d0522)
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] .social-chat-container .theme-love .msg.sent {
+  background: linear-gradient(135deg, #ff7597 0%, #ff4d6d 100%) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-love .msg.received,
+[data-theme="dark"] .social-chat-container .theme-love .msg.ai {
+  background: rgba(77, 5, 34, 0.85) !important;
+  color: #ffffff !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-love .ig-type-box {
+  background: rgba(61, 4, 27, 0.85) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
 }
 
-.social-chat-container .ig-cam-container {
-  background: #262626 !important;
+[data-theme="dark"] .social-chat-container .theme-love .ig-textarea {
+  color: #ffffff !important;
 }
 
-.social-chat-container .ig-cam-btn {
-  color: #FFFFFF !important;
+[data-theme="dark"] .social-chat-container .theme-love .ig-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
 }
 
-/* 4. Entrance Motion & Scroll Behavior */
-@keyframes ig-pop-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.92) translateY(6px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+[data-theme="dark"] .social-chat-container .theme-love .ig-cam-container,
+[data-theme="dark"] .social-chat-container .theme-love .ig-send-container {
+  background: #ff7597 !important;
 }
 
-.social-chat-container .msg {
-  animation: ig-pop-in 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+[data-theme="dark"] .social-chat-container .theme-love .ig-cam-btn,
+[data-theme="dark"] .social-chat-container .theme-love .ig-send-btn,
+[data-theme="dark"] .social-chat-container .theme-love .ig-mic-btn {
+  color: #4d0522 !important;
 }
 
-.social-chat-container .messages {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow-y: auto;
-  scroll-behavior: smooth;
+
+/* --------------------------------------------------------------------------
+   WHALE THEME (LIGHT MODE - DEFAULT)
+   - Sent msg: Dark color of picture (#073b68)
+   - Recv msg: Light color of picture (#e0f2fe)
+   - Typebox: Light color of picture (#e0f2fe)
+   - Cam & Send buttons: Dark color (#073b68)
+   - Cam & Send SVGs: Light color (#ffffff)
+   -------------------------------------------------------------------------- */
+.social-chat-container .theme-whale .msg.sent {
+  background: linear-gradient(135deg, #0b4f8a 0%, #073b68 100%) !important;
+  color: #ffffff !important;
+}
+
+.social-chat-container .theme-whale .msg.received,
+.social-chat-container .theme-whale .msg.ai {
+  background: rgba(224, 242, 254, 0.92) !important;
+  color: #073b68 !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+.social-chat-container .theme-whale .ig-type-box {
+  background: rgba(215, 242, 255, 0.9) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+.social-chat-container .theme-whale .ig-textarea {
+  color: #073b68 !important;
+}
+
+.social-chat-container .theme-whale .ig-textarea::placeholder {
+  color: rgba(7, 59, 104, 0.6) !important;
+}
+
+.social-chat-container .theme-whale .ig-cam-container,
+.social-chat-container .theme-whale .ig-send-container {
+  background: #073b68 !important;
+}
+
+.social-chat-container .theme-whale .ig-cam-btn,
+.social-chat-container .theme-whale .ig-send-btn,
+.social-chat-container .theme-whale .ig-mic-btn {
+  color: #ffffff !important;
+}
+
+/* --------------------------------------------------------------------------
+   WHALE THEME (DARK MODE)
+   - Sent msg: Light color of picture (#38bdf8)
+   - Recv msg: Dark color of picture (#092038)
+   - Typebox: Dark color of picture (#061729)
+   - Cam & Send buttons: Light color (#38bdf8)
+   - Cam & Send SVGs: Dark color (#061729)
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] .social-chat-container .theme-whale .msg.sent {
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-whale .msg.received,
+[data-theme="dark"] .social-chat-container .theme-whale .msg.ai {
+  background: rgba(9, 32, 56, 0.85) !important;
+  color: #ffffff !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-whale .ig-type-box {
+  background: rgba(6, 23, 41, 0.85) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-whale .ig-textarea {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-whale .ig-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-whale .ig-cam-container,
+[data-theme="dark"] .social-chat-container .theme-whale .ig-send-container {
+  background: #38bdf8 !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-whale .ig-cam-btn,
+[data-theme="dark"] .social-chat-container .theme-whale .ig-send-btn,
+[data-theme="dark"] .social-chat-container .theme-whale .ig-mic-btn {
+  color: #061729 !important;
 }
 
