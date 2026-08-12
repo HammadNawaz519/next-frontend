@@ -83,10 +83,10 @@
 .social-chat-container .list {
   flex: 1;
   overflow-y: auto;
-  padding: 0 16px 100px; /* Extra bottom space so last item clears the floating nav */
+  padding: 0 8px 100px; /* Extra bottom space so last item clears the floating nav */
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 /* Rounded Scrollbar */
@@ -99,10 +99,10 @@
 }
 
 .social-chat-container .list .item {
-  padding: 14px 16px;
-  border-radius: 50px;
+  padding: 8px 10px;
+  border-radius: 18px;
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
   cursor: pointer;
   background: transparent;
@@ -121,8 +121,8 @@
 }
 
 .social-chat-container .user-pfp {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: var(--dm-bg-active);
   display: flex;
