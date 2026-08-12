@@ -3027,7 +3027,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </button>
                     {/* Monochrome Video Call Button */}
                     <button onClick={() => handleCall('video')} title="Video Call" style={{ background: 'transparent', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', marginLeft: '12px' }}>
-                      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M23 7l-7 5 7 5V7z" />
                         <rect x="1" y="5" width="15" height="14" rx="3" ry="3" />
                       </svg>
@@ -4093,38 +4093,38 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           }}
         >
           <div
-            className="w-full max-w-md bg-[#121212] border-t border-x border-[#262626] rounded-t-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom zoom-in-95 duration-300 font-sans text-white"
+            className="w-full max-w-md bg-[var(--dm-bg-sidebar)] border-t border-x border-[var(--dm-border)] rounded-t-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom zoom-in-95 duration-300 font-sans text-[var(--dm-text-primary)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Sheet Handle Bar */}
             <div className="w-full pt-3 pb-1 flex items-center justify-center">
-              <div className="w-12 h-1.5 rounded-full bg-[#262626]" />
+              <div className="w-12 h-1.5 rounded-full bg-[var(--dm-border)]" />
             </div>
 
             {/* Header */}
-            <div className="px-6 py-3 flex items-center justify-between border-b border-[#262626]">
+            <div className="px-6 py-3 flex items-center justify-between border-b border-[var(--dm-border)]">
               <div>
-                <h3 className="text-base font-extrabold text-white tracking-tight">Customize</h3>
+                <h3 className="text-base font-extrabold text-[var(--dm-text-primary)] tracking-tight">Customize</h3>
               </div>
               <button
                 onClick={() => {
                   setLiveThemeId(null);
                   setShowThemePicker(false);
                 }}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-[#262626] text-zinc-400 hover:text-white transition-colors cursor-pointer text-xs"
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer text-xs"
               >
                 ✕
               </button>
             </div>
 
             {/* Two Box Slider Tabs */}
-            <div className="mx-6 my-3 p-1 rounded-2xl bg-[#1a1a1a] border border-[#262626] flex items-center gap-1 flex-shrink-0">
+            <div className="mx-6 my-3 p-1 rounded-2xl bg-[var(--dm-bg-hover)] border border-[var(--dm-border)] flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={() => setCustomizerTab('themes')}
                 className={`flex-1 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                   customizerTab === 'themes'
-                    ? 'bg-[#262626] text-white shadow-md'
-                    : 'text-zinc-400 hover:text-white'
+                    ? 'bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] shadow-sm'
+                    : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
                 }`}
               >
                 Themes
@@ -4133,8 +4133,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 onClick={() => setCustomizerTab('fonts')}
                 className={`flex-1 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                   customizerTab === 'fonts'
-                    ? 'bg-[#262626] text-white shadow-md'
-                    : 'text-zinc-400 hover:text-white'
+                    ? 'bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] shadow-sm'
+                    : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
                 }`}
               >
                 Fonts
@@ -4156,11 +4156,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       }}
                       className={`h-[160px] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all ${
                         isSelected
-                          ? 'bg-[#3a3a3c] text-white shadow-lg'
-                          : 'bg-[#1c1c1e] text-zinc-300 hover:bg-[#252528]'
+                          ? 'bg-[#3a3a3c] text-white shadow-md'
+                          : 'bg-[var(--dm-bg-hover)] text-[var(--dm-text-primary)] hover:opacity-80'
                       }`}
                     >
-                      <span className="text-xs font-semibold text-white">{cleanName}</span>
+                      <span className="text-xs font-semibold">{cleanName}</span>
                     </div>
                   );
                 })}
@@ -4184,12 +4184,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       }}
                       className={`h-[100px] rounded-2xl flex items-center justify-center cursor-pointer transition-all ${
                         isSelected
-                          ? 'bg-[#3a3a3c] text-white shadow-lg'
-                          : 'bg-[#1c1c1e] text-zinc-300 hover:bg-[#252528]'
+                          ? 'bg-[#3a3a3c] text-white shadow-md'
+                          : 'bg-[var(--dm-bg-hover)] text-[var(--dm-text-primary)] hover:opacity-80'
                       }`}
                       style={{ fontFamily: font.family }}
                     >
-                      <span className="text-base font-semibold text-white">{font.name}</span>
+                      <span className="text-base font-semibold">{font.name}</span>
                     </div>
                   );
                 })}
@@ -4197,13 +4197,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             )}
 
             {/* Bottom Action Footer (Shifted higher up with clean spacing) */}
-            <div className="px-6 pt-2 pb-5 bg-[#121212] flex items-center gap-3">
+            <div className="px-6 pt-2 pb-5 bg-[var(--dm-bg-sidebar)] flex items-center gap-3">
               <button
                 onClick={() => {
                   setLiveThemeId(null);
                   setShowThemePicker(false);
                 }}
-                className="flex-1 py-3 px-4 rounded-full text-xs font-bold text-zinc-400 bg-[#1c1c1e] hover:bg-[#2c2c2e] transition-all cursor-pointer"
+                className="flex-1 py-3 px-4 rounded-full text-xs font-bold text-[var(--dm-text-muted)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] transition-all cursor-pointer"
               >
                 Cancel
               </button>
