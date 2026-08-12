@@ -67,10 +67,13 @@ export interface ChatTheme {
   inputBorderColor: string;
   reactionAccent: string;
   previewWallpaper: string;
+  wallpaperUrl?: string;
 }
 
 export const INSTAGRAM_THEMES: ChatTheme[] = [
   { id: 'default', name: 'Default 🔮', category: 'Ambient', outgoingGradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'var(--dm-bg-hover)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#6366f1', inputBorderColor: 'var(--dm-border)', reactionAccent: '#6366f1', previewWallpaper: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' },
+  { id: 'whale', name: 'Whale 🐋', category: 'Nature', outgoingGradient: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 255, 255, 0.15)', incomingTextColor: '#ffffff', chatBg: '#0f172a', accentColor: '#38bdf8', inputBorderColor: 'rgba(56, 189, 248, 0.3)', reactionAccent: '#38bdf8', previewWallpaper: 'url("/Whale.jpg")', wallpaperUrl: '/Whale.jpg' },
+  { id: 'love', name: 'Love ❤️', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 255, 255, 0.15)', incomingTextColor: '#ffffff', chatBg: '#831843', accentColor: '#f472b6', inputBorderColor: 'rgba(244, 114, 182, 0.3)', reactionAccent: '#f472b6', previewWallpaper: 'url("/Love.jpg")', wallpaperUrl: '/Love.jpg' },
 ];
 
 export interface MessageTag {
@@ -3040,7 +3043,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   ref={messagesContainerRef}
                   onScroll={handleMessagesScroll}
                   className="messages"
-                  style={{ background: 'transparent' }}
+                  style={{
+                    backgroundImage: activeTheme?.wallpaperUrl ? `url("${activeTheme.wallpaperUrl}")` : undefined,
+                    backgroundSize: activeTheme?.wallpaperUrl ? 'cover' : undefined,
+                    backgroundPosition: activeTheme?.wallpaperUrl ? 'center' : undefined,
+                    backgroundAttachment: activeTheme?.wallpaperUrl ? 'fixed' : undefined
+                  }}
                 >
                   {isLoadingMessages && messages.length === 0 && (
                     <div className="chat-skeleton-container">
@@ -4141,26 +4149,35 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </button>
             </div>
 
-            {/* Tab 1: Themes (3 Columns Grid, 160px height per box, outline removed) */}
+            {/* Tab 1: Themes (3 Columns Grid, 160px height per box showing wallpaper background) */}
             {customizerTab === 'themes' && (
               <div className="px-6 py-3 overflow-y-auto grid grid-cols-3 gap-3 no-scrollbar max-h-[55vh]">
                 {INSTAGRAM_THEMES.map(theme => {
                   const isSelected = (liveThemeId || (selectedUser ? chatThemes[selectedUser.id] : null) || 'default') === theme.id;
-                  const cleanName = theme.name.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
                   return (
                     <div
                       key={theme.id}
                       onClick={() => {
                         if (navigator.vibrate) navigator.vibrate(20);
                         setLiveThemeId(theme.id);
+                        handleSelectTheme(theme);
                       }}
-                      className={`h-[160px] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all ${
+                      className={`h-[160px] rounded-2xl flex flex-col items-center justify-end p-2.5 cursor-pointer transition-all relative overflow-hidden bg-cover bg-center ${
                         isSelected
-                          ? 'bg-[#3a3a3c] text-white shadow-md'
-                          : 'bg-[var(--dm-bg-hover)] text-[var(--dm-text-primary)] hover:opacity-80'
+                          ? 'ring-2 ring-indigo-500 scale-[1.02] shadow-xl'
+                          : 'hover:opacity-90 opacity-80 hover:scale-[1.01]'
                       }`}
+                      style={{
+                        backgroundImage: theme.wallpaperUrl
+                          ? `url("${theme.wallpaperUrl}")`
+                          : theme.previewWallpaper,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }}
                     >
-                      <span className="text-xs font-semibold">{cleanName}</span>
+                      <div className="w-full py-1 px-2 rounded-xl bg-black/50 backdrop-blur-md text-center">
+                        <span className="text-[11px] font-bold text-white tracking-wide">{theme.name}</span>
+                      </div>
                     </div>
                   );
                 })}
