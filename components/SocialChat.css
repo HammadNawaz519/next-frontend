@@ -1927,8 +1927,8 @@
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 6px 12px 6px 6px;
+  gap: 10px;
+  padding: 6px;
   border-radius: 28px;
   transition: all 0.3s ease;
 }
@@ -1994,6 +1994,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-left: 2px;
 }
 
 .social-chat-container .ig-cam-btn {
@@ -2026,6 +2027,8 @@
 
 .social-chat-container .ig-mic-btn,
 .social-chat-container .ig-send-btn {
+  width: 40px;
+  height: 40px;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -2034,6 +2037,7 @@
   justify-content: center;
   flex-shrink: 0;
   padding: 0;
+  margin-right: 2px;
   font-weight: 600;
   font-size: 15px;
 }
