@@ -2043,3 +2043,35 @@
   border: none !important;
 }
 
+
+/* Overrides for Full Width, Charcoal Camera, and Borderless Messages/Dates */
+.social-chat-container .type-box.ig-type-box {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-right: 0 !important;
+  border: none !important;
+}
+
+.social-chat-container .ig-cam-container {
+  background: #262626 !important;
+}
+
+.social-chat-container .ig-cam-btn {
+  color: #FFFFFF !important;
+}
+
+.social-chat-container .msg.sent,
+.social-chat-container .msg.received,
+.social-chat-container .msg.ai {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.social-chat-container .date-separator span {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
