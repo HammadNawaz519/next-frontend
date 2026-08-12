@@ -1921,3 +1921,125 @@
     margin-left: 34px;
   }
 }
+
+/* --- Instagram DM Input Bar Styles --- */
+.social-chat-container .ig-type-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 28px;
+  transition: all 0.3s ease;
+}
+
+/* Light Theme Variables (Default) */
+.social-chat-container .default-theme-ig {
+  background: #F2F2F2;
+}
+.social-chat-container .default-theme-ig .ig-cam-container {
+  background: #E4E4E4;
+}
+.social-chat-container .default-theme-ig .ig-textarea,
+.social-chat-container .default-theme-ig .ig-cam-btn,
+.social-chat-container .default-theme-ig .ig-mic-btn,
+.social-chat-container .default-theme-ig .ig-send-btn {
+  color: #000000;
+}
+.social-chat-container .default-theme-ig .ig-textarea::placeholder {
+  color: #8E8E8E;
+}
+
+/* Dark Theme Variables */
+[data-theme="dark"] .social-chat-container .default-theme-ig {
+  background: #262626;
+}
+[data-theme="dark"] .social-chat-container .default-theme-ig .ig-cam-container {
+  background: #363636;
+}
+[data-theme="dark"] .social-chat-container .default-theme-ig .ig-textarea,
+[data-theme="dark"] .social-chat-container .default-theme-ig .ig-cam-btn,
+[data-theme="dark"] .social-chat-container .default-theme-ig .ig-mic-btn,
+[data-theme="dark"] .social-chat-container .default-theme-ig .ig-send-btn {
+  color: #FFFFFF;
+}
+[data-theme="dark"] .social-chat-container .default-theme-ig .ig-textarea::placeholder {
+  color: #A8A8A8;
+}
+
+/* Custom/Wallpaper Theme Variables */
+.social-chat-container .custom-theme-ig {
+  background: rgba(18, 28, 38, 0.75);
+  backdrop-filter: blur(10px);
+}
+.social-chat-container .custom-theme-ig .ig-cam-container {
+  background: rgba(160, 220, 240, 0.8);
+}
+.social-chat-container .custom-theme-ig .ig-textarea,
+.social-chat-container .custom-theme-ig .ig-cam-btn,
+.social-chat-container .custom-theme-ig .ig-mic-btn,
+.social-chat-container .custom-theme-ig .ig-send-btn {
+  color: #E2E8F0;
+}
+.social-chat-container .custom-theme-ig .ig-textarea::placeholder {
+  color: rgba(226, 232, 240, 0.6);
+}
+
+/* Elements */
+.social-chat-container .ig-cam-container {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.social-chat-container .ig-cam-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.social-chat-container .ig-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-size: 15px;
+  line-height: 20px;
+  max-height: 100px;
+  font-family: inherit;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 8px 0;
+}
+.social-chat-container .ig-textarea::-webkit-scrollbar {
+  display: none;
+}
+
+.social-chat-container .ig-mic-btn,
+.social-chat-container .ig-send-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+
+.social-chat-container .ig-type-box {
+  border: none !important;
+}
+

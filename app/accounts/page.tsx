@@ -63,7 +63,7 @@ export default function AccountsPage() {
   const [loginError, setLoginError] = useState('');
 
   // ── Forgot Password / Reset State inside Login Sheet ──
-  const [loginStep, setLoginStep] = useState<'login' | 'forgot-password' | 'reset-otp'>('login');
+  const [loginStep, setLoginStep] = useState<'login' | 'forgot-password' | 'reset-otp' | 'success'>('login');
   const [resetEmail, setResetEmail] = useState('');
   const [resetOtp, setResetOtp] = useState(['', '', '', '', '', '']);
   const [resetNewPw, setResetNewPw] = useState('');
@@ -274,22 +274,7 @@ export default function AccountsPage() {
       if (!res.ok) {
         setResetError(data.message || 'Failed to reset password. Please try again.');
       } else {
-        const signInRes = await signIn('credentials', {
-          redirect: false,
-          email: resetEmail,
-          password: resetNewPw,
-        });
-        if (signInRes?.ok) {
-          setShowLoginSheet(false);
-          resetLoginSheet();
-          router.push('/dashboard');
-          router.refresh();
-        } else {
-          setLoginEmail(resetEmail);
-          setLoginPassword(resetNewPw);
-          setLoginStep('login');
-          setLoginError('');
-        }
+        setLoginStep('success');
       }
     } catch (err) {
       setResetError('An unexpected error occurred. Please try again.');
@@ -936,6 +921,30 @@ export default function AccountsPage() {
                   </Button>
                 </form>
               </>
+            )}
+
+            {/* STEP 4: SUCCESS */}
+            {loginStep === 'success' && (
+              <div className="flex flex-col justify-center items-center space-y-6 text-center py-6">
+                <div className="w-16 h-16 bg-[#1c1c1e] border border-white/10 rounded-full flex items-center justify-center">
+                  <Check className="w-8 h-8 text-white" />
+                </div>
+                <div className="space-y-2">
+                  <h1 className="text-2xl font-semibold text-white">Success!</h1>
+                  <p className="text-white/70 text-sm">
+                    Your password has been successfully reset.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    setLoginEmail(resetEmail);
+                    setLoginStep('login');
+                  }}
+                  className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4"
+                >
+                  Continue to Login
+                </Button>
+              </div>
             )}
           </div>
         </div>

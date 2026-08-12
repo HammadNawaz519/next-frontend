@@ -2914,10 +2914,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     title="View Chat Info & Details"
                   >
                     <button
-                      style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', marginRight: '10px', flexShrink: 0 }}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', marginRight: '10px', flexShrink: 0 }}
                       onClick={(e) => { e.stopPropagation(); handleChatBack(e); }}
                     >
-                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                     </button>
                     <div className="avatar">
                       {selectedUser.image && selectedUser.image.length > 5 ? (
@@ -2987,12 +2987,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       </button>
                     )}
                     {/* Monochrome Audio Call Button */}
-                    <button className="call-btn" onClick={() => handleCall('audio')} title="Audio Call">
-                      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
+                    <button onClick={() => handleCall('audio')} title="Audio Call" style={{ background: 'transparent', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', marginLeft: '12px' }}>
+                      <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
                     </button>
                     {/* Monochrome Video Call Button */}
-                    <button className="call-btn" onClick={() => handleCall('video')} title="Video Call">
-                      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>
+                    <button onClick={() => handleCall('video')} title="Video Call" style={{ background: 'transparent', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', marginLeft: '12px' }}>
+                      <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>
                     </button>
                   </div>
 
@@ -3115,260 +3115,113 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                 {selectedMessageIds.size === 0 ? (
                   <footer className="footer" style={{ borderTop: 'none', background: 'transparent', padding: '6px 16px 16px' }}>
-                    {isVoiceToText ? (
-                      <div
-                        className="type-box"
-                        style={{
-                          position: 'relative',
-                          borderRadius: '9999px',
-                          background: activeTheme.incomingBubbleColor || 'var(--dm-bg-hover)',
-                          borderColor: activeTheme.inputBorderColor || 'var(--dm-border)',
-                          backdropFilter: 'blur(12px)'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, padding: '8px 14px', borderRadius: '24px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', animation: 'pulse 2s infinite' }}>
+                    <div className={`type-box ig-type-box ${activeTheme.id !== 'default' ? 'custom-theme-ig' : 'default-theme-ig'}`}>
+                      {isVoiceToText ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, padding: '4px', borderRadius: '24px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', animation: 'pulse 2s infinite' }}>
                           <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
                           <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dm-text-primary)', flex: 1 }}>
                             {inputValue || 'Listening... speak now'}
                           </span>
                         </div>
-                        <button
-                          className="send-btn"
-                          onClick={() => {
-                            stopVoiceToText();
-                            if (inputValue.trim()) {
-                              handleSendMessage();
-                            }
-                          }}
-                          style={{
-                            background: activeTheme.accentColor || '#6366f1',
-                            borderRadius: '9999px'
-                          }}
-                        >
-                          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
-                        </button>
-                      </div>
-                    ) : !isRecording ? (
-                      <div
-                        className="type-box"
-                        style={{
-                          borderRadius: '9999px',
-                          background: activeTheme.id !== 'default'
-                            ? (activeTheme.incomingBubbleColor || 'var(--dm-bg-sidebar)')
-                            : 'var(--dm-bg-sidebar)',
-                          borderColor: activeTheme.id !== 'default'
-                            ? (activeTheme.inputBorderColor || 'var(--dm-border)')
-                            : 'var(--dm-border)',
-                          transition: 'all 0.3s ease'
-                        }}
-                      >
-                        <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Camera / Photo">
-                          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                            <circle cx="12" cy="13" r="4"/>
-                          </svg>
-                        </button>
-                        {/* Gap between image and emoji */}
-                        <div style={{ width: '6px', flexShrink: 0 }} />
-                        <div className="hidden md:block" style={{ position: 'relative' }}>
-                          <button className="icon-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)} title="Emoji" style={{ color: showEmojiPicker ? 'var(--dm-text-primary)' : undefined }}>
-                            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3.5-9c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm7 0c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" /></svg>
+                      ) : isRecording ? (
+                        <>
+                          <button className="cancel-record-btn transition-all active:scale-90 animate-in fade-in zoom-in duration-200" onClick={(e) => { e.preventDefault(); cancelRecording(); }} title="Cancel recording" aria-label="Cancel recording" style={{ width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', cursor: 'pointer', marginRight: '8px', flexShrink: 0 }}>
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                           </button>
-                          {showEmojiPicker && (
-                            <div className="emoji-picker-bar" style={{
-                              position: 'absolute', bottom: '48px', left: '-8px',
-                              background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)',
-                              borderRadius: '16px', padding: '12px 8px', zIndex: 999,
-                              boxShadow: '0 -4px 30px rgba(0,0,0,0.15)',
-                              animation: 'emojiBarIn 0.25s cubic-bezier(0.2,0.8,0.2,1) forwards',
-                              display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '280px'
-                            }}>
-                              {[
-                                { label: 'Smileys', emojis: ['😀', '😂', '😍', '🥰', '😎', '🤔', '😅', '😭', '🥹', '😇', '🤩', '😏', '😒', '🙄', '😤', '🤯', '😴', '🤢', '🥶', '😱'] },
-                                { label: 'Gestures', emojis: ['👍', '👎', '👋', '🤝', '🙏', '👏', '🤜', '💪', '✌️', '🤞', '👌', '🤙', '☝️', '🖐️', '🫶', '🤲', '🫱', '🤟', '🤘', '👊'] },
-                                { label: 'Hearts', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💖', '💗', '💓', '💞', '💝', '❤️‍🔥', '💔', '❣️', '💟', '♥️', '🫀', '💕'] },
-                                { label: 'Nature', emojis: ['🌟', '⭐', '🌙', '☀️', '🌈', '🌊', '🔥', '❄️', '⚡', '🌸', '🌺', '🍀', '🌿', '🐶', '🐱', '🦋', '🐝', '🌴', '🍁', '🌻'] },
-                                { label: 'Food', emojis: ['🍕', '🍔', '🍜', '🍣', '🍰', '🎂', '🍩', '🍪', '☕', '🧋', '🍷', '🎉', '🎊', '🎈', '🎁', '🏆', '💯', '✅', '🔥', '⚡'] },
-                              ].map(group => (
-                                <div key={group.label}>
-                                  <div style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--dm-text-muted)', marginBottom: '6px', paddingLeft: '4px' }}>{group.label}</div>
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
-                                    {group.emojis.map(emoji => (
-                                      <button key={emoji} onClick={() => { setInputValue(prev => prev + emoji); setShowEmojiPicker(false); }} style={{ fontSize: '20px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '8px', lineHeight: 1, transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--dm-bg-active)')} onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-                                        {emoji}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <textarea
-                          placeholder="Message..."
-                          value={inputValue}
-                          rows={1}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setInputValue(val);
-                            // Auto-resize
-                            const t = e.target as HTMLTextAreaElement;
-                            t.style.height = 'auto';
-                            t.style.height = Math.min(t.scrollHeight, 84) + 'px';
-
-                            // Typing Indicator Logic
-                            if (socket && selectedUser) {
-                              if (!typingTimeoutRef.current) {
-                                socket.emit('typing', { receiverEmail: selectedUser.email });
-                              } else {
-                                clearTimeout(typingTimeoutRef.current);
+                          <div className="visualizer" style={{ flex: 1 }}>
+                            {[...Array(13)].map((_, i) => <div key={i} className="bar" style={{ animationDelay: `${-0.1 * (i % 7)}s` }} />)}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="ig-cam-container">
+                            <button className="ig-cam-btn" onClick={() => fileInputRef.current?.click()} title="Camera / Photo">
+                              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                              </svg>
+                            </button>
+                          </div>
+                          
+                          <textarea
+                            placeholder="Message..."
+                            className="ig-textarea"
+                            value={inputValue}
+                            rows={1}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setInputValue(val);
+                              const t = e.target as HTMLTextAreaElement;
+                              t.style.height = 'auto';
+                              t.style.height = Math.min(t.scrollHeight, 84) + 'px';
+                              if (socket && selectedUser) {
+                                if (!typingTimeoutRef.current) { socket.emit('typing', { receiverEmail: selectedUser.email }); }
+                                else { clearTimeout(typingTimeoutRef.current); }
+                                typingTimeoutRef.current = setTimeout(() => {
+                                  socket.emit('stop_typing', { receiverEmail: selectedUser.email });
+                                  typingTimeoutRef.current = null;
+                                }, 2000);
                               }
-                              typingTimeoutRef.current = setTimeout(() => {
-                                socket.emit('stop_typing', { receiverEmail: selectedUser.email });
-                                typingTimeoutRef.current = null;
-                              }, 2000);
-                            }
-
-                            // Show popup if the last character is @ or if we're typing an @ mention
-                            const lastWord = val.split(' ').pop() || '';
-                            if (lastWord.startsWith('@')) {
-                              setShowAIMention(true);
-                            } else {
-                              setShowAIMention(false);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              handleSendMessage();
-                            }
-                          }}
-                        />
-                        {showAIMention && (
-                          <div className="mention-popup animate-in slide-in-from-bottom-2 duration-200">
-                            <div className="mention-item" onClick={() => { setInputValue(prev => prev + 'ai '); setShowAIMention(false); }}>
-                              <div className="mention-avatar">AI</div>
-                              <div className="mention-info">
-                                <b>AI Assistant</b>
-                                <span>Ask me anything</span>
+                              const lastWord = val.split(' ').pop() || '';
+                              setShowAIMention(lastWord.startsWith('@'));
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendMessage();
+                              }
+                            }}
+                          />
+                          {showAIMention && (
+                            <div className="mention-popup animate-in slide-in-from-bottom-2 duration-200">
+                              <div className="mention-item" onClick={() => { setInputValue(prev => prev + 'ai '); setShowAIMention(false); }}>
+                                <div className="mention-avatar">AI</div>
+                                <div className="mention-info">
+                                  <b>AI Assistant</b>
+                                  <span>Ask me anything</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        <button
-                          className="cancel-record-btn transition-all active:scale-90 animate-in fade-in zoom-in duration-200"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            cancelRecording();
-                          }}
-                          title="Cancel recording"
-                          aria-label="Cancel recording"
-                          style={{
-                            width: '42px',
-                            height: '42px',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: 'rgba(239, 68, 68, 0.15)',
-                            color: '#ef4444',
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                            cursor: 'pointer',
-                            marginRight: '8px',
-                            flexShrink: 0
-                          }}
-                        >
-                          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                        <div className="visualizer" style={{ flex: 1 }}>
-                          {[...Array(13)].map((_, i) => <div key={i} className="bar" style={{ animationDelay: `${-0.1 * (i % 7)}s` }} />)}
-                        </div>
-                      </>
-                    )}
+                          )}
+                        </>
+                      )}
 
-
-                    {!isRecording && !isVoiceToText && !inputValue.trim() ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-                        {/* Microphone */}
+                      {!isRecording && !isVoiceToText && !inputValue.trim() ? (
                         <button
-                          className="ig-media-btn"
+                          className="ig-mic-btn"
                           onClick={startRecording}
                           title="Voice message"
                         >
-                          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
                             <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
                             <line x1="12" y1="19" x2="12" y2="23"/>
                             <line x1="8" y1="23" x2="16" y2="23"/>
                           </svg>
                         </button>
-                        {/* Gallery */}
+                      ) : (
                         <button
-                          className="ig-media-btn"
-                          onClick={() => fileInputRef.current?.click()}
-                          title="Gallery"
+                          className={`ig-send-btn ${isRecording ? 'recording-pulse' : ''}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if ((e.currentTarget as any)._touchHandled) { (e.currentTarget as any)._touchHandled = false; return; }
+                            if (isVoiceToText) stopVoiceToText();
+                            if (inputValue.trim()) { handleSendMessage(); } else if (isRecording) { stopRecording(); } else { startRecording(); }
+                          }}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            (e.currentTarget as any)._touchHandled = true;
+                            if (isVoiceToText) stopVoiceToText();
+                            if (inputValue.trim()) { handleSendMessage(); } else if (isRecording) { stopRecording(); } else { startRecording(); }
+                          }}
+                          title={isRecording ? 'Send voice note' : 'Send'}
                         >
-                          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                            <circle cx="8.5" cy="8.5" r="1.5"/>
-                            <polyline points="21 15 16 10 5 21"/>
-                          </svg>
+                          Send
                         </button>
-                        {/* Sticker / Emoji */}
-                        <button
-                          className="ig-media-btn"
-                          onClick={() => setShowEmojiPicker(p => !p)}
-                          title="Emoji"
-                          style={{ color: showEmojiPicker ? (activeTheme.accentColor || 'var(--dm-text-primary)') : undefined }}
-                        >
-                          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-                            <line x1="9" y1="9" x2="9.01" y2="9"/>
-                            <line x1="15" y1="9" x2="15.01" y2="9"/>
-                          </svg>
-                        </button>
-                        {/* Plus */}
-                        <button
-                          className="ig-plus-btn"
-                          title="More"
-                          style={{ color: 'var(--dm-text-secondary)' }}
-                        >
-                          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                            <line x1="12" y1="5" x2="12" y2="19"/>
-                            <line x1="5" y1="12" x2="19" y2="12"/>
-                          </svg>
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        className={`send-btn${isRecording ? ' recording-pulse' : ''}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if ((e.currentTarget as any)._touchHandled) { (e.currentTarget as any)._touchHandled = false; return; }
-                          if (inputValue.trim()) { handleSendMessage(); } else if (isRecording) { stopRecording(); } else { startRecording(); }
-                        }}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          (e.currentTarget as any)._touchHandled = true;
-                          if (inputValue.trim()) { handleSendMessage(); } else if (isRecording) { stopRecording(); } else { startRecording(); }
-                        }}
-                        title={isRecording ? 'Send voice note' : inputValue.trim() ? 'Send' : 'Voice message'}
-                        style={{
-                          background: activeTheme.accentColor || (isRecording ? '#0095f6' : '#6366f1'),
-                          borderRadius: '9999px',
-                          boxShadow: isRecording ? '0 4px 15px rgba(0,149,246,0.3)' : (activeTheme.accentColor ? `0 4px 15px ${activeTheme.accentColor}40` : undefined),
-                          transition: 'all 0.3s ease'
-                        }}
-                      >
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
-                      </button>
-                    )}
+                      )}
+                    </div>
                   </footer>
                 ) : (
                   <footer className="sel-bar">
