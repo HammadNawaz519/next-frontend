@@ -187,6 +187,7 @@ const IGMessageOverlay = ({
   onRequestDelete,
   onOpenTagPicker,
   session,
+  activeTheme,
 }: {
   state: IGMenuState;
   currentUserId: string;
@@ -197,14 +198,20 @@ const IGMessageOverlay = ({
   onRequestDelete: (msgId: string, type: 'me' | 'everyone') => void;
   onOpenTagPicker: (msg: any) => void;
   session: any;
+  activeTheme?: ChatTheme;
 }) => {
-  const { msg, bubbleRect, isSent } = state;
+  if (!state || !state.msg) return null;
+  const { msg, isSent } = state;
+  const rawRect = state.bubbleRect || (state as any).rect;
+  const bubbleRect = rawRect && typeof rawRect.top === 'number'
+    ? rawRect
+    : { top: 150, bottom: 250, left: 20, right: 300, width: 280, height: 100 };
+
   const overlayRef = useRef<HTMLDivElement>(null);
   const reactionBarRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
-  const [pickerEmoji, setPickerEmoji] = useState('');
 
   // Animate in on mount
   useEffect(() => {
@@ -236,11 +243,11 @@ const IGMessageOverlay = ({
   };
 
   // Smart layout: reaction bar & action menu positioning without collision/overlap
-  const REACTION_BAR_H = 48;
+  const REACTION_BAR_H = 52;
   const MENU_ITEMS_H = isSent ? 260 : 210;
-  const GAP = 8;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
+  const GAP = 10;
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 400;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
 
   // Clamp bubble rect to viewport
   const bTop = Math.max(0, bubbleRect.top);
@@ -256,18 +263,14 @@ const IGMessageOverlay = ({
   let menuTop: number;
 
   if (spaceBelow >= MENU_ITEMS_H + 20) {
-    // Ample space below: Reaction Bar ABOVE bubble, Menu BELOW bubble
     reactionBarTop = Math.max(12, bTop - REACTION_BAR_H - GAP);
     menuTop = Math.min(vh - MENU_ITEMS_H - 12, bBottom + GAP);
   } else if (spaceAbove >= REACTION_BAR_H + MENU_ITEMS_H + 16) {
-    // Message is near bottom: both Reaction Bar and Menu go ABOVE bubble cleanly stacked
     reactionBarTop = bTop - REACTION_BAR_H - GAP;
     menuTop = reactionBarTop - MENU_ITEMS_H - GAP;
   } else {
-    // Tight viewport: place Reaction Bar ABOVE bubble, Menu BELOW or clamped
     reactionBarTop = Math.max(12, bTop - REACTION_BAR_H - GAP);
     menuTop = Math.max(12, Math.min(vh - MENU_ITEMS_H - 12, bBottom + GAP));
-    // Prevent overlap if menu covers reaction bar
     if (menuTop < reactionBarTop + REACTION_BAR_H && menuTop + MENU_ITEMS_H > reactionBarTop) {
       menuTop = Math.min(vh - MENU_ITEMS_H - 8, reactionBarTop + REACTION_BAR_H + GAP);
     }
@@ -289,22 +292,32 @@ const IGMessageOverlay = ({
       .map((r: any) => r.emoji)
   );
 
+  const accentColor = activeTheme?.accentColor || '#6366f1';
+  const outgoingGradient = activeTheme?.outgoingGradient || 'linear-gradient(135deg, #3797F0 0%, #833AB4 50%, #C13584 100%)';
+  const incomingBubbleColor = activeTheme?.incomingBubbleColor || 'rgba(39, 39, 42, 0.9)';
+
   const isDark = typeof document !== 'undefined' &&
     document.documentElement.getAttribute('data-theme') === 'dark';
 
   const menuBg = isDark
-    ? 'rgba(28, 28, 30, 0.97)'
-    : 'rgba(255,255,255,0.97)';
-  const menuBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-  const menuText = isDark ? '#fff' : '#000';
-  const menuMuted = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.38)';
-  const dividerColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-  const hoverBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+    ? 'rgba(20, 20, 24, 0.94)'
+    : 'rgba(255, 255, 255, 0.96)';
+  const menuBorder = activeTheme?.id !== 'default'
+    ? `${accentColor}50`
+    : (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)');
+  const menuText = isDark ? '#ffffff' : '#09090b';
+  const menuMuted = isDark ? 'rgba(255,255,255,0.48)' : 'rgba(0,0,0,0.42)';
+  const dividerColor = activeTheme?.id !== 'default'
+    ? `${accentColor}25`
+    : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)');
+  const hoverBg = activeTheme?.id !== 'default'
+    ? `${accentColor}20`
+    : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)');
   const dangerColor = '#ef4444';
 
   const reactionBg = isDark
-    ? 'rgba(28,28,30,0.96)'
-    : 'rgba(255,255,255,0.96)';
+    ? 'rgba(22, 22, 26, 0.94)'
+    : 'rgba(255, 255, 255, 0.96)';
 
   const animStyle = (extraTransform = '') => ({
     opacity: mounted ? 1 : 0,
@@ -334,16 +347,24 @@ const IGMessageOverlay = ({
         cursor: 'pointer',
         color: danger ? dangerColor : menuText,
         fontSize: '14px',
-        fontWeight: 500,
+        fontWeight: 600,
         textAlign: 'left',
         borderRadius: '0',
         flexShrink: 0,
-        transition: 'background 0.12s',
+        transition: 'background 0.15s ease, color 0.15s ease',
       }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = hoverBg; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.background = danger ? 'rgba(239, 68, 68, 0.12)' : hoverBg;
+        if (!danger && activeTheme?.id !== 'default') {
+          (e.currentTarget as HTMLElement).style.color = accentColor;
+        }
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.background = 'transparent';
+        (e.currentTarget as HTMLElement).style.color = danger ? dangerColor : menuText;
+      }}
     >
-      <span style={{ width: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: danger ? 1 : 0.8 }}>{icon}</span>
+      <span style={{ width: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: danger ? dangerColor : (activeTheme?.id !== 'default' ? accentColor : 'inherit'), opacity: danger ? 1 : 0.9 }}>{icon}</span>
       <span style={{ flex: 1 }}>{label}</span>
       {hint && <span style={{ fontSize: '12px', color: menuMuted, flexShrink: 0 }}>{hint}</span>}
     </button>
@@ -365,11 +386,11 @@ const IGMessageOverlay = ({
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(0,0,0,0.3)',
+          background: 'rgba(0,0,0,0.5)',
           opacity: mounted ? 1 : 0,
           transition: 'opacity 0.22s ease-out',
-          backdropFilter: 'blur(3px)',
-          WebkitBackdropFilter: 'blur(3px)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
         }}
       />
 
@@ -385,7 +406,12 @@ const IGMessageOverlay = ({
           transform: mounted ? 'scale(1.02)' : 'scale(1)',
           transformOrigin: isSent ? 'right center' : 'left center',
           transition: 'transform 0.22s ease-out',
-          filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.25))',
+          borderRadius: '1.25rem',
+          background: isSent
+            ? outgoingGradient
+            : incomingBubbleColor,
+          boxShadow: `0 12px 35px ${accentColor}40, 0 4px 15px rgba(0,0,0,0.25)`,
+          opacity: 0.95,
           zIndex: 1,
         }}
       />
@@ -399,18 +425,18 @@ const IGMessageOverlay = ({
           left: reactionBarLeft,
           maxWidth: 'calc(100vw - 24px)',
           width: 'fit-content',
-          height: '48px',
+          height: '52px',
           background: reactionBg,
-          borderRadius: '24px',
-          border: `1px solid ${menuBorder}`,
+          borderRadius: '26px',
+          border: `1.5px solid ${menuBorder}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '2px',
-          padding: '0 8px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.12)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
+          gap: '3px',
+          padding: '0 10px',
+          boxShadow: `0 14px 38px rgba(0,0,0,0.3), 0 0 20px ${accentColor}30`,
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
           zIndex: 3,
           overflowX: 'auto',
           scrollbarWidth: 'none',
@@ -426,23 +452,25 @@ const IGMessageOverlay = ({
               onClick={() => { onReact(msg.id, emoji); handleClose(); }}
               title={emoji}
               style={{
-                background: alreadyReacted ? 'rgba(99,102,241,0.18)' : 'transparent',
-                border: alreadyReacted ? '1.5px solid rgba(99,102,241,0.45)' : '1.5px solid transparent',
+                background: alreadyReacted ? (activeTheme?.id !== 'default' ? outgoingGradient : 'rgba(99,102,241,0.25)') : 'transparent',
+                border: alreadyReacted ? `1.5px solid ${accentColor}` : '1.5px solid transparent',
+                color: alreadyReacted ? '#ffffff' : 'inherit',
                 borderRadius: '50%',
-                width: '38px',
-                height: '38px',
-                fontSize: '20px',
+                width: '40px',
+                height: '40px',
+                fontSize: '21px',
                 lineHeight: 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                transition: 'transform 0.15s ease-out, background 0.15s',
+                transition: 'transform 0.18s cubic-bezier(0.18, 0.89, 0.32, 1.28), background 0.15s',
                 flexShrink: 0,
+                boxShadow: alreadyReacted ? `0 4px 12px ${accentColor}50` : 'none',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)'; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.3)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
-              onTouchStart={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)'; }}
+              onTouchStart={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.3)'; }}
               onTouchEnd={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
             >
               {emoji}
@@ -456,8 +484,8 @@ const IGMessageOverlay = ({
             background: 'transparent',
             border: '1.5px solid transparent',
             borderRadius: '50%',
-            width: '38px',
-            height: '38px',
+            width: '40px',
+            height: '40px',
             fontSize: '18px',
             lineHeight: 1,
             display: 'flex',
@@ -487,11 +515,11 @@ const IGMessageOverlay = ({
           left: menuLeft,
           width: MENU_W,
           background: menuBg,
-          borderRadius: '18px',
-          border: `1px solid ${menuBorder}`,
-          boxShadow: '0 20px 60px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.10)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
+          borderRadius: '20px',
+          border: `1.5px solid ${menuBorder}`,
+          boxShadow: `0 24px 64px rgba(0,0,0,0.38), 0 0 25px ${accentColor}25`,
+          backdropFilter: 'blur(28px)',
+          WebkitBackdropFilter: 'blur(28px)',
           overflow: 'hidden',
           zIndex: 2,
           display: 'flex',
@@ -701,12 +729,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
       const rect = bubbleRef.current.getBoundingClientRect();
       onShowIGMenu({
         msg,
-        rect: {
-          top: rect.top,
-          left: rect.left,
-          width: rect.width,
-          height: rect.height,
-        },
+        bubbleRect: rect,
         isSent,
       });
     }
@@ -809,11 +832,21 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                   <img
                     src={msg.content}
                     alt="media"
+                    draggable={false}
                     className="cursor-pointer hover:opacity-95 transition-opacity"
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
                     onClick={e => { e.stopPropagation(); if (onPreviewImage) onPreviewImage(msg.content); else window.open(msg.content, '_blank'); }}
+                    onContextMenu={e => { e.preventDefault(); e.stopPropagation(); handleContextMenu(e); }}
                   />
                 )}
-                {msg.type === 'video' && <video src={msg.content} controls />}
+                {msg.type === 'video' && (
+                  <video
+                    src={msg.content}
+                    controls
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                    onContextMenu={e => { e.preventDefault(); e.stopPropagation(); handleContextMenu(e); }}
+                  />
+                )}
                 <div
                   className="time-row media-time-row"
                   style={{
@@ -4250,20 +4283,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       {/* --- IMAGE LIGHTBOX PREVIEW OVERLAY --- */}
       {lightboxImageSrc && (
         <div
-          className="fixed inset-0 z-[2000] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[2000] bg-black/92 backdrop-blur-2xl flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setLightboxImageSrc(null)}
         >
           <button
             onClick={() => setLightboxImageSrc(null)}
-            className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-lg font-bold cursor-pointer transition-all active:scale-90"
-            title="Close image"
+            className="absolute top-6 left-5 md:top-8 md:left-8 w-11 h-11 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 text-white flex items-center justify-center cursor-pointer transition-all active:scale-90 backdrop-blur-md shadow-lg z-10"
+            title="Go back"
           >
-            ✕
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
           <img
             src={lightboxImageSrc}
             alt="Full preview"
-            className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200"
+            className="max-w-full max-h-[88vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -4653,6 +4686,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           onRequestDelete={handleRequestDelete}
           onOpenTagPicker={(m: any) => setOpenTagPickerMsg(m)}
           session={session}
+          activeTheme={activeTheme}
         />
       )}
     </>
