@@ -527,8 +527,8 @@ const IGMessageOverlay = ({
 const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker }: any) => {
   if (msg.type === 'system') {
     return (
-      <div className="w-full flex justify-center my-3.5 text-center px-4 animate-in fade-in duration-300 pointer-events-none">
-        <span className="text-[11px] font-medium py-1 px-4 rounded-full bg-black/20 dark:bg-white/10 text-[var(--dm-text-muted)] backdrop-blur-md">
+      <div className="w-full flex justify-center my-2 text-center px-4 animate-in fade-in duration-300 pointer-events-none">
+        <span className="text-[11px] font-medium text-[var(--dm-text-muted)]">
           {msg.content}
         </span>
       </div>
@@ -2964,11 +2964,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     )}
                     {/* Monochrome Audio Call Button */}
                     <button onClick={() => handleCall('audio')} title="Audio Call" style={{ background: 'transparent', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', marginLeft: '12px' }}>
-                      <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
+                      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                      </svg>
                     </button>
                     {/* Monochrome Video Call Button */}
                     <button onClick={() => handleCall('video')} title="Video Call" style={{ background: 'transparent', border: 'none', color: 'var(--dm-text-primary)', cursor: 'pointer', marginLeft: '12px' }}>
-                      <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>
+                      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="6" width="14" height="12" rx="3" ry="3" />
+                        <path d="M16 10l5-3v10l-5-3" />
+                      </svg>
                     </button>
                   </div>
 
@@ -4131,7 +4136,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             </div>
 
             {/* Themes Simple List */}
-            <div className="px-4 py-2 overflow-y-auto flex flex-col no-scrollbar" style={{ maxHeight: '52vh' }}>
+            <div className="px-4 py-4 overflow-y-auto flex flex-col no-scrollbar" style={{ maxHeight: '52vh' }}>
               {INSTAGRAM_THEMES
                 .filter(t => {
                   const matchesCat = themeCategoryFilter === 'All' || t.category === themeCategoryFilter;
@@ -4140,6 +4145,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 })
                 .map(theme => {
                   const isSelected = (liveThemeId || chatThemes[selectedUser.id] || 'default') === theme.id;
+                  const cleanName = theme.name.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
                   return (
                     <div
                       key={theme.id}
@@ -4147,25 +4153,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         if (navigator.vibrate) navigator.vibrate(20);
                         setLiveThemeId(theme.id);
                       }}
-                      className={`flex items-center gap-3.5 py-3 px-3 rounded-2xl cursor-pointer transition-all ${
+                      className={`flex items-center gap-3.5 py-3 px-4 rounded-2xl cursor-pointer transition-all ${
                         isSelected
-                          ? 'bg-[var(--dm-bg-hover)]'
-                          : 'hover:bg-[var(--dm-bg-hover)]/50'
+                          ? 'bg-[#262626] text-white'
+                          : 'hover:bg-[var(--dm-bg-hover)]'
                       }`}
                     >
-                      {/* Gradient swatch */}
+                      {/* Swatch */}
                       <div
-                        className="w-11 h-11 rounded-full flex-shrink-0 shadow-md"
+                        className="w-9 h-9 rounded-full flex-shrink-0 shadow-sm border border-white/20"
                         style={{ background: theme.previewWallpaper }}
                       />
-                      {/* Name + category */}
+                      {/* Name */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[var(--dm-text-primary)] truncate">{theme.name}</p>
-                        <p className="text-[11px] text-[var(--dm-text-muted)] truncate">{theme.category}</p>
+                        <p className={`text-sm font-semibold truncate ${isSelected ? 'text-white' : 'text-[var(--dm-text-primary)]'}`}>{cleanName}</p>
                       </div>
                       {/* Check */}
                       {isSelected && (
-                        <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-extrabold flex-shrink-0 animate-in zoom-in-75 duration-200">
+                        <div className="w-5 h-5 rounded-full bg-white text-black flex items-center justify-center text-[10px] font-extrabold flex-shrink-0 animate-in zoom-in-75 duration-200">
                           ✓
                         </div>
                       )}
@@ -4193,7 +4198,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   setLiveThemeId(null);
                   setShowThemePicker(false);
                 }}
-                className="flex-1 py-3 px-4 rounded-full text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer active:scale-95"
+                className="flex-1 py-3 px-4 rounded-full text-xs font-bold text-white bg-[#262626] hover:bg-[#1a1a1a] shadow-md transition-all cursor-pointer active:scale-95"
               >
                 Apply Theme
               </button>
