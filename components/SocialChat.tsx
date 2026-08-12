@@ -72,8 +72,6 @@ export interface ChatTheme {
 
 export const INSTAGRAM_THEMES: ChatTheme[] = [
   { id: 'default', name: 'Default 🔮', category: 'Ambient', outgoingGradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'var(--dm-bg-hover)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#6366f1', inputBorderColor: 'var(--dm-border)', reactionAccent: '#6366f1', previewWallpaper: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' },
-  { id: 'whale', name: 'Whale 🐋', category: 'Nature', outgoingGradient: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 255, 255, 0.15)', incomingTextColor: '#ffffff', chatBg: '#0f172a', accentColor: '#38bdf8', inputBorderColor: 'rgba(56, 189, 248, 0.3)', reactionAccent: '#38bdf8', previewWallpaper: 'url("/Whale.jpg")', wallpaperUrl: '/Whale.jpg' },
-  { id: 'love', name: 'Love ❤️', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 255, 255, 0.15)', incomingTextColor: '#ffffff', chatBg: '#831843', accentColor: '#f472b6', inputBorderColor: 'rgba(244, 114, 182, 0.3)', reactionAccent: '#f472b6', previewWallpaper: 'url("/Love.jpg")', wallpaperUrl: '/Love.jpg' },
 ];
 
 export interface MessageTag {
@@ -537,7 +535,7 @@ const IGMessageOverlay = ({
 
 // ─── MessageItem ────────────────────────────────────────────────────────────
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker, onOpenThemePicker }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender }: any) => {
   if (msg.type === 'system') {
     const isThemeSystemMsg = msg.content.toLowerCase().includes('theme to') || msg.content.toLowerCase().includes('customize chat');
     
@@ -587,6 +585,16 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
   const isMoving = useRef(false);
   const bubbleRef = useRef<HTMLDivElement>(null);
 
+  const reactionCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    (msg.reactions || []).forEach((r: any) => {
+      if (r.emoji) {
+        counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [msg.reactions]);
+
   const triggerIGMenu = () => {
     if (!bubbleRef.current) return;
     const rect = bubbleRef.current.getBoundingClientRect();
@@ -619,6 +627,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    handlePointerMove();
     const currentX = e.touches[0].clientX;
     const currentY = e.touches[0].clientY;
     const diffX = currentX - touchStartX.current;
@@ -642,24 +651,35 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           (e.currentTarget as any)._hapticsTriggered = true;
         }
       }
-    } else {
-      handlePointerMove();
     }
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchEnd = () => {
     handlePointerUp();
-    (e.currentTarget as any)._hapticsTriggered = false;
-    if (swipeOffset > 50 && onReply) onReply(msg);
+    if (swipeOffset > 50) {
+      if (navigator.vibrate) navigator.vibrate(30);
+      onReply(msg);
+    }
     setIsSwiping(false);
     setSwipeOffset(0);
-    isSwipingHorizontally.current = null;
   };
 
-  // Right-click context menu (desktop)
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    triggerIGMenu();
+    if (navigator.vibrate) navigator.vibrate(40);
+    if (bubbleRef.current) {
+      const rect = bubbleRef.current.getBoundingClientRect();
+      onShowIGMenu({
+        msg,
+        rect: {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+        },
+        isSent,
+      });
+    }
   };
 
   const handleMessageClick = (e: React.MouseEvent) => {
@@ -669,51 +689,29 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
     }
   };
 
-  // Reaction counts
-  const reactionCounts: Record<string, number> = {};
-  if (msg.reactions && msg.type !== 'deleted') {
-    msg.reactions.forEach((r: any) => {
-      reactionCounts[r.emoji] = (reactionCounts[r.emoji] || 0) + 1;
-    });
-  }
-
   return (
     <div
       className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${isSelected ? 'selected-item' : ''} animate-in slide-in-from-bottom-2 duration-300 relative`}
       onClick={handleMessageClick}
       onMouseDown={handlePointerDown}
-      onMouseUp={handlePointerUp}
       onMouseMove={handlePointerMove}
+      onMouseUp={handlePointerUp}
+      onMouseLeave={handlePointerUp}
       onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
       onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       onContextMenu={handleContextMenu}
       style={{
         display: 'flex',
-        flexDirection: 'column',
-        alignItems: isSent ? 'flex-end' : 'flex-start',
-        marginLeft: isSent ? 'auto' : '0',
-        marginRight: isSent ? '0' : 'auto',
-        cursor: isInSelectionMode ? 'pointer' : 'default',
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        justifyContent: isSent ? 'flex-end' : 'flex-start',
+        gap: '8px',
         width: '100%',
-        maxWidth: '100%',
+        padding: '0 8px',
         userSelect: 'none',
-        WebkitUserSelect: 'none',
       }}
     >
-      {/* Swipe Reply Indicator */}
-      {swipeOffset > 0 && (
-        <div
-          className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-sm font-bold transition-opacity z-10 text-indigo-500"
-          style={{ opacity: Math.min(swipeOffset / 50, 1) }}
-        >
-          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
-          {swipeOffset > 50 && (
-            <span className="text-[10px] uppercase tracking-wider font-extrabold animate-in zoom-in-50 duration-150">Reply</span>
-          )}
-        </div>
-      )}
-
       {!isSent && !isAI && (
         <img
           src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.avif'}
@@ -722,113 +720,136 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           referrerPolicy="no-referrer"
         />
       )}
-      {/* Bubble */}
-      <div
-        ref={bubbleRef}
-        className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''}`}
-        style={{
-          order: isSent ? 2 : 1,
-          width: 'fit-content',
-          maxWidth: '75%',
-          marginLeft: isSent ? 'auto' : '0',
-          marginRight: isSent ? '0' : 'auto',
-          transition: isSwiping ? 'none' : 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.18s, background 0.3s ease, color 0.3s ease',
-          transform: swipeOffset > 0
-            ? `translateX(${swipeOffset}px)`
-            : isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
-          background: isSent ? (activeTheme?.outgoingGradient || 'linear-gradient(135deg, #18181b 0%, #000000 100%)') : (activeTheme?.incomingBubbleColor || undefined),
-          color: isSent ? (activeTheme?.outgoingTextColor || '#ffffff') : (activeTheme?.incomingTextColor || undefined),
-        }}
-      >
-        {msg.replyTo && (
-          <div className={`mb-2 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden ${isSent ? 'border-white/50 bg-black/25 text-white' : 'border-white/50 bg-black/10 dark:bg-white/10'}`}>
-            <span className="font-bold text-[11px] opacity-90">{msg.replyTo.senderName || 'Quoted Message'}</span>
-            <span className="truncate text-[11px] opacity-85">{msg.replyTo.content}</span>
-          </div>
-        )}
-        {isAI && <div className="system-sender">AI Assistant</div>}
-        {msg.type === 'image' && (
-          <img
-            src={msg.content}
-            alt="media"
-            className="cursor-pointer hover:opacity-95 transition-opacity"
-            onClick={e => { e.stopPropagation(); if (onPreviewImage) onPreviewImage(msg.content); else window.open(msg.content, '_blank'); }}
-          />
-        )}
-        {msg.type === 'video' && <video src={msg.content} controls />}
-        {msg.type === 'voice' && <audio src={msg.content} controls />}
-        {msg.type === 'call' && (
-          <div className="call-log-msg">
-            <div className={`call-icon ${msg.content.includes('Missed') ? 'missed' : msg.content.includes('rejected') ? 'rejected' : 'completed'}`}>
-              {msg.content.includes('video') ? (
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>
-              ) : (
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
-              )}
-              {(msg.content.includes('Missed') || msg.content.includes('rejected')) && <div className="call-status-badge">!</div>}
-            </div>
-            <div className="call-details">
-              <span className="call-title">{msg.content.split(' • ')[0]}</span>
-              {msg.content.includes(' • ') && <span className="call-duration">{msg.content.split(' • ')[1]}</span>}
-            </div>
-          </div>
-        )}
-        {msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
-          <div style={{ fontSize: '0.98rem', lineHeight: '1.45', wordBreak: 'break-word', display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: '8px', justifyContent: 'space-between' }}>
-            <span style={{ flex: '1 1 auto' }}>{msg.content}</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', opacity: 0.75, flexShrink: 0, marginLeft: 'auto', alignSelf: 'flex-end', paddingBottom: '1px' }}>
-              <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-              {isSent && (
-                <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                    <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-                  </svg>
+
+      {/* Consecutive Grouping Tail Logic */}
+      {(() => {
+        const isMiddleInGroup = isPrevSameSender && isNextSameSender;
+        const isFirstInGroup = !isPrevSameSender && isNextSameSender;
+        const isLastInGroup = isPrevSameSender && !isNextSameSender;
+
+        let bubbleBorderRadius = '18px 18px 4px 18px';
+        if (isSent) {
+          if (isFirstInGroup) bubbleBorderRadius = '18px 18px 4px 18px';
+          else if (isMiddleInGroup) bubbleBorderRadius = '18px';
+          else if (isLastInGroup) bubbleBorderRadius = '18px 4px 18px 18px';
+          else bubbleBorderRadius = '18px 18px 4px 18px';
+        } else {
+          if (isFirstInGroup) bubbleBorderRadius = '18px 18px 18px 4px';
+          else if (isMiddleInGroup) bubbleBorderRadius = '18px';
+          else if (isLastInGroup) bubbleBorderRadius = '4px 18px 18px 18px';
+          else bubbleBorderRadius = '18px 18px 18px 4px';
+        }
+
+        return (
+          <div
+            ref={bubbleRef}
+            className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''}`}
+            style={{
+              order: isSent ? 2 : 1,
+              width: 'fit-content',
+              maxWidth: '70%',
+              borderRadius: bubbleBorderRadius,
+              marginTop: isPrevSameSender ? '2px' : '6px',
+              transition: isSwiping ? 'none' : 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.18s, background 0.3s ease, color 0.3s ease',
+              transform: swipeOffset > 0
+                ? `translateX(${swipeOffset}px)`
+                : isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
+              background: isSent
+                ? (activeTheme?.id !== 'default' ? activeTheme?.outgoingGradient : 'linear-gradient(135deg, #3797F0 0%, #833AB4 50%, #C13584 100%)')
+                : (activeTheme?.id !== 'default' ? activeTheme?.incomingBubbleColor : undefined),
+              color: isSent ? '#ffffff' : (activeTheme?.id !== 'default' ? activeTheme?.incomingTextColor : undefined),
+            }}
+          >
+            {msg.replyTo && (
+              <div className={`mb-2 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden ${isSent ? 'border-white/50 bg-black/25 text-white' : 'border-white/50 bg-black/10 dark:bg-white/10'}`}>
+                <span className="font-bold text-[11px] opacity-90">{msg.replyTo.senderName || 'Quoted Message'}</span>
+                <span className="truncate text-[11px] opacity-85">{msg.replyTo.content}</span>
+              </div>
+            )}
+            {isAI && <div className="system-sender">AI Assistant</div>}
+            {msg.type === 'image' && (
+              <img
+                src={msg.content}
+                alt="media"
+                className="cursor-pointer hover:opacity-95 transition-opacity"
+                onClick={e => { e.stopPropagation(); if (onPreviewImage) onPreviewImage(msg.content); else window.open(msg.content, '_blank'); }}
+              />
+            )}
+            {msg.type === 'video' && <video src={msg.content} controls />}
+            {msg.type === 'voice' && <audio src={msg.content} controls />}
+            {msg.type === 'call' && (
+              <div className="call-log-msg">
+                <div className={`call-icon ${msg.content.includes('Missed') ? 'missed' : msg.content.includes('rejected') ? 'rejected' : 'completed'}`}>
+                  {msg.content.includes('video') ? (
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
+                  )}
+                  {(msg.content.includes('Missed') || msg.content.includes('rejected')) && <div className="call-status-badge">!</div>}
+                </div>
+                <div className="call-details">
+                  <span className="call-title">{msg.content.split(' • ')[0]}</span>
+                  {msg.content.includes(' • ') && <span className="call-duration">{msg.content.split(' • ')[1]}</span>}
+                </div>
+              </div>
+            )}
+            {msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
+              <div style={{ fontSize: '0.98rem', lineHeight: '1.45', wordBreak: 'break-word', display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: '8px', justifyContent: 'space-between' }}>
+                <span style={{ flex: '1 1 auto' }}>{msg.content}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', opacity: 0.75, flexShrink: 0, marginLeft: 'auto', alignSelf: 'flex-end', paddingBottom: '1px' }}>
+                  <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                  {isSent && (
+                    <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+                      </svg>
+                    </span>
+                  )}
                 </span>
-              )}
-            </span>
-          </div>
-        ) : (
-          <div className="time-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '3px', fontSize: '0.68rem', opacity: 0.75 }}>
-            <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-            {isSent && (
-              <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                  <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-                </svg>
-              </span>
+              </div>
+            ) : (
+              <div className="time-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '3px', fontSize: '0.68rem', opacity: 0.75 }}>
+                <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                {isSent && (
+                  <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                      <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+                    </svg>
+                  </span>
+                )}
+              </div>
+            )}
+
+            {msgTag && (
+              <div
+                onClick={e => { e.stopPropagation(); onOpenTagPicker(msg); }}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-md cursor-pointer transition-all hover:scale-105 active:scale-95 animate-in zoom-in-75 duration-200 mt-1.5"
+                style={{ background: `${msgTag.color}25`, border: `1px solid ${msgTag.color}50`, color: msgTag.color }}
+              >
+                <span>{msgTag.emoji}</span>
+                <span>{msgTag.label}</span>
+                <span className="text-[9px] opacity-60 ml-0.5">✕</span>
+              </div>
             )}
           </div>
-        )}
-
-        {msgTag && (
-          <div
-            onClick={e => { e.stopPropagation(); onOpenTagPicker(msg); }}
-            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-md cursor-pointer transition-all hover:scale-105 active:scale-95 animate-in zoom-in-75 duration-200 mt-1.5"
-            style={{ background: `${msgTag.color}25`, border: `1px solid ${msgTag.color}50`, color: msgTag.color }}
-          >
-            <span>{msgTag.emoji}</span>
-            <span>{msgTag.label}</span>
-            <span className="text-[9px] opacity-60 ml-0.5">✕</span>
-          </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* Reaction bubbles (below the message) */}
       {Object.keys(reactionCounts).length > 0 && (
         <div
           style={{
-            order: isSent ? 3 : 3,
+            position: 'absolute',
+            bottom: '-12px',
+            [isSent ? 'right' : 'left']: '48px',
             display: 'flex',
             gap: '4px',
             flexWrap: 'wrap',
             justifyContent: isSent ? 'flex-end' : 'flex-start',
-            marginTop: '-6px',
-            marginLeft: isSent ? 'auto' : '8px',
-            marginRight: isSent ? '8px' : 'auto',
             zIndex: 1,
           }}
         >
-          {Object.entries(reactionCounts).map(([emoji, count]) => (
+          {Object.entries(reactionCounts).map(([emoji, count]: [string, number]) => (
             <span
               key={emoji}
               onClick={e => { e.stopPropagation(); onReact(msg.id, emoji); }}
@@ -3066,7 +3087,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   )}
                   {(() => {
                     let lastMsgTime: number | null = null;
-                    return messages.filter(msg => msg.type !== 'accepted').map((msg) => {
+                    const filteredMessages = messages.filter(msg => msg.type !== 'accepted');
+                    return filteredMessages.map((msg, index) => {
+                      const prevMsg = filteredMessages[index - 1];
+                      const nextMsg = filteredMessages[index + 1];
+                      const isPrevSameSender = prevMsg && String(prevMsg.senderId) === String(msg.senderId);
+                      const isNextSameSender = nextMsg && String(nextMsg.senderId) === String(msg.senderId);
                       const msgTime = new Date(msg.createdAt).getTime();
                       const showSep = lastMsgTime === null || (msgTime - lastMsgTime) > 15 * 60 * 1000;
                       if (showSep) lastMsgTime = msgTime;
@@ -3095,6 +3121,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               msgTag={msgTags[msg.id]}
                               onOpenTagPicker={setOpenTagPickerMsg}
                               onOpenThemePicker={() => setShowThemePicker(true)}
+                              isPrevSameSender={isPrevSameSender}
+                              isNextSameSender={isNextSameSender}
                             />
                           </div>
                         </React.Fragment>
@@ -4149,7 +4177,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </button>
             </div>
 
-            {/* Tab 1: Themes (3 Columns Grid, 160px height per box showing wallpaper background) */}
+            {/* Tab 1: Themes (Horizontal 3 Columns Grid, 160px height per box showing pure wallpaper background) */}
             {customizerTab === 'themes' && (
               <div className="px-6 py-3 overflow-y-auto grid grid-cols-3 gap-3 no-scrollbar max-h-[55vh]">
                 {INSTAGRAM_THEMES.map(theme => {
@@ -4160,7 +4188,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       onClick={() => {
                         if (navigator.vibrate) navigator.vibrate(20);
                         setLiveThemeId(theme.id);
-                        handleSelectTheme(theme);
                       }}
                       className={`h-[160px] rounded-2xl flex flex-col items-center justify-end p-2.5 cursor-pointer transition-all relative overflow-hidden bg-cover bg-center ${
                         isSelected

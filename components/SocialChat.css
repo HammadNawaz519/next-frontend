@@ -2079,3 +2079,132 @@
   -webkit-backdrop-filter: none !important;
 }
 
+
+
+/* ==========================================================================
+   INSTAGRAM-STYLE CHAT UI OVERRIDES: WALLPAPER, GLASS, MESSAGES & MOTION
+   ========================================================================== */
+
+/* 1. Viewport & Stationary Wallpaper */
+.social-chat-container .chat-area,
+.social-chat-container .messages {
+  background-image: url("/bg-light.png") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+[data-theme="dark"] .social-chat-container .chat-area,
+[data-theme="dark"] .social-chat-container .messages {
+  background-image: url("/bg-dark.png") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+/* 2. Sent & Received Message Bubbles */
+.social-chat-container .msg.sent {
+  background: linear-gradient(135deg, #3797F0 0%, #833AB4 50%, #C13584 100%) !important;
+  color: #FFFFFF !important;
+  max-width: 70% !important;
+  border-radius: 18px 18px 4px 18px !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.social-chat-container .msg.received,
+.social-chat-container .msg.ai {
+  background: rgba(240, 240, 240, 0.85) !important;
+  color: #000000 !important;
+  max-width: 70% !important;
+  border-radius: 18px 18px 18px 4px !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+[data-theme="dark"] .social-chat-container .msg.received,
+[data-theme="dark"] .social-chat-container .msg.ai {
+  background: rgba(38, 38, 38, 0.75) !important;
+  color: #FFFFFF !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+/* 3. Frosted Glass Header & Typebox Chrome */
+.social-chat-container .chat-header {
+  height: 56px !important;
+  min-height: 56px !important;
+  padding: 0 16px !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+[data-theme="dark"] .social-chat-container .chat-header {
+  background: rgba(18, 18, 18, 0.65) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.social-chat-container .footer {
+  padding: 8px 16px 16px !important;
+  background: transparent !important;
+  border-top: none !important;
+}
+
+.social-chat-container .ig-type-box {
+  background: rgba(230, 230, 230, 0.85) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-radius: 28px !important;
+  border: none !important;
+}
+
+[data-theme="dark"] .social-chat-container .ig-type-box {
+  background: rgba(26, 26, 26, 0.85) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+.social-chat-container .ig-cam-container {
+  background: #262626 !important;
+}
+
+.social-chat-container .ig-cam-btn {
+  color: #FFFFFF !important;
+}
+
+/* 4. Entrance Motion & Scroll Behavior */
+@keyframes ig-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.social-chat-container .msg {
+  animation: ig-pop-in 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+}
+
+.social-chat-container .messages {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
