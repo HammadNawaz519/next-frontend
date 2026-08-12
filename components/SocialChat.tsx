@@ -98,7 +98,11 @@ export const INSTAGRAM_THEMES: ChatTheme[] = [
   { id: 'pastel', name: 'Pastel Dreams ☁️', category: 'Ambient', outgoingGradient: 'linear-gradient(135deg, #f472b6 0%, #818cf8 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(244, 114, 182, 0.12)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'linear-gradient(180deg, rgba(244, 114, 182, 0.08) 0%, rgba(129, 140, 248, 0.08) 100%)', accentColor: '#818cf8', inputBorderColor: 'rgba(129, 140, 248, 0.3)', reactionAccent: '#f472b6', previewWallpaper: 'linear-gradient(135deg, #f472b6 0%, #818cf8 100%)' },
   { id: 'winter', name: 'Winter Solstice ❄️', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #0284c7 0%, #475569 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(2, 132, 199, 0.12)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)', accentColor: '#38bdf8', inputBorderColor: 'rgba(56, 189, 248, 0.3)', reactionAccent: '#94a3b8', previewWallpaper: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)' },
   { id: 'halloween', name: 'Halloween Glow 🎃', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #ea580c 0%, #7c2d12 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(234, 88, 12, 0.15)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'linear-gradient(180deg, #451a03 0%, #000000 100%)', accentColor: '#f97316', inputBorderColor: 'rgba(249, 115, 22, 0.4)', reactionAccent: '#fb923c', previewWallpaper: 'linear-gradient(135deg, #7c2d12 0%, #000000 100%)' },
-  { id: 'holiday', name: 'Holiday Magic ✨', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #dc2626 0%, #16a34a 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(220, 38, 38, 0.12)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'linear-gradient(180deg, rgba(220, 38, 38, 0.08) 0%, rgba(22, 163, 74, 0.08) 100%)', accentColor: '#dc2626', inputBorderColor: 'rgba(220, 38, 38, 0.3)', reactionAccent: '#22c55e', previewWallpaper: 'linear-gradient(135deg, #991b1b 0%, #14532d 100%)' }
+  { id: 'holiday', name: 'Holiday Magic ✨', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #dc2626 0%, #16a34a 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(220, 38, 38, 0.12)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'linear-gradient(180deg, rgba(220, 38, 38, 0.08) 0%, rgba(22, 163, 74, 0.08) 100%)', accentColor: '#dc2626', inputBorderColor: 'rgba(220, 38, 38, 0.3)', reactionAccent: '#22c55e', previewWallpaper: 'linear-gradient(135deg, #991b1b 0%, #14532d 100%)' },
+  { id: 'ig_teal', name: 'IG Teal 🌊', category: 'Nature', outgoingGradient: 'linear-gradient(135deg, #12a085 0%, #0a6b5a 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(18, 160, 133, 0.22)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'radial-gradient(ellipse at 30% 20%, #1f7a6b 0%, #005c4b 50%, #003a30 100%)', accentColor: '#12a085', inputBorderColor: 'rgba(18, 160, 133, 0.35)', reactionAccent: '#2dd4bf', previewWallpaper: 'linear-gradient(135deg, #005c4b 0%, #12a085 100%)' },
+  { id: 'ig_dark', name: 'Dark Slate 🌑', category: 'Ambient', outgoingGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(55, 65, 81, 0.85)', incomingTextColor: '#f3f4f6', chatBg: '#111827', accentColor: '#3b82f6', inputBorderColor: 'rgba(55, 65, 81, 0.5)', reactionAccent: '#60a5fa', previewWallpaper: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)' },
+  { id: 'ig_blue', name: 'Deep Blue 💙', category: 'Gradients', outgoingGradient: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(30, 58, 138, 0.28)', incomingTextColor: '#dbeafe', chatBg: 'linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%)', accentColor: '#3b82f6', inputBorderColor: 'rgba(59, 130, 246, 0.3)', reactionAccent: '#93c5fd', previewWallpaper: 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)' },
+  { id: 'ig_green', name: 'Fresh Green 🌿', category: 'Nature', outgoingGradient: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(22, 163, 74, 0.16)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'linear-gradient(180deg, rgba(22,163,74,0.1) 0%, rgba(5,46,22,0.12) 100%)', accentColor: '#22c55e', inputBorderColor: 'rgba(34, 197, 94, 0.3)', reactionAccent: '#4ade80', previewWallpaper: 'linear-gradient(135deg, #15803d 0%, #052e16 100%)' },
 ];
 
 export interface MessageTag {
@@ -139,6 +143,21 @@ export const formatLastSeenAgo = (lastSeenRaw?: string | Date | null): string =>
   if (diffWeeks === 1) return '1 week ago';
   if (diffWeeks < 5) return `${diffWeeks} weeks ago`;
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
+
+export const formatDateSeparator = (date: Date): string => {
+  const d = new Date(date);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase();
+  if (diffDays === 0) return timeStr;
+  if (diffDays < 7) {
+    const dayStr = d.toLocaleDateString([], { weekday: 'short' }).toUpperCase();
+    return `${dayStr} ${timeStr}`;
+  }
+  const monthStr = d.toLocaleDateString([], { month: 'short' }).toUpperCase();
+  return `${monthStr} ${d.getDate()}, ${timeStr}`;
 };
 
 
@@ -690,6 +709,14 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         </div>
       )}
 
+      {!isSent && !isAI && (
+        <img
+          src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.avif'}
+          alt=""
+          className="msg-small-avatar"
+          referrerPolicy="no-referrer"
+        />
+      )}
       {/* Bubble */}
       <div
         ref={bubbleRef}
@@ -2869,9 +2896,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 <div
                   className="chat-header"
                   style={{
-                    background: activeTheme.id !== 'default'
-                      ? (activeTheme.incomingBubbleColor || 'var(--dm-bg-sidebar)')
-                      : 'var(--dm-bg-sidebar)',
+                    background: 'transparent',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
                     borderBottom: 'none',
                     transition: 'all 300ms ease'
                   }}
@@ -2991,27 +3018,42 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <span>Loading older messages...</span>
                     </div>
                   )}
-                  {messages.filter(msg => msg.type !== 'accepted').map((msg) => (
-                    <div key={msg.id} id={`msg-item-${msg.id}`}>
-                      <MessageItem
-                        msg={msg}
-                        currentUserId={(session?.user as any)?.id}
-                        selectedUser={selectedUser}
-                        onDelete={handleDelete}
-                        onReact={handleReact}
-                        onRequestDelete={handleRequestDelete}
-                        isSelected={selectedMessageIds.has(msg.id)}
-                        isInSelectionMode={selectedMessageIds.size > 0}
-                        toggleMessageSelection={toggleMessageSelection}
-                        onShowIGMenu={setIgMenu}
-                        onReply={setReplyToMessage}
-                        activeTheme={activeTheme}
-                        onPreviewImage={setLightboxImageSrc}
-                        msgTag={msgTags[msg.id]}
-                        onOpenTagPicker={setOpenTagPickerMsg}
-                      />
-                    </div>
-                  ))}
+                  {(() => {
+                    let lastMsgTime: number | null = null;
+                    return messages.filter(msg => msg.type !== 'accepted').map((msg) => {
+                      const msgTime = new Date(msg.createdAt).getTime();
+                      const showSep = lastMsgTime === null || (msgTime - lastMsgTime) > 15 * 60 * 1000;
+                      if (showSep) lastMsgTime = msgTime;
+                      return (
+                        <React.Fragment key={msg.id}>
+                          {showSep && (
+                            <div className="date-separator">
+                              <span>{formatDateSeparator(new Date(msg.createdAt))}</span>
+                            </div>
+                          )}
+                          <div id={`msg-item-${msg.id}`}>
+                            <MessageItem
+                              msg={msg}
+                              currentUserId={(session?.user as any)?.id}
+                              selectedUser={selectedUser}
+                              onDelete={handleDelete}
+                              onReact={handleReact}
+                              onRequestDelete={handleRequestDelete}
+                              isSelected={selectedMessageIds.has(msg.id)}
+                              isInSelectionMode={selectedMessageIds.size > 0}
+                              toggleMessageSelection={toggleMessageSelection}
+                              onShowIGMenu={setIgMenu}
+                              onReply={setReplyToMessage}
+                              activeTheme={activeTheme}
+                              onPreviewImage={setLightboxImageSrc}
+                              msgTag={msgTags[msg.id]}
+                              onOpenTagPicker={setOpenTagPickerMsg}
+                            />
+                          </div>
+                        </React.Fragment>
+                      );
+                    });
+                  })()}
                   {!isLoadingMessages && messages.filter(msg => msg.type !== 'accepted').length === 0 && (
                     <div className="empty-chat-state">
                       <div className="empty-chat-pfp">
@@ -3120,8 +3162,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           transition: 'all 0.3s ease'
                         }}
                       >
-                        <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Send Media">
-                          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
+                        <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Camera / Photo">
+                          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                            <circle cx="12" cy="13" r="4"/>
+                          </svg>
                         </button>
                         {/* Gap between image and emoji */}
                         <div style={{ width: '6px', flexShrink: 0 }} />
@@ -3160,7 +3205,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           )}
                         </div>
                         <textarea
-                          placeholder="Write a message..."
+                          placeholder="Message..."
                           value={inputValue}
                           rows={1}
                           onChange={(e) => {
@@ -3247,61 +3292,83 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     )}
 
 
-                    <button
-                      className={`send-btn${isRecording ? ' recording-pulse' : ''}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if ((e.currentTarget as any)._touchHandled) {
-                          (e.currentTarget as any)._touchHandled = false;
-                          return;
-                        }
-                        if (inputValue.trim()) {
-                          handleSendMessage();
-                        } else if (isRecording) {
-                          stopRecording();
-                        } else {
-                          startRecording();
-                        }
-                      }}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        (e.currentTarget as any)._touchHandled = true;
-                        if (inputValue.trim()) {
-                          handleSendMessage();
-                        } else if (isRecording) {
-                          stopRecording();
-                        } else {
-                          startRecording();
-                        }
-                      }}
-                      title={isRecording ? 'Send voice note' : inputValue.trim() ? 'Send' : 'Voice message'}
-                      style={
-                        isRecording
-                          ? {
-                              background: activeTheme.accentColor || '#0095f6',
-                              borderRadius: '9999px',
-                              boxShadow: '0 4px 15px rgba(0, 149, 246, 0.3)',
-                              transition: 'all 0.3s ease'
-                            }
-                          : {
-                              background: activeTheme.accentColor || '#6366f1',
-                              borderRadius: '9999px',
-                              boxShadow: activeTheme.accentColor ? `0 4px 15px ${activeTheme.accentColor}40` : undefined,
-                              transition: 'all 0.3s ease'
-                            }
-                      }
-                    >
-                      {inputValue.trim() || isRecording ? (
+                    {!isRecording && !isVoiceToText && !inputValue.trim() ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                        {/* Microphone */}
+                        <button
+                          className="ig-media-btn"
+                          onClick={startRecording}
+                          title="Voice message"
+                        >
+                          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <line x1="12" y1="19" x2="12" y2="23"/>
+                            <line x1="8" y1="23" x2="16" y2="23"/>
+                          </svg>
+                        </button>
+                        {/* Gallery */}
+                        <button
+                          className="ig-media-btn"
+                          onClick={() => fileInputRef.current?.click()}
+                          title="Gallery"
+                        >
+                          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                          </svg>
+                        </button>
+                        {/* Sticker / Emoji */}
+                        <button
+                          className="ig-media-btn"
+                          onClick={() => setShowEmojiPicker(p => !p)}
+                          title="Emoji"
+                          style={{ color: showEmojiPicker ? (activeTheme.accentColor || 'var(--dm-text-primary)') : undefined }}
+                        >
+                          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                            <line x1="9" y1="9" x2="9.01" y2="9"/>
+                            <line x1="15" y1="9" x2="15.01" y2="9"/>
+                          </svg>
+                        </button>
+                        {/* Plus */}
+                        <button
+                          className="ig-plus-btn"
+                          title="More"
+                          style={{ color: 'var(--dm-text-secondary)' }}
+                        >
+                          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                          </svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        className={`send-btn${isRecording ? ' recording-pulse' : ''}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if ((e.currentTarget as any)._touchHandled) { (e.currentTarget as any)._touchHandled = false; return; }
+                          if (inputValue.trim()) { handleSendMessage(); } else if (isRecording) { stopRecording(); } else { startRecording(); }
+                        }}
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          (e.currentTarget as any)._touchHandled = true;
+                          if (inputValue.trim()) { handleSendMessage(); } else if (isRecording) { stopRecording(); } else { startRecording(); }
+                        }}
+                        title={isRecording ? 'Send voice note' : inputValue.trim() ? 'Send' : 'Voice message'}
+                        style={{
+                          background: activeTheme.accentColor || (isRecording ? '#0095f6' : '#6366f1'),
+                          borderRadius: '9999px',
+                          boxShadow: isRecording ? '0 4px 15px rgba(0,149,246,0.3)' : (activeTheme.accentColor ? `0 4px 15px ${activeTheme.accentColor}40` : undefined),
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
-                      ) : isVoiceToText ? (
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
-                      ) : (
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-                          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-                        </svg>
-                      )}
-                    </button>
+                      </button>
+                    )}
                   </footer>
                 ) : (
                   <footer className="sel-bar">
@@ -3838,6 +3905,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                   {theme.id === 'emerald' && '🌿'}
                                   {theme.id === 'nordic' && '❄️'}
                                   {theme.id === 'monochrome' && '🖤'}
+                                  {theme.id === 'ig_teal' && '🌊'}
+                                  {theme.id === 'ig_dark' && '🌑'}
+                                  {theme.id === 'ig_blue' && '💙'}
+                                  {theme.id === 'ig_green' && '🌿'}
                                   {theme.id === 'default' && '🔮'}
                                 </div>
                                 <span className="text-xs font-semibold text-[var(--dm-text-primary)]">{theme.name}</span>
@@ -4230,8 +4301,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               />
             </div>
 
-            {/* Themes Grid */}
-            <div className="px-6 py-3 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-3.5 max-h-[45vh] no-scrollbar">
+            {/* Themes Simple List */}
+            <div className="px-4 py-2 overflow-y-auto flex flex-col no-scrollbar" style={{ maxHeight: '52vh' }}>
               {INSTAGRAM_THEMES
                 .filter(t => {
                   const matchesCat = themeCategoryFilter === 'All' || t.category === themeCategoryFilter;
@@ -4247,40 +4318,28 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         if (navigator.vibrate) navigator.vibrate(20);
                         setLiveThemeId(theme.id);
                       }}
-                      className={`relative p-2.5 rounded-2xl border-2 cursor-pointer transition-all ${
-                        isSelected 
-                          ? 'border-indigo-500 scale-[1.03] shadow-xl ring-2 ring-indigo-500/30 bg-[var(--dm-bg-hover)]' 
-                          : 'border-[var(--dm-border)] bg-[var(--dm-bg-hover)] hover:border-zinc-500/50 hover:scale-[1.01]'
+                      className={`flex items-center gap-3.5 py-3 px-3 rounded-2xl cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-[var(--dm-bg-hover)]'
+                          : 'hover:bg-[var(--dm-bg-hover)]/50'
                       }`}
                     >
-                      {/* Card Wallpaper Miniature */}
+                      {/* Gradient swatch */}
                       <div
-                        className="w-full aspect-[4/3] rounded-xl p-2 flex flex-col justify-between overflow-hidden shadow-inner relative transition-all duration-300"
+                        className="w-11 h-11 rounded-full flex-shrink-0 shadow-md"
                         style={{ background: theme.previewWallpaper }}
-                      >
-                        <div
-                          className="self-start max-w-[80%] px-2 py-1 rounded-lg text-[9px] font-medium shadow-sm truncate"
-                          style={{ background: theme.incomingBubbleColor, color: theme.incomingTextColor }}
-                        >
-                          Hey! 👋
-                        </div>
-                        <div
-                          className="self-end max-w-[80%] px-2 py-1 rounded-lg text-[9px] font-medium shadow-sm truncate"
-                          style={{ background: theme.outgoingGradient, color: theme.outgoingTextColor }}
-                        >
-                          Awesome ✨
-                        </div>
+                      />
+                      {/* Name + category */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[var(--dm-text-primary)] truncate">{theme.name}</p>
+                        <p className="text-[11px] text-[var(--dm-text-muted)] truncate">{theme.category}</p>
                       </div>
-
-                      {/* Card Footer Name & Checkmark */}
-                      <div className="mt-2 flex items-center justify-between px-0.5">
-                        <span className="text-[11px] font-bold text-[var(--dm-text-primary)] truncate">{theme.name}</span>
-                        {isSelected && (
-                          <div className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px] font-extrabold animate-in zoom-in-75 duration-200 shadow-md flex-shrink-0 ml-1">
-                            ✓
-                          </div>
-                        )}
-                      </div>
+                      {/* Check */}
+                      {isSelected && (
+                        <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-extrabold flex-shrink-0 animate-in zoom-in-75 duration-200">
+                          ✓
+                        </div>
+                      )}
                     </div>
                   );
                 })}

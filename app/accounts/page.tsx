@@ -62,6 +62,17 @@ export default function AccountsPage() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
 
+  // ── Forgot Password / Reset State inside Login Sheet ──
+  const [loginStep, setLoginStep] = useState<'login' | 'forgot-password' | 'reset-otp'>('login');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetOtp, setResetOtp] = useState(['', '', '', '', '', '']);
+  const [resetNewPw, setResetNewPw] = useState('');
+  const [resetConfirmPw, setResetConfirmPw] = useState('');
+  const [resetShowPw, setResetShowPw] = useState(false);
+  const [resetShowConfirm, setResetShowConfirm] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
+
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const resetSignupSheet = () => {
@@ -70,6 +81,16 @@ export default function AccountsPage() {
     setSignupOtp(['', '', '', '', '', '']);
     setOtpError('');
     setSignupShowPassword(false);
+  };
+
+  const resetLoginSheet = () => {
+    setLoginEmail(''); setLoginPassword(''); setLoginError('');
+    setLoginStep('login');
+    setResetEmail('');
+    setResetOtp(['', '', '', '', '', '']);
+    setResetNewPw(''); setResetConfirmPw('');
+    setResetShowPw(false); setResetShowConfirm(false);
+    setResetError('');
   };
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
@@ -175,6 +196,7 @@ export default function AccountsPage() {
         setLoginError('Invalid credentials. Please check your email and password.');
       } else {
         setShowLoginSheet(false);
+        resetLoginSheet();
         router.push('/dashboard');
         router.refresh();
       }
@@ -182,6 +204,97 @@ export default function AccountsPage() {
       setLoginError('An unexpected error occurred.');
     } finally {
       setLoginLoading(false);
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetError('');
+    try {
+      const res = await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResetError(data.message || 'Failed to send reset code.');
+      } else {
+        setResetOtp(['', '', '', '', '', '']);
+        setResetNewPw('');
+        setResetConfirmPw('');
+        setLoginStep('reset-otp');
+      }
+    } catch (err) {
+      setResetError('An unexpected error occurred. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetOtpChange = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, '').slice(-1);
+    const newOtp = [...resetOtp];
+    newOtp[index] = digit;
+    setResetOtp(newOtp);
+    if (digit && index < 5) {
+      const next = document.getElementById(`acc-reset-otp-${index + 1}`);
+      next?.focus();
+    }
+  };
+
+  const handleResetOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !resetOtp[index] && index > 0) {
+      const prev = document.getElementById(`acc-reset-otp-${index - 1}`);
+      prev?.focus();
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetError('');
+    if (resetNewPw !== resetConfirmPw) {
+      setResetError('Passwords do not match.');
+      setResetLoading(false);
+      return;
+    }
+    try {
+      const res = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: resetEmail,
+          code: resetOtp.join(''),
+          newPassword: resetNewPw,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResetError(data.message || 'Failed to reset password. Please try again.');
+      } else {
+        const signInRes = await signIn('credentials', {
+          redirect: false,
+          email: resetEmail,
+          password: resetNewPw,
+        });
+        if (signInRes?.ok) {
+          setShowLoginSheet(false);
+          resetLoginSheet();
+          router.push('/dashboard');
+          router.refresh();
+        } else {
+          setLoginEmail(resetEmail);
+          setLoginPassword(resetNewPw);
+          setLoginStep('login');
+          setLoginError('');
+        }
+      }
+    } catch (err) {
+      setResetError('An unexpected error occurred. Please try again.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -504,6 +617,23 @@ export default function AccountsPage() {
                 </button>
               </div>
 
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetEmail(selectedAccount.email);
+                    setSelectedAccount(null);
+                    setPassword('');
+                    setShowLoginSheet(true);
+                    setLoginStep('forgot-password');
+                    setResetError('');
+                  }}
+                  className="text-xs text-zinc-400 hover:text-white transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
+
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -534,7 +664,7 @@ export default function AccountsPage() {
       >
         <div 
           className="absolute inset-0 bg-black/60 backdrop-blur-md" 
-          onClick={() => setShowLoginSheet(false)}
+          onClick={() => { setShowLoginSheet(false); resetLoginSheet(); }}
         />
         <div 
           className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.35)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${showLoginSheet ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'}`}
@@ -544,81 +674,269 @@ export default function AccountsPage() {
 
           {/* Content */}
           <div className="relative h-full flex flex-col space-y-6">
-            {/* Top bar back button */}
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setShowLoginSheet(false)}
-                className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-                title="Back"
-              >
-                <ArrowLeft className="w-4 h-4 text-white" />
-              </button>
-            </div>
-
-            <div className="text-center space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Welcome Back</h1>
-              <p className="text-white/70">Sign in to your account</p>
-            </div>
-
-            {loginError && (
-              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-center font-semibold">
-                {loginError}
-              </div>
-            )}
-
-            <form onSubmit={handleManualLoginSubmit} className="space-y-4">
-              <div className="space-y-2 text-left">
-                <label htmlFor="login-email" className="text-white/90 text-sm font-medium block">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                  <Input
-                    id="login-email"
-                    type="email"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2 text-left">
-                <label htmlFor="login-password" className="text-white/90 text-sm font-medium block">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                  <Input
-                    id="login-password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    className="pl-10 pr-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                    placeholder="Enter your password"
-                    required
-                  />
+            {/* STEP 1: LOGIN FORM */}
+            {loginStep === 'login' && (
+              <>
+                <div className="flex items-center justify-between">
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
+                    onClick={() => { setShowLoginSheet(false); resetLoginSheet(); }}
+                    className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
+                    title="Back"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    <ArrowLeft className="w-4 h-4 text-white" />
                   </button>
                 </div>
-              </div>
 
-              <Button
-                type="submit"
-                disabled={loginLoading}
-                className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4"
-              >
-                {loginLoading ? 'Signing in...' : 'Sign In'}
-              </Button>
-            </form>
+                <div className="text-center space-y-2">
+                  <h1 className="text-2xl font-semibold text-white">Welcome Back</h1>
+                  <p className="text-white/70">Sign in to your account</p>
+                </div>
+
+                {loginError && (
+                  <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-center font-semibold">
+                    {loginError}
+                  </div>
+                )}
+
+                <form onSubmit={handleManualLoginSubmit} className="space-y-4">
+                  <div className="space-y-2 text-left">
+                    <label htmlFor="login-email" className="text-white/90 text-sm font-medium block">
+                      Email
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                      <Input
+                        id="login-email"
+                        type="email"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
+                        placeholder="Enter your email"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-left">
+                    <label htmlFor="login-password" className="text-white/90 text-sm font-medium block">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                      <Input
+                        id="login-password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="pl-10 pr-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
+                        placeholder="Enter your password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetEmail(loginEmail);
+                        setResetError('');
+                        setLoginStep('forgot-password');
+                      }}
+                      className="text-white/70 hover:text-white text-xs transition-colors font-medium"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={loginLoading}
+                    className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4"
+                  >
+                    {loginLoading ? 'Signing in...' : 'Sign In'}
+                  </Button>
+                </form>
+              </>
+            )}
+
+            {/* STEP 2: FORGOT PASSWORD FORM */}
+            {loginStep === 'forgot-password' && (
+              <>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => { setLoginStep('login'); setResetError(''); }}
+                    className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
+                    title="Back to Sign In"
+                  >
+                    <ArrowLeft className="w-4 h-4 text-white" />
+                  </button>
+                </div>
+
+                <div className="text-center space-y-2">
+                  <h1 className="text-2xl font-semibold text-white">Reset Password</h1>
+                  <p className="text-white/70 text-sm">Enter your email to receive a reset code</p>
+                </div>
+
+                {resetError && (
+                  <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-center font-semibold">
+                    {resetError}
+                  </div>
+                )}
+
+                <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+                  <div className="space-y-2 text-left">
+                    <label htmlFor="acc-reset-email" className="text-white/90 text-sm font-medium block">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                      <Input
+                        id="acc-reset-email"
+                        type="email"
+                        value={resetEmail}
+                        onChange={(e) => { setResetEmail(e.target.value); setResetError(''); }}
+                        className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
+                        placeholder="Enter your email"
+                        required
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={resetLoading || !resetEmail.trim()}
+                    className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4 disabled:opacity-50"
+                  >
+                    {resetLoading ? 'Sending code...' : 'Send Reset Code'}
+                  </Button>
+                </form>
+              </>
+            )}
+
+            {/* STEP 3: RESET OTP & NEW PASSWORD */}
+            {loginStep === 'reset-otp' && (
+              <>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => { setLoginStep('forgot-password'); setResetError(''); }}
+                    className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
+                    title="Back"
+                  >
+                    <ArrowLeft className="w-4 h-4 text-white" />
+                  </button>
+                </div>
+
+                <div className="text-center space-y-2">
+                  <div className="w-12 h-12 bg-white/10 border border-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Shield className="w-6 h-6 text-white" />
+                  </div>
+                  <h1 className="text-2xl font-semibold text-white">Check your email</h1>
+                  <p className="text-white/60 text-xs">We sent a 6-digit code to</p>
+                  <p className="text-white font-medium text-xs">{resetEmail}</p>
+                </div>
+
+                {resetError && (
+                  <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-center font-semibold">
+                    {resetError}
+                  </div>
+                )}
+
+                <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                  {/* OTP inputs */}
+                  <div className="flex justify-center space-x-2 my-2">
+                    {resetOtp.map((digit, index) => (
+                      <input
+                        key={index}
+                        id={`acc-reset-otp-${index}`}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleResetOtpChange(index, e.target.value)}
+                        onKeyDown={(e) => handleResetOtpKeyDown(index, e)}
+                        className="w-10 h-12 text-center text-lg font-bold bg-[#1c1c1e] border border-zinc-800 text-white rounded-xl focus:outline-none focus:border-white/50 transition-colors"
+                        autoFocus={index === 0}
+                      />
+                    ))}
+                  </div>
+
+                  {/* New password */}
+                  <div className="space-y-2 text-left">
+                    <label htmlFor="acc-reset-new-pw" className="text-white/90 text-sm font-medium block">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                      <Input
+                        id="acc-reset-new-pw"
+                        type={resetShowPw ? 'text' : 'password'}
+                        value={resetNewPw}
+                        onChange={(e) => { setResetNewPw(e.target.value); setResetError(''); }}
+                        className="pl-10 pr-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
+                        placeholder="Enter new password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setResetShowPw(!resetShowPw)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
+                      >
+                        {resetShowPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm new password */}
+                  <div className="space-y-2 text-left">
+                    <label htmlFor="acc-reset-confirm-pw" className="text-white/90 text-sm font-medium block">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                      <Input
+                        id="acc-reset-confirm-pw"
+                        type={resetShowConfirm ? 'text' : 'password'}
+                        value={resetConfirmPw}
+                        onChange={(e) => { setResetConfirmPw(e.target.value); setResetError(''); }}
+                        className="pl-10 pr-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
+                        placeholder="Confirm new password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setResetShowConfirm(!resetShowConfirm)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
+                      >
+                        {resetShowConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {resetConfirmPw && resetNewPw !== resetConfirmPw && (
+                      <p className="text-xs text-red-400">Passwords do not match</p>
+                    )}
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={resetLoading || resetOtp.join('').length < 6 || !resetNewPw || resetNewPw !== resetConfirmPw}
+                    className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4 disabled:opacity-50"
+                  >
+                    {resetLoading ? 'Resetting...' : 'Reset Password'}
+                  </Button>
+                </form>
+              </>
+            )}
           </div>
         </div>
       </div>

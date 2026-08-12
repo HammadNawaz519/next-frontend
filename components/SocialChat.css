@@ -198,10 +198,11 @@
 }
 
 .social-chat-container .to .avatar {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: var(--indigo-light);
+  background: transparent;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -279,7 +280,9 @@
 .social-chat-container .msg-wrapper.received,
 .social-chat-container .msg-wrapper.ai {
   margin-right: auto;
+  margin-left: 36px;
   align-items: flex-start;
+  position: relative;
 }
 
 .social-chat-container .msg {
@@ -1263,8 +1266,8 @@
 }
 
 [data-theme="dark"] .social-chat-container .footer {
-  background: var(--dm-bg-sidebar);
-  border-top-color: var(--dm-border);
+  background: transparent;
+  border-top: none;
 }
 
 [data-theme="dark"] .social-chat-container .type-box {
@@ -1803,6 +1806,118 @@
   100% { background-position: -200% 0; }
 }
 
+/* =========================================
+   INSTAGRAM-STYLE DATE SEPARATOR
+   ========================================= */
+.social-chat-container .date-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0 2px;
+  animation: dateSepFadeIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  pointer-events: none;
+}
 
+.social-chat-container .date-separator span {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--dm-text-muted, #8e8e8e);
+  background: rgba(128,128,128,0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 3px 14px;
+  border-radius: 20px;
+}
 
+@keyframes dateSepFadeIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.92); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
 
+/* =========================================
+   SMALL SENDER AVATAR BESIDE RECEIVED MESSAGES
+   ========================================= */
+.social-chat-container .msg-small-avatar {
+  position: absolute;
+  left: -33px;
+  top: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--dm-bg-active);
+}
+
+/* =========================================
+   INSTAGRAM-STYLE FOOTER ICON BUTTONS
+   ========================================= */
+.social-chat-container .ig-media-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--dm-text-secondary);
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+  padding: 0;
+}
+
+.social-chat-container .ig-media-btn:hover,
+.social-chat-container .ig-media-btn:active {
+  background: var(--dm-bg-hover);
+  color: var(--dm-text-primary);
+  transform: scale(1.08);
+}
+
+.social-chat-container .ig-plus-btn {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 2px solid var(--dm-text-secondary);
+  background: transparent;
+  color: var(--dm-text-secondary);
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+  padding: 0;
+}
+
+.social-chat-container .ig-plus-btn:hover,
+.social-chat-container .ig-plus-btn:active {
+  border-color: var(--dm-text-primary);
+  color: var(--dm-text-primary);
+  transform: scale(1.08);
+}
+
+/* Reduce typebox height on mobile to match Instagram */
+@media (max-width: 768px) {
+  .social-chat-container .type-box {
+    min-height: 40px;
+  }
+  .social-chat-container .type-box textarea {
+    min-height: 24px;
+    padding: 6px 4px;
+  }
+  .social-chat-container .footer {
+    padding: 6px 10px 12px;
+    gap: 6px;
+  }
+  .social-chat-container .msg-wrapper.received,
+  .social-chat-container .msg-wrapper.ai {
+    margin-left: 34px;
+  }
+}
