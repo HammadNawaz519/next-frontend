@@ -48,6 +48,13 @@ export default function AccountsPage() {
   const [signupPhone, setSignupPhone] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupLoading, setSignupLoading] = useState(false);
+  const [signupError, setSignupError] = useState('');
+  // 'form' = filling out details, 'otp' = verifying email code
+  const [signupStep, setSignupStep] = useState<'form' | 'otp'>('form');
+  const [signupOtp, setSignupOtp] = useState(['', '', '', '', '', '']);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [signupShowPassword, setSignupShowPassword] = useState(false);
 
   const [showLoginSheet, setShowLoginSheet] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
@@ -57,14 +64,101 @@ export default function AccountsPage() {
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const resetSignupSheet = () => {
+    setSignupName(''); setSignupEmail(''); setSignupPhone(''); setSignupPassword('');
+    setSignupError(''); setSignupStep('form');
+    setSignupOtp(['', '', '', '', '', '']);
+    setOtpError('');
+    setSignupShowPassword(false);
+  };
+
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupLoading(true);
-    setTimeout(() => {
+    setSignupError('');
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: signupName,
+          email: signupEmail,
+          password: signupPassword,
+          phone: signupPhone,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSignupError(data.message || 'Registration failed. Please try again.');
+      } else {
+        // Move to OTP verification step
+        setSignupStep('otp');
+        setSignupOtp(['', '', '', '', '', '']);
+        setOtpError('');
+      }
+    } catch (err) {
+      setSignupError('An unexpected error occurred. Please try again.');
+    } finally {
       setSignupLoading(false);
-      setShowSignupSheet(false);
-      setSignupName(''); setSignupEmail(''); setSignupPhone(''); setSignupPassword('');
-    }, 1500);
+    }
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, '').slice(-1);
+    const newOtp = [...signupOtp];
+    newOtp[index] = digit;
+    setSignupOtp(newOtp);
+    if (digit && index < 5) {
+      const next = document.getElementById(`ac-otp-${index + 1}`);
+      next?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !signupOtp[index] && index > 0) {
+      const prev = document.getElementById(`ac-otp-${index - 1}`);
+      prev?.focus();
+    }
+  };
+
+  const handleOtpVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOtpLoading(true);
+    setOtpError('');
+    const code = signupOtp.join('');
+    if (code.length < 6) {
+      setOtpError('Please enter the full 6-digit code.');
+      setOtpLoading(false);
+      return;
+    }
+    try {
+      const res = await fetch('/api/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: signupEmail, code }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setOtpError(data.message || 'Verification failed. Please try again.');
+      } else {
+        // Account created — sign in immediately and stay in the app
+        const signInRes = await signIn('credentials', {
+          redirect: false,
+          email: signupEmail,
+          password: signupPassword,
+        });
+        setShowSignupSheet(false);
+        resetSignupSheet();
+        if (signInRes?.ok) {
+          router.push('/dashboard');
+          router.refresh();
+        }
+      }
+    } catch (err) {
+      setOtpError('An unexpected error occurred.');
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
   const handleManualLoginSubmit = async (e: React.FormEvent) => {
@@ -531,126 +625,183 @@ export default function AccountsPage() {
 
       {/* Create New Account - Bottom Sheet (Sliding up from bottom) */}
       <div 
-        className={`fixed inset-0 z-[500] transition-all duration-500 ${showSignupSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-[10000] transition-all duration-500 ${showSignupSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       >
         <div 
           className="absolute inset-0 bg-black/60 backdrop-blur-md" 
-          onClick={() => setShowSignupSheet(false)}
+          onClick={() => { setShowSignupSheet(false); resetSignupSheet(); }}
         />
         <div 
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.35)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${showSignupSheet ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'}`}
+          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-[10001] bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.35)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 ${showSignupSheet ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'}`}
         >
           {/* Top handle bar */}
           <div className="w-12 h-1 bg-[#27272a] rounded-full mx-auto mb-6" />
 
-          {/* Content */}
-          <div className="relative h-full flex flex-col space-y-6">
-            {/* Top bar back button */}
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setShowSignupSheet(false)}
-                className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-                title="Back"
-              >
-                <ArrowLeft className="w-4 h-4 text-white" />
-              </button>
+          {/* ── STEP: Form ── */}
+          {signupStep === 'form' && (
+            <div className="flex flex-col space-y-6">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => { setShowSignupSheet(false); resetSignupSheet(); }}
+                  className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
+                  title="Back"
+                >
+                  <ArrowLeft className="w-4 h-4 text-white" />
+                </button>
+              </div>
+
+              <div className="text-center space-y-2">
+                <h1 className="text-2xl font-semibold text-white">Create Account</h1>
+                <p className="text-white/70">Join us today</p>
+              </div>
+
+              {signupError && (
+                <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-center font-semibold">
+                  {signupError}
+                </div>
+              )}
+
+              <form onSubmit={handleSignupSubmit} className="space-y-4">
+                <div className="space-y-2 text-left">
+                  <label htmlFor="ac-signup-name" className="text-white/90 text-sm font-medium block">Username</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                    <Input
+                      id="ac-signup-name"
+                      type="text"
+                      value={signupName}
+                      onChange={(e) => setSignupName(e.target.value)}
+                      className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
+                      placeholder="Username"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-left">
+                  <label htmlFor="ac-signup-email" className="text-white/90 text-sm font-medium block">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                    <Input
+                      id="ac-signup-email"
+                      type="email"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
+                      placeholder="Enter your email"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-left">
+                  <label htmlFor="ac-signup-phone" className="text-white/90 text-sm font-medium block">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                    <Input
+                      id="ac-signup-phone"
+                      type="tel"
+                      value={signupPhone}
+                      onChange={(e) => setSignupPhone(e.target.value)}
+                      className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
+                      placeholder="Enter your phone number (+92...)"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-left">
+                  <label htmlFor="ac-signup-password" className="text-white/90 text-sm font-medium block">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                    <Input
+                      id="ac-signup-password"
+                      type={signupShowPassword ? 'text' : 'password'}
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      className="pl-10 pr-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
+                      placeholder="Create a password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSignupShowPassword(!signupShowPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
+                    >
+                      {signupShowPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={signupLoading}
+                  className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4"
+                >
+                  {signupLoading ? 'Sending verification...' : 'Create Account'}
+                </Button>
+              </form>
             </div>
+          )}
 
-            <div className="text-center space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Create Account</h1>
-              <p className="text-white/70">Join us today</p>
+          {/* ── STEP: OTP Verification ── */}
+          {signupStep === 'otp' && (
+            <div className="flex flex-col space-y-6">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setSignupStep('form')}
+                  className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
+                  title="Back"
+                >
+                  <ArrowLeft className="w-4 h-4 text-white" />
+                </button>
+              </div>
+
+              <div className="text-center space-y-2">
+                <div className="w-14 h-14 bg-white/10 border border-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Shield className="w-7 h-7 text-white" />
+                </div>
+                <h1 className="text-2xl font-semibold text-white">Check your email</h1>
+                <p className="text-white/60 text-sm">We sent a 6-digit code to</p>
+                <p className="text-white font-semibold text-sm">{signupEmail}</p>
+              </div>
+
+              {otpError && (
+                <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-center font-semibold">
+                  {otpError}
+                </div>
+              )}
+
+              <form onSubmit={handleOtpVerify} className="space-y-6">
+                <div className="flex justify-center gap-2">
+                  {signupOtp.map((digit, i) => (
+                    <input
+                      key={i}
+                      id={`ac-otp-${i}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(i, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                      className="w-11 h-14 text-center text-xl font-bold bg-[#1c1c1e] border border-zinc-700 text-white rounded-2xl focus:outline-none focus:border-white/60 transition-colors"
+                      autoFocus={i === 0}
+                    />
+                  ))}
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={otpLoading || signupOtp.join('').length < 6}
+                  className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md"
+                >
+                  {otpLoading ? 'Verifying...' : 'Verify & Create Account'}
+                </Button>
+              </form>
             </div>
-
-            <form onSubmit={handleSignupSubmit} className="space-y-4">
-              <div className="space-y-2 text-left">
-                <label htmlFor="signup-name" className="text-white/90 text-sm font-medium block">
-                  Username
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    value={signupName}
-                    onChange={(e) => setSignupName(e.target.value)}
-                    className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                    placeholder="Username"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2 text-left">
-                <label htmlFor="signup-email" className="text-white/90 text-sm font-medium block">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
-                    className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2 text-left">
-                <label htmlFor="signup-phone" className="text-white/90 text-sm font-medium block">
-                  Phone Number
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                  <Input
-                    id="signup-phone"
-                    type="tel"
-                    value={signupPhone}
-                    onChange={(e) => setSignupPhone(e.target.value)}
-                    className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                    placeholder="Enter your phone number (+92...)"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2 text-left">
-                <label htmlFor="signup-password" className="text-white/90 text-sm font-medium block">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                  <Input
-                    id="signup-password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    className="pl-10 pr-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                    placeholder="Create a password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={signupLoading}
-                className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4"
-              >
-                {signupLoading ? 'Creating account...' : 'Sign Up'}
-              </Button>
-            </form>
-          </div>
+          )}
         </div>
       </div>
     </div>
