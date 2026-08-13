@@ -4671,15 +4671,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </button>
               <button
                 onClick={() => {
-                  const targetThemeId = liveThemeId || (selectedUser ? chatThemes[selectedUser.id] : null) || 'default';
-                  const themeObj = INSTAGRAM_THEMES.find(t => t.id === targetThemeId) || INSTAGRAM_THEMES[0];
-                  handleSelectTheme(themeObj);
+                  if (customizerTab === 'fonts') {
+                    setLiveThemeId(null);
+                    setShowThemePicker(false);
+                    return;
+                  }
+                  if (liveThemeId && selectedUser && liveThemeId !== (chatThemes[selectedUser.id] || 'default')) {
+                    const themeObj = INSTAGRAM_THEMES.find(t => t.id === liveThemeId) || INSTAGRAM_THEMES[0];
+                    handleSelectTheme(themeObj);
+                  }
                   setLiveThemeId(null);
                   setShowThemePicker(false);
                 }}
                 className="flex-1 py-3 px-4 rounded-full text-xs font-bold text-white bg-[#262626] hover:bg-[#1a1a1a] shadow-md transition-all cursor-pointer active:scale-95"
               >
-                Apply Theme
+                {customizerTab === 'fonts' ? 'Done' : 'Apply Theme'}
               </button>
             </div>
           </div>
