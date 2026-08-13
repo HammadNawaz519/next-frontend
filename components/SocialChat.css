@@ -585,7 +585,7 @@
 
 /* FOOTER */
 .social-chat-container .footer {
-  padding: 10px 16px 16px;
+  padding: 6px 8px 14px;
   background: transparent;
   border-top: none;
   display: flex;
@@ -1922,14 +1922,14 @@
 /* Reduce typebox height on mobile to match Instagram */
 @media (max-width: 768px) {
   .social-chat-container .type-box {
-    min-height: 40px;
+    min-height: 42px;
   }
   .social-chat-container .type-box textarea {
     min-height: 24px;
     padding: 6px 4px;
   }
   .social-chat-container .footer {
-    padding: 6px 10px 12px;
+    padding: 6px 6px 12px;
     gap: 6px;
   }
 }
@@ -1939,10 +1939,11 @@
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px;
+  gap: 8px;
+  padding: 4px 6px;
   border-radius: 28px;
   transition: all 0.3s ease;
+  min-height: 44px;
 }
 
 /* Light Theme Variables (Default) */
@@ -2056,7 +2057,7 @@
   font-family: inherit;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 8px 0;
+  padding: 8px 4px;
 }
 .social-chat-container .ig-textarea::-webkit-scrollbar {
   display: none;

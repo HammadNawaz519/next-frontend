@@ -2378,13 +2378,32 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             setMessages(prev => {
               const deletedRef = deletedMessageIds;
               const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
+              if (dbMsgs.length === 0) return prev;
               const dbMsgIds = new Set(dbMsgs.map(m => m.id));
-              const olderInPrev = prev.filter(m => !dbMsgIds.has(m.id));
+              const earliestDbTime = new Date(dbMsgs[0].createdAt).getTime();
+
+              const isMatchInDb = (m: any) => {
+                if (dbMsgIds.has(m.id)) return true;
+                const mTime = new Date(m.createdAt).getTime();
+                return dbMsgs.some((dbM: any) =>
+                  dbM.content === m.content &&
+                  String(dbM.senderId) === String(m.senderId) &&
+                  dbM.type === m.type &&
+                  Math.abs(new Date(dbM.createdAt).getTime() - mTime) < 30000
+                );
+              };
+
+              const olderInPrev = prev.filter(m => {
+                const mTime = new Date(m.createdAt).getTime();
+                return mTime < earliestDbTime && !isMatchInDb(m);
+              });
+
               const now = Date.now();
-              const inFlight = prev.filter(m =>
-                !dbMsgs.some((dbM: any) => dbM.id === m.id || (dbM.content === m.content && String(dbM.senderId) === String(m.senderId))) &&
-                (now - new Date(m.createdAt).getTime() < 30000)
-              );
+              const inFlight = prev.filter(m => {
+                const mTime = new Date(m.createdAt).getTime();
+                return !isMatchInDb(m) && (now - mTime < 15000) && (mTime >= earliestDbTime);
+              });
+
               return [...olderInPrev, ...dbMsgs, ...inFlight].sort(
                 (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
               );
@@ -2392,8 +2411,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             const normalizedHistory = (history as any[]).map(normalizeMsg);
             setMessagesCache((prev: any) => {
               const existing = prev[activeUser.id] || [];
+              if (normalizedHistory.length === 0) return prev;
               const dbMsgIds = new Set(normalizedHistory.map(m => m.id));
-              const olderInExisting = existing.filter((m: any) => !dbMsgIds.has(m.id));
+              const earliestDbTime = new Date(normalizedHistory[0].createdAt).getTime();
+
+              const isMatchInDb = (m: any) => {
+                if (dbMsgIds.has(m.id)) return true;
+                const mTime = new Date(m.createdAt).getTime();
+                return normalizedHistory.some((dbM: any) =>
+                  dbM.content === m.content &&
+                  String(dbM.senderId) === String(m.senderId) &&
+                  dbM.type === m.type &&
+                  Math.abs(new Date(dbM.createdAt).getTime() - mTime) < 30000
+                );
+              };
+
+              const olderInExisting = existing.filter((m: any) => {
+                const mTime = new Date(m.createdAt).getTime();
+                return mTime < earliestDbTime && !isMatchInDb(m);
+              });
+
               return { ...prev, [activeUser.id]: [...olderInExisting, ...normalizedHistory] };
             });
           }).catch(() => {});
@@ -2425,13 +2462,32 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               setMessages(prev => {
                 const deletedRef = deletedMessageIds;
                 const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
+                if (dbMsgs.length === 0) return prev;
                 const dbMsgIds = new Set(dbMsgs.map(m => m.id));
-                const olderInPrev = prev.filter(m => !dbMsgIds.has(m.id));
+                const earliestDbTime = new Date(dbMsgs[0].createdAt).getTime();
+
+                const isMatchInDb = (m: any) => {
+                  if (dbMsgIds.has(m.id)) return true;
+                  const mTime = new Date(m.createdAt).getTime();
+                  return dbMsgs.some((dbM: any) =>
+                    dbM.content === m.content &&
+                    String(dbM.senderId) === String(m.senderId) &&
+                    dbM.type === m.type &&
+                    Math.abs(new Date(dbM.createdAt).getTime() - mTime) < 30000
+                  );
+                };
+
+                const olderInPrev = prev.filter(m => {
+                  const mTime = new Date(m.createdAt).getTime();
+                  return mTime < earliestDbTime && !isMatchInDb(m);
+                });
+
                 const now = Date.now();
-                const inFlight = prev.filter(m =>
-                  !dbMsgs.some((dbM: any) => dbM.id === m.id || (dbM.content === m.content && String(dbM.senderId) === String(m.senderId))) &&
-                  (now - new Date(m.createdAt).getTime() < 30000)
-                );
+                const inFlight = prev.filter(m => {
+                  const mTime = new Date(m.createdAt).getTime();
+                  return !isMatchInDb(m) && (now - mTime < 15000) && (mTime >= earliestDbTime);
+                });
+
                 return [...olderInPrev, ...dbMsgs, ...inFlight].sort(
                   (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
                 );
@@ -2439,8 +2495,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               const normalizedHistory = (history as any[]).map(normalizeMsg);
               setMessagesCache((prev: any) => {
                 const existing = prev[activeUser.id] || [];
+                if (normalizedHistory.length === 0) return prev;
                 const dbMsgIds = new Set(normalizedHistory.map(m => m.id));
-                const olderInExisting = existing.filter((m: any) => !dbMsgIds.has(m.id));
+                const earliestDbTime = new Date(normalizedHistory[0].createdAt).getTime();
+
+                const isMatchInDb = (m: any) => {
+                  if (dbMsgIds.has(m.id)) return true;
+                  const mTime = new Date(m.createdAt).getTime();
+                  return normalizedHistory.some((dbM: any) =>
+                    dbM.content === m.content &&
+                    String(dbM.senderId) === String(m.senderId) &&
+                    dbM.type === m.type &&
+                    Math.abs(new Date(dbM.createdAt).getTime() - mTime) < 30000
+                  );
+                };
+
+                const olderInExisting = existing.filter((m: any) => {
+                  const mTime = new Date(m.createdAt).getTime();
+                  return mTime < earliestDbTime && !isMatchInDb(m);
+                });
+
                 return { ...prev, [activeUser.id]: [...olderInExisting, ...normalizedHistory] };
               });
             }).catch(() => {});
@@ -3609,7 +3683,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
 
                 {replyToMessage && (
-                  <div className="mx-4 mb-2 p-2.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] flex items-center justify-between animate-in slide-in-from-bottom-2 duration-200">
+                  <div className="mx-2 mb-2 p-2.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] flex items-center justify-between animate-in slide-in-from-bottom-2 duration-200">
                     <div className="flex flex-col min-w-0 pr-2">
                       <span className="text-[11px] font-bold text-[var(--dm-text-primary)] flex items-center gap-1">
                         <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
@@ -3629,7 +3703,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 )}
 
                 {selectedMessageIds.size === 0 ? (
-                  <footer className="footer" style={{ borderTop: 'none', background: 'transparent', padding: '6px 16px 16px' }}>
+                  <footer className="footer" style={{ borderTop: 'none', background: 'transparent', padding: '6px 8px 14px' }}>
                     <div className={`type-box ig-type-box ${activeTheme.id !== 'default' ? 'custom-theme-ig' : 'default-theme-ig'}`}>
                       {isVoiceToText ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, padding: '4px', borderRadius: '24px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', animation: 'pulse 2s infinite' }}>
