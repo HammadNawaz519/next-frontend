@@ -1581,6 +1581,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [isChatMuted, setIsChatMuted] = useState(false);
   const [mutedChats, setMutedChats] = useState<Set<string>>(new Set());
   const [acceptedContactIds, setAcceptedContactIds] = useState<Set<string>>(new Set());
+  const acceptedContactIdsRef = useRef<Set<string>>(new Set());
   // Close chat details modal first when user hits back button / Escape key
   useEffect(() => {
     if (!showChatDetails) return;
