@@ -2271,8 +2271,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
       });
 
-      newSocket.on('receive_chat_theme', ({ themeId, senderId, senderEmail }: any) => {
+      newSocket.on('receive_chat_theme', ({ themeId, themeName, senderName, senderId, senderEmail }: any) => {
         if (themeId) {
+          const partnerId = senderId || senderEmail;
           setChatThemes(prev => {
             const updated = { ...prev };
             if (senderId) updated[senderId] = themeId;
@@ -2282,6 +2283,25 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             }
             return updated;
           });
+
+          const themeObj = INSTAGRAM_THEMES.find(t => t.id === themeId);
+          const cleanThemeName = (themeName || themeObj?.name || themeId).replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+          const displayName = senderName || 'Someone';
+          const systemText = `${displayName} changed the theme to ${cleanThemeName} [theme:${themeId}]. Customize chat`;
+          const stableId = 'system-theme-' + Date.now() + Math.random().toString(36).substring(7);
+          const systemMsg: Message = {
+            id: stableId,
+            senderId: partnerId,
+            receiverId: (sessionRef.current?.user as any)?.id || 'me',
+            content: systemText,
+            type: 'system',
+            createdAt: new Date(),
+            isSeen: true
+          };
+
+          if (partnerId && selectedUserRef.current && (String(selectedUserRef.current.id) === String(partnerId) || (selectedUserRef.current.email && selectedUserRef.current.email.toLowerCase().trim() === String(senderEmail).toLowerCase().trim()))) {
+            setMessages(prev => [...prev, systemMsg]);
+          }
         }
       });
 
@@ -4676,7 +4696,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     setShowThemePicker(false);
                     return;
                   }
-                  if (liveThemeId && selectedUser && liveThemeId !== (chatThemes[selectedUser.id] || 'default')) {
+                  if (liveThemeId && selectedUser) {
                     const themeObj = INSTAGRAM_THEMES.find(t => t.id === liveThemeId) || INSTAGRAM_THEMES[0];
                     handleSelectTheme(themeObj);
                   }
