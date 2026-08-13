@@ -3793,7 +3793,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                         </svg>
                       </button>
-                      <h3 className="font-extrabold text-lg tracking-tight">Chat Details</h3>
+                      <h3 className="font-extrabold text-base tracking-tight">Chat Info</h3>
                       <div className="w-10" />
                     </div>
 
@@ -3806,15 +3806,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           <img src="/Avatar.avif" alt="avatar" className="w-full h-full object-cover" />
                         )}
                       </div>
-                      <h2 className="text-2xl font-extrabold text-[var(--dm-text-primary)]">
+                      <h2 className="text-xl font-extrabold text-[var(--dm-text-primary)]">
                         {nicknames[selectedUser.id] || selectedUser.name}
                       </h2>
-                      <p className="text-sm text-[var(--dm-text-muted)] mt-1 font-medium">
+                      <p className="text-xs text-[var(--dm-text-muted)] mt-0.5 font-medium">
                         @{selectedUser.username || selectedUser.email?.split('@')[0]}
                       </p>
 
-                      {/* 3 Simple Action Buttons under Profile Pic */}
-                      <div className="flex items-center justify-center gap-6 mt-4 text-sm font-semibold">
+                      {/* 3 Simple Action Buttons under Profile Pic (No background, no boundaries) */}
+                      <div className="flex items-center justify-center gap-6 mt-4 text-xs font-semibold">
                         <button
                           onClick={() => {
                             setShowChatDetails(false);
@@ -3857,30 +3857,30 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             placeholder="Enter nickname..."
                             value={nicknameInput}
                             onChange={(e) => setNicknameInput(e.target.value)}
-                            className="flex-1 px-4 py-2.5 text-sm rounded-full bg-[var(--dm-bg-input)] text-[var(--dm-text-primary)] focus:outline-none"
+                            className="flex-1 px-4 py-2 text-xs rounded-full bg-[var(--dm-bg-input)] text-[var(--dm-text-primary)] focus:outline-none"
                             autoFocus
                           />
                           <button
                             onClick={handleSaveNickname}
-                            className="px-4 py-2.5 text-sm font-bold rounded-full bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700 transition-colors"
+                            className="px-3.5 py-2 text-xs font-bold rounded-full bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700 transition-colors"
                           >
                             Save
                           </button>
                         </div>
                       )}
 
-                      {/* All Options Above Media Section — Unboxed, No borders, Instagram Style */}
-                      <div className="w-full max-w-sm mt-6 text-left space-y-1.5">
+                      {/* All Options Above Media Section — Unboxed, No borders, No outlines */}
+                      <div className="w-full max-w-sm mt-6 text-left space-y-1">
                         {/* Theme Selection Row */}
                         <button
                           onClick={() => {
                             setLiveThemeId(chatThemes[selectedUser.id] || 'default');
                             setShowThemePicker(true);
                           }}
-                          className="w-full py-3 px-3 flex items-center justify-between text-sm transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
+                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
                         >
-                          <span className="font-semibold text-[15px] text-[var(--dm-text-primary)]">Chat Theme</span>
-                          <span className="text-sm font-medium text-[var(--dm-text-secondary)]">
+                          <span className="font-semibold text-[var(--dm-text-primary)]">Chat Theme</span>
+                          <span className="text-xs text-[var(--dm-text-secondary)]">
                             {(INSTAGRAM_THEMES.find(t => t.id === (chatThemes[selectedUser.id] || 'default')) || INSTAGRAM_THEMES[0]).name}
                           </span>
                         </button>
@@ -3888,10 +3888,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         {/* Mute Notifications Row */}
                         <button
                           onClick={() => setIsChatMuted(!isChatMuted)}
-                          className="w-full py-3 px-3 flex items-center justify-between text-sm transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
+                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
                         >
-                          <span className="font-semibold text-[15px] text-[var(--dm-text-primary)]">Mute Notifications</span>
-                          <span className={`text-sm font-semibold ${isChatMuted ? 'text-rose-500' : 'text-[var(--dm-text-muted)]'}`}>
+                          <span className="font-semibold text-[var(--dm-text-primary)]">Mute Notifications</span>
+                          <span className={`text-xs font-semibold ${isChatMuted ? 'text-rose-500' : 'text-[var(--dm-text-muted)]'}`}>
                             {isChatMuted ? 'Muted' : 'Off'}
                           </span>
                         </button>
@@ -3902,10 +3902,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             setNicknameInput(nicknames[selectedUser.id] || '');
                             setEditingNickname(!editingNickname);
                           }}
-                          className="w-full py-3 px-3 flex items-center justify-between text-sm transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
+                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
                         >
-                          <span className="font-semibold text-[15px] text-[var(--dm-text-primary)]">Set Nickname</span>
-                          <span className="text-sm font-medium text-[var(--dm-text-secondary)]">
+                          <span className="font-semibold text-[var(--dm-text-primary)]">Set Nickname</span>
+                          <span className="text-xs text-[var(--dm-text-secondary)]">
                             {nicknames[selectedUser.id] || 'None'}
                           </span>
                         </button>
@@ -3916,29 +3916,29 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             setReportSubmitted(false);
                             setShowReportModal(true);
                           }}
-                          className="w-full py-3 px-3 flex items-center justify-between text-sm transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
+                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
                         >
-                          <span className="font-semibold text-[15px] text-amber-500">Report Conversation</span>
+                          <span className="font-semibold text-amber-500">Report Conversation</span>
                         </button>
 
                         {/* Clear History Row */}
                         <button
                           onClick={() => setShowClearConfirmModal(true)}
-                          className="w-full py-3 px-3 flex items-center justify-between text-sm transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
+                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
                         >
-                          <span className="font-semibold text-[15px] text-rose-500">Clear Chat History</span>
+                          <span className="font-semibold text-rose-500">Clear Chat History</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Shared Content Tab Navigation */}
+                    {/* Shared Content Tab Navigation (Simple Text Tabs, No outlines) */}
                     <div className="px-4 pt-4 max-w-lg mx-auto w-full">
                       <div className="flex items-center justify-around pb-2 text-center">
                         <button
                           onClick={() => setDetailsTab('photos')}
-                          className={`text-sm font-semibold transition-all cursor-pointer ${
+                          className={`text-xs font-bold transition-all cursor-pointer ${
                             detailsTab === 'photos'
-                              ? 'text-[var(--dm-text-primary)] font-extrabold text-[15px]'
+                              ? 'text-[var(--dm-text-primary)] font-extrabold'
                               : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
                           }`}
                         >
@@ -3946,9 +3946,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </button>
                         <button
                           onClick={() => setDetailsTab('reels')}
-                          className={`text-sm font-semibold transition-all cursor-pointer ${
+                          className={`text-xs font-bold transition-all cursor-pointer ${
                             detailsTab === 'reels'
-                              ? 'text-[var(--dm-text-primary)] font-extrabold text-[15px]'
+                              ? 'text-[var(--dm-text-primary)] font-extrabold'
                               : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
                           }`}
                         >
@@ -3956,9 +3956,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </button>
                         <button
                           onClick={() => setDetailsTab('files')}
-                          className={`text-sm font-semibold transition-all cursor-pointer ${
+                          className={`text-xs font-bold transition-all cursor-pointer ${
                             detailsTab === 'files'
-                              ? 'text-[var(--dm-text-primary)] font-extrabold text-[15px]'
+                              ? 'text-[var(--dm-text-primary)] font-extrabold'
                               : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
                           }`}
                         >
@@ -3967,13 +3967,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       </div>
                     </div>
 
-                    {/* Shared Content Display Panel */}
+                    {/* Shared Content Display Panel (No outlines on items) */}
                     <div className="px-4 py-4 space-y-6 max-w-lg mx-auto w-full flex-1">
                       {/* Tab 1: Photos & Images */}
                       {detailsTab === 'photos' && (
                         <div>
                           {messages.filter(m => m.type === 'image').length === 0 ? (
-                            <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-sm text-[var(--dm-text-muted)] font-medium">
+                            <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
                               No photos shared in this chat yet
                             </div>
                           ) : (
@@ -3996,7 +3996,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       {detailsTab === 'reels' && (
                         <div>
                           {messages.filter(m => m.type === 'video').length === 0 ? (
-                            <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-sm text-[var(--dm-text-muted)] font-medium">
+                            <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
                               No video reels shared in this chat yet
                             </div>
                           ) : (
@@ -4019,7 +4019,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       {detailsTab === 'files' && (
                         <div>
                           {messages.filter(m => m.type === 'voice' || m.type === 'file').length === 0 ? (
-                            <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-sm text-[var(--dm-text-muted)] font-medium">
+                            <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
                               No audio clips or documents shared yet
                             </div>
                           ) : (
@@ -4031,11 +4031,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                       <div className="w-8 h-8 rounded-full bg-[var(--dm-bg-active)] flex items-center justify-center text-xs font-bold">
                                         {m.type === 'voice' ? '🎙️' : '📄'}
                                       </div>
-                                      <span className="text-sm font-semibold truncate text-[var(--dm-text-primary)]">
+                                      <span className="text-xs font-semibold truncate text-[var(--dm-text-primary)]">
                                         {m.type === 'voice' ? 'Voice Clip' : m.content}
                                       </span>
                                     </div>
-                                    <span className="text-xs text-[var(--dm-text-muted)]">
+                                    <span className="text-[10px] text-[var(--dm-text-muted)]">
                                       {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                   </div>
@@ -4235,10 +4235,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="w-full max-w-md mx-auto bg-[var(--dm-bg-sidebar)] text-[var(--dm-text-primary)] rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[85vh] flex flex-col">
                       <div className="flex items-center justify-between pb-3">
-                        <h3 className="font-extrabold text-lg tracking-tight">Themes</h3>
+                        <h3 className="font-extrabold text-base tracking-tight">Themes</h3>
                         <button
                           onClick={() => setShowThemePicker(false)}
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-sm text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] cursor-pointer"
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] cursor-pointer"
                         >
                           ✕
                         </button>
@@ -4277,7 +4277,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                   {theme.id === 'ig_green' && '🌿'}
                                   {theme.id === 'default' && '🔮'}
                                 </div>
-                                <span className="text-sm font-semibold text-[var(--dm-text-primary)]">{theme.name}</span>
+                                <span className="text-xs font-semibold text-[var(--dm-text-primary)]">{theme.name}</span>
                               </div>
 
                               {isSelected && (
@@ -4578,14 +4578,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             {/* Header */}
             <div className="px-6 py-3 flex items-center justify-between border-b border-[var(--dm-border)]">
               <div>
-                <h3 className="text-lg font-extrabold text-[var(--dm-text-primary)] tracking-tight">Customize</h3>
+                <h3 className="text-base font-extrabold text-[var(--dm-text-primary)] tracking-tight">Customize</h3>
               </div>
               <button
                 onClick={() => {
                   setLiveThemeId(null);
                   setShowThemePicker(false);
                 }}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer text-sm"
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer text-xs"
               >
                 ✕
               </button>
@@ -4595,7 +4595,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             <div className="mx-6 my-3 p-1 rounded-2xl bg-[var(--dm-bg-hover)] border border-[var(--dm-border)] flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={() => setCustomizerTab('themes')}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-extrabold transition-all cursor-pointer ${
+                className={`flex-1 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                   customizerTab === 'themes'
                     ? 'bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] shadow-sm'
                     : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
@@ -4605,7 +4605,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </button>
               <button
                 onClick={() => setCustomizerTab('fonts')}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-extrabold transition-all cursor-pointer ${
+                className={`flex-1 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                   customizerTab === 'fonts'
                     ? 'bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] shadow-sm'
                     : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
@@ -4615,7 +4615,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </button>
             </div>
 
-            {/* Tab 1: Themes */}
+            {/* Tab 1: Themes (Horizontal 3 Columns Grid, 160px height per box showing pure wallpaper background) */}
             {customizerTab === 'themes' && (
               <div className="px-6 py-3 overflow-y-auto grid grid-cols-3 gap-3 no-scrollbar max-h-[55vh]">
                 {INSTAGRAM_THEMES.map(theme => {
@@ -4641,7 +4641,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       }}
                     >
                       <div className="w-full py-1 px-2 rounded-xl bg-black/50 backdrop-blur-md text-center">
-                        <span className="text-xs font-bold text-white tracking-wide">{theme.name}</span>
+                        <span className="text-[11px] font-bold text-white tracking-wide">{theme.name}</span>
                       </div>
                     </div>
                   );
@@ -4649,7 +4649,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </div>
             )}
 
-            {/* Tab 2: Fonts */}
+            {/* Tab 2: Fonts (2 Columns Grid, 100px height per box, outline removed) */}
             {customizerTab === 'fonts' && (
               <div className="px-6 py-3 overflow-y-auto grid grid-cols-2 gap-3 no-scrollbar max-h-[55vh]">
                 {FONT_OPTIONS.map(font => {
@@ -4671,21 +4671,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       }`}
                       style={{ fontFamily: font.id === 'default' ? 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' : font.family }}
                     >
-                      <span className="text-lg font-bold">{font.name}</span>
+                      <span className="text-base font-semibold">{font.name}</span>
                     </div>
                   );
                 })}
               </div>
             )}
 
-            {/* Bottom Action Footer */}
+            {/* Bottom Action Footer (Shifted higher up with clean spacing) */}
             <div className="px-6 pt-2 pb-5 bg-[var(--dm-bg-sidebar)] flex items-center gap-3">
               <button
                 onClick={() => {
                   setLiveThemeId(null);
                   setShowThemePicker(false);
                 }}
-                className="flex-1 py-3 px-4 rounded-full text-sm font-bold text-[var(--dm-text-muted)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] transition-all cursor-pointer"
+                className="flex-1 py-3 px-4 rounded-full text-xs font-bold text-[var(--dm-text-muted)] bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] transition-all cursor-pointer"
               >
                 Cancel
               </button>
@@ -4703,7 +4703,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   setLiveThemeId(null);
                   setShowThemePicker(false);
                 }}
-                className="flex-1 py-3 px-4 rounded-full text-sm font-bold text-white bg-[#262626] hover:bg-[#1a1a1a] shadow-md transition-all cursor-pointer active:scale-95"
+                className="flex-1 py-3 px-4 rounded-full text-xs font-bold text-white bg-[#262626] hover:bg-[#1a1a1a] shadow-md transition-all cursor-pointer active:scale-95"
               >
                 {customizerTab === 'fonts' ? 'Done' : 'Apply Theme'}
               </button>
