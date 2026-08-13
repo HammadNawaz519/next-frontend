@@ -2158,8 +2158,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         // 4. Mark as seen if active
         if (selectedUserRef.current?.id === partnerId) {
-          markMessagesAsSeen(partnerId);
-          newSocket.emit('mark_as_seen', { senderEmail: selectedUserRef.current.email });
+          markMessagesAsSeen(partnerId).catch(() => {});
+          newSocket.emit('mark_as_seen', {
+            senderEmail: selectedUserRef.current.email,
+            senderId: partnerId
+          });
         }
 
         // 5. Stunning Custom PWA / Local Notification Trigger
@@ -2875,8 +2878,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           });
         }
 
-        markMessagesAsSeen(selectedUser.id);
-        socket?.emit('mark_as_seen', { senderEmail: selectedUser.email });
+        markMessagesAsSeen(selectedUser.id).catch(() => {});
+        socket?.emit('mark_as_seen', {
+          senderEmail: selectedUser.email,
+          senderId: selectedUser.id
+        });
 
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
@@ -3066,10 +3072,31 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       const savedMsg = await saveSocialMessage(selectedUser.id, currentContent, 'text', currentReplyTo ?? null);
       if (savedMsg) {
         const normalized = normalizeMsg(savedMsg as any);
-        setMessages(prev => prev.map(m => m.id === stableId ? { ...normalized, id: normalized.id || stableId } : m));
+        setMessages(prev => prev.map(m => {
+          if (m.id === stableId) {
+            return {
+              ...normalized,
+              id: normalized.id || stableId,
+              isSeen: m.isSeen || normalized.isSeen || false
+            };
+          }
+          return m;
+        }));
         setMessagesCache(prev => {
           const current = prev[selectedUser.id] || [];
-          return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? { ...normalized, id: normalized.id || stableId } : m) };
+          return {
+            ...prev,
+            [selectedUser.id]: current.map(m => {
+              if (m.id === stableId) {
+                return {
+                  ...normalized,
+                  id: normalized.id || stableId,
+                  isSeen: m.isSeen || normalized.isSeen || false
+                };
+              }
+              return m;
+            })
+          };
         });
       }
     } catch (err) {
@@ -3124,11 +3151,31 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             try {
               const savedMsg = await saveSocialMessage(selectedUser.id, base64Audio, 'voice');
               if (savedMsg) {
-                const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
-                setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
+                setMessages(prev => prev.map(m => {
+                  if (m.id === stableId) {
+                    return {
+                      ...(savedMsg as any),
+                      id: (savedMsg as any).id || stableId,
+                      isSeen: m.isSeen || (savedMsg as any).isSeen || false
+                    };
+                  }
+                  return m;
+                }));
                 setMessagesCache(prev => {
                   const current = prev[selectedUser.id] || [];
-                  return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m) };
+                  return {
+                    ...prev,
+                    [selectedUser.id]: current.map(m => {
+                      if (m.id === stableId) {
+                        return {
+                          ...(savedMsg as any),
+                          id: (savedMsg as any).id || stableId,
+                          isSeen: m.isSeen || (savedMsg as any).isSeen || false
+                        };
+                      }
+                      return m;
+                    })
+                  };
                 });
               }
             } catch (err) {
@@ -3266,27 +3313,66 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         if (resData?.success && resData?.message) {
           const savedMsg = resData.message;
-          const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
-
-          setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
+          setMessages(prev => prev.map(m => {
+            if (m.id === stableId) {
+              return {
+                ...(savedMsg as any),
+                id: (savedMsg as any).id || stableId,
+                isSeen: m.isSeen || (savedMsg as any).isSeen || false
+              };
+            }
+            return m;
+          }));
           setMessagesCache(prev => {
             const current = prev[selectedUser.id] || [];
-            return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m) };
+            return {
+              ...prev,
+              [selectedUser.id]: current.map(m => {
+                if (m.id === stableId) {
+                  return {
+                    ...(savedMsg as any),
+                    id: (savedMsg as any).id || stableId,
+                    isSeen: m.isSeen || (savedMsg as any).isSeen || false
+                  };
+                }
+                return m;
+              })
+            };
           });
 
           // Emit real-time message with saved permanent file URL
-          socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...finalMsg });
+          socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...(savedMsg as any), id: (savedMsg as any).id || stableId });
         } else {
           // Fallback to base64 via saveSocialMessage
           const savedMsg = await saveSocialMessage(selectedUser.id, base64Preview, type);
           if (savedMsg) {
-            const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
-            setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
+            setMessages(prev => prev.map(m => {
+              if (m.id === stableId) {
+                return {
+                  ...(savedMsg as any),
+                  id: (savedMsg as any).id || stableId,
+                  isSeen: m.isSeen || (savedMsg as any).isSeen || false
+                };
+              }
+              return m;
+            }));
             setMessagesCache(prev => {
               const current = prev[selectedUser.id] || [];
-              return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m) };
+              return {
+                ...prev,
+                [selectedUser.id]: current.map(m => {
+                  if (m.id === stableId) {
+                    return {
+                      ...(savedMsg as any),
+                      id: (savedMsg as any).id || stableId,
+                      isSeen: m.isSeen || (savedMsg as any).isSeen || false
+                    };
+                  }
+                  return m;
+                })
+              };
             });
-            socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...finalMsg });
+            socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...(savedMsg as any), id: (savedMsg as any).id || stableId });
           }
         }
       } catch (err) {
