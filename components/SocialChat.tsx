@@ -2828,7 +2828,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   };
 
-  // Auto swipe / scroll to bottom on new messages, typing, or chat selection (NOT when loading older messages)
+  // Auto scroll to bottom on new messages, typing, or chat selection (NOT when loading older messages)
   const lastMsgId = messages.length > 0 ? messages[messages.length - 1]?.id : null;
   const isOtherUserTyping = typingUsers.has(selectedUser?.email || '');
 
@@ -2840,16 +2840,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       return () => clearTimeout(timer);
     }
   }, [selectedUser?.id, lastMsgId, isOtherUserTyping]);
-
-  // Scroll to bottom when user is typing in the input box
-  useEffect(() => {
-    if (inputValue && selectedUser?.id && !isLoadingOlder) {
-      const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [inputValue, selectedUser?.id]);
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -3577,7 +3567,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </div>
                   )}
                   {typingUsers.has(selectedUser.email) && (
-                    <div className="msg-wrapper received animate-in fade-in slide-in-from-bottom-2 duration-200 my-1" style={{ width: 'fit-content', marginLeft: 0 }}>
+                    <div
+                      className="msg-wrapper received animate-in fade-in slide-in-from-bottom-2 duration-200 my-1"
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'flex-end',
+                        justifyContent: 'flex-start',
+                        gap: '8px',
+                        width: '100%',
+                        padding: '0 8px 0 2px',
+                        userSelect: 'none',
+                        position: 'relative'
+                      }}
+                    >
+                      <img
+                        src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.avif'}
+                        alt=""
+                        className="msg-small-avatar"
+                        referrerPolicy="no-referrer"
+                      />
                       <div
                         className="msg received"
                         style={{
@@ -3660,8 +3669,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               const val = e.target.value;
                               setInputValue(val);
                               const t = e.target as HTMLTextAreaElement;
+                              const prevHeight = t.style.height;
                               t.style.height = 'auto';
-                              t.style.height = Math.min(t.scrollHeight, 84) + 'px';
+                              const newHeight = Math.min(t.scrollHeight, 84);
+                              t.style.height = newHeight + 'px';
+                              if (messagesContainerRef.current && prevHeight !== newHeight + 'px') {
+                                const container = messagesContainerRef.current;
+                                const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+                                if (isNearBottom) {
+                                  container.scrollTop = container.scrollHeight;
+                                }
+                              }
                               if (socket && selectedUser) {
                                 if (!typingTimeoutRef.current) { socket.emit('typing', { receiverEmail: selectedUser.email }); }
                                 else { clearTimeout(typingTimeoutRef.current); }
