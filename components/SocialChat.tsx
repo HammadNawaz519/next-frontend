@@ -657,6 +657,130 @@ const IGMessageOverlay = ({
   );
 };
 
+const ChatItem = memo(({
+  user,
+  isSelected,
+  isOnline,
+  showActivity,
+  isPinned,
+  lastSeenVal,
+  nickname,
+  onSelect,
+  onLongPress
+}: any) => {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLongPressRef = useRef<boolean>(false);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  const startPress = (e: React.TouchEvent | React.MouseEvent) => {
+    isLongPressRef.current = false;
+    if ('touches' in e && e.touches.length > 0) {
+      touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else {
+      touchStartPosRef.current = null;
+    }
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    // Standard comfortable long-press duration (520ms)
+    timerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      timerRef.current = null;
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate(40); } catch (err) {}
+      }
+      onLongPress(user);
+    }, 520);
+  };
+
+  const cancelPress = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartPosRef.current || e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
+    const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
+    // If finger moves more than 7px (scrolling the list), cancel long press immediately
+    if (dx > 7 || dy > 7) {
+      cancelPress();
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isLongPressRef.current) {
+      isLongPressRef.current = false;
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    cancelPress();
+    onSelect(user, e);
+  };
+
+  return (
+    <div
+      className={`item ${isSelected ? 'active' : ''}`}
+      onClick={handleClick}
+      onMouseDown={startPress}
+      onMouseUp={cancelPress}
+      onMouseLeave={cancelPress}
+      onTouchStart={startPress}
+      onTouchEnd={cancelPress}
+      onTouchMove={handleTouchMove}
+      onTouchCancel={cancelPress}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        cancelPress();
+        onLongPress(user);
+      }}
+    >
+      {/* Avatar with online dot */}
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div className="user-pfp">
+          {user.image && user.image.length > 5
+            ? <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
+            : <img src="/Avatar.avif" alt="avatar" />
+          }
+        </div>
+        {showActivity && (
+          <span style={{
+            position: 'absolute', bottom: 2, right: 2,
+            width: '12px', height: '12px', borderRadius: '50%',
+            background: isOnline ? '#22c55e' : 'transparent',
+            border: isOnline ? '2px solid var(--dm-bg-sidebar)' : 'none',
+            display: 'block',
+            transition: 'background 0.3s'
+          }} />
+        )}
+      </div>
+
+      {/* Meta */}
+      <div className="meta">
+        <b>
+          {isPinned && <span style={{ marginRight: '4px', fontSize: '11px' }}>📌</span>}
+          {nickname || user.name}
+          {(user as any).unseenCount > 0 && (
+            <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 700, background: '#6366f1', color: '#fff', borderRadius: '20px', padding: '1px 6px' }}>
+              {(user as any).unseenCount}
+            </span>
+          )}
+        </b>
+        <small style={{ color: (user as any).unseenCount > 0 ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)', fontWeight: (user as any).unseenCount > 0 ? 600 : 400 }}>
+          {(user as any).lastMessage || (
+            showActivity
+              ? (isOnline ? '● Active now' : (formatLastSeenAgo(lastSeenVal) ? `Active ${formatLastSeenAgo(lastSeenVal)}` : ''))
+              : ''
+          )}
+        </small>
+      </div>
+    </div>
+  );
+});
+
 const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, chatSwipeOffset }: any) => {
   if (msg.type === 'system') {
     const isThemeSystemMsg = msg.content.toLowerCase().includes('theme to') || msg.content.toLowerCase().includes('customize chat');
@@ -3524,61 +3648,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 const isOnline = showActivity && ((userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(user.id));
                 const isPinned = pinnedChats.has(user.id);
                 const lastSeenVal = lastSeenMap[userEmail] || lastSeenMap[user.id] || (user as any).lastSeen;
-                let chatLongPressTimer: ReturnType<typeof setTimeout> | null = null;
-                const handleChatLongPress = () => {
-                  setSelectedChatForOptions(user);
-                };
                 return (
-                  <div
+                  <ChatItem
                     key={user.id}
-                    className={`item ${selectedUser?.id === user.id ? 'active' : ''}`}
-                    onClick={(e: React.MouseEvent) => handleSelectUser(user, e)}
-                    onMouseDown={() => { chatLongPressTimer = setTimeout(() => { chatLongPressTimer = null; handleChatLongPress(); }, 600); }}
-                    onMouseUp={() => { if (chatLongPressTimer) { clearTimeout(chatLongPressTimer); chatLongPressTimer = null; } }}
-                    onMouseLeave={() => { if (chatLongPressTimer) { clearTimeout(chatLongPressTimer); chatLongPressTimer = null; } }}
-                    onTouchStart={() => { chatLongPressTimer = setTimeout(() => { chatLongPressTimer = null; handleChatLongPress(); }, 600); }}
-                    onTouchEnd={() => { if (chatLongPressTimer) { clearTimeout(chatLongPressTimer); chatLongPressTimer = null; } }}
-                  >
-                    {/* Avatar with online dot */}
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                      <div className="user-pfp">
-                        {user.image && user.image.length > 5
-                          ? <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
-                          : <img src="/Avatar.avif" alt="avatar" />
-                        }
-                      </div>
-                      {showActivity && (
-                        <span style={{
-                          position: 'absolute', bottom: 2, right: 2,
-                          width: '12px', height: '12px', borderRadius: '50%',
-                          background: isOnline ? '#22c55e' : 'transparent',
-                          border: isOnline ? '2px solid var(--dm-bg-sidebar)' : 'none',
-                          display: 'block',
-                          transition: 'background 0.3s'
-                        }} />
-                      )}
-                    </div>
-
-                    {/* Meta */}
-                    <div className="meta">
-                      <b>
-                        {isPinned && <span style={{ marginRight: '4px', fontSize: '11px' }}>📌</span>}
-                        {nicknames[user.id] || user.name}
-                        {(user as any).unseenCount > 0 && (
-                          <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 700, background: '#6366f1', color: '#fff', borderRadius: '20px', padding: '1px 6px' }}>
-                            {(user as any).unseenCount}
-                          </span>
-                        )}
-                      </b>
-                      <small style={{ color: (user as any).unseenCount > 0 ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)', fontWeight: (user as any).unseenCount > 0 ? 600 : 400 }}>
-                        {(user as any).lastMessage || (
-                          showActivity
-                            ? (isOnline ? '● Active now' : (formatLastSeenAgo(lastSeenVal) ? `Active ${formatLastSeenAgo(lastSeenVal)}` : ''))
-                            : ''
-                        )}
-                      </small>
-                    </div>
-                  </div>
+                    user={user}
+                    isSelected={selectedUser?.id === user.id}
+                    isOnline={isOnline}
+                    showActivity={showActivity}
+                    isPinned={isPinned}
+                    lastSeenVal={lastSeenVal}
+                    nickname={nicknames[user.id]}
+                    onSelect={handleSelectUser}
+                    onLongPress={setSelectedChatForOptions}
+                  />
                 );
               })}
               {(view === 'recent' ? users : requests).length === 0 && searchQuery.length < 2 && (
