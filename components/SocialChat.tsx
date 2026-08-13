@@ -1351,11 +1351,28 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }));
 
-  const handleChatBack = (e: React.MouseEvent) => {
-    runCircleTransition(() => setSelectedUser(null), e.clientX, e.clientY, true);
+  const handleChatBack = (e?: React.MouseEvent) => {
+    if (showChatDetails) {
+      setShowChatDetails(false);
+      setEditingNickname(false);
+      return;
+    }
+    if (showThemePicker) {
+      setShowThemePicker(false);
+      return;
+    }
+    const clientX = e ? e.clientX : 28;
+    const clientY = e ? e.clientY : 28;
+    runCircleTransition(() => {
+      setShowChatDetails(false);
+      setShowThemePicker(false);
+      setSelectedUser(null);
+    }, clientX, clientY, true);
   };
 
   const handleSelectUser = (user: any, e: React.MouseEvent) => {
+    setShowChatDetails(false);
+    setShowThemePicker(false);
     runCircleTransition(() => setSelectedUser(user), e.clientX, e.clientY, false);
   };
 
@@ -1564,7 +1581,33 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [isChatMuted, setIsChatMuted] = useState(false);
   const [mutedChats, setMutedChats] = useState<Set<string>>(new Set());
   const [acceptedContactIds, setAcceptedContactIds] = useState<Set<string>>(new Set());
-  const acceptedContactIdsRef = useRef<Set<string>>(new Set());
+  // Close chat details modal first when user hits back button / Escape key
+  useEffect(() => {
+    if (!showChatDetails) return;
+
+    try {
+      window.history.pushState({ chatDetailsOpen: true }, '');
+    } catch (err) {}
+
+    const handlePopState = () => {
+      setShowChatDetails(false);
+      setEditingNickname(false);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowChatDetails(false);
+        setEditingNickname(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showChatDetails]);
 
   // Global App-Wide Font Application Effect
   useEffect(() => {
