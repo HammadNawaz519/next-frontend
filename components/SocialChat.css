@@ -2092,6 +2092,18 @@
   color: #FFFFFF !important;
 }
 
+.social-chat-container .cancel-record-btn {
+  background: #262626 !important;
+  color: #FFFFFF !important;
+  border: 1px solid #363636 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.social-chat-container .cancel-record-btn:hover {
+  background: #333333 !important;
+  border-color: #444444 !important;
+}
+
 /* Default Mode Bubble Colors (Charcoal Black Sent, Grey Received) */
 .social-chat-container .theme-default .msg.sent,
 .social-chat-container .msg.sent {

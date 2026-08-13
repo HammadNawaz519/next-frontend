@@ -3949,7 +3949,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </div>
                       ) : isRecording ? (
                         <>
-                          <button className="cancel-record-btn transition-all active:scale-90 animate-in fade-in zoom-in duration-200" onClick={(e) => { e.preventDefault(); cancelRecording(); }} title="Cancel recording" aria-label="Cancel recording" style={{ width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', cursor: 'pointer', marginRight: '8px', flexShrink: 0 }}>
+                          <button
+                            className="cancel-record-btn transition-all active:scale-90 animate-in fade-in zoom-in duration-200"
+                            onClick={(e) => { e.preventDefault(); cancelRecording(); }}
+                            title="Cancel recording"
+                            aria-label="Cancel recording"
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: '#262626',
+                              color: '#ffffff',
+                              border: '1px solid #363636',
+                              cursor: 'pointer',
+                              marginRight: '8px',
+                              flexShrink: 0
+                            }}
+                          >
                             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={2.5}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
