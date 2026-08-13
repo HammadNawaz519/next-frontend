@@ -657,9 +657,7 @@ const IGMessageOverlay = ({
   );
 };
 
-// ─── MessageItem ────────────────────────────────────────────────────────────
-
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, chatSwipeOffset }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, chatSwipeOffset }: any) => {
   if (msg.type === 'system') {
     const isThemeSystemMsg = msg.content.toLowerCase().includes('theme to') || msg.content.toLowerCase().includes('customize chat');
     
@@ -953,17 +951,26 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                     draggable={false}
                     className="cursor-pointer hover:opacity-95 transition-opacity"
                     style={{ userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
-                    onClick={e => { e.stopPropagation(); if (onPreviewImage) onPreviewImage(msg.content); else window.open(msg.content, '_blank'); }}
+                    onClick={e => { e.stopPropagation(); if (onPreviewMedia) onPreviewMedia(msg.content, 'image'); else if (onPreviewImage) onPreviewImage(msg.content); else window.open(msg.content, '_blank'); }}
                     onContextMenu={e => { e.preventDefault(); e.stopPropagation(); handleContextMenu(e); }}
                   />
                 )}
                 {msg.type === 'video' && (
-                  <video
-                    src={msg.content}
-                    controls
-                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
-                    onContextMenu={e => { e.preventDefault(); e.stopPropagation(); handleContextMenu(e); }}
-                  />
+                  <div
+                    className="relative cursor-pointer group"
+                    onClick={e => {
+                      e.stopPropagation();
+                      if (onPreviewMedia) onPreviewMedia(msg.content, 'video');
+                      else if (onPreviewImage) onPreviewImage(msg.content);
+                    }}
+                  >
+                    <video
+                      src={msg.content}
+                      controls
+                      style={{ userSelect: 'none', WebkitUserSelect: 'none', display: 'block', maxWidth: '100%' }}
+                      onContextMenu={e => { e.preventDefault(); e.stopPropagation(); handleContextMenu(e); }}
+                    />
+                  </div>
                 )}
                 <div
                   className="time-row media-time-row"
@@ -1569,8 +1576,44 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   });
   const [liveThemeId, setLiveThemeId] = useState<string | null>(null);
   const [themeSearchQuery, setThemeSearchQuery] = useState('');
-  const [themeCategoryFilter, setThemeCategoryFilter] = useState<'All' | 'Gradients' | 'Ambient' | 'Nature' | 'Special'>('All');
-  const [lightboxImageSrc, setLightboxImageSrc] = useState<string | null>(null);
+  const [lightboxMedia, setLightboxMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
+  const openMediaLightbox = (url: string, type: 'image' | 'video' = 'image') => {
+    setLightboxMedia({ url, type });
+  };
+
+  const handleDownloadMedia = async (url: string, type?: 'image' | 'video') => {
+    try {
+      const isDataOrBlob = url.startsWith('data:') || url.startsWith('blob:');
+      let blobUrl = url;
+      if (!isDataOrBlob) {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        blobUrl = URL.createObjectURL(blob);
+      }
+      const ext = type === 'video' ? 'mp4' : (url.includes('.png') ? 'png' : url.includes('.webp') ? 'webp' : 'jpg');
+      const filename = `connect_media_${Date.now()}.${ext}`;
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      if (!isDataOrBlob) {
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+      }
+    } catch (err) {
+      console.error("Failed to download media via blob, falling back:", err);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `connect_media_${Date.now()}`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
   const [detailsTab, setDetailsTab] = useState<'photos' | 'reels' | 'files'>('photos');
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
   const [chatThemes, setChatThemes] = useState<Record<string, string>>({});
@@ -3611,7 +3654,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               onShowIGMenu={setIgMenu}
                               onReply={setReplyToMessage}
                               activeTheme={activeTheme}
-                              onPreviewImage={setLightboxImageSrc}
+                              onPreviewImage={(src: string) => openMediaLightbox(src, 'image')}
+                              onPreviewMedia={openMediaLightbox}
                               msgTag={msgTags[msg.id]}
                               onOpenTagPicker={setOpenTagPickerMsg}
                               onOpenThemePicker={() => setShowThemePicker(true)}
@@ -4074,7 +4118,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                 <div
                                   key={m.id}
                                   className="aspect-square rounded-2xl overflow-hidden bg-black/10 cursor-pointer group relative"
-                                  onClick={() => window.open(m.content, '_blank')}
+                                  onClick={() => openMediaLightbox(m.content, 'image')}
                                 >
                                   <img src={m.content} alt="photo" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                                 </div>
@@ -4097,9 +4141,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                 <div
                                   key={m.id}
                                   className="aspect-[9/16] rounded-2xl overflow-hidden bg-black cursor-pointer group relative"
-                                  onClick={() => window.open(m.content, '_blank')}
+                                  onClick={() => openMediaLightbox(m.content, 'video')}
                                 >
-                                  <video src={m.content} controls className="w-full h-full object-cover" />
+                                  <video src={m.content} className="w-full h-full object-cover pointer-events-none" />
                                 </div>
                               ))}
                             </div>
@@ -4628,25 +4672,72 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       )}
 
 
-      {/* --- IMAGE LIGHTBOX PREVIEW OVERLAY --- */}
-      {lightboxImageSrc && (
+      {/* --- IMAGE & VIDEO LIGHTBOX PREVIEW OVERLAY --- */}
+      {lightboxMedia && (
         <div
-          className="fixed inset-0 z-[2000] bg-black/92 backdrop-blur-2xl flex items-center justify-center p-4 animate-in fade-in duration-200"
-          onClick={() => setLightboxImageSrc(null)}
+          className="fixed inset-0 z-[2000] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setLightboxMedia(null)}
         >
+          {/* Top-left Back Button: No circle radius, no border, clean back icon */}
           <button
-            onClick={() => setLightboxImageSrc(null)}
-            className="absolute top-12 left-5 md:top-14 md:left-8 w-11 h-11 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 text-white flex items-center justify-center cursor-pointer transition-all active:scale-90 backdrop-blur-md shadow-lg z-10"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxMedia(null);
+            }}
+            className="absolute top-6 left-5 md:top-8 md:left-8 text-white/90 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90 z-30 p-2"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              borderRadius: 0,
+              outline: 'none',
+              boxShadow: 'none'
+            }}
             title="Go back"
+            aria-label="Go back"
           >
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
           </button>
-          <img
-            src={lightboxImageSrc}
-            alt="Full preview"
-            className="max-w-full max-h-[88vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          />
+
+          {/* Top-right Download Button: Exact to extreme right, download SVG, no border, no circle */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownloadMedia(lightboxMedia.url, lightboxMedia.type);
+            }}
+            className="absolute top-6 right-5 md:top-8 md:right-8 text-white/90 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90 z-30 p-2"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              borderRadius: 0,
+              outline: 'none',
+              boxShadow: 'none'
+            }}
+            title="Download media"
+            aria-label="Download media"
+          >
+            <svg width="26" height="26" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          </button>
+
+          {lightboxMedia.type === 'video' ? (
+            <video
+              src={lightboxMedia.url}
+              controls
+              autoPlay
+              className="max-w-full max-h-[88vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={lightboxMedia.url}
+              alt="Full preview"
+              className="max-w-full max-h-[88vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
         </div>
       )}
       {/* --- INSTAGRAM-STYLE PREMIUM CONVERSATION THEME & FONT CUSTOMIZER MODAL --- */}
