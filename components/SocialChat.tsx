@@ -1553,6 +1553,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const voiceToTextRef = useRef<any>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef<boolean>(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -2940,17 +2941,39 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
+    const distance = target.scrollHeight - target.scrollTop - target.clientHeight;
+    isNearBottomRef.current = distance <= 140;
+
     if (target.scrollTop < 120 && hasMoreMessages && !isLoadingOlder && !isLoadingMessages) {
       loadOlderMessages();
     }
   };
 
-  // Auto scroll to bottom on new messages, typing, or chat selection (NOT when loading older messages)
-  const lastMsgId = messages.length > 0 ? messages[messages.length - 1]?.id : null;
+  // Auto scroll to bottom only if user is near bottom, on initial chat load, or when sending own message
+  const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
+  const lastMsgId = lastMsg?.id || null;
   const isOtherUserTyping = typingUsers.has(selectedUser?.email || '');
+  const prevSelectedChatIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (selectedUser?.id && messages.length > 0 && !isLoadingOlder) {
+    if (!selectedUser?.id || messages.length === 0 || isLoadingOlder) return;
+
+    const isInitialChatSwitch = prevSelectedChatIdRef.current !== selectedUser.id;
+    prevSelectedChatIdRef.current = selectedUser.id;
+
+    if (isInitialChatSwitch) {
+      isNearBottomRef.current = true;
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+
+    const currentUserId = (session?.user as any)?.id;
+    const isSentByMe = lastMsg && String(lastMsg.senderId) === String(currentUserId);
+
+    // If user is scrolled up reading older messages and an incoming message arrives, DO NOT pull down
+    if (isSentByMe || isNearBottomRef.current) {
       const timer = setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 50);
@@ -3783,6 +3806,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             className="ig-textarea"
                             value={inputValue}
                             rows={1}
+                            onFocus={() => {
+                              isNearBottomRef.current = true;
+                              setTimeout(() => {
+                                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                              }, 60);
+                            }}
+                            onClick={() => {
+                              isNearBottomRef.current = true;
+                              setTimeout(() => {
+                                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                              }, 40);
+                            }}
                             onChange={(e) => {
                               const val = e.target.value;
                               setInputValue(val);
@@ -3793,7 +3828,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               t.style.height = newHeight + 'px';
                               if (messagesContainerRef.current && prevHeight !== newHeight + 'px') {
                                 const container = messagesContainerRef.current;
-                                const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+                                const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 140;
                                 if (isNearBottom) {
                                   container.scrollTop = container.scrollHeight;
                                 }
