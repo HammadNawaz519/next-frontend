@@ -3225,9 +3225,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     if (socket) {
       socket.emit('send_social_message', {
-        receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
-        receiverId: selectedUser.id,
-        ...optimisticMsg
+        ...optimisticMsg,
+        receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined
       });
     }
 
@@ -3311,10 +3310,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
             });
             socket.emit('send_social_message', {
+              ...optimisticMsg,
               receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
-              receiverId: selectedUser.id,
-              ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {}),
-              ...optimisticMsg
+              ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
             });
 
             try {
@@ -3511,11 +3509,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
           // Emit real-time message with saved permanent file URL
           socket.emit('send_social_message', {
-            receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
-            receiverId: selectedUser.id,
-            ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {}),
             ...(savedMsg as any),
-            id: (savedMsg as any).id || stableId
+            id: (savedMsg as any).id || stableId,
+            receiverId: selectedUser.id,
+            receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+            ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
           });
         } else {
           // Fallback to base64 via saveSocialMessage
@@ -3548,11 +3546,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               };
             });
             socket.emit('send_social_message', {
-              receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
-              receiverId: selectedUser.id,
-              ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {}),
               ...(savedMsg as any),
-              id: (savedMsg as any).id || stableId
+              id: (savedMsg as any).id || stableId,
+              receiverId: selectedUser.id,
+              receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+              ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
             });
           }
         }
