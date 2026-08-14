@@ -439,6 +439,7 @@ export default function DashboardPage() {
         id: userId,
         name: fallbackUser.name,
         username: fallbackUser.username,
+        email: fallbackUser.email || "",
         image: fallbackUser.image,
         bio: fallbackUser.bio || "",
         website: fallbackUser.website || "",
@@ -951,7 +952,7 @@ export default function DashboardPage() {
               setIsProfileOpen(false);
               setIsClosingProfile(false);
               setSelectedProfileUser(null);
-              setSelectedChatUser(targetUser);
+              setSelectedChatUser({ ...targetUser, _openTs: Date.now() });
               setActiveView('chat');
             }, x, y, false);
           }}

@@ -1391,11 +1391,32 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-select the user passed from another profile's Message button
-  const initialUserRef = React.useRef<any>(null);
   useEffect(() => {
-    if (initialUser && initialUser.id !== initialUserRef.current?.id) {
-      initialUserRef.current = initialUser;
+    if (initialUser && initialUser.id) {
+      setShowChatDetails(false);
+      setShowThemePicker(false);
       setSelectedUser(initialUser);
+
+      // Ensure user is in contacts list so header and list reflect correctly
+      setUsers(prev => {
+        if (prev.some(u => u.id === initialUser.id)) return prev;
+        const updated = [{ ...initialUser, unseenCount: 0, isRequest: false }, ...prev];
+        allContactsRef.current = updated;
+        return updated;
+      });
+
+      // Automatically unhide if previously hidden in deletedChatIds
+      setDeletedChatIds(prev => {
+        if (prev.has(initialUser.id)) {
+          const next = new Set(prev);
+          next.delete(initialUser.id);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('social_deleted_chats', JSON.stringify(Array.from(next)));
+          }
+          return next;
+        }
+        return prev;
+      });
     }
   }, [initialUser]);
 
@@ -1818,7 +1839,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
 
-  const activeThemeId = (selectedUser ? (chatThemes[selectedUser.id] || chatThemes[(selectedUser.email || '').toLowerCase().trim()]) : null) || 'default';
+  const activeThemeId = (selectedUser ? (
+    chatThemes[selectedUser.id] ||
+    (selectedUser.email ? chatThemes[selectedUser.email.toLowerCase().trim()] : null) ||
+    (selectedUser.username ? chatThemes[selectedUser.username.toLowerCase().trim()] : null)
+  ) : null) || 'default';
   const activeTheme = useMemo(() => {
     return INSTAGRAM_THEMES.find(t => t.id === activeThemeId) || INSTAGRAM_THEMES[0];
   }, [activeThemeId, selectedUser, chatThemes]);
@@ -1870,7 +1895,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const updated = {
       ...chatThemes,
       [selectedUser.id]: theme.id,
-      ...(selectedUser.email ? { [selectedUser.email.toLowerCase().trim()]: theme.id } : {})
+      ...(selectedUser.email ? { [selectedUser.email.toLowerCase().trim()]: theme.id } : {}),
+      ...(selectedUser.username ? { [selectedUser.username.toLowerCase().trim()]: theme.id } : {})
     };
     setChatThemes(updated);
     if (typeof window !== 'undefined') {
@@ -2111,14 +2137,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return prev;
         });
 
-        // Check for theme change system messages coming via socket
-        const detectedSocketTheme = detectThemeIdFromMessages([msg]);
-        if (detectedSocketTheme && partnerId) {
+        // Check for theme change from payload or system messages coming via socket
+        const incomingTheme = (msg as any).themeId || detectThemeIdFromMessages([msg]);
+        if (incomingTheme && partnerId) {
           setChatThemes(prev => {
             const updated = {
               ...prev,
-              [partnerId]: detectedSocketTheme,
-              ...(selectedUserRef.current?.id === partnerId && selectedUserRef.current?.email ? { [selectedUserRef.current.email.toLowerCase().trim()]: detectedSocketTheme } : {})
+              [partnerId]: incomingTheme,
+              ...(selectedUserRef.current?.id === partnerId && selectedUserRef.current?.email ? { [selectedUserRef.current.email.toLowerCase().trim()]: incomingTheme } : {}),
+              ...(selectedUserRef.current?.id === partnerId && selectedUserRef.current?.username ? { [selectedUserRef.current.username.toLowerCase().trim()]: incomingTheme } : {})
             };
             if (typeof window !== 'undefined') {
               localStorage.setItem('chat_themes', JSON.stringify(updated));
@@ -2449,6 +2476,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             const updated = { ...prev };
             if (senderId) updated[senderId] = themeId;
             if (senderEmail) updated[senderEmail.toLowerCase().trim()] = themeId;
+            if (selectedUserRef.current?.id === senderId && selectedUserRef.current?.username) {
+              updated[selectedUserRef.current.username.toLowerCase().trim()] = themeId;
+            }
             if (typeof window !== 'undefined') {
               localStorage.setItem('chat_themes', JSON.stringify(updated));
             }
@@ -2952,7 +2982,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             const updated = {
               ...prev,
               [selectedUser.id]: detectedCachedTheme,
-              ...(selectedUser.email ? { [selectedUser.email.toLowerCase().trim()]: detectedCachedTheme } : {})
+              ...(selectedUser.email ? { [selectedUser.email.toLowerCase().trim()]: detectedCachedTheme } : {}),
+              ...(selectedUser.username ? { [selectedUser.username.toLowerCase().trim()]: detectedCachedTheme } : {})
             };
             if (typeof window !== 'undefined') {
               localStorage.setItem('chat_themes', JSON.stringify(updated));
@@ -2993,7 +3024,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             const updated = {
               ...prev,
               [selectedUser.id]: detectedFreshTheme,
-              ...(selectedUser.email ? { [selectedUser.email.toLowerCase().trim()]: detectedFreshTheme } : {})
+              ...(selectedUser.email ? { [selectedUser.email.toLowerCase().trim()]: detectedFreshTheme } : {}),
+              ...(selectedUser.username ? { [selectedUser.username.toLowerCase().trim()]: detectedFreshTheme } : {})
             };
             if (typeof window !== 'undefined') {
               localStorage.setItem('chat_themes', JSON.stringify(updated));
@@ -3113,9 +3145,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!inputValue.trim() || !selectedUser || !socket || !session?.user) return;
+    if (!inputValue.trim() || !selectedUser || !session?.user) return;
 
-    const currentContent = inputValue;
+    const currentContent = inputValue.trim();
     const senderId = (session.user as any).id;
     setInputValue('');
     setShowAIMention(false);
@@ -3181,15 +3213,23 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       type: 'text',
       createdAt: new Date(),
       isSeen: false,
-      replyTo: currentReplyTo
-    };
+      replyTo: currentReplyTo,
+      ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
+    } as any;
 
     setMessages(prev => [...prev, optimisticMsg]);
     setMessagesCache(prev => {
       const current = prev[selectedUser.id] || [];
       return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
     });
-    socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...optimisticMsg });
+
+    if (socket) {
+      socket.emit('send_social_message', {
+        receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+        receiverId: selectedUser.id,
+        ...optimisticMsg
+      });
+    }
 
     try {
       // Background DB Save – pass replyTo so it's persisted in the database
@@ -3270,7 +3310,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               const current = prev[selectedUser.id] || [];
               return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
             });
-            socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...optimisticMsg });
+            socket.emit('send_social_message', {
+              receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+              receiverId: selectedUser.id,
+              ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {}),
+              ...optimisticMsg
+            });
 
             try {
               const savedMsg = await saveSocialMessage(selectedUser.id, base64Audio, 'voice');
@@ -3465,7 +3510,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           });
 
           // Emit real-time message with saved permanent file URL
-          socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...(savedMsg as any), id: (savedMsg as any).id || stableId });
+          socket.emit('send_social_message', {
+            receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+            receiverId: selectedUser.id,
+            ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {}),
+            ...(savedMsg as any),
+            id: (savedMsg as any).id || stableId
+          });
         } else {
           // Fallback to base64 via saveSocialMessage
           const savedMsg = await saveSocialMessage(selectedUser.id, base64Preview, type);
@@ -3496,7 +3547,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 })
               };
             });
-            socket.emit('send_social_message', { receiverEmail: selectedUser.email, ...(savedMsg as any), id: (savedMsg as any).id || stableId });
+            socket.emit('send_social_message', {
+              receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+              receiverId: selectedUser.id,
+              ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {}),
+              ...(savedMsg as any),
+              id: (savedMsg as any).id || stableId
+            });
           }
         }
       } catch (err) {
@@ -3870,9 +3927,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       </div>
                       <h3>Start a conversation</h3>
                       <p>Send a message to start chatting with <b>{selectedUser.name}</b></p>
-                      <div className="empty-chat-hint">
-                        Messages are encrypted and secure
-                      </div>
                     </div>
                   )}
                   {typingUsers.has(selectedUser.email) && (
