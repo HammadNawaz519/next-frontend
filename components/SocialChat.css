@@ -256,12 +256,12 @@
 /* MESSAGES */
 .social-chat-container .messages {
   flex: 1;
-  padding: 16px 12px;
+  padding: 12px 6px 8px;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   background-color: transparent;
 }
 
@@ -587,12 +587,12 @@
 
 /* FOOTER */
 .social-chat-container .footer {
-  padding: 6px 8px 14px;
+  padding: 4px 6px 10px;
   background: transparent;
   border-top: none;
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 
 .social-chat-container .type-box {
@@ -601,7 +601,7 @@
   align-items: flex-end;
   background: var(--dm-bg-hover);
   border-radius: 24px;
-  padding: 6px 10px 6px 16px;
+  padding: 6px 8px 6px 14px;
   border: 1px solid var(--dm-border);
   position: relative;
   min-height: 44px;
@@ -2204,7 +2204,7 @@
 
 /* Footer Chrome Container (Completely transparent background — no white behind typebox) */
 .social-chat-container .footer {
-  padding: 8px 16px 16px !important;
+  padding: 4px 6px 10px !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
