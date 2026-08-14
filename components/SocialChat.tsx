@@ -992,9 +992,9 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         flexDirection: 'row',
         alignItems: 'flex-end',
         justifyContent: isSent ? 'flex-end' : 'flex-start',
-        gap: '8px',
+        gap: '6px',
         width: '100%',
-        padding: isSent ? '0 2px 0 8px' : '0 8px 0 2px',
+        padding: '0',
         userSelect: 'none',
         position: 'relative',
         transition: isSwiping
@@ -3935,9 +3935,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         flexDirection: 'row',
                         alignItems: 'flex-end',
                         justifyContent: 'flex-start',
-                        gap: '8px',
+                        gap: '6px',
                         width: '100%',
-                        padding: '0 8px 0 2px',
+                        padding: '0',
                         userSelect: 'none',
                         position: 'relative'
                       }}
@@ -3970,7 +3970,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
 
                 {replyToMessage && (
-                  <div className="mx-1.5 mb-1.5 p-2.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] flex items-center justify-between animate-in slide-in-from-bottom-2 duration-200">
+                  <div className="mx-1 mb-1 p-2.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] flex items-center justify-between animate-in slide-in-from-bottom-2 duration-200">
                     <div className="flex flex-col min-w-0 pr-2">
                       <span className="text-[11px] font-bold text-[var(--dm-text-primary)] flex items-center gap-1">
                         <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
@@ -3990,7 +3990,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 )}
 
                 {selectedMessageIds.size === 0 ? (
-                  <footer className="footer" style={{ borderTop: 'none', background: 'transparent', padding: '4px 6px 10px' }}>
+                  <footer className="footer" style={{ borderTop: 'none', background: 'transparent', padding: '2px 4px 6px' }}>
                     <div className={`type-box ig-type-box ${activeTheme.id !== 'default' ? 'custom-theme-ig' : 'default-theme-ig'}`}>
                       {isVoiceToText ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, padding: '4px', borderRadius: '24px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', animation: 'pulse 2s infinite' }}>
