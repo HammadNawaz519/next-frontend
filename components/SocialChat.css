@@ -2520,3 +2520,33 @@
   color: #061729 !important;
 }
 
+/* ── MULTI-MEDIA ALBUM & UPLOAD STATUS INDICATOR ── */
+.media-album-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  position: relative;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 4px;
+}
+
+.media-sending-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse-upload 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-upload {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-2px) scale(1.1);
+    opacity: 1;
+  }
+}
+

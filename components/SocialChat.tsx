@@ -13,6 +13,7 @@ import {
   reactToSocialMessage,
   getRecentChats,
   markMessagesAsSeen,
+  getChatSharedMedia,
   askAI,
   saveCall,
   updateActivityStatus,
@@ -788,7 +789,7 @@ const ChatItem = memo(({
   );
 });
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, chatSwipeOffset }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, chatSwipeOffset, onOpenAlbum }: any) => {
   if (msg.type === 'system') {
     const isThemeSystemMsg = msg.content.toLowerCase().includes('theme to') || msg.content.toLowerCase().includes('customize chat');
     
@@ -1041,7 +1042,8 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           else bubbleBorderRadius = '18px 18px 18px 4px';
         }
 
-        const isMedia = msg.type === 'image' || msg.type === 'video';
+        const isMedia = msg.type === 'image' || msg.type === 'video' || msg.type === 'media_album';
+        const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
         return (
@@ -1074,64 +1076,239 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
             )}
             {isAI && <div className="system-sender">AI Assistant</div>}
             {isMedia ? (
-              <div className="relative group rounded-[1.25rem] overflow-hidden" style={{ width: 'fit-content' }}>
-                {msg.type === 'image' && (
-                  <img
-                    src={msg.content}
-                    alt="media"
-                    draggable={false}
-                    className="cursor-pointer hover:opacity-95 transition-opacity"
-                    style={{ userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
-                    onClick={e => { e.stopPropagation(); if (onPreviewMedia) onPreviewMedia(msg.content, 'image'); else if (onPreviewImage) onPreviewImage(msg.content); else window.open(msg.content, '_blank'); }}
-                    onContextMenu={e => { e.preventDefault(); e.stopPropagation(); handleContextMenu(e); }}
-                  />
-                )}
-                {msg.type === 'video' && (
+              msg.type === 'media_album' ? (() => {
+                let items: Array<{ url: string; type: string; name?: string }> = [];
+                try {
+                  items = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
+                } catch (e) {
+                  items = [{ url: msg.content, type: 'image' }];
+                }
+
+                if (!Array.isArray(items) || items.length === 0) return null;
+
+                if (items.length === 1) {
+                  const item = items[0];
+                  return (
+                    <div className="relative group rounded-[1.25rem] overflow-hidden" style={{ width: 'fit-content' }}>
+                      {item.type === 'video' ? (
+                        <div
+                          className="relative cursor-pointer group"
+                          onClick={e => { e.stopPropagation(); if (onPreviewMedia) onPreviewMedia(item.url, 'video'); }}
+                        >
+                          <video src={item.url} controls className="block max-w-full rounded-[1.25rem]" />
+                        </div>
+                      ) : (
+                        <img
+                          src={item.url}
+                          alt="media"
+                          className="cursor-pointer hover:opacity-95 transition-opacity rounded-[1.25rem]"
+                          onClick={e => { e.stopPropagation(); if (onPreviewMedia) onPreviewMedia(item.url, 'image'); else if (onPreviewImage) onPreviewImage(item.url); }}
+                        />
+                      )}
+                      <div className="time-row media-time-row" style={{ position: 'absolute', bottom: '8px', right: '8px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.65rem', color: '#ffffff', backgroundColor: 'rgba(0, 0, 0, 0.6)', padding: '3px 7px', borderRadius: '12px', backdropFilter: 'blur(6px)' }}>
+                        <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                        {isSent && (
+                          isSending ? (
+                            <span className="inline-flex items-center text-white/90 animate-bounce ml-0.5" title="Sending...">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="12" y1="19" x2="12" y2="5" />
+                                <polyline points="5 12 12 5 19 12" />
+                              </svg>
+                            </span>
+                          ) : !isDeletedMsg && (
+                            <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`} style={{ color: msg.isSeen ? '#38bdf8' : '#ffffff' }}>
+                              <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                                <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+                              </svg>
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
+                const displayItems = items.slice(0, 3);
+                const remainingCount = items.length - 3;
+
+                return (
                   <div
-                    className="relative cursor-pointer group"
-                    onClick={e => {
+                    className="relative rounded-[1.25rem] overflow-hidden cursor-pointer group"
+                    style={{ width: '270px', maxWidth: '100%' }}
+                    onClick={(e) => {
                       e.stopPropagation();
-                      if (onPreviewMedia) onPreviewMedia(msg.content, 'video');
-                      else if (onPreviewImage) onPreviewImage(msg.content);
+                      if (onOpenAlbum) {
+                        onOpenAlbum({
+                          id: msg.id,
+                          items,
+                          time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+                        });
+                      }
                     }}
                   >
-                    <video
+                    <div className="grid grid-cols-2 gap-1 bg-black/20 p-1 rounded-[1.25rem]">
+                      {/* First item */}
+                      <div className={`relative overflow-hidden rounded-xl bg-black/30 ${items.length >= 3 ? 'row-span-2 aspect-[9/16]' : 'aspect-square'}`}>
+                        {displayItems[0].type === 'video' ? (
+                          <video src={displayItems[0].url} className="w-full h-full object-cover pointer-events-none" />
+                        ) : (
+                          <img src={displayItems[0].url} alt="" className="w-full h-full object-cover" />
+                        )}
+                        {displayItems[0].type === 'video' && (
+                          <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center text-white">
+                            <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Second item */}
+                      {displayItems[1] && (
+                        <div className="relative overflow-hidden rounded-xl bg-black/30 aspect-square">
+                          {displayItems[1].type === 'video' ? (
+                            <video src={displayItems[1].url} className="w-full h-full object-cover pointer-events-none" />
+                          ) : (
+                            <img src={displayItems[1].url} alt="" className="w-full h-full object-cover" />
+                          )}
+                          {displayItems[1].type === 'video' && (
+                            <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center text-white">
+                              <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Third item */}
+                      {displayItems[2] && (
+                        <div className="relative overflow-hidden rounded-xl bg-black/30 aspect-square">
+                          {displayItems[2].type === 'video' ? (
+                            <video src={displayItems[2].url} className="w-full h-full object-cover pointer-events-none" />
+                          ) : (
+                            <img src={displayItems[2].url} alt="" className="w-full h-full object-cover" />
+                          )}
+                          {remainingCount > 0 ? (
+                            <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center text-white font-bold">
+                              <span className="text-lg leading-none">+{remainingCount + 1}</span>
+                              <span className="text-[10px] opacity-80 uppercase tracking-wider mt-0.5">Photos</span>
+                            </div>
+                          ) : (
+                            displayItems[2].type === 'video' && (
+                              <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center text-white">
+                                <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      className="time-row media-time-row"
+                      style={{
+                        position: 'absolute',
+                        bottom: '8px',
+                        right: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '0.65rem',
+                        color: '#ffffff',
+                        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                        padding: '3px 7px',
+                        borderRadius: '12px',
+                        backdropFilter: 'blur(6px)',
+                        pointerEvents: 'none',
+                        zIndex: 2,
+                      }}
+                    >
+                      <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                      {isSent && (
+                        isSending ? (
+                          <span className="inline-flex items-center text-white/90 animate-bounce ml-0.5" title="Sending...">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="12" y1="19" x2="12" y2="5" />
+                              <polyline points="5 12 12 5 19 12" />
+                            </svg>
+                          </span>
+                        ) : !isDeletedMsg && (
+                          <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`} style={{ color: msg.isSeen ? '#38bdf8' : '#ffffff' }}>
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                              <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+                            </svg>
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </div>
+                );
+              })() : (
+                <div className="relative group rounded-[1.25rem] overflow-hidden" style={{ width: 'fit-content' }}>
+                  {msg.type === 'image' && (
+                    <img
                       src={msg.content}
-                      controls
-                      style={{ userSelect: 'none', WebkitUserSelect: 'none', display: 'block', maxWidth: '100%' }}
+                      alt="media"
+                      draggable={false}
+                      className="cursor-pointer hover:opacity-95 transition-opacity"
+                      style={{ userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
+                      onClick={e => { e.stopPropagation(); if (onPreviewMedia) onPreviewMedia(msg.content, 'image'); else if (onPreviewImage) onPreviewImage(msg.content); else window.open(msg.content, '_blank'); }}
                       onContextMenu={e => { e.preventDefault(); e.stopPropagation(); handleContextMenu(e); }}
                     />
-                  </div>
-                )}
-                <div
-                  className="time-row media-time-row"
-                  style={{
-                    position: 'absolute',
-                    bottom: '8px',
-                    right: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.65rem',
-                    color: '#ffffff',
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    padding: '3px 7px',
-                    borderRadius: '12px',
-                    backdropFilter: 'blur(6px)',
-                    pointerEvents: 'none',
-                    zIndex: 2,
-                  }}
-                >
-                  <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                  {isSent && !isDeletedMsg && (
-                    <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`} style={{ color: msg.isSeen ? '#38bdf8' : '#ffffff' }}>
-                      <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                        <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-                      </svg>
-                    </span>
                   )}
+                  {msg.type === 'video' && (
+                    <div
+                      className="relative cursor-pointer group"
+                      onClick={e => {
+                        e.stopPropagation();
+                        if (onPreviewMedia) onPreviewMedia(msg.content, 'video');
+                        else if (onPreviewImage) onPreviewImage(msg.content);
+                      }}
+                    >
+                      <video
+                        src={msg.content}
+                        controls
+                        style={{ userSelect: 'none', WebkitUserSelect: 'none', display: 'block', maxWidth: '100%' }}
+                        onContextMenu={e => { e.preventDefault(); e.stopPropagation(); handleContextMenu(e); }}
+                      />
+                    </div>
+                  )}
+                  <div
+                    className="time-row media-time-row"
+                    style={{
+                      position: 'absolute',
+                      bottom: '8px',
+                      right: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '0.65rem',
+                      color: '#ffffff',
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      padding: '3px 7px',
+                      borderRadius: '12px',
+                      backdropFilter: 'blur(6px)',
+                      pointerEvents: 'none',
+                      zIndex: 2,
+                    }}
+                  >
+                    <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                    {isSent && (
+                      isSending ? (
+                        <span className="inline-flex items-center text-white/90 animate-bounce ml-0.5" title="Sending...">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="12" y1="19" x2="12" y2="5" />
+                            <polyline points="5 12 12 5 19 12" />
+                          </svg>
+                        </span>
+                      ) : !isDeletedMsg && (
+                        <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`} style={{ color: msg.isSeen ? '#38bdf8' : '#ffffff' }}>
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                            <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+                          </svg>
+                        </span>
+                      )
+                    )}
+                  </div>
                 </div>
-              </div>
+              )
             ) : (
               <>
                 {msg.type === 'voice' && <audio src={msg.content} controls />}
@@ -1845,6 +2022,48 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showReportModal, setShowReportModal] = useState(false);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [sharedMedia, setSharedMedia] = useState<{ photos: any[]; videos: any[]; files: any[] }>({ photos: [], videos: [], files: [] });
+  const [selectedAlbum, setSelectedAlbum] = useState<{ id: string; items: any[]; time?: string } | null>(null);
+
+  // Automatically fetch ALL shared media for this chat from DB regardless of pagination state
+  useEffect(() => {
+    if (!selectedUser?.id) {
+      setSharedMedia({ photos: [], videos: [], files: [] });
+      return;
+    }
+    getChatSharedMedia(selectedUser.id).then((mediaMsgs: any[]) => {
+      const photos: any[] = [];
+      const videos: any[] = [];
+      const files: any[] = [];
+
+      (mediaMsgs || []).forEach((m) => {
+        if (m.type === 'image') {
+          photos.push({ id: m.id, content: m.content, createdAt: m.createdAt, senderId: m.senderId });
+        } else if (m.type === 'video') {
+          videos.push({ id: m.id, content: m.content, createdAt: m.createdAt, senderId: m.senderId });
+        } else if (m.type === 'voice' || m.type === 'file') {
+          files.push({ id: m.id, content: m.content, type: m.type, createdAt: m.createdAt, senderId: m.senderId });
+        } else if (m.type === 'media_album') {
+          try {
+            const items = typeof m.content === 'string' ? JSON.parse(m.content) : m.content;
+            if (Array.isArray(items)) {
+              items.forEach((it: any, idx: number) => {
+                if (it.type === 'video') {
+                  videos.push({ id: `${m.id}-${idx}`, content: it.url, createdAt: m.createdAt, senderId: m.senderId });
+                } else if (it.type === 'image') {
+                  photos.push({ id: `${m.id}-${idx}`, content: it.url, createdAt: m.createdAt, senderId: m.senderId });
+                } else {
+                  files.push({ id: `${m.id}-${idx}`, content: it.url, type: it.type || 'file', createdAt: m.createdAt, senderId: m.senderId });
+                }
+              });
+            }
+          } catch (e) {}
+        }
+      });
+
+      setSharedMedia({ photos, videos, files });
+    }).catch(() => {});
+  }, [selectedUser?.id]);
 
   const activeThemeId = (selectedUser ? (
     chatThemes[selectedUser.id] ||
@@ -2178,11 +2397,40 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return [...prev, msg];
         });
 
+        // Real-time update to sharedMedia
+        if (selectedUserRef.current?.id === partnerId) {
+          if (msg.type === 'image') {
+            setSharedMedia(p => ({ ...p, photos: [{ id: msg.id, content: msg.content, createdAt: msg.createdAt, senderId: msg.senderId }, ...p.photos] }));
+          } else if (msg.type === 'video') {
+            setSharedMedia(p => ({ ...p, videos: [{ id: msg.id, content: msg.content, createdAt: msg.createdAt, senderId: msg.senderId }, ...p.videos] }));
+          } else if (msg.type === 'voice' || msg.type === 'file') {
+            setSharedMedia(p => ({ ...p, files: [{ id: msg.id, content: msg.content, type: msg.type, createdAt: msg.createdAt, senderId: msg.senderId }, ...p.files] }));
+          } else if (msg.type === 'media_album') {
+            try {
+              const items = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
+              if (Array.isArray(items)) {
+                setSharedMedia(p => {
+                  const np = [...p.photos];
+                  const nv = [...p.videos];
+                  const nf = [...p.files];
+                  items.forEach((it: any, idx: number) => {
+                    if (it.type === 'video') nv.unshift({ id: `${msg.id}-${idx}`, content: it.url, createdAt: msg.createdAt, senderId: msg.senderId });
+                    else if (it.type === 'image') np.unshift({ id: `${msg.id}-${idx}`, content: it.url, createdAt: msg.createdAt, senderId: msg.senderId });
+                    else nf.unshift({ id: `${msg.id}-${idx}`, content: it.url, type: it.type, createdAt: msg.createdAt, senderId: msg.senderId });
+                  });
+                  return { photos: np, videos: nv, files: nf };
+                });
+              }
+            } catch (e) {}
+          }
+        }
+
         // 2. Update Sidebar (Users/Requests)
         const formatMsg = (m: Message) => {
           if (m.type === 'voice') return 'Voice Message';
-          if (m.type === 'image') return 'Image';
+          if (m.type === 'image') return 'Photo';
           if (m.type === 'video') return 'Video';
+          if (m.type === 'media_album') return 'Photos & Videos';
           if (m.type === 'file') return 'Attachment';
           if (m.type === 'accepted') return 'Request accepted';
           return m.content.length > 30 ? m.content.substring(0, 30) + '...' : m.content;
@@ -3441,29 +3689,29 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !selectedUser || !socket || !session?.user) return;
+    const rawFiles = e.target.files ? Array.from(e.target.files) : [];
+    if (rawFiles.length === 0 || !selectedUser || !socket || !session?.user) return;
 
     // Reset input so selecting the same file twice triggers change event
     e.target.value = '';
 
-    const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'voice' : 'file';
     const senderId = (session.user as any).id;
     const stableId = 'file-' + Date.now() + Math.random().toString(36).substring(7);
 
-    // Read as Base64 for persistent optimistic preview that survives page refresh
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64Preview = reader.result as string;
+    if (rawFiles.length === 1) {
+      const file = rawFiles[0];
+      const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'voice' : 'file';
+      const localPreview = URL.createObjectURL(file);
 
       const optimisticMsg: any = {
         id: stableId,
         senderId: senderId,
         receiverId: selectedUser.id,
-        content: base64Preview,
+        content: localPreview,
         type: type,
         createdAt: new Date(),
-        isSeen: false
+        isSeen: false,
+        status: 'sending'
       };
 
       setMessages(prev => [...prev, optimisticMsg]);
@@ -3471,6 +3719,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         const current = prev[selectedUser.id] || [];
         return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
       });
+
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 40);
 
       try {
         const formData = new FormData();
@@ -3492,7 +3744,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               return {
                 ...(savedMsg as any),
                 id: (savedMsg as any).id || stableId,
-                isSeen: m.isSeen || (savedMsg as any).isSeen || false
+                isSeen: m.isSeen || (savedMsg as any).isSeen || false,
+                status: 'sent'
               };
             }
             return m;
@@ -3506,12 +3759,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   return {
                     ...(savedMsg as any),
                     id: (savedMsg as any).id || stableId,
-                    isSeen: m.isSeen || (savedMsg as any).isSeen || false
+                    isSeen: m.isSeen || (savedMsg as any).isSeen || false,
+                    status: 'sent'
                   };
                 }
                 return m;
               })
             };
+          });
+
+          // Add to sharedMedia
+          setSharedMedia(prev => {
+            if (type === 'image') return { ...prev, photos: [{ id: savedMsg.id, content: savedMsg.content, createdAt: savedMsg.createdAt, senderId }, ...prev.photos] };
+            if (type === 'video') return { ...prev, videos: [{ id: savedMsg.id, content: savedMsg.content, createdAt: savedMsg.createdAt, senderId }, ...prev.videos] };
+            return { ...prev, files: [{ id: savedMsg.id, content: savedMsg.content, type, createdAt: savedMsg.createdAt, senderId }, ...prev.files] };
           });
 
           // Emit real-time message with saved permanent file URL
@@ -3522,50 +3783,109 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
             ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
           });
-        } else {
-          // Fallback to base64 via saveSocialMessage
-          const savedMsg = await saveSocialMessage(selectedUser.id, base64Preview, type);
-          if (savedMsg) {
-            setMessages(prev => prev.map(m => {
-              if (m.id === stableId) {
-                return {
-                  ...(savedMsg as any),
-                  id: (savedMsg as any).id || stableId,
-                  isSeen: m.isSeen || (savedMsg as any).isSeen || false
-                };
-              }
-              return m;
-            }));
-            setMessagesCache(prev => {
-              const current = prev[selectedUser.id] || [];
-              return {
-                ...prev,
-                [selectedUser.id]: current.map(m => {
-                  if (m.id === stableId) {
-                    return {
-                      ...(savedMsg as any),
-                      id: (savedMsg as any).id || stableId,
-                      isSeen: m.isSeen || (savedMsg as any).isSeen || false
-                    };
-                  }
-                  return m;
-                })
-              };
-            });
-            socket.emit('send_social_message', {
-              ...(savedMsg as any),
-              id: (savedMsg as any).id || stableId,
-              receiverId: selectedUser.id,
-              receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
-              ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
-            });
-          }
         }
       } catch (err) {
         console.error("Failed to upload media file:", err);
       }
-    };
-    reader.readAsDataURL(file);
+    } else {
+      // Multi-file batch
+      const localItems = rawFiles.map(f => ({
+        url: URL.createObjectURL(f),
+        type: f.type.startsWith('image/') ? 'image' : f.type.startsWith('video/') ? 'video' : 'file',
+        name: f.name
+      }));
+
+      const optimisticMsg: any = {
+        id: stableId,
+        senderId: senderId,
+        receiverId: selectedUser.id,
+        content: JSON.stringify(localItems),
+        type: 'media_album',
+        createdAt: new Date(),
+        isSeen: false,
+        status: 'sending'
+      };
+
+      setMessages(prev => [...prev, optimisticMsg]);
+      setMessagesCache(prev => {
+        const current = prev[selectedUser.id] || [];
+        return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
+      });
+
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 40);
+
+      try {
+        const formData = new FormData();
+        rawFiles.forEach(f => formData.append('files', f));
+        formData.append('receiverId', selectedUser.id);
+
+        const res = await fetch('/api/chat/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        const resData = await res.json();
+
+        if (resData?.success && resData?.message) {
+          const savedMsg = resData.message;
+          setMessages(prev => prev.map(m => {
+            if (m.id === stableId) {
+              return {
+                ...(savedMsg as any),
+                id: (savedMsg as any).id || stableId,
+                isSeen: m.isSeen || (savedMsg as any).isSeen || false,
+                status: 'sent'
+              };
+            }
+            return m;
+          }));
+          setMessagesCache(prev => {
+            const current = prev[selectedUser.id] || [];
+            return {
+              ...prev,
+              [selectedUser.id]: current.map(m => {
+                if (m.id === stableId) {
+                  return {
+                    ...(savedMsg as any),
+                    id: (savedMsg as any).id || stableId,
+                    isSeen: m.isSeen || (savedMsg as any).isSeen || false,
+                    status: 'sent'
+                  };
+                }
+                return m;
+              })
+            };
+          });
+
+          // Update sharedMedia
+          if (resData.items && Array.isArray(resData.items)) {
+            setSharedMedia(prev => {
+              const newPhotos = [...prev.photos];
+              const newVideos = [...prev.videos];
+              const newFiles = [...prev.files];
+              resData.items.forEach((it: any, idx: number) => {
+                if (it.type === 'video') newVideos.unshift({ id: `${savedMsg.id}-${idx}`, content: it.url, createdAt: savedMsg.createdAt, senderId });
+                else if (it.type === 'image') newPhotos.unshift({ id: `${savedMsg.id}-${idx}`, content: it.url, createdAt: savedMsg.createdAt, senderId });
+                else newFiles.unshift({ id: `${savedMsg.id}-${idx}`, content: it.url, type: it.type, createdAt: savedMsg.createdAt, senderId });
+              });
+              return { photos: newPhotos, videos: newVideos, files: newFiles };
+            });
+          }
+
+          socket.emit('send_social_message', {
+            ...(savedMsg as any),
+            id: (savedMsg as any).id || stableId,
+            receiverId: selectedUser.id,
+            receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+            ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
+          });
+        }
+      } catch (err) {
+        console.error("Failed to upload media batch:", err);
+      }
+    }
   };
 
   const handleDelete = async (msgId: string, type: 'me' | 'everyone') => {
@@ -3915,6 +4235,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               isPrevSameSender={isPrevSameSender}
                               isNextSameSender={isNextSameSender}
                               chatSwipeOffset={chatSwipeOffset}
+                              onOpenAlbum={setSelectedAlbum}
                             />
                           </div>
                         </React.Fragment>
@@ -4201,7 +4522,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
 
 
-                <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="*" />
+                <input type="file" ref={fileInputRef} multiple style={{ display: 'none' }} onChange={handleFileUpload} accept="image/*,video/*,audio/*" />
 
                 {/* ── PREMIUM REDESIGNED CHAT DETAILS VIEW OVERLAY ── */}
                 {showChatDetails && selectedUser && (
@@ -4399,19 +4720,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       {/* Tab 1: Photos & Images */}
                       {detailsTab === 'photos' && (
                         <div>
-                          {messages.filter(m => m.type === 'image').length === 0 ? (
+                          {sharedMedia.photos.length === 0 ? (
                             <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
                               No photos shared in this chat yet
                             </div>
                           ) : (
                             <div className="grid grid-cols-3 gap-2">
-                              {messages.filter(m => m.type === 'image').map(m => (
+                              {sharedMedia.photos.map(m => (
                                 <div
                                   key={m.id}
                                   className="aspect-square rounded-2xl overflow-hidden bg-black/10 cursor-pointer group relative"
                                   onClick={() => openMediaLightbox(m.content, 'image')}
                                 >
-                                  <img src={m.content} alt="photo" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                  <img src={m.content} alt="photo" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
                                 </div>
                               ))}
                             </div>
@@ -4422,19 +4743,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       {/* Tab 2: Reels & Videos */}
                       {detailsTab === 'reels' && (
                         <div>
-                          {messages.filter(m => m.type === 'video').length === 0 ? (
+                          {sharedMedia.videos.length === 0 ? (
                             <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
                               No video reels shared in this chat yet
                             </div>
                           ) : (
                             <div className="grid grid-cols-2 gap-3">
-                              {messages.filter(m => m.type === 'video').map(m => (
+                              {sharedMedia.videos.map(m => (
                                 <div
                                   key={m.id}
                                   className="aspect-[9/16] rounded-2xl overflow-hidden bg-black cursor-pointer group relative"
                                   onClick={() => openMediaLightbox(m.content, 'video')}
                                 >
                                   <video src={m.content} className="w-full h-full object-cover pointer-events-none" />
+                                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none group-hover:bg-black/10 transition-colors">
+                                    <div className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white">
+                                      <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                    </div>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -4445,13 +4771,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       {/* Tab 3: Voice Clips & Files */}
                       {detailsTab === 'files' && (
                         <div>
-                          {messages.filter(m => m.type === 'voice' || m.type === 'file').length === 0 ? (
+                          {sharedMedia.files.length === 0 ? (
                             <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
                               No audio clips or documents shared yet
                             </div>
                           ) : (
                             <div className="space-y-3">
-                              {messages.filter(m => m.type === 'voice' || m.type === 'file').map(m => (
+                              {sharedMedia.files.map(m => (
                                 <div key={m.id} className="p-3.5 rounded-2xl bg-[var(--dm-bg-hover)] flex flex-col gap-2">
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2.5 min-w-0">
@@ -4475,6 +4801,70 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           )}
                         </div>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── MULTI-MEDIA ALBUM VIEWER OVERLAY (Instagram style) ── */}
+                {selectedAlbum && (
+                  <div className="absolute inset-0 z-50 flex flex-col bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] animate-in slide-in-from-right duration-250 font-sans overflow-hidden">
+                    {/* Top Header with Back Button on the top left */}
+                    <div className="flex items-center justify-between px-4 pt-[calc(14px+env(safe-area-inset-top,0px))] pb-3 border-b border-[var(--dm-border)]/40 bg-[var(--dm-bg-sidebar)]/95 backdrop-blur-md z-10">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setSelectedAlbum(null)}
+                          className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] active:scale-90 transition-all cursor-pointer flex-shrink-0"
+                          title="Back to chat"
+                          aria-label="Back to chat"
+                        >
+                          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <div>
+                          <h3 className="font-bold text-sm leading-tight text-[var(--dm-text-primary)]">Shared Media</h3>
+                          <p className="text-[11px] text-[var(--dm-text-muted)] font-medium">
+                            {selectedAlbum.items.length} {selectedAlbum.items.length === 1 ? 'item' : 'items'} {selectedAlbum.time ? `• ${selectedAlbum.time}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Media Grid */}
+                    <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {selectedAlbum.items.map((item, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => {
+                              openMediaLightbox(item.url, item.type === 'video' ? 'video' : 'image');
+                            }}
+                            className="relative aspect-square rounded-2xl overflow-hidden bg-black/15 cursor-pointer group hover:scale-[1.02] active:scale-95 transition-all shadow-sm"
+                          >
+                            {item.type === 'video' ? (
+                              <>
+                                <video src={item.url} className="w-full h-full object-cover pointer-events-none" />
+                                <div className="absolute inset-0 bg-black/25 flex items-center justify-center group-hover:bg-black/15 transition-colors">
+                                  <div className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white shadow-lg">
+                                    <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M8 5v14l11-7z" />
+                                    </svg>
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <img
+                                src={item.url}
+                                alt=""
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            )}
+                            <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/65 backdrop-blur-sm text-[10px] font-semibold text-white/95">
+                              {idx + 1}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}

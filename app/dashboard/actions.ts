@@ -165,6 +165,40 @@ export async function getSocialMessages(otherUserId: string, limit: number = 25,
   return messages.reverse();
 }
 
+export async function getChatSharedMedia(otherUserId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return [];
+
+  const currentUser = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true }
+  });
+
+  if (!currentUser) return [];
+
+  const mediaMessages = await prisma.socialMessage.findMany({
+    where: {
+      OR: [
+        { senderId: currentUser.id, receiverId: otherUserId, deletedBySender: false },
+        { senderId: otherUserId, receiverId: currentUser.id, deletedByReceiver: false }
+      ],
+      type: { in: ['image', 'video', 'voice', 'file', 'media_album'] }
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 500,
+    select: {
+      id: true,
+      senderId: true,
+      receiverId: true,
+      content: true,
+      type: true,
+      createdAt: true
+    }
+  });
+
+  return mediaMessages;
+}
+
 export async function markMessagesAsSeen(senderId: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;

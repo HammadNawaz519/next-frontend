@@ -24,48 +24,43 @@ export async function POST(req: NextRequest) {
     }
 
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    const rawFiles = formData.getAll("files").concat(formData.getAll("file")) as File[];
+    const files = rawFiles.filter(f => f && typeof f !== "string" && f.size > 0);
     const receiverId = formData.get("receiverId") as string | null;
-    let type = (formData.get("type") as string | null) || "file";
+    let singleType = (formData.get("type") as string | null) || "file";
     const base64Data = formData.get("base64") as string | null;
 
     if (!receiverId) {
       return NextResponse.json({ error: "Receiver ID is required" }, { status: 400 });
     }
 
-    let fileUrl = "";
-
-    if (file && typeof file !== "string") {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-
-      // Determine extension
-      const originalName = file.name || "media";
+    const uploadSingleBuffer = async (buffer: Buffer, originalName: string, mimeTypeInput?: string): Promise<{ url: string; type: string }> => {
       let ext = path.extname(originalName).toLowerCase();
-      if (!ext) {
-        if (file.type.includes("png")) ext = ".png";
-        else if (file.type.includes("jpeg") || file.type.includes("jpg")) ext = ".jpg";
-        else if (file.type.includes("gif")) ext = ".gif";
-        else if (file.type.includes("webm")) ext = ".webm";
-        else if (file.type.includes("mp4")) ext = ".mp4";
-        else if (file.type.includes("ogg")) ext = ".ogg";
-        else ext = ".bin";
-      }
+      let itemType = "file";
+      const mime = (mimeTypeInput || "").toLowerCase();
 
-      if (file.type.startsWith("image/")) type = "image";
-      else if (file.type.startsWith("video/")) type = "video";
-      else if (file.type.startsWith("audio/")) type = "voice";
+      if (mime.startsWith("image/") || [".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".heic"].includes(ext)) {
+        itemType = "image";
+        if (!ext) ext = ".jpg";
+      } else if (mime.startsWith("video/") || [".mp4", ".webm", ".mov", ".mkv"].includes(ext)) {
+        itemType = "video";
+        if (!ext) ext = ".mp4";
+      } else if (mime.startsWith("audio/") || [".mp3", ".wav", ".ogg", ".webm", ".m4a"].includes(ext)) {
+        itemType = "voice";
+        if (!ext) ext = ".mp3";
+      } else {
+        if (!ext) ext = ".bin";
+      }
 
       const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}${ext}`;
 
       if (isCloudinaryConfigured()) {
-        const resourceType = type === "image" ? "image" : type === "video" || type === "voice" ? "video" : "auto";
+        const resourceType = itemType === "image" ? "image" : itemType === "video" || itemType === "voice" ? "video" : "auto";
         const cldResult = await uploadToCloudinary(buffer, `connect/chat/${currentUser.id}`, resourceType);
-        fileUrl = cldResult.url;
+        return { url: cldResult.url, type: itemType };
       } else if (isR2Configured()) {
-        const mimeType = file.type || (type === "image" ? "image/jpeg" : type === "video" ? "video/mp4" : "application/octet-stream");
-        const r2Result = await uploadToR2(buffer, `chat/${currentUser.id}/${filename}`, mimeType);
-        fileUrl = r2Result.url;
+        const r2Result = await uploadToR2(buffer, `chat/${currentUser.id}/${filename}`, mime || "application/octet-stream");
+        return { url: r2Result.url, type: itemType };
       } else {
         const uploadsDir = path.join(process.cwd(), "public", "uploads", "chat");
         if (!fs.existsSync(uploadsDir)) {
@@ -73,51 +68,9 @@ export async function POST(req: NextRequest) {
         }
         const filePath = path.join(uploadsDir, filename);
         fs.writeFileSync(filePath, buffer);
-        fileUrl = `/uploads/chat/${filename}`;
+        return { url: `/uploads/chat/${filename}`, type: itemType };
       }
-    } else if (base64Data && base64Data.startsWith("data:")) {
-      // Handle base64 fallback
-      const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
-        const mimeType = matches[1];
-        const rawBuffer = Buffer.from(matches[2], "base64");
-
-        let ext = ".bin";
-        if (mimeType.includes("png")) ext = ".png";
-        else if (mimeType.includes("jpeg") || mimeType.includes("jpg")) ext = ".jpg";
-        else if (mimeType.includes("gif")) ext = ".gif";
-        else if (mimeType.includes("webm")) ext = ".webm";
-        else if (mimeType.includes("mp4")) ext = ".mp4";
-        else if (mimeType.includes("ogg")) ext = ".ogg";
-
-        if (mimeType.startsWith("image/")) type = "image";
-        else if (mimeType.startsWith("video/")) type = "video";
-        else if (mimeType.startsWith("audio/")) type = "voice";
-
-        const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}${ext}`;
-
-        if (isCloudinaryConfigured()) {
-          const resourceType = type === "image" ? "image" : type === "video" || type === "voice" ? "video" : "auto";
-          const cldResult = await uploadToCloudinary(rawBuffer, `connect/chat/${currentUser.id}`, resourceType);
-          fileUrl = cldResult.url;
-        } else if (isR2Configured()) {
-          const r2Result = await uploadToR2(rawBuffer, `chat/${currentUser.id}/${filename}`, mimeType);
-          fileUrl = r2Result.url;
-        } else {
-          const uploadsDir = path.join(process.cwd(), "public", "uploads", "chat");
-          if (!fs.existsSync(uploadsDir)) {
-            fs.mkdirSync(uploadsDir, { recursive: true });
-          }
-          const filePath = path.join(uploadsDir, filename);
-          fs.writeFileSync(filePath, rawBuffer);
-          fileUrl = `/uploads/chat/${filename}`;
-        }
-      } else {
-        return NextResponse.json({ error: "Invalid base64 format" }, { status: 400 });
-      }
-    } else {
-      return NextResponse.json({ error: "No file or media data provided" }, { status: 400 });
-    }
+    };
 
     // Un-hide chat if previously hidden
     await prisma.hiddenSocialChat.deleteMany({
@@ -129,19 +82,75 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    const message = await prisma.socialMessage.create({
-      data: {
-        content: fileUrl,
-        type: type,
-        senderId: currentUser.id,
-        receiverId: receiverId
-      },
-      include: {
-        reactions: true
-      }
-    });
+    if (files.length > 1) {
+      // Parallel concurrent upload for all files in batch
+      const uploadedItems = await Promise.all(
+        files.map(async (f) => {
+          const bytes = await f.arrayBuffer();
+          const buffer = Buffer.from(bytes);
+          const { url, type } = await uploadSingleBuffer(buffer, f.name || "media", f.type);
+          return { url, type, name: f.name || "media" };
+        })
+      );
 
-    return NextResponse.json({ success: true, message });
+      const message = await prisma.socialMessage.create({
+        data: {
+          content: JSON.stringify(uploadedItems),
+          type: "media_album",
+          senderId: currentUser.id,
+          receiverId: receiverId
+        },
+        include: {
+          reactions: true
+        }
+      });
+
+      return NextResponse.json({ success: true, message, items: uploadedItems });
+    } else if (files.length === 1) {
+      const f = files[0];
+      const bytes = await f.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const { url, type } = await uploadSingleBuffer(buffer, f.name || "media", f.type);
+
+      const message = await prisma.socialMessage.create({
+        data: {
+          content: url,
+          type: type,
+          senderId: currentUser.id,
+          receiverId: receiverId
+        },
+        include: {
+          reactions: true
+        }
+      });
+
+      return NextResponse.json({ success: true, message });
+    } else if (base64Data && base64Data.startsWith("data:")) {
+      const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mimeType = matches[1];
+        const rawBuffer = Buffer.from(matches[2], "base64");
+        const { url, type } = await uploadSingleBuffer(rawBuffer, "upload" + Date.now(), mimeType);
+
+        const message = await prisma.socialMessage.create({
+          data: {
+            content: url,
+            type: type,
+            senderId: currentUser.id,
+            receiverId: receiverId
+          },
+          include: {
+            reactions: true
+          }
+        });
+
+        return NextResponse.json({ success: true, message });
+      } else {
+        return NextResponse.json({ error: "Invalid base64 format" }, { status: 400 });
+      }
+    } else {
+      return NextResponse.json({ error: "No file or media data provided" }, { status: 400 });
+    }
   } catch (error: any) {
     console.error("[CHAT_UPLOAD_ERROR]", error);
     return NextResponse.json(
