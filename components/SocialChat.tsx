@@ -1023,7 +1023,14 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         />
       )}
 
-      {/* Consecutive Grouping Tail Logic */}
+      {/* Consecutive Grouping Tail Logic — column wrapper keeps bubble + time stacked */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: isSent ? 'flex-end' : 'flex-start',
+        order: isSent ? 2 : 1,
+        minWidth: 0,
+      }}>
       {(() => {
         const isMiddleInGroup = isPrevSameSender && isNextSameSender;
         const isFirstInGroup = !isPrevSameSender && isNextSameSender;
@@ -1051,7 +1058,6 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
             ref={bubbleRef}
             className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''} ${isMedia ? 'media-msg' : ''}`}
             style={{
-              order: isSent ? 2 : 1,
               width: 'fit-content',
               maxWidth: '70%',
               borderRadius: isMedia ? '1.25rem' : bubbleBorderRadius,
@@ -1258,12 +1264,11 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         );
       })()}
 
-      {/* ── Time & status row: sits BELOW the bubble, outside the box ── */}
       {(() => {
         const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
         const timeStr = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-        if (msg.type === 'call') return null; // call logs show their own layout
+        if (msg.type === 'call') return null;
         return (
           <div
             style={{
@@ -1273,11 +1278,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
               fontSize: '0.67rem',
               color: '#3d3d3d',
               opacity: 0.75,
-              marginTop: '3px',
-              alignSelf: isSent ? 'flex-end' : 'flex-start',
-              paddingLeft: isSent ? 0 : '4px',
-              paddingRight: isSent ? '4px' : 0,
-              order: isSent ? 2 : 1,
+              marginTop: '2px',
               userSelect: 'none',
               pointerEvents: 'none',
             }}
@@ -1302,6 +1303,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           </div>
         );
       })()}
+      </div>
 
       {/* Reaction bubbles (below the message) */}
       {Object.keys(reactionCounts).length > 0 && (
