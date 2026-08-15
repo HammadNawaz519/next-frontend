@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
+import { isR2Configured, uploadToR2 } from "@/lib/r2";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -54,16 +55,21 @@ export async function POST(req: NextRequest) {
       else if (file.type.startsWith("video/")) type = "video";
       else if (file.type.startsWith("audio/")) type = "voice";
 
-      const uploadsDir = path.join(process.cwd(), "public", "uploads", "chat");
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-
       const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}${ext}`;
-      const filePath = path.join(uploadsDir, filename);
-      fs.writeFileSync(filePath, buffer);
 
-      fileUrl = `/uploads/chat/${filename}`;
+      if (isR2Configured()) {
+        const mimeType = file.type || (type === "image" ? "image/jpeg" : type === "video" ? "video/mp4" : "application/octet-stream");
+        const r2Result = await uploadToR2(buffer, `chat/${currentUser.id}/${filename}`, mimeType);
+        fileUrl = r2Result.url;
+      } else {
+        const uploadsDir = path.join(process.cwd(), "public", "uploads", "chat");
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        const filePath = path.join(uploadsDir, filename);
+        fs.writeFileSync(filePath, buffer);
+        fileUrl = `/uploads/chat/${filename}`;
+      }
     } else if (base64Data && base64Data.startsWith("data:")) {
       // Handle base64 fallback
       const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
@@ -83,16 +89,20 @@ export async function POST(req: NextRequest) {
         else if (mimeType.startsWith("video/")) type = "video";
         else if (mimeType.startsWith("audio/")) type = "voice";
 
-        const uploadsDir = path.join(process.cwd(), "public", "uploads", "chat");
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
-        }
-
         const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}${ext}`;
-        const filePath = path.join(uploadsDir, filename);
-        fs.writeFileSync(filePath, rawBuffer);
 
-        fileUrl = `/uploads/chat/${filename}`;
+        if (isR2Configured()) {
+          const r2Result = await uploadToR2(rawBuffer, `chat/${currentUser.id}/${filename}`, mimeType);
+          fileUrl = r2Result.url;
+        } else {
+          const uploadsDir = path.join(process.cwd(), "public", "uploads", "chat");
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+          const filePath = path.join(uploadsDir, filename);
+          fs.writeFileSync(filePath, rawBuffer);
+          fileUrl = `/uploads/chat/${filename}`;
+        }
       } else {
         return NextResponse.json({ error: "Invalid base64 format" }, { status: 400 });
       }
