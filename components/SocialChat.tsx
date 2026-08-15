@@ -1273,6 +1273,8 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
       {(() => {
         const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
+        // Only show time + tick under the LAST message in a consecutive group
+        if (isNextSameSender) return null;
         const timeStr = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
         if (msg.type === 'call') return null;
         return (
