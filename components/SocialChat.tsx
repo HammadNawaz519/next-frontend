@@ -1888,7 +1888,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       document.body.removeChild(link);
     }
   };
-  const [detailsTab, setDetailsTab] = useState<'photos' | 'reels' | 'files'>('photos');
+  const [detailsTab, setDetailsTab] = useState<'media' | 'files'>('media');
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
   const [chatThemes, setChatThemes] = useState<Record<string, string>>({});
   const [lastSeenMap, setLastSeenMap] = useState<Record<string, string>>({});
@@ -1965,26 +1965,27 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [chatSearchQuery, setChatSearchQuery] = useState('');
   const [showReportModal, setShowReportModal] = useState(false);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
-  const [reportSubmitted, setReportSubmitted] = useState(false);
-  const [sharedMedia, setSharedMedia] = useState<{ photos: any[]; videos: any[]; files: any[] }>({ photos: [], videos: [], files: [] });
+  const [sharedMedia, setSharedMedia] = useState<{
+    picsAndVideos: { id: string; content: string; type: 'image' | 'video'; createdAt: any; senderId?: string }[];
+    files: { id: string; content: string; type: string; createdAt: any; senderId?: string }[];
+  }>({ picsAndVideos: [], files: [] });
+  const [mediaDisplayLimit, setMediaDisplayLimit] = useState<number>(15);
   const [selectedAlbum, setSelectedAlbum] = useState<{ id: string; items: any[]; time?: string } | null>(null);
 
   // Automatically fetch ALL shared media for this chat from DB regardless of pagination state
   useEffect(() => {
     if (!selectedUser?.id) {
-      setSharedMedia({ photos: [], videos: [], files: [] });
+      setSharedMedia({ picsAndVideos: [], files: [] });
+      setMediaDisplayLimit(15);
       return;
     }
     getChatSharedMedia(selectedUser.id).then((mediaMsgs: any[]) => {
-      const photos: any[] = [];
-      const videos: any[] = [];
+      const picsAndVideos: any[] = [];
       const files: any[] = [];
 
       (mediaMsgs || []).forEach((m) => {
-        if (m.type === 'image') {
-          photos.push({ id: m.id, content: m.content, createdAt: m.createdAt, senderId: m.senderId });
-        } else if (m.type === 'video') {
-          videos.push({ id: m.id, content: m.content, createdAt: m.createdAt, senderId: m.senderId });
+        if (m.type === 'image' || m.type === 'video') {
+          picsAndVideos.push({ id: m.id, content: m.content, type: m.type, createdAt: m.createdAt, senderId: m.senderId });
         } else if (m.type === 'voice' || m.type === 'file') {
           files.push({ id: m.id, content: m.content, type: m.type, createdAt: m.createdAt, senderId: m.senderId });
         } else if (m.type === 'media_album') {
@@ -1992,10 +1993,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             const items = typeof m.content === 'string' ? JSON.parse(m.content) : m.content;
             if (Array.isArray(items)) {
               items.forEach((it: any, idx: number) => {
-                if (it.type === 'video') {
-                  videos.push({ id: `${m.id}-${idx}`, content: it.url, createdAt: m.createdAt, senderId: m.senderId });
-                } else if (it.type === 'image') {
-                  photos.push({ id: `${m.id}-${idx}`, content: it.url, createdAt: m.createdAt, senderId: m.senderId });
+                if (it.type === 'video' || it.type === 'image') {
+                  picsAndVideos.push({ id: `${m.id}-${idx}`, content: it.url, type: it.type, createdAt: m.createdAt, senderId: m.senderId });
                 } else {
                   files.push({ id: `${m.id}-${idx}`, content: it.url, type: it.type || 'file', createdAt: m.createdAt, senderId: m.senderId });
                 }
@@ -2005,7 +2004,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
       });
 
-      setSharedMedia({ photos, videos, files });
+      setSharedMedia({ picsAndVideos, files });
+      setMediaDisplayLimit(15);
     }).catch(() => {});
   }, [selectedUser?.id]);
 
@@ -3202,12 +3202,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, unseenCount: 0 } : u));
 
       try {
-        const history = await getSocialMessages(selectedUser.id, 25);
+        const history = await getSocialMessages(selectedUser.id, 30);
         // Filter out messages the user deleted locally (persisted in localStorage)
         const deletedRef = deletedMessageIds;
         const fresh = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
 
-        if (fresh.length < 25) {
+        if (fresh.length < 30) {
           setHasMoreMessages(false);
         } else {
           setHasMoreMessages(true);
@@ -3264,13 +3264,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const prevScrollHeight = container ? container.scrollHeight : 0;
 
     try {
-      const olderHistory = await getSocialMessages(selectedUser.id, 25, firstMsg.id);
+      const olderHistory = await getSocialMessages(selectedUser.id, 30, firstMsg.id);
       if (!olderHistory || olderHistory.length === 0) {
         setHasMoreMessages(false);
         setIsLoadingOlder(false);
         return;
       }
-      if (olderHistory.length < 25) {
+      if (olderHistory.length < 30) {
         setHasMoreMessages(false);
       }
       const deletedRef = deletedMessageIds;
@@ -3783,27 +3783,36 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           }));
           setMessagesCache(prev => {
             const current = prev[selectedUser.id] || [];
-            return {
-              ...prev,
-              [selectedUser.id]: current.map(m => {
-                if (m.id === stableId) {
-                  return {
-                    ...(savedMsg as any),
-                    id: (savedMsg as any).id || stableId,
-                    isSeen: m.isSeen || (savedMsg as any).isSeen || false,
-                    status: 'sent'
-                  };
-                }
-                return m;
-              })
-            };
+            const updated = current.map(m => {
+              if (m.id === stableId) {
+                return {
+                  ...(savedMsg as any),
+                  id: (savedMsg as any).id || stableId,
+                  isSeen: m.isSeen || (savedMsg as any).isSeen || false,
+                  status: 'sent'
+                };
+              }
+              return m;
+            });
+            const nextCache = { ...prev, [selectedUser.id]: updated };
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('social_messages_cache', JSON.stringify(nextCache));
+            }
+            return nextCache;
           });
 
-          // Add to sharedMedia
+          // Add to sharedMedia Pics & Videos
           setSharedMedia(prev => {
-            if (type === 'image') return { ...prev, photos: [{ id: savedMsg.id, content: savedMsg.content, createdAt: savedMsg.createdAt, senderId }, ...prev.photos] };
-            if (type === 'video') return { ...prev, videos: [{ id: savedMsg.id, content: savedMsg.content, createdAt: savedMsg.createdAt, senderId }, ...prev.videos] };
-            return { ...prev, files: [{ id: savedMsg.id, content: savedMsg.content, type, createdAt: savedMsg.createdAt, senderId }, ...prev.files] };
+            if (type === 'image' || type === 'video') {
+              return {
+                ...prev,
+                picsAndVideos: [{ id: savedMsg.id, content: savedMsg.content, type: type as 'image' | 'video', createdAt: savedMsg.createdAt, senderId }, ...prev.picsAndVideos]
+              };
+            }
+            return {
+              ...prev,
+              files: [{ id: savedMsg.id, content: savedMsg.content, type, createdAt: savedMsg.createdAt, senderId }, ...prev.files]
+            };
           });
 
           // Emit real-time message with saved permanent file URL
@@ -3884,34 +3893,37 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           }));
           setMessagesCache(prev => {
             const current = prev[selectedUser.id] || [];
-            return {
-              ...prev,
-              [selectedUser.id]: current.map(m => {
-                if (m.id === stableId) {
-                  return {
-                    ...(savedMsg as any),
-                    id: (savedMsg as any).id || stableId,
-                    isSeen: m.isSeen || (savedMsg as any).isSeen || false,
-                    status: 'sent'
-                  };
-                }
-                return m;
-              })
-            };
+            const updated = current.map(m => {
+              if (m.id === stableId) {
+                return {
+                  ...(savedMsg as any),
+                  id: (savedMsg as any).id || stableId,
+                  isSeen: m.isSeen || (savedMsg as any).isSeen || false,
+                  status: 'sent'
+                };
+              }
+              return m;
+            });
+            const nextCache = { ...prev, [selectedUser.id]: updated };
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('social_messages_cache', JSON.stringify(nextCache));
+            }
+            return nextCache;
           });
 
-          // Update sharedMedia
+          // Update sharedMedia Pics & Videos
           if (resData.items && Array.isArray(resData.items)) {
             setSharedMedia(prev => {
-              const newPhotos = [...prev.photos];
-              const newVideos = [...prev.videos];
+              const newPicsAndVideos = [...prev.picsAndVideos];
               const newFiles = [...prev.files];
               resData.items.forEach((it: any, idx: number) => {
-                if (it.type === 'video') newVideos.unshift({ id: `${savedMsg.id}-${idx}`, content: it.url, createdAt: savedMsg.createdAt, senderId });
-                else if (it.type === 'image') newPhotos.unshift({ id: `${savedMsg.id}-${idx}`, content: it.url, createdAt: savedMsg.createdAt, senderId });
-                else newFiles.unshift({ id: `${savedMsg.id}-${idx}`, content: it.url, type: it.type, createdAt: savedMsg.createdAt, senderId });
+                if (it.type === 'video' || it.type === 'image') {
+                  newPicsAndVideos.unshift({ id: `${savedMsg.id}-${idx}`, content: it.url, type: it.type, createdAt: savedMsg.createdAt, senderId });
+                } else {
+                  newFiles.unshift({ id: `${savedMsg.id}-${idx}`, content: it.url, type: it.type, createdAt: savedMsg.createdAt, senderId });
+                }
               });
-              return { photos: newPhotos, videos: newVideos, files: newFiles };
+              return { picsAndVideos: newPicsAndVideos, files: newFiles };
             });
           }
 
@@ -4714,24 +4726,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     <div className="px-4 pt-4 max-w-lg mx-auto w-full">
                       <div className="flex items-center justify-around pb-2 text-center">
                         <button
-                          onClick={() => setDetailsTab('photos')}
+                          onClick={() => setDetailsTab('media')}
                           className={`text-xs font-bold transition-all cursor-pointer ${
-                            detailsTab === 'photos'
+                            detailsTab === 'media'
                               ? 'text-[var(--dm-text-primary)] font-extrabold'
                               : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
                           }`}
                         >
-                          Photos
-                        </button>
-                        <button
-                          onClick={() => setDetailsTab('reels')}
-                          className={`text-xs font-bold transition-all cursor-pointer ${
-                            detailsTab === 'reels'
-                              ? 'text-[var(--dm-text-primary)] font-extrabold'
-                              : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
-                          }`}
-                        >
-                          Reels
+                          Pics & Videos
                         </button>
                         <button
                           onClick={() => setDetailsTab('files')}
@@ -4748,58 +4750,62 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                     {/* Shared Content Display Panel (No outlines on items) */}
                     <div className="px-4 py-4 space-y-6 max-w-lg mx-auto w-full flex-1">
-                      {/* Tab 1: Photos & Images */}
-                      {detailsTab === 'photos' && (
+                      {/* Tab 1: Pics & Videos (Unified grid with 15 by 15 pagination) */}
+                      {detailsTab === 'media' && (
                         <div>
-                          {sharedMedia.photos.length === 0 ? (
+                          {sharedMedia.picsAndVideos.length === 0 ? (
                             <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
-                              No photos shared in this chat yet
+                              No photos or videos shared in this chat yet
                             </div>
                           ) : (
-                            <div className="grid grid-cols-3 gap-2">
-                              {sharedMedia.photos.map(m => (
-                                <div
-                                  key={m.id}
-                                  className="aspect-square rounded-2xl overflow-hidden bg-black/10 cursor-pointer group relative"
-                                  onClick={() => openMediaLightbox(m.content, 'image')}
-                                >
-                                  <img src={m.content} alt="photo" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Tab 2: Reels & Videos */}
-                      {detailsTab === 'reels' && (
-                        <div>
-                          {sharedMedia.videos.length === 0 ? (
-                            <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
-                              No video reels shared in this chat yet
-                            </div>
-                          ) : (
-                            <div className="grid grid-cols-2 gap-3">
-                              {sharedMedia.videos.map(m => (
-                                <div
-                                  key={m.id}
-                                  className="aspect-[9/16] rounded-2xl overflow-hidden bg-black cursor-pointer group relative"
-                                  onClick={() => openMediaLightbox(m.content, 'video')}
-                                >
-                                  <video src={m.content} className="w-full h-full object-cover pointer-events-none" />
-                                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none group-hover:bg-black/10 transition-colors">
-                                    <div className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white">
-                                      <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                                    </div>
+                            <>
+                              <div className="grid grid-cols-3 gap-2">
+                                {sharedMedia.picsAndVideos.slice(0, mediaDisplayLimit).map(m => (
+                                  <div
+                                    key={m.id}
+                                    className="aspect-square rounded-2xl overflow-hidden bg-black/10 cursor-pointer group relative shadow-sm"
+                                    onClick={() => openMediaLightbox(m.content, m.type === 'video' ? 'video' : 'image')}
+                                  >
+                                    {m.type === 'video' ? (
+                                      <>
+                                        <video src={m.content} className="w-full h-full object-cover pointer-events-none" />
+                                        <div className="absolute inset-0 bg-black/25 flex items-center justify-center group-hover:bg-black/15 transition-colors">
+                                          <div className="w-8 h-8 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white">
+                                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                          </div>
+                                        </div>
+                                        <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-bold text-white uppercase tracking-wider">
+                                          Video
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <img
+                                        src={m.content}
+                                        alt="media"
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                        loading="lazy"
+                                      />
+                                    )}
                                   </div>
+                                ))}
+                              </div>
+
+                              {sharedMedia.picsAndVideos.length > mediaDisplayLimit && (
+                                <div className="pt-4 text-center">
+                                  <button
+                                    onClick={() => setMediaDisplayLimit(prev => prev + 15)}
+                                    className="px-5 py-2.5 rounded-full text-xs font-bold bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] transition-all active:scale-95 cursor-pointer shadow-sm"
+                                  >
+                                    Load More ({Math.min(mediaDisplayLimit, sharedMedia.picsAndVideos.length)} of {sharedMedia.picsAndVideos.length})
+                                  </button>
                                 </div>
-                              ))}
-                            </div>
+                              )}
+                            </>
                           )}
                         </div>
                       )}
 
-                      {/* Tab 3: Voice Clips & Files */}
+                      {/* Tab 2: Voice Clips & Files */}
                       {detailsTab === 'files' && (
                         <div>
                           {sharedMedia.files.length === 0 ? (

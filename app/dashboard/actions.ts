@@ -119,7 +119,7 @@ export async function getUserDetails() {
 
 
 
-export async function getSocialMessages(otherUserId: string, limit: number = 25, beforeId?: string) {
+export async function getSocialMessages(otherUserId: string, limit: number = 30, beforeId?: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return [];
 
