@@ -3324,7 +3324,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (isInitialChatSwitch) {
       isNearBottomRef.current = true;
       const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        } else {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        }
       }, 50);
       return () => clearTimeout(timer);
     }
@@ -3333,16 +3337,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const isSentByMe = lastMsg && String(lastMsg.senderId) === String(currentUserId);
 
     if (isSentByMe || isNearBottomRef.current) {
-      const timer = setTimeout(() => {
+      const performScroll = () => {
         if (messagesContainerRef.current) {
           messagesContainerRef.current.scrollTo({
             top: messagesContainerRef.current.scrollHeight,
-            behavior: 'smooth'
+            behavior: 'smooth',
           });
         }
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 40);
-      return () => clearTimeout(timer);
+      };
+
+      const rafId = requestAnimationFrame(performScroll);
+      const timer = setTimeout(performScroll, 60);
+      return () => {
+        cancelAnimationFrame(rafId);
+        clearTimeout(timer);
+      };
     }
   }, [selectedUser?.id, lastMsgId, isOtherUserTyping]);
 
@@ -4244,7 +4253,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       </div>
                     )}
                     {/* Invisible fixed spacer at bottom so newest messages rest safely above the typebox */}
-                    <div style={{ height: '76px', flexShrink: 0, pointerEvents: 'none', visibility: 'hidden' }} aria-hidden="true" />
+                    <div style={{ height: '50px', flexShrink: 0, pointerEvents: 'none', visibility: 'hidden' }} aria-hidden="true" />
                     <div ref={messagesEndRef} />
                   </div>
 
