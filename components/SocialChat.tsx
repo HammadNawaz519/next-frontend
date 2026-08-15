@@ -3190,9 +3190,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           });
         }
         setIsLoadingMessages(false);
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-        }, 30);
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
       } else {
         setIsLoadingMessages(true);
         setMessages([]); // Clear while loading if no cache
@@ -3238,9 +3238,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           senderId: selectedUser.id
         });
 
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-        }, 60);
+        requestAnimationFrame(() => {
+          if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+          }
+        });
       } catch (err) {
         console.error("Failed to load messages:", err);
       } finally {
@@ -3646,6 +3648,48 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     setIsVoiceToText(false);
   };
 
+  const compressImageClient = async (file: File): Promise<File> => {
+    if (!file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') {
+      return file;
+    }
+    return new Promise((resolve) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target?.result as string;
+        img.onload = () => {
+          const maxDim = 1920;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { resolve(file); return; }
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            if (blob && blob.size < file.size) {
+              resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' }));
+            } else {
+              resolve(file);
+            }
+          }, 'image/jpeg', 0.85);
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawFiles = e.target.files ? Array.from(e.target.files) : [];
     if (rawFiles.length === 0 || !selectedUser || !socket || !session?.user) return;
@@ -3657,9 +3701,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const stableId = 'file-' + Date.now() + Math.random().toString(36).substring(7);
 
     if (rawFiles.length === 1) {
-      const file = rawFiles[0];
-      const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'voice' : 'file';
-      const localPreview = URL.createObjectURL(file);
+      const rawFile = rawFiles[0];
+      const type = rawFile.type.startsWith('image/') ? 'image' : rawFile.type.startsWith('video/') ? 'video' : rawFile.type.startsWith('audio/') ? 'voice' : 'file';
+      const localPreview = URL.createObjectURL(rawFile);
 
       const optimisticMsg: any = {
         id: stableId,
@@ -3678,13 +3722,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
       });
 
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 40);
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
 
       try {
+        const uploadFile = type === 'image' ? await compressImageClient(rawFile) : rawFile;
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', uploadFile);
         formData.append('receiverId', selectedUser.id);
         formData.append('type', type);
 
@@ -3770,13 +3818,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
       });
 
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 40);
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
 
       try {
+        const uploadFiles = await Promise.all(rawFiles.map(f => f.type.startsWith('image/') ? compressImageClient(f) : Promise.resolve(f)));
         const formData = new FormData();
-        rawFiles.forEach(f => formData.append('files', f));
+        uploadFiles.forEach(f => formData.append('files', f));
         formData.append('receiverId', selectedUser.id);
 
         const res = await fetch('/api/chat/upload', {
