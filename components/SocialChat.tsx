@@ -1967,7 +1967,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [sharedMedia, setSharedMedia] = useState<{
-    picsAndVideos: { id: string; content: string; type: 'image' | 'video'; createdAt: any; senderId?: string }[];
+    picsAndVideos: { id: string; content: string; type: string; createdAt: any; senderId?: string }[];
     files: { id: string; content: string; type: string; createdAt: any; senderId?: string }[];
   }>({ picsAndVideos: [], files: [] });
   const [mediaDisplayLimit, setMediaDisplayLimit] = useState<number>(15);
