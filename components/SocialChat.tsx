@@ -3302,32 +3302,39 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     const distance = target.scrollHeight - target.scrollTop - target.clientHeight;
-    isNearBottomRef.current = distance <= 140;
+    isNearBottomRef.current = distance <= 80;
 
-    if (target.scrollTop < 120 && hasMoreMessages && !isLoadingOlder && !isLoadingMessages) {
+    // Only trigger loadOlderMessages when user actively scrolls near the top and there is sufficient scroll content
+    if (
+      target.scrollTop < 40 &&
+      target.scrollHeight > target.clientHeight + 80 &&
+      distance > 100 &&
+      hasMoreMessages &&
+      !isLoadingOlder &&
+      !isLoadingMessages
+    ) {
       loadOlderMessages();
     }
   };
 
-  // Auto scroll to bottom only if user is near bottom, on initial chat load, or when sending own message
+  // Auto scroll to bottom only on new messages or chat switch
   const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
   const lastMsgId = lastMsg?.id || null;
-  const isOtherUserTyping = typingUsers.has(selectedUser?.email || '');
   const prevSelectedChatIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!selectedUser?.id || messages.length === 0 || isLoadingOlder) return;
 
     const isInitialChatSwitch = prevSelectedChatIdRef.current !== selectedUser.id;
-    prevSelectedChatIdRef.current = selectedUser.id;
-
     if (isInitialChatSwitch) {
+      prevSelectedChatIdRef.current = selectedUser.id;
       isNearBottomRef.current = true;
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
       const timer = setTimeout(() => {
         if (messagesContainerRef.current) {
           messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        } else {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
         }
       }, 50);
       return () => clearTimeout(timer);
@@ -3337,23 +3344,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const isSentByMe = lastMsg && String(lastMsg.senderId) === String(currentUserId);
 
     if (isSentByMe || isNearBottomRef.current) {
-      const performScroll = () => {
+      const timer = setTimeout(() => {
         if (messagesContainerRef.current) {
           messagesContainerRef.current.scrollTo({
             top: messagesContainerRef.current.scrollHeight,
             behavior: 'smooth',
           });
         }
-      };
-
-      const rafId = requestAnimationFrame(performScroll);
-      const timer = setTimeout(performScroll, 60);
-      return () => {
-        cancelAnimationFrame(rafId);
-        clearTimeout(timer);
-      };
+      }, 30);
+      return () => clearTimeout(timer);
     }
-  }, [selectedUser?.id, lastMsgId, isOtherUserTyping]);
+  }, [selectedUser?.id, lastMsgId]);
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
