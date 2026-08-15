@@ -2292,8 +2292,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         if (onStatusChange) onStatusChange(false);
       });
 
-      newSocket.on('receive_social_message', async (msg: Message) => {
-        const partnerId = msg.senderId === (sessionRef.current?.user as any)?.id ? msg.receiverId : msg.senderId;
+      newSocket.on('receive_social_message', async (msg: any) => {
+        const myId = String((sessionRef.current?.user as any)?.id || '');
+        const msgSenderId = String(msg.senderId || '');
+        const msgReceiverId = String(msg.receiverId || '');
+        const partnerId = msgSenderId === myId ? msgReceiverId : msgSenderId;
+        const selectedId = String(selectedUserRef.current?.id || '');
 
         // Automatically un-hide chat if previously deleted
         setDeletedChatIds(prev => {
@@ -2327,19 +2331,45 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         // 1. Update Message Stream safely without duplicates
         setMessages((prev) => {
-          if (selectedUserRef.current?.id !== partnerId) return prev; // Only append if we are looking at this user's chat!
+          if (selectedId !== partnerId && selectedId !== msgSenderId && selectedId !== msgReceiverId) return prev;
           const isDup = prev.some(m =>
             m.id === msg.id ||
-            (m.content === msg.content && String(m.senderId) === String(msg.senderId) && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 15000)
+            (m.content === msg.content && String(m.senderId) === msgSenderId && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 25000)
           );
           if (isDup) {
             return prev.map(m =>
-              (m.id === msg.id || (m.content === msg.content && String(m.senderId) === String(msg.senderId) && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 15000))
-                ? { ...msg, id: msg.id || m.id }
+              (m.id === msg.id || (m.content === msg.content && String(m.senderId) === msgSenderId && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 25000))
+                ? { ...m, ...msg, id: msg.id || m.id, status: 'sent' }
                 : m
             );
           }
-          return [...prev, msg];
+          return [...prev, { ...msg, status: 'sent' }];
+        });
+
+        // Sync to cache immediately so reload preserves received photos
+        setMessagesCache((prev) => {
+          const cacheKey = partnerId || msgSenderId;
+          if (!cacheKey) return prev;
+          const current = prev[cacheKey] || [];
+          const isDup = current.some(m =>
+            m.id === msg.id ||
+            (m.content === msg.content && String(m.senderId) === msgSenderId && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 25000)
+          );
+          let updatedList;
+          if (isDup) {
+            updatedList = current.map(m =>
+              (m.id === msg.id || (m.content === msg.content && String(m.senderId) === msgSenderId && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 25000))
+                ? { ...m, ...msg, id: msg.id || m.id, status: 'sent' }
+                : m
+            );
+          } else {
+            updatedList = [...current, { ...msg, status: 'sent' }];
+          }
+          const next = { ...prev, [cacheKey]: updatedList };
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('social_messages_cache', JSON.stringify(next));
+          }
+          return next;
         });
 
         // Real-time update to sharedMedia
