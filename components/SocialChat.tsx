@@ -1105,25 +1105,6 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                           onClick={e => { e.stopPropagation(); if (onPreviewMedia) onPreviewMedia(item.url, 'image'); else if (onPreviewImage) onPreviewImage(item.url); }}
                         />
                       )}
-                      <div className="time-row media-time-row" style={{ position: 'absolute', bottom: '8px', right: '8px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.65rem', color: '#ffffff', backgroundColor: 'rgba(0, 0, 0, 0.6)', padding: '3px 7px', borderRadius: '12px', backdropFilter: 'blur(6px)' }}>
-                        <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                        {isSent && (
-                          isSending ? (
-                            <span className="inline-flex items-center text-white/90 animate-bounce ml-0.5" title="Sending...">
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round">
-                                <line x1="12" y1="19" x2="12" y2="5" />
-                                <polyline points="5 12 12 5 19 12" />
-                              </svg>
-                            </span>
-                          ) : !isDeletedMsg && (
-                            <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`} style={{ color: msg.isSeen ? '#38bdf8' : '#ffffff' }}>
-                              <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                                <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-                              </svg>
-                            </span>
-                          )
-                        )}
-                      </div>
                     </div>
                   );
                 }
@@ -1201,43 +1182,6 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                       )}
                     </div>
 
-                    <div
-                      className="time-row media-time-row"
-                      style={{
-                        position: 'absolute',
-                        bottom: '8px',
-                        right: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '0.65rem',
-                        color: '#ffffff',
-                        backgroundColor: 'rgba(0, 0, 0, 0.65)',
-                        padding: '3px 7px',
-                        borderRadius: '12px',
-                        backdropFilter: 'blur(6px)',
-                        pointerEvents: 'none',
-                        zIndex: 2,
-                      }}
-                    >
-                      <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                      {isSent && (
-                        isSending ? (
-                          <span className="inline-flex items-center text-white/90 animate-bounce ml-0.5" title="Sending...">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round">
-                              <line x1="12" y1="19" x2="12" y2="5" />
-                              <polyline points="5 12 12 5 19 12" />
-                            </svg>
-                          </span>
-                        ) : !isDeletedMsg && (
-                          <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`} style={{ color: msg.isSeen ? '#38bdf8' : '#ffffff' }}>
-                            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                              <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-                            </svg>
-                          </span>
-                        )
-                      )}
-                    </div>
                   </div>
                 );
               })() : (
@@ -1270,43 +1214,6 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                       />
                     </div>
                   )}
-                  <div
-                    className="time-row media-time-row"
-                    style={{
-                      position: 'absolute',
-                      bottom: '8px',
-                      right: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '0.65rem',
-                      color: '#ffffff',
-                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                      padding: '3px 7px',
-                      borderRadius: '12px',
-                      backdropFilter: 'blur(6px)',
-                      pointerEvents: 'none',
-                      zIndex: 2,
-                    }}
-                  >
-                    <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                    {isSent && (
-                      isSending ? (
-                        <span className="inline-flex items-center text-white/90 animate-bounce ml-0.5" title="Sending...">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="12" y1="19" x2="12" y2="5" />
-                            <polyline points="5 12 12 5 19 12" />
-                          </svg>
-                        </span>
-                      ) : !isDeletedMsg && (
-                        <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`} style={{ color: msg.isSeen ? '#38bdf8' : '#ffffff' }}>
-                          <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                            <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-                          </svg>
-                        </span>
-                      )
-                    )}
-                  </div>
                 </div>
               )
             ) : (
@@ -1329,31 +1236,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                   </div>
                 )}
                 {msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
-                  <div style={{ fontSize: '0.98rem', lineHeight: '1.45', wordBreak: 'break-word', display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: '8px', justifyContent: 'space-between' }}>
-                    <span style={{ flex: '1 1 auto' }}>{msg.content}</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', opacity: 0.75, flexShrink: 0, marginLeft: 'auto', alignSelf: 'flex-end', paddingBottom: '1px' }}>
-                      <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                      {isSent && !isDeletedMsg && (
-                        <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
-                          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                            <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-                          </svg>
-                        </span>
-                      )}
-                    </span>
+                  <div style={{ fontSize: '0.98rem', lineHeight: '1.45', wordBreak: 'break-word' }}>
+                    <span>{msg.content}</span>
                   </div>
-                ) : (
-                  <div className="time-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '3px', fontSize: '0.68rem', opacity: 0.75 }}>
-                    <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                    {isSent && !isDeletedMsg && (
-                      <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`}>
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                          <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-                        </svg>
-                      </span>
-                    )}
-                  </div>
-                )}
+                ) : null}
               </>
             )}
 
@@ -1372,7 +1258,50 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         );
       })()}
 
-
+      {/* ── Time & status row: sits BELOW the bubble, outside the box ── */}
+      {(() => {
+        const isSending = (msg as any).status === 'sending';
+        const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
+        const timeStr = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        if (msg.type === 'call') return null; // call logs show their own layout
+        return (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3px',
+              fontSize: '0.67rem',
+              color: '#3d3d3d',
+              opacity: 0.75,
+              marginTop: '3px',
+              alignSelf: isSent ? 'flex-end' : 'flex-start',
+              paddingLeft: isSent ? 0 : '4px',
+              paddingRight: isSent ? '4px' : 0,
+              order: isSent ? 2 : 1,
+              userSelect: 'none',
+              pointerEvents: 'none',
+            }}
+          >
+            <span>{timeStr}</span>
+            {isSent && (
+              isSending ? (
+                <span className="inline-flex items-center animate-bounce" title="Sending..." style={{ color: '#3d3d3d' }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="19" x2="12" y2="5" />
+                    <polyline points="5 12 12 5 19 12" />
+                  </svg>
+                </span>
+              ) : !isDeletedMsg && (
+                <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`} style={{ color: msg.isSeen ? '#38bdf8' : '#3d3d3d' }}>
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                    <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+                  </svg>
+                </span>
+              )
+            )}
+          </div>
+        );
+      })()}
 
       {/* Reaction bubbles (below the message) */}
       {Object.keys(reactionCounts).length > 0 && (
