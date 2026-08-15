@@ -26,7 +26,8 @@ export const getCloudinaryInstance = () => {
 };
 
 /**
- * Uploads a buffer or file to Cloudinary with automatic optimization (WebP/AVIF, adaptive compression)
+ * Uploads a buffer to Cloudinary — NO eager transforms so upload is instant.
+ * Quality/format optimization is applied at delivery time via URL params.
  */
 export async function uploadToCloudinary(
   buffer: Buffer,
@@ -44,11 +45,8 @@ export async function uploadToCloudinary(
       {
         folder,
         resource_type: resourceType,
-        // Auto quality and auto format (delivers WebP/AVIF to modern browsers)
-        transformation: [
-          { quality: "auto" },
-          { fetch_format: "auto" }
-        ],
+        // No eager transforms — raw upload is significantly faster.
+        // Quality/format is applied on-the-fly by Cloudinary's CDN at delivery.
       },
       (error, result: UploadApiResponse | undefined) => {
         if (error || !result) {

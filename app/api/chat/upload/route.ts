@@ -14,15 +14,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true }
-    });
-
-    if (!currentUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     const formData = await req.formData();
     const rawFiles = formData.getAll("files").concat(formData.getAll("file")) as File[];
     const files = rawFiles.filter(f => f && typeof f !== "string" && f.size > 0);
@@ -33,6 +24,28 @@ export async function POST(req: NextRequest) {
     if (!receiverId) {
       return NextResponse.json({ error: "Receiver ID is required" }, { status: 400 });
     }
+
+    // Use id from JWT session first (fastest path), fall back to DB lookup
+    let userId = (session.user as any)?.id as string | undefined;
+    if (!userId) {
+      const found = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true }
+      });
+      if (!found) return NextResponse.json({ error: "User not found" }, { status: 404 });
+      userId = found.id;
+    }
+    const currentUserId = userId;
+
+    // Fire-and-forget: un-hide chat (non-critical, doesn't block upload)
+    prisma.hiddenSocialChat.deleteMany({
+      where: {
+        OR: [
+          { userId: currentUserId, hiddenUserId: receiverId },
+          { userId: receiverId, hiddenUserId: currentUserId }
+        ]
+      }
+    }).catch(() => {});
 
     const uploadSingleBuffer = async (buffer: Buffer, originalName: string, mimeTypeInput?: string): Promise<{ url: string; type: string }> => {
       let ext = path.extname(originalName).toLowerCase();
@@ -56,10 +69,10 @@ export async function POST(req: NextRequest) {
 
       if (isCloudinaryConfigured()) {
         const resourceType = itemType === "image" ? "image" : itemType === "video" || itemType === "voice" ? "video" : "auto";
-        const cldResult = await uploadToCloudinary(buffer, `connect/chat/${currentUser.id}`, resourceType);
+        const cldResult = await uploadToCloudinary(buffer, `connect/chat/${currentUserId}`, resourceType);
         return { url: cldResult.url, type: itemType };
       } else if (isR2Configured()) {
-        const r2Result = await uploadToR2(buffer, `chat/${currentUser.id}/${filename}`, mime || "application/octet-stream");
+        const r2Result = await uploadToR2(buffer, `chat/${currentUserId}/${filename}`, mime || "application/octet-stream");
         return { url: r2Result.url, type: itemType };
       } else {
         const uploadsDir = path.join(process.cwd(), "public", "uploads", "chat");
@@ -97,7 +110,7 @@ export async function POST(req: NextRequest) {
         data: {
           content: JSON.stringify(uploadedItems),
           type: "media_album",
-          senderId: currentUser.id,
+          senderId: currentUserId,
           receiverId: receiverId
         },
         include: {
@@ -116,7 +129,7 @@ export async function POST(req: NextRequest) {
         data: {
           content: url,
           type: type,
-          senderId: currentUser.id,
+          senderId: currentUserId,
           receiverId: receiverId
         },
         include: {
@@ -136,7 +149,7 @@ export async function POST(req: NextRequest) {
           data: {
             content: url,
             type: type,
-            senderId: currentUser.id,
+            senderId: currentUserId,
             receiverId: receiverId
           },
           include: {
