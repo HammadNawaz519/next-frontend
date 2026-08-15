@@ -587,22 +587,22 @@
   }
 }
 
-/* ── INNER CHAT CONTAINER BOX (0.1in margin, no outline) ── */
+/* ── INNER CHAT CONTAINER BOX (extends full length to bottom) ── */
 .social-chat-container .chat-inner-box {
   position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
-  margin: 0.1in 0.1in calc(0.1in + env(safe-area-inset-bottom, 0px)) 0.1in;
+  margin: 0.1in 0.1in 0 0.1in;
   border: none;
   box-shadow: none;
-  border-radius: 1.75rem;
+  border-radius: 1.75rem 1.75rem 0 0;
   overflow: hidden;
   background: transparent;
   min-height: 0;
 }
 
-/* FLOATING TYPEBOX DOCK — full width to edges of the box */
+/* FLOATING TYPEBOX DOCK — full width to edges of the box at extreme bottom */
 .social-chat-container .chat-bottom-dock {
   position: absolute;
   bottom: 0px;
@@ -613,6 +613,7 @@
   flex-direction: column;
   gap: 0px;
   padding: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: transparent !important;
   z-index: 20;
   pointer-events: none;
