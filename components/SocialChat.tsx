@@ -1965,6 +1965,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [chatSearchQuery, setChatSearchQuery] = useState('');
   const [showReportModal, setShowReportModal] = useState(false);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
+  const [reportSubmitted, setReportSubmitted] = useState(false);
   const [sharedMedia, setSharedMedia] = useState<{
     picsAndVideos: { id: string; content: string; type: 'image' | 'video'; createdAt: any; senderId?: string }[];
     files: { id: string; content: string; type: string; createdAt: any; senderId?: string }[];
@@ -2343,26 +2344,31 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         // Real-time update to sharedMedia
         if (selectedUserRef.current?.id === partnerId) {
-          if (msg.type === 'image') {
-            setSharedMedia(p => ({ ...p, photos: [{ id: msg.id, content: msg.content, createdAt: msg.createdAt, senderId: msg.senderId }, ...p.photos] }));
-          } else if (msg.type === 'video') {
-            setSharedMedia(p => ({ ...p, videos: [{ id: msg.id, content: msg.content, createdAt: msg.createdAt, senderId: msg.senderId }, ...p.videos] }));
+          if (msg.type === 'image' || msg.type === 'video') {
+            setSharedMedia(p => ({
+              ...p,
+              picsAndVideos: [{ id: msg.id, content: msg.content, type: msg.type, createdAt: msg.createdAt, senderId: msg.senderId }, ...p.picsAndVideos]
+            }));
           } else if (msg.type === 'voice' || msg.type === 'file') {
-            setSharedMedia(p => ({ ...p, files: [{ id: msg.id, content: msg.content, type: msg.type, createdAt: msg.createdAt, senderId: msg.senderId }, ...p.files] }));
+            setSharedMedia(p => ({
+              ...p,
+              files: [{ id: msg.id, content: msg.content, type: msg.type, createdAt: msg.createdAt, senderId: msg.senderId }, ...p.files]
+            }));
           } else if (msg.type === 'media_album') {
             try {
               const items = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
               if (Array.isArray(items)) {
                 setSharedMedia(p => {
-                  const np = [...p.photos];
-                  const nv = [...p.videos];
+                  const npv = [...p.picsAndVideos];
                   const nf = [...p.files];
                   items.forEach((it: any, idx: number) => {
-                    if (it.type === 'video') nv.unshift({ id: `${msg.id}-${idx}`, content: it.url, createdAt: msg.createdAt, senderId: msg.senderId });
-                    else if (it.type === 'image') np.unshift({ id: `${msg.id}-${idx}`, content: it.url, createdAt: msg.createdAt, senderId: msg.senderId });
-                    else nf.unshift({ id: `${msg.id}-${idx}`, content: it.url, type: it.type, createdAt: msg.createdAt, senderId: msg.senderId });
+                    if (it.type === 'video' || it.type === 'image') {
+                      npv.unshift({ id: `${msg.id}-${idx}`, content: it.url, type: it.type, createdAt: msg.createdAt, senderId: msg.senderId });
+                    } else {
+                      nf.unshift({ id: `${msg.id}-${idx}`, content: it.url, type: it.type, createdAt: msg.createdAt, senderId: msg.senderId });
+                    }
                   });
-                  return { photos: np, videos: nv, files: nf };
+                  return { picsAndVideos: npv, files: nf };
                 });
               }
             } catch (e) {}
