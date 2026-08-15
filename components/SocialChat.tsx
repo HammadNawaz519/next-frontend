@@ -1030,6 +1030,8 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         alignItems: isSent ? 'flex-end' : 'flex-start',
         order: isSent ? 2 : 1,
         minWidth: 0,
+        maxWidth: '75%',
+        width: 'fit-content',
       }}>
       {(() => {
         const isMiddleInGroup = isPrevSameSender && isNextSameSender;
@@ -1059,7 +1061,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
             className={`msg ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''} ${isMedia ? 'media-msg' : ''}`}
             style={{
               width: 'fit-content',
-              maxWidth: '70%',
+              maxWidth: '100%',
               borderRadius: isMedia ? '1.25rem' : bubbleBorderRadius,
               marginTop: isPrevSameSender ? '2px' : '6px',
               transition: isSelected ? 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28)' : 'none',
