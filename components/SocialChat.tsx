@@ -242,17 +242,18 @@ const IGMessageOverlay = ({
   };
 
   // Smart layout: reaction bar & action menu positioning without collision/overlap
-  const REACTION_BAR_H = 52;
-  const MENU_ITEMS_H = isSent ? 260 : 210;
-  const GAP = 10;
+  const REACTION_BAR_H = 50;
+  const MENU_ITEMS_H = isSent ? 245 : 195;
+  const GAP = 8;
+  const PAD = 14;
   const vw = typeof window !== 'undefined' ? window.innerWidth : 400;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
 
   // Clamp bubble rect to viewport
-  const bTop = Math.max(0, bubbleRect.top);
-  const bBottom = Math.min(vh, bubbleRect.bottom);
-  const bLeft = Math.max(0, bubbleRect.left);
-  const bRight = Math.min(vw, bubbleRect.right);
+  const bTop = Math.max(PAD, bubbleRect.top);
+  const bBottom = Math.min(vh - PAD, bubbleRect.bottom);
+  const bLeft = Math.max(10, bubbleRect.left);
+  const bRight = Math.min(vw - 10, bubbleRect.right);
   const bCenterX = (bLeft + bRight) / 2;
 
   const spaceBelow = vh - bBottom;
@@ -261,26 +262,40 @@ const IGMessageOverlay = ({
   let reactionBarTop: number;
   let menuTop: number;
 
-  if (spaceBelow >= MENU_ITEMS_H + 20) {
-    reactionBarTop = Math.max(12, bTop - REACTION_BAR_H - GAP);
-    menuTop = Math.min(vh - MENU_ITEMS_H - 12, bBottom + GAP);
-  } else if (spaceAbove >= REACTION_BAR_H + MENU_ITEMS_H + 16) {
-    reactionBarTop = bTop - REACTION_BAR_H - GAP;
+  if (spaceBelow >= MENU_ITEMS_H + PAD && spaceAbove >= REACTION_BAR_H + PAD) {
+    // Normal Case: Reaction Bar directly above bubble, Menu directly below bubble
+    reactionBarTop = Math.max(PAD, bTop - REACTION_BAR_H - GAP);
+    menuTop = Math.min(vh - MENU_ITEMS_H - PAD, bBottom + GAP);
+  } else if (spaceBelow < MENU_ITEMS_H + PAD) {
+    // Message is down / near the bottom: Both reaction bar and menu go ABOVE the bubble
+    // Stack: Menu -> Gap -> Reaction Bar -> Gap -> Bubble
+    reactionBarTop = Math.max(PAD + MENU_ITEMS_H + GAP, bTop - REACTION_BAR_H - GAP);
     menuTop = reactionBarTop - MENU_ITEMS_H - GAP;
+
+    // Safety: if whole stack hits the top of viewport, clamp from top
+    if (menuTop < PAD) {
+      menuTop = PAD;
+      reactionBarTop = menuTop + MENU_ITEMS_H + GAP;
+    }
   } else {
-    reactionBarTop = Math.max(12, bTop - REACTION_BAR_H - GAP);
-    menuTop = Math.max(12, Math.min(vh - MENU_ITEMS_H - 12, bBottom + GAP));
-    if (menuTop < reactionBarTop + REACTION_BAR_H && menuTop + MENU_ITEMS_H > reactionBarTop) {
-      menuTop = Math.min(vh - MENU_ITEMS_H - 8, reactionBarTop + REACTION_BAR_H + GAP);
+    // Message is near the top: Both reaction bar and menu go BELOW the bubble
+    // Stack: Bubble -> Gap -> Reaction Bar -> Gap -> Menu
+    reactionBarTop = Math.min(vh - REACTION_BAR_H - MENU_ITEMS_H - GAP - PAD, bBottom + GAP);
+    menuTop = reactionBarTop + REACTION_BAR_H + GAP;
+
+    // Safety: if whole stack hits the bottom of viewport, clamp from bottom
+    if (menuTop + MENU_ITEMS_H > vh - PAD) {
+      menuTop = vh - MENU_ITEMS_H - PAD;
+      reactionBarTop = Math.max(PAD, menuTop - REACTION_BAR_H - GAP);
     }
   }
 
   // Horizontal Sizing & Centering
-  const reactionBarW = Math.min(410, vw - 24);
+  const reactionBarW = Math.min(390, vw - 24);
   let reactionBarLeft = bCenterX - reactionBarW / 2;
   reactionBarLeft = Math.max(12, Math.min(reactionBarLeft, vw - reactionBarW - 12));
 
-  const MENU_W = Math.min(300, vw - 24);
+  const MENU_W = Math.min(280, vw - 24);
   let menuLeft = isSent ? bRight - MENU_W : bLeft;
   menuLeft = Math.max(12, Math.min(menuLeft, vw - MENU_W - 12));
 
@@ -369,8 +384,6 @@ const IGMessageOverlay = ({
     </button>
   );
 
-  const isMedia = msg.type === 'image' || msg.type === 'video';
-
   return (
     <div
       ref={overlayRef}
@@ -387,15 +400,15 @@ const IGMessageOverlay = ({
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(0,0,0,0.5)',
+          background: 'rgba(0,0,0,0.45)',
           opacity: mounted ? 1 : 0,
           transition: 'opacity 0.22s ease-out',
-          backdropFilter: 'blur(6px)',
-          WebkitBackdropFilter: 'blur(6px)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
         }}
       />
 
-      {/* Highlighted ghost of the message bubble */}
+      {/* Message bubble highlight outline (transparent interior so text is never covered or faded) */}
       <div
         style={{
           position: 'absolute',
@@ -404,17 +417,11 @@ const IGMessageOverlay = ({
           width: bubbleRect.width,
           height: bubbleRect.height,
           pointerEvents: 'none',
-          transform: mounted ? 'scale(1.02)' : 'scale(1)',
-          transformOrigin: isSent ? 'right center' : 'left center',
-          transition: 'transform 0.22s ease-out',
           borderRadius: '1.25rem',
-          background: isMedia
-            ? 'transparent'
-            : (isSent ? outgoingGradient : incomingBubbleColor),
-          boxShadow: isMedia
-            ? '0 8px 30px rgba(0,0,0,0.3)'
-            : `0 12px 35px ${accentColor}40, 0 4px 15px rgba(0,0,0,0.25)`,
-          opacity: 0.95,
+          boxShadow: `0 0 0 2px ${activeTheme?.id !== 'default' ? accentColor : (isSent ? '#3797F0' : 'rgba(255,255,255,0.4)')}, 0 8px 25px rgba(0,0,0,0.3)`,
+          background: 'transparent',
+          opacity: mounted ? 1 : 0,
+          transition: 'opacity 0.2s ease-out',
           zIndex: 1,
         }}
       />
