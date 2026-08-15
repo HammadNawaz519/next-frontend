@@ -4334,6 +4334,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </div>
                       </div>
                     )}
+                    {/* Invisible fixed spacer at bottom so newest messages rest safely above the typebox */}
+                    <div style={{ height: '50px', flexShrink: 0, pointerEvents: 'none', visibility: 'hidden' }} aria-hidden="true" />
                     <div ref={messagesEndRef} />
                   </div>
 
