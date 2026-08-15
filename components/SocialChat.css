@@ -1524,8 +1524,10 @@
   }
 
   .social-chat-container .footer {
-    padding: 12px 20px;
-    background: var(--dm-bg-sidebar);
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 
   .social-chat-container .type-box {
@@ -1985,8 +1987,10 @@
     padding: 6px 4px;
   }
   .social-chat-container .footer {
-    padding: 6px 6px 12px;
-    gap: 6px;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 }
 
