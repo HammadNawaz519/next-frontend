@@ -3076,33 +3076,60 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   // Search or Load Recent
   useEffect(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const rawQ = searchQuery.trim().toLowerCase();
+    const q = rawQ.startsWith('@') ? rawQ.substring(1).trim() : rawQ;
 
     if (q.length >= 1) {
-      // 1. Instant client-side filter from cached list
-      const filtered = allContactsRef.current.filter(
-        u => u.name?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)
-      );
-      setUsers(filtered);
+      // 1. Instant client-side filter from cached list (checking name, username, email, nickname, and last message)
+      const matchesContact = (u: any) => {
+        const nick = (nicknames[u.id] || '').toLowerCase();
+        const name = (u.name || '').toLowerCase();
+        const username = (u.username || '').toLowerCase();
+        const email = (u.email || '').toLowerCase();
+        const lastMsg = (u.lastMessage || '').toLowerCase();
+        return name.includes(q) || username.includes(q) || email.includes(q) || nick.includes(q) || lastMsg.includes(q);
+      };
 
-      // 2. Background server search (finds people not in recent list)
+      const filteredContacts = allContactsRef.current.filter(matchesContact);
+      const filteredRequests = allRequestsRef.current.filter(matchesContact);
+
+      setUsers(filteredContacts);
+      setRequests(filteredRequests);
+
+      // 2. Background server search (finds people globally not yet in recent chats)
       const delayDebounce = setTimeout(async () => {
-        const results = await searchUsers(searchQuery);
-        if (Array.isArray(results) && results.length > 0) {
-          const formatted = results.map((u: any) => ({
-            ...u,
-            lastMessage: u.bio || `@${u.username || 'user'}`,
-            unseenCount: 0,
-            isRequest: false
-          }));
-          setUsers(formatted as any);
+        try {
+          const results = await searchUsers(q);
+          if (Array.isArray(results) && results.length > 0) {
+            const existingIds = new Set(allContactsRef.current.map(c => c.id));
+            const existingReqIds = new Set(allRequestsRef.current.map(r => r.id));
+
+            const newPeople: User[] = [];
+            results.forEach((u: any) => {
+              if (u.id === (session?.user as any)?.id) return;
+              if (!existingIds.has(u.id) && !existingReqIds.has(u.id)) {
+                newPeople.push({
+                  ...u,
+                  lastMessage: u.bio || `@${u.username || 'user'}`,
+                  unseenCount: 0,
+                  isRequest: false
+                });
+              }
+            });
+
+            // Keep filtered contacts first, followed by new global people
+            setUsers([...filteredContacts, ...newPeople]);
+          }
+        } catch (e) {
+          console.error("Search users error:", e);
         }
-      }, 250);
+      }, 200);
+
       return () => clearTimeout(delayDebounce);
 
-    } else if (q.length === 0) {
+    } else {
       // Restore full list from ref (no network call needed)
-      if (allContactsRef.current.length > 0) {
+      if (allContactsRef.current.length > 0 || allRequestsRef.current.length > 0) {
         setUsers(allContactsRef.current);
         setRequests(allRequestsRef.current);
       } else {
@@ -3128,7 +3155,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
       }
     }
-  }, [searchQuery]);
+  }, [searchQuery, nicknames]);
 
   // ── Instagram-style Activity Status Lifecycle ─────────────────────────────
   useEffect(() => {
@@ -4089,12 +4116,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 <h2 className="text-xl font-bold" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
               </div>
 
-              <input
-                type="text"
-                placeholder="Search contacts..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  placeholder="Search people, usernames, or chats..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pr-8"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] cursor-pointer"
+                    title="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
               <div className="view-toggle">
                 <button className={view === 'recent' ? 'active' : ''} onClick={() => setView('recent')}>
                   Chats

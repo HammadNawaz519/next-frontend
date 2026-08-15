@@ -872,7 +872,8 @@ export async function searchUsers(query: string) {
 
   if (!currentUser) return [];
 
-  const q = query ? query.trim() : '';
+  const rawQ = query ? query.trim() : '';
+  const q = rawQ.startsWith('@') ? rawQ.substring(1).trim() : rawQ;
 
   if (!q) {
     return await (prisma.user as any).findMany({
@@ -895,7 +896,7 @@ export async function searchUsers(query: string) {
       ]
     },
     select: { id: true, name: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true },
-    take: 30,
+    take: 40,
   });
 }
 
