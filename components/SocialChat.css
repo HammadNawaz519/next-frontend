@@ -256,7 +256,7 @@
 /* MESSAGES */
 .social-chat-container .messages {
   flex: 1;
-  padding: 10px 10px 6px;
+  padding: 10px 10px 84px;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
@@ -585,14 +585,34 @@
   }
 }
 
-/* FOOTER */
+/* FLOATING BOTTOM DOCK (Transparent footer with type box lifted vertically) */
+.social-chat-container .chat-bottom-dock {
+  position: absolute;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 10px;
+  background: transparent !important;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.social-chat-container .chat-bottom-dock > * {
+  pointer-events: auto;
+}
+
 .social-chat-container .footer {
-  padding: 4px 10px 8px;
-  background: transparent;
-  border-top: none;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   display: flex;
   align-items: flex-end;
   gap: 6px;
+  width: 100%;
 }
 
 .social-chat-container .type-box {
@@ -2204,7 +2224,7 @@
 
 /* Footer Chrome Container (Completely transparent background — no white behind typebox) */
 .social-chat-container .footer {
-  padding: 4px 10px 8px !important;
+  padding: 0 !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
