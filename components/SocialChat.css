@@ -253,40 +253,43 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* MESSAGES — flex container filling space above bottom dock */
+/* MESSAGES — flex container with native bottom clearance for the floating typebox */
 .social-chat-container .messages {
   flex: 1;
   min-height: 0;
-  padding: 4px 8px 0px;
+  padding: 6px 8px calc(50px + env(safe-area-inset-bottom, 0px)) 8px;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 2px;
   background-color: transparent;
+  scroll-padding-bottom: calc(50px + env(safe-area-inset-bottom, 0px));
   scroll-behavior: smooth;
 }
 
 .social-chat-container .msg-wrapper {
   position: relative;
   display: flex;
-  flex-direction: column;
-  max-width: 75%;
-  width: fit-content;
+  flex-direction: row;
+  width: 100%;
 }
 
 .social-chat-container .msg-wrapper.sent {
   margin-left: auto;
   margin-right: 0;
+  justify-content: flex-end;
   align-items: flex-end;
+  align-self: flex-end;
 }
 
 .social-chat-container .msg-wrapper.received,
 .social-chat-container .msg-wrapper.ai {
   margin-right: auto;
   margin-left: 0;
+  justify-content: flex-start;
   align-items: flex-end;
-  position: relative;
+  align-self: flex-start;
 }
 
 .social-chat-container .msg {
