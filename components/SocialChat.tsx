@@ -3301,16 +3301,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   };
 
+  const prevScrollTopRef = useRef<number>(0);
+
   const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     const distance = target.scrollHeight - target.scrollTop - target.clientHeight;
     isNearBottomRef.current = distance <= 80;
 
-    // Only trigger loadOlderMessages when user actively scrolls near the top and there is sufficient scroll content
+    const isScrollingUp = target.scrollTop < prevScrollTopRef.current;
+    prevScrollTopRef.current = target.scrollTop;
+
+    // Only trigger loadOlderMessages when user actively scrolls UP near the very top (scrollTop <= 5)
     if (
-      target.scrollTop < 40 &&
-      target.scrollHeight > target.clientHeight + 80 &&
-      distance > 100 &&
+      isScrollingUp &&
+      target.scrollTop <= 5 &&
+      target.scrollHeight > target.clientHeight + 150 &&
+      distance > 150 &&
       hasMoreMessages &&
       !isLoadingOlder &&
       !isLoadingMessages
@@ -3328,7 +3334,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   useEffect(() => {
     if (!selectedUser?.id || messages.length === 0 || isLoadingOlder) return;
 
-    // Chat Switch
+    // Chat Switch -> immediately jump to bottom
     if (prevSelectedChatIdRef.current !== selectedUser.id) {
       prevSelectedChatIdRef.current = selectedUser.id;
       prevLastMsgIdRef.current = lastMsgId;
@@ -3339,7 +3345,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       return;
     }
 
-    // New Message Arrived
+    // New Message Arrived -> scroll down
     if (lastMsgId && lastMsgId !== prevLastMsgIdRef.current) {
       prevLastMsgIdRef.current = lastMsgId;
       const currentUserId = (session?.user as any)?.id;
@@ -3347,10 +3353,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       if (isSentByMe || isNearBottomRef.current) {
         if (messagesContainerRef.current) {
-          messagesContainerRef.current.scrollTo({
-            top: messagesContainerRef.current.scrollHeight,
-            behavior: 'smooth',
-          });
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
         }
       }
     }
