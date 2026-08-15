@@ -986,6 +986,9 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
     }
   };
 
+  const hasReactions = Object.keys(reactionCounts).length > 0;
+  const hasTimeRow = !isNextSameSender && msg.type !== 'call';
+
   return (
     <div
       className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${isSelected ? 'selected-item' : ''} animate-in slide-in-from-bottom-2 duration-300 relative`}
@@ -1005,6 +1008,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         padding: '0',
         userSelect: 'none',
         position: 'relative',
+        marginBottom: hasReactions ? '14px' : (isNextSameSender ? '1px' : '4px'),
         transition: isSwiping
           ? 'none'
           : 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)',
@@ -1020,8 +1024,8 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           className="msg-small-avatar"
           style={{
             visibility: isNextSameSender ? 'hidden' : 'visible',
-            /* offset = time row height (~18px) so avatar aligns with bubble bottom */
-            marginBottom: '20px',
+            marginBottom: hasTimeRow ? '18px' : '0px',
+            flexShrink: 0,
           }}
           referrerPolicy="no-referrer"
         />
@@ -1314,17 +1318,17 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
       </div>
 
       {/* Reaction bubbles (below the message) */}
-      {Object.keys(reactionCounts).length > 0 && (
+      {hasReactions && (
         <div
           style={{
             position: 'absolute',
             bottom: '-12px',
-            [isSent ? 'right' : 'left']: '48px',
+            [isSent ? 'right' : 'left']: isSent ? '4px' : '36px',
             display: 'flex',
             gap: '4px',
             flexWrap: 'wrap',
             justifyContent: isSent ? 'flex-end' : 'flex-start',
-            zIndex: 1,
+            zIndex: 5,
           }}
         >
           {Object.entries(reactionCounts).map(([emoji, count]: [string, number]) => (
