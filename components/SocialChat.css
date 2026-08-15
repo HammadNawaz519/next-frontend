@@ -256,15 +256,22 @@
 /* MESSAGES */
 .social-chat-container .messages {
   flex: 1;
-  /* last message sits cleanly above the floating typebox:
-     typebox ≈ 58px tall + 10px gap + safe-area = ~86px total clearance   */
-  padding: 10px 10px calc(90px + env(safe-area-inset-bottom, 0px));
+  /*
+    The floating dock (typebox) is ~58px tall.
+    dock padding-bottom adds ~20px. Total dock ≈ 78px from ground.
+    We add extra breathing room so the LAST MESSAGE is always
+    clearly above the typebox, never hidden behind it.
+    160px = plenty of clearance on all devices.
+  */
+  padding: 10px 10px 160px;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
   background-color: transparent;
+  /* also fixes scrollIntoView snapping behind the dock */
+  scroll-padding-bottom: 160px;
 }
 
 .social-chat-container .msg-wrapper {
