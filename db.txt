@@ -1,0 +1,177 @@
+================================================================================
+  REAL-WORLD INSTAGRAM-GRADE MEDIA ARCHITECTURE & SEPARATE DATABASE PLAN
+================================================================================
+Project: Connect (Social Chat & Media Platform)
+Target: Storing Photos, Videos, Voice Notes & Stories like Real Instagram/Meta
+Date: August 2026
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY & CORE PRINCIPLE
+--------------------------------------------------------------------------------
+In real-world platforms like Instagram (Meta Haystack / Evergreen storage) and 
+WhatsApp:
+- Raw binary media files (JPG, PNG, MP4, WebM, M4A) are NEVER stored inside the
+  main relational database (PostgreSQL/MySQL) or application server disks.
+- Storing binary blobs directly in the primary DB causes database bloat, slow
+  backups, slow indexes, memory exhaustion, and high database hosting costs.
+
+INSTAGRAM-STYLE SEPARATION OF CONCERNS:
+1. PRIMARY APPLICATION DATABASE (PostgreSQL):
+   - Handles relationships, users, auth, friendships, message threads, likes.
+2. SEPARATE MEDIA METADATA DATABASE (Media DB / Dedicated Service):
+   - Handles file lifecycle, processing status, resolutions, bitrates, aspect 
+     ratios, checksums (deduplication), and CDN reference URLs.
+3. DISTRIBUTED OBJECT/BLOB STORAGE (S3 / Cloudflare R2 / MinIO):
+   - Stores raw original files and compressed/transcoded renditions.
+4. GLOBAL CDN (Cloudflare / Fastly / AWS CloudFront):
+   - Caches media at edge servers globally for ultra-fast, millisecond delivery.
+
+
+--------------------------------------------------------------------------------
+2. HIGH-LEVEL ARCHITECTURAL FLOW (HOW INSTAGRAM WORKS)
+--------------------------------------------------------------------------------
+
+[ Mobile / Web Client ]
+       │
+       │ 1. Request Upload Authorization (File name, size, type, checksum)
+       ▼
+[ Media Gateway API Service ]
+       │
+       │ 2. Generate secure Presigned Upload URL & create 'PROCESSING' record
+       ▼
+[ Dedicated Media DB ]
+       │
+       │ 3. Return Presigned Upload URL directly to Client
+       ▼
+[ Mobile / Web Client ]
+       │
+       │ 4. Direct Upload Binary payload to Object Storage (Bypasses backend server!)
+       ▼
+[ Cloudflare R2 / AWS S3 Bucket (Raw Ingest) ]
+       │
+       │ 5. Bucket Trigger / Webhook / Redis Queue (BullMQ)
+       ▼
+[ Media Worker Transcoder (FFmpeg + Sharp) ]
+       │
+       ├─► Generate Responsive Images (WebP/AVIF: 1080p, 720p, 360p, Thumb)
+       ├─► Extract BlurHash / LQIP string (Instant blur placeholder in chat)
+       ├─► Transcode Video to HLS Adaptive Streams (.m3u8 + .ts segments)
+       ├─► Transcode Audio to AAC / Opus
+       ▼
+[ Optimized CDN Media Bucket (Cloudflare R2 / Fastly / S3) ]
+       │
+       │ 6. Update Media DB status to 'READY' + CDN Rendition URLs
+       ▼
+[ Dedicated Media DB ]
+       │
+       │ 7. Attach Media ID to Chat Message / Post / Story in Primary DB
+       ▼
+[ Primary Database & Connected Clients via WebSockets ]
+
+
+--------------------------------------------------------------------------------
+3. SEPARATE MEDIA DATABASE SCHEMA DESIGN
+--------------------------------------------------------------------------------
+
+You can host this in a dedicated PostgreSQL database (e.g. `connect_media_db`)
+or as a distinct schema / microservice.
+
+/* 1. MEDIA ASSETS (Core Master Record) */
+Table: media_assets {
+    id                  VARCHAR(36) PRIMARY KEY,      -- UUID / CUID
+    owner_id            VARCHAR(36) NOT NULL,         -- User ID of uploader
+    media_type          VARCHAR(20) NOT NULL,         -- 'image' | 'video' | 'voice' | 'file'
+    checksum_sha256     VARCHAR(64) NOT NULL,         -- For deduplication (saves storage!)
+    original_file_name  VARCHAR(255),
+    mime_type           VARCHAR(100) NOT NULL,
+    size_bytes          BIGINT NOT NULL,
+    width               INT,                          -- Original width in px
+    height              INT,                          -- Original height in px
+    duration_seconds    FLOAT,                        -- For video and voice clips
+    blurhash            VARCHAR(100),                 -- Ultra-compact string for instant blurred preview
+    dominant_color      VARCHAR(10),                  -- e.g. '#1e293b' for smooth background placeholders
+    status              VARCHAR(20) DEFAULT 'PENDING',-- 'PENDING' | 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED'
+    storage_bucket      VARCHAR(100) NOT NULL,        -- 'connect-media-prod'
+    storage_key         VARCHAR(500) NOT NULL,        -- 'raw/2026/08/user123/asset-xyz.mp4'
+    cdn_master_url      VARCHAR(1000),                -- 'https://cdn.connect.app/media/asset-xyz.webp'
+    is_ephemeral        BOOLEAN DEFAULT FALSE,        -- True for 24h Stories / Disappearing messages
+    expires_at          TIMESTAMP WITH TIME ZONE,     -- Auto-deletion trigger
+    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+}
+
+/* 2. MEDIA RENDITIONS (Different Sizes & Transcoded Formats) */
+Table: media_renditions {
+    id                  VARCHAR(36) PRIMARY KEY,
+    asset_id            VARCHAR(36) REFERENCES media_assets(id) ON DELETE CASCADE,
+    rendition_type      VARCHAR(30) NOT NULL,         -- 'thumbnail', 'low', 'standard', 'high', 'hls_playlist', 'waveform'
+    format              VARCHAR(20) NOT NULL,         -- 'webp', 'avif', 'mp4', 'm3u8', 'aac', 'opus'
+    width               INT,
+    height              INT,
+    bitrate_kbps        INT,
+    size_bytes          BIGINT,
+    cdn_url             VARCHAR(1000) NOT NULL,       -- 'https://cdn.connect.app/variants/asset-xyz-1080p.webp'
+    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+}
+
+/* 3. MEDIA ATTACHMENTS (Junction to Main Features) */
+Table: media_attachments {
+    id                  VARCHAR(36) PRIMARY KEY,
+    asset_id            VARCHAR(36) REFERENCES media_assets(id) ON DELETE CASCADE,
+    entity_type         VARCHAR(30) NOT NULL,         -- 'CHAT_MESSAGE', 'POST', 'STORY', 'REEL', 'AVATAR', 'VOICE_NOTE'
+    entity_id           VARCHAR(36) NOT NULL,         -- ID in the primary DB (e.g. SocialMessage ID)
+    display_order       INT DEFAULT 0,                -- For multi-image carousel posts
+    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+}
+
+
+--------------------------------------------------------------------------------
+4. RECOMMENDED STORAGE PROVIDERS FOR CONNECT
+--------------------------------------------------------------------------------
+
+Option A: CLOUDFLARE R2 + CLOUDFLARE IMAGES / STREAM (RECOMMENDED)
+- Zero Egress Fees: $0 bandwidth bill even when millions of images/videos stream.
+- S3-compatible API: Works with standard AWS S3 SDK.
+- Built-in global CDN (300+ edge locations worldwide).
+- Blazing fast image resizing and on-the-fly WebP conversion.
+
+Option B: AWS S3 + AWS CLOUDFRONT + LAMBDA TRANSCODER
+- The enterprise standard used by major tech corporations.
+- High durability (99.999999999%).
+- Slightly higher egress bandwidth cost compared to Cloudflare R2.
+
+Option C: SELF-HOSTED MINIO + LOCAL WORKER (100% FREE & PRIVATE)
+- Self-hostable on any VPS or dedicated server with Docker.
+- 100% S3-compatible API.
+- Excellent for private servers and dev/staging environments.
+
+
+--------------------------------------------------------------------------------
+5. STEP-BY-STEP IMPLEMENTATION ROADMAP
+--------------------------------------------------------------------------------
+
+PHASE 1: DIRECT-TO-BUCKET UPLOAD SERVICE
+- Create a dedicated microservice or API route (`/api/media/presign`).
+- When a user selects a photo/video in Chat or Feed, the client requests a signed upload ticket.
+- Client uploads directly to the Object Storage bucket without loading your Node.js server RAM.
+
+PHASE 2: MEDIA DB PERSISTENCE & BLURHASH GENERATION
+- Generate a BlurHash string (e.g. `L6PZfSi_.AyE_3t7t7R**0o#DgR4`) during upload.
+- Store the BlurHash directly in the chat message payload.
+- Clients render the instant blurred image skeleton in 0.01ms before the full image loads!
+
+PHASE 3: ASYNCHRONOUS TRANSCODING PIPELINE
+- Use BullMQ + Redis + Sharp (for images) and FFmpeg (for video/audio).
+- Automatically compress uploaded 20MB phone photos to ~150KB high-fidelity WebP files.
+- Automatically compress videos into adaptive streams for instant buffering.
+
+PHASE 4: DEDUPLICATION & CHECKSUM CACHE
+- Before uploading, compute SHA-256 hash on client or gateway.
+- If the exact video/photo was already uploaded by anyone, reuse the existing `media_assets` record instantly (0s upload time!).
+
+PHASE 5: EPHEMERAL TTL & AUTO CLEANUP
+- Automated cron job that periodically deletes expired Story media (24h) or deleted message attachments from the bucket and Media DB.
+
+================================================================================
+  END OF PLAN - READY TO PROCEED WITH ARCHITECTURAL IMPLEMENTATION
+================================================================================
