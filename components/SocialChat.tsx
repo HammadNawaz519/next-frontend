@@ -4123,23 +4123,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   onTouchMove={handleContainerTouchMove}
                   onTouchEnd={handleContainerTouchEnd}
                   className="messages"
-                >     </div>
-
-                </div>
-
-                <div
-                  ref={messagesContainerRef}
-                  onScroll={handleMessagesScroll}
-                  onTouchStart={handleContainerTouchStart}
-                  onTouchMove={handleContainerTouchMove}
-                  onTouchEnd={handleContainerTouchEnd}
-                  className="messages"
-                  style={{
-                    backgroundImage: activeTheme?.wallpaperUrl ? `url("${activeTheme.wallpaperUrl}")` : undefined,
-                    backgroundSize: activeTheme?.wallpaperUrl ? 'cover' : undefined,
-                    backgroundPosition: activeTheme?.wallpaperUrl ? 'center' : undefined,
-                    backgroundAttachment: activeTheme?.wallpaperUrl ? 'fixed' : undefined
-                  }}
                 >
                   {isLoadingMessages && messages.length === 0 && (
                     <div className="chat-skeleton-container">
