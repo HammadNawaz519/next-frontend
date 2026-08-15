@@ -1018,7 +1018,11 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.avif'}
           alt=""
           className="msg-small-avatar"
-          style={{ visibility: isNextSameSender ? 'hidden' : 'visible' }}
+          style={{
+            visibility: isNextSameSender ? 'hidden' : 'visible',
+            /* offset = time row height (~18px) so avatar aligns with bubble bottom */
+            marginBottom: '20px',
+          }}
           referrerPolicy="no-referrer"
         />
       )}
