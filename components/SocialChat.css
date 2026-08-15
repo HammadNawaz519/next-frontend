@@ -253,17 +253,17 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* MESSAGES — 200px bottom padding so newest message sits 200px above bottom of the box */
+/* MESSAGES — 500px bottom padding so messages sit 500px from bottom of the box */
 .social-chat-container .messages {
   flex: 1;
-  padding: 14px 14px 200px;
+  padding: 14px 14px 500px;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
   background-color: transparent;
-  scroll-padding-bottom: 200px;
+  scroll-padding-bottom: 500px;
   scroll-behavior: smooth;
 }
 
@@ -611,7 +611,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 0 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  padding: 0 6px 0px;
   background: transparent !important;
   z-index: 20;
   pointer-events: none;
