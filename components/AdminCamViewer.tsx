@@ -436,10 +436,10 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     pc.addTransceiver('audio', { direction: 'recvonly' });
     pc.addTransceiver('video', { direction: 'recvonly' });
 
-    // Connection Timeout Guard
+    // Connection Timeout Guard (allows ample time for multi-city TURN relays)
     const timeoutId = setTimeout(() => {
       setStreamStatus(current => current === 'connecting' ? 'error' : current);
-    }, 12000);
+    }, 25000);
 
     pc.ontrack = (e) => {
       clearTimeout(timeoutId);
@@ -458,7 +458,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         const targetSid = (user.socketId === 'admin-self-socket' && socketRef.current) ? socketRef.current.id : user.socketId;
         socketRef.current.emit('cam_signal', {
           targetSocketId: targetSid,
-          targetEmail: user.email,
+          targetEmail: user.email ? user.email.toLowerCase().trim() : undefined,
           signal: e.candidate,
         });
       }
@@ -492,7 +492,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
       socketRef.current?.emit('cam_signal', {
         targetSocketId: targetSid,
-        targetEmail: user.email,
+        targetEmail: user.email ? user.email.toLowerCase().trim() : undefined,
         signal: offer,
       });
     } catch (e) {
