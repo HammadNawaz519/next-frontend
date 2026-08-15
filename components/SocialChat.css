@@ -256,7 +256,9 @@
 /* MESSAGES */
 .social-chat-container .messages {
   flex: 1;
-  padding: 10px 10px calc(76px + env(safe-area-inset-bottom, 0px));
+  /* last message sits cleanly above the floating typebox:
+     typebox ≈ 58px tall + 10px gap + safe-area = ~86px total clearance   */
+  padding: 10px 10px calc(90px + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
@@ -585,16 +587,19 @@
   }
 }
 
-/* FLOATING BOTTOM DOCK (Transparent footer with type box lifted vertically) */
+/* FLOATING BOTTOM DOCK — sits flush at the very bottom, like Instagram */
 .social-chat-container .chat-bottom-dock {
   position: absolute;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  /* 0px from bottom so the dock touches the ground;
+     internal padding + safe-area push content up from the edge */
+  bottom: 0;
   left: 0;
   right: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 0 10px;
+  /* padding gives breathing room above device bottom edge */
+  padding: 0 10px calc(10px + env(safe-area-inset-bottom, 0px));
   background: transparent !important;
   z-index: 20;
   pointer-events: none;
