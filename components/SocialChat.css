@@ -253,17 +253,18 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* MESSAGES — fills chat area; bottom padding ensures messages sit cleanly above floating typebox */
+/* MESSAGES — 200px bottom padding so newest message sits 200px above bottom of the box */
 .social-chat-container .messages {
   flex: 1;
-  padding: 10px 10px calc(72px + env(safe-area-inset-bottom, 0px));
+  padding: 14px 14px 200px;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
   background-color: transparent;
-  scroll-padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  scroll-padding-bottom: 200px;
+  scroll-behavior: smooth;
 }
 
 .social-chat-container .msg-wrapper {
@@ -586,16 +587,31 @@
   }
 }
 
-/* FLOATING TYPEBOX DOCK — 0.2in above bottom, 0.1in from sides, higher z-index so messages slide behind on scroll */
+/* ── INNER CHAT CONTAINER BOX (0.1in margin, visible crisp white outline) ── */
+.social-chat-container .chat-inner-box {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0.1in 0.1in calc(0.1in + env(safe-area-inset-bottom, 0px)) 0.1in;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
+  border-radius: 1.75rem;
+  overflow: hidden;
+  background: transparent;
+  min-height: 0;
+}
+
+/* FLOATING TYPEBOX DOCK — sits at extreme bottom of inner container with higher z-index */
 .social-chat-container .chat-bottom-dock {
   position: absolute;
-  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  bottom: 0px;
   left: 0;
   right: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 0 10px;
+  padding: 0 8px calc(6px + env(safe-area-inset-bottom, 0px));
   background: transparent !important;
   z-index: 20;
   pointer-events: none;
