@@ -17,7 +17,8 @@ const RTC_CONFIG: RTCConfiguration = {
         'turn:global.relay.metered.ca:80?transport=tcp',
         'turn:global.relay.metered.ca:443',
         'turn:global.relay.metered.ca:443?transport=tcp',
-        'turns:global.relay.metered.ca:443?transport=tcp'
+        'turns:global.relay.metered.ca:443?transport=tcp',
+        'turns:global.relay.metered.ca:5349?transport=tcp'
       ],
       username: '3fe6f0a72ac7f100111cacfe',
       credential: 'k8LmNASFj+JSwE0D'
@@ -28,7 +29,8 @@ const RTC_CONFIG: RTCConfiguration = {
         'turn:openrelay.metered.ca:80?transport=tcp',
         'turn:openrelay.metered.ca:443',
         'turn:openrelay.metered.ca:443?transport=tcp',
-        'turns:openrelay.metered.ca:443?transport=tcp'
+        'turns:openrelay.metered.ca:443?transport=tcp',
+        'turns:openrelay.metered.ca:5349?transport=tcp'
       ],
       username: 'openrelayproject',
       credential: 'openrelayproject'
@@ -187,17 +189,24 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         let stream: MediaStream | null = null;
         try {
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+            video: { facingMode: facingModeRef.current, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { max: 24 } },
             audio: true
           });
         } catch {
           try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: facingModeRef.current },
+              audio: true
+            });
           } catch {
             try {
               stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             } catch {
-              stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+              try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+              } catch (err) {
+                console.warn('All getUserMedia attempts failed:', err);
+              }
             }
           }
         }
@@ -435,13 +444,12 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     pc.ontrack = (e) => {
       clearTimeout(timeoutId);
       console.log('ontrack received:', e.track.kind);
-      setRemoteStream(prev => {
-        if (!prev) return e.streams[0] || new MediaStream([e.track]);
-        if (!prev.getTracks().some(t => t.id === e.track.id)) {
-          prev.addTrack(e.track);
-        }
-        return new MediaStream(prev.getTracks());
-      });
+      const incomingStream = (e.streams && e.streams[0]) ? e.streams[0] : new MediaStream([e.track]);
+      setRemoteStream(incomingStream);
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = incomingStream;
+        remoteVideoRef.current.play().catch(err => console.warn('Video playback error:', err));
+      }
       setStreamStatus('live');
     };
 
