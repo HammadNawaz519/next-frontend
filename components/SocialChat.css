@@ -257,7 +257,7 @@
 .social-chat-container .messages {
   flex: 1;
   min-height: 0;
-  padding: 4px 10px 0px;
+  padding: 4px 8px 0px;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;

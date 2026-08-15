@@ -1003,7 +1003,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         flexDirection: 'row',
         alignItems: 'flex-end',
         justifyContent: isSent ? 'flex-end' : 'flex-start',
-        gap: '6px',
+        gap: isSent ? '0px' : '6px',
         width: '100%',
         padding: '0',
         userSelect: 'none',
@@ -3649,44 +3649,61 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const compressImageClient = async (file: File): Promise<File> => {
-    if (!file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') {
+    if (!file || !file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') {
       return file;
     }
     return new Promise((resolve) => {
-      const img = new Image();
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        img.src = e.target?.result as string;
+      const timeout = setTimeout(() => resolve(file), 1500);
+      try {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
         img.onload = () => {
-          const maxDim = 1920;
-          let { width, height } = img;
-          if (width > maxDim || height > maxDim) {
-            if (width > height) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
+          try {
+            URL.revokeObjectURL(url);
+            const maxDim = 1920;
+            let { width, height } = img;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
             }
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) { resolve(file); return; }
-          ctx.drawImage(img, 0, 0, width, height);
-          canvas.toBlob((blob) => {
-            if (blob && blob.size < file.size) {
-              resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' }));
-            } else {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              clearTimeout(timeout);
               resolve(file);
+              return;
             }
-          }, 'image/jpeg', 0.85);
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob((blob) => {
+              clearTimeout(timeout);
+              if (blob && blob.size < file.size) {
+                resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' }));
+              } else {
+                resolve(file);
+              }
+            }, 'image/jpeg', 0.85);
+          } catch (err) {
+            clearTimeout(timeout);
+            resolve(file);
+          }
         };
-        img.onerror = () => resolve(file);
-      };
-      reader.onerror = () => resolve(file);
-      reader.readAsDataURL(file);
+        img.onerror = () => {
+          try { URL.revokeObjectURL(url); } catch (e) {}
+          clearTimeout(timeout);
+          resolve(file);
+        };
+        img.src = url;
+      } catch (e) {
+        clearTimeout(timeout);
+        resolve(file);
+      }
     });
   };
 
@@ -3740,6 +3757,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           method: 'POST',
           body: formData
         });
+
+        if (!res.ok) {
+          console.error("Upload error status:", res.status);
+          setMessages(prev => prev.map(m => m.id === stableId ? { ...m, status: 'error' } : m));
+          return;
+        }
 
         const resData = await res.json();
 
@@ -3835,6 +3858,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           method: 'POST',
           body: formData
         });
+
+        if (!res.ok) {
+          console.error("Multi upload error status:", res.status);
+          setMessages(prev => prev.map(m => m.id === stableId ? { ...m, status: 'error' } : m));
+          return;
+        }
 
         const resData = await res.json();
 
