@@ -253,25 +253,19 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* MESSAGES */
+/* MESSAGES — fills all space above the typebox */
 .social-chat-container .messages {
   flex: 1;
-  /*
-    The floating dock (typebox) is ~58px tall.
-    dock padding-bottom adds ~20px. Total dock ≈ 78px from ground.
-    We add extra breathing room so the LAST MESSAGE is always
-    clearly above the typebox, never hidden behind it.
-    160px = plenty of clearance on all devices.
-  */
-  padding: 10px 10px 160px;
+  /* Simple top+side padding; no bottom trick needed
+     because the typebox is now in normal document flow below */
+  padding: 10px 10px 10px;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
   background-color: transparent;
-  /* also fixes scrollIntoView snapping behind the dock */
-  scroll-padding-bottom: 160px;
+  min-height: 0; /* allows flex child to shrink so typebox stays visible */
 }
 
 .social-chat-container .msg-wrapper {
@@ -594,19 +588,18 @@
   }
 }
 
-/* FLOATING BOTTOM DOCK — sits flush at the very bottom, like Instagram */
+/*
+  BOTTOM DOCK — normal flex-column flow item.
+  Sits at the bottom of .chat-area, messages fill the space above.
+  Transparent background so the wallpaper/chat bg shows through.
+*/
 .social-chat-container .chat-bottom-dock {
-  position: absolute;
-  /* 0px from bottom so the dock touches the ground;
-     internal padding + safe-area push content up from the edge */
-  bottom: 0;
-  left: 0;
-  right: 0;
+  position: relative;
+  flex-shrink: 0;          /* never squish the typebox */
   display: flex;
   flex-direction: column;
   gap: 6px;
-  /* padding gives breathing room above device bottom edge */
-  padding: 0 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding: 6px 10px calc(12px + env(safe-area-inset-bottom, 0px));
   background: transparent !important;
   z-index: 20;
   pointer-events: none;
