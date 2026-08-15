@@ -253,17 +253,21 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* MESSAGES — 800px bottom clearance, reduced gap between multiple sent messages */
+/* MESSAGES — Instagram DM scroll container:
+   - Visual flow: messages scroll behind translucent frosted-glass floating input bar.
+   - Bottom position: when scrolled to bottom, latest message stays fully visible directly ABOVE the input bar.
+   - Safe area: padding automatically accounts for mobile home indicator.
+*/
 .social-chat-container .messages {
   flex: 1;
-  padding: 14px 14px 800px;
+  padding: 12px 12px calc(68px + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   background-color: transparent;
-  scroll-padding-bottom: 800px;
+  scroll-padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
   scroll-behavior: smooth;
 }
 
@@ -605,18 +609,16 @@
   height: 100%;
 }
 
-/* FLOATING TYPEBOX DOCK — full width to edges of the box at extreme bottom */
+/* FLOATING TYPEBOX DOCK — floating rounded pill over chat area with translucent frosted glass */
 .social-chat-container .chat-bottom-dock {
   position: absolute;
   bottom: 0px;
   left: 0;
   right: 0;
-  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0px;
-  padding: 0;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  gap: 6px;
+  padding: 0 10px calc(8px + env(safe-area-inset-bottom, 0px));
   background: transparent !important;
   z-index: 20;
   pointer-events: none;
@@ -633,7 +635,7 @@
   box-shadow: none !important;
   display: flex;
   align-items: flex-end;
-  gap: 0px;
+  gap: 6px;
   width: 100%;
 }
 
@@ -641,32 +643,25 @@
   flex: 1;
   display: flex;
   align-items: flex-end;
-  background: rgba(245, 245, 247, 0.85);
+  background: rgba(245, 245, 247, 0.78);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-radius: 0 !important;
-  padding: 8px 12px 8px 14px;
+  border-radius: 24px;
+  padding: 5px 6px 5px 12px;
   border: 1px solid var(--dm-border);
-  border-left: none !important;
-  border-right: none !important;
-  border-bottom: none !important;
   position: relative;
-  min-height: 44px;
-  max-height: 110px;
-  width: 100%;
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.05);
+  min-height: 42px;
+  max-height: 100px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
   transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 [data-theme="dark"] .social-chat-container .type-box {
-  background: rgba(26, 26, 30, 0.85);
+  background: rgba(30, 30, 36, 0.78);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-left: none;
-  border-right: none;
-  border-bottom: none;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }
 
 .social-chat-container .type-box textarea {
