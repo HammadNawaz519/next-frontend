@@ -1049,12 +1049,12 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         let bubbleBorderRadius = '18px 18px 4px 18px';
         if (isSent) {
           if (isFirstInGroup) bubbleBorderRadius = '18px 18px 4px 18px';
-          else if (isMiddleInGroup) bubbleBorderRadius = '18px';
+          else if (isMiddleInGroup) bubbleBorderRadius = '18px 4px 4px 18px';
           else if (isLastInGroup) bubbleBorderRadius = '18px 4px 18px 18px';
           else bubbleBorderRadius = '18px 18px 4px 18px';
         } else {
           if (isFirstInGroup) bubbleBorderRadius = '18px 18px 18px 4px';
-          else if (isMiddleInGroup) bubbleBorderRadius = '18px';
+          else if (isMiddleInGroup) bubbleBorderRadius = '4px 18px 18px 4px';
           else if (isLastInGroup) bubbleBorderRadius = '4px 18px 18px 18px';
           else bubbleBorderRadius = '18px 18px 18px 4px';
         }
