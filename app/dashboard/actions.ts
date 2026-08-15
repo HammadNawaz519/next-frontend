@@ -5,6 +5,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
+import { isCloudinaryConfigured, uploadToCloudinary } from "@/lib/cloudinary";
 
 export async function askAI(prompt: string) {
   const apiKey = process.env.VITE_GROQ_API_KEY;
@@ -215,33 +216,39 @@ export async function saveSocialMessage(
 
   let finalContent = content;
 
-  // Fallback: If content is base64 image/video/voice, write to disk file in /public/uploads/chat/
+  // Fallback: If content is base64 image/video/voice, upload to Cloudinary or write to disk
   if (content && content.startsWith("data:")) {
     try {
-      const fs = require("fs");
-      const path = require("path");
       const matches = content.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
       if (matches && matches.length === 3) {
         const mimeType = matches[1];
         const rawBuffer = Buffer.from(matches[2], "base64");
 
-        let ext = ".bin";
-        if (mimeType.includes("png")) ext = ".png";
-        else if (mimeType.includes("jpeg") || mimeType.includes("jpg")) ext = ".jpg";
-        else if (mimeType.includes("gif")) ext = ".gif";
-        else if (mimeType.includes("webm")) ext = ".webm";
-        else if (mimeType.includes("mp4")) ext = ".mp4";
-        else if (mimeType.includes("ogg")) ext = ".ogg";
+        if (isCloudinaryConfigured()) {
+          const resourceType = mimeType.startsWith("image/") ? "image" : mimeType.startsWith("video/") || mimeType.startsWith("audio/") ? "video" : "auto";
+          const result = await uploadToCloudinary(rawBuffer, `connect/chat/${currentUser.id}`, resourceType);
+          finalContent = result.url;
+        } else {
+          const fs = require("fs");
+          const path = require("path");
+          let ext = ".bin";
+          if (mimeType.includes("png")) ext = ".png";
+          else if (mimeType.includes("jpeg") || mimeType.includes("jpg")) ext = ".jpg";
+          else if (mimeType.includes("gif")) ext = ".gif";
+          else if (mimeType.includes("webm")) ext = ".webm";
+          else if (mimeType.includes("mp4")) ext = ".mp4";
+          else if (mimeType.includes("ogg")) ext = ".ogg";
 
-        const uploadsDir = path.join(process.cwd(), "public", "uploads", "chat");
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
+          const uploadsDir = path.join(process.cwd(), "public", "uploads", "chat");
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+
+          const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}${ext}`;
+          const filePath = path.join(uploadsDir, filename);
+          fs.writeFileSync(filePath, rawBuffer);
+          finalContent = `/uploads/chat/${filename}`;
         }
-
-        const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}${ext}`;
-        const filePath = path.join(uploadsDir, filename);
-        fs.writeFileSync(filePath, rawBuffer);
-        finalContent = `/uploads/chat/${filename}`;
       }
     } catch (e) {
       console.error("Failed to parse base64 media in saveSocialMessage fallback:", e);

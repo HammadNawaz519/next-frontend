@@ -256,7 +256,7 @@
 /* MESSAGES */
 .social-chat-container .messages {
   flex: 1;
-  padding: 10px 10px 84px;
+  padding: 10px 10px calc(76px + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
@@ -588,7 +588,7 @@
 /* FLOATING BOTTOM DOCK (Transparent footer with type box lifted vertically) */
 .social-chat-container .chat-bottom-dock {
   position: absolute;
-  bottom: 12px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   display: flex;
@@ -619,14 +619,25 @@
   flex: 1;
   display: flex;
   align-items: flex-end;
-  background: var(--dm-bg-hover);
+  background: rgba(245, 245, 247, 0.78);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-radius: 24px;
   padding: 5px 6px 5px 12px;
   border: 1px solid var(--dm-border);
   position: relative;
   min-height: 42px;
   max-height: 100px;
-  transition: background 0.3s ease, border-color 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+[data-theme="dark"] .social-chat-container .type-box {
+  background: rgba(30, 30, 36, 0.78);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }
 
 .social-chat-container .type-box textarea {
@@ -1633,14 +1644,23 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
-  padding-bottom: max(14px, env(safe-area-inset-bottom));
-  background: #ffffff;
-  border-top: 1px solid #e5e7eb;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-radius: 24px;
+  border: 1px solid var(--dm-border);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.15);
   gap: 12px;
   animation: selBarUp 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   z-index: 100;
   width: 100%;
+}
+
+[data-theme="dark"] .social-chat-container .sel-bar {
+  background: rgba(30, 30, 36, 0.85);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
 }
 
 @keyframes selBarUp {
@@ -2247,9 +2267,9 @@
 }
 
 .social-chat-container .theme-love-u .ig-type-box {
-  background: rgba(245, 218, 226, 0.92) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(245, 218, 226, 0.85) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
 }
 
 .social-chat-container .theme-love-u .ig-textarea {
@@ -2286,9 +2306,9 @@
 }
 
 [data-theme="dark"] .social-chat-container .theme-love-u .ig-type-box {
-  background: rgba(65, 18, 35, 0.88) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(65, 18, 35, 0.82) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
 }
 
 [data-theme="dark"] .social-chat-container .theme-love-u .ig-textarea {
@@ -2333,9 +2353,9 @@
 }
 
 .social-chat-container .theme-love .ig-type-box {
-  background: rgba(245, 218, 226, 0.92) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(245, 218, 226, 0.85) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
 }
 
 .social-chat-container .theme-love .ig-textarea {
@@ -2380,9 +2400,9 @@
 }
 
 [data-theme="dark"] .social-chat-container .theme-love .ig-type-box {
-  background: rgba(65, 20, 36, 0.88) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(65, 20, 36, 0.82) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
 }
 
 [data-theme="dark"] .social-chat-container .theme-love .ig-textarea {
@@ -2428,9 +2448,9 @@
 }
 
 .social-chat-container .theme-whale .ig-type-box {
-  background: rgba(210, 235, 248, 0.92) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(210, 235, 248, 0.85) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
 }
 
 .social-chat-container .theme-whale .ig-textarea {
@@ -2475,9 +2495,9 @@
 }
 
 [data-theme="dark"] .social-chat-container .theme-whale .ig-type-box {
-  background: rgba(18, 38, 58, 0.88) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(18, 38, 58, 0.82) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
 }
 
 [data-theme="dark"] .social-chat-container .theme-whale .ig-textarea {

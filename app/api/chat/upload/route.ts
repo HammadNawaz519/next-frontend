@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import { isR2Configured, uploadToR2 } from "@/lib/r2";
+import { isCloudinaryConfigured, uploadToCloudinary } from "@/lib/cloudinary";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -57,7 +58,11 @@ export async function POST(req: NextRequest) {
 
       const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}${ext}`;
 
-      if (isR2Configured()) {
+      if (isCloudinaryConfigured()) {
+        const resourceType = type === "image" ? "image" : type === "video" || type === "voice" ? "video" : "auto";
+        const cldResult = await uploadToCloudinary(buffer, `connect/chat/${currentUser.id}`, resourceType);
+        fileUrl = cldResult.url;
+      } else if (isR2Configured()) {
         const mimeType = file.type || (type === "image" ? "image/jpeg" : type === "video" ? "video/mp4" : "application/octet-stream");
         const r2Result = await uploadToR2(buffer, `chat/${currentUser.id}/${filename}`, mimeType);
         fileUrl = r2Result.url;
@@ -91,7 +96,11 @@ export async function POST(req: NextRequest) {
 
         const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}${ext}`;
 
-        if (isR2Configured()) {
+        if (isCloudinaryConfigured()) {
+          const resourceType = type === "image" ? "image" : type === "video" || type === "voice" ? "video" : "auto";
+          const cldResult = await uploadToCloudinary(rawBuffer, `connect/chat/${currentUser.id}`, resourceType);
+          fileUrl = cldResult.url;
+        } else if (isR2Configured()) {
           const r2Result = await uploadToR2(rawBuffer, `chat/${currentUser.id}/${filename}`, mimeType);
           fileUrl = r2Result.url;
         } else {

@@ -3978,7 +3978,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                 <div className="chat-bottom-dock">
                   {replyToMessage && (
-                    <div className="mx-2 mb-1 p-2.5 rounded-2xl border border-[var(--dm-border)] bg-[var(--dm-bg-hover)] flex items-center justify-between animate-in slide-in-from-bottom-2 duration-200">
+                    <div
+                      className="mx-1 mb-1.5 p-2.5 rounded-2xl border border-[var(--dm-border)] flex items-center justify-between animate-in slide-in-from-bottom-2 duration-200"
+                      style={{
+                        background: 'var(--dm-bg-hover)',
+                        backdropFilter: 'blur(24px) saturate(180%)',
+                        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)'
+                      }}
+                    >
                       <div className="flex flex-col min-w-0 pr-2">
                         <span className="text-[11px] font-bold text-[var(--dm-text-primary)] flex items-center gap-1">
                           <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>

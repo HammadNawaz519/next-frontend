@@ -129,21 +129,25 @@ Table: media_attachments {
 4. RECOMMENDED STORAGE PROVIDERS FOR CONNECT
 --------------------------------------------------------------------------------
 
-Option A: CLOUDFLARE R2 + CLOUDFLARE IMAGES / STREAM (RECOMMENDED)
-- Zero Egress Fees: $0 bandwidth bill even when millions of images/videos stream.
-- S3-compatible API: Works with standard AWS S3 SDK.
-- Built-in global CDN (300+ edge locations worldwide).
-- Blazing fast image resizing and on-the-fly WebP conversion.
+Option A: CLOUDINARY (ACTIVE & RECOMMENDED - NO CREDIT CARD REQUIRED)
+- 25 GB Free monthly credits for storage & global CDN bandwidth.
+- Zero Credit Card / Bank Account required to sign up.
+- Automated on-the-fly image optimization to WebP & AVIF (`f_auto, q_auto`).
+- Built-in video transcoding and streaming.
+- Setup:
+    CLOUDINARY_CLOUD_NAME="your_cloud_name"
+    CLOUDINARY_API_KEY="your_api_key"
+    CLOUDINARY_API_SECRET="your_api_secret"
 
-Option B: AWS S3 + AWS CLOUDFRONT + LAMBDA TRANSCODER
+Option B: CLOUDFLARE R2 (S3-COMPATIBLE)
+- Zero Egress Fees: $0 bandwidth bill.
+- Requires payment card to activate R2 subscription.
+
+Option C: AWS S3 + AWS CLOUDFRONT
 - The enterprise standard used by major tech corporations.
-- High durability (99.999999999%).
-- Slightly higher egress bandwidth cost compared to Cloudflare R2.
 
-Option C: SELF-HOSTED MINIO + LOCAL WORKER (100% FREE & PRIVATE)
+Option D: SELF-HOSTED MINIO + LOCAL WORKER (100% FREE & PRIVATE)
 - Self-hostable on any VPS or dedicated server with Docker.
-- 100% S3-compatible API.
-- Excellent for private servers and dev/staging environments.
 
 
 --------------------------------------------------------------------------------
