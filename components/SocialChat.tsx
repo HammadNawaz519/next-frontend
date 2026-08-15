@@ -1067,7 +1067,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
               width: 'fit-content',
               maxWidth: '100%',
               borderRadius: isMedia ? '1.25rem' : bubbleBorderRadius,
-              marginTop: isPrevSameSender ? '2px' : '6px',
+              marginTop: isPrevSameSender ? '1px' : '4px',
               transition: isSelected ? 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28)' : 'none',
               transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
               background: isMedia ? 'transparent' : (isSent
