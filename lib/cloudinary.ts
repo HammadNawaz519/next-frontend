@@ -1,21 +1,29 @@
 import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 
-const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-const apiKey = process.env.CLOUDINARY_API_KEY;
-const apiSecret = process.env.CLOUDINARY_API_SECRET;
-
 export const isCloudinaryConfigured = (): boolean => {
-  return Boolean(cloudName && apiKey && apiSecret);
+  const cName = process.env.CLOUDINARY_CLOUD_NAME;
+  const k = process.env.CLOUDINARY_API_KEY;
+  const s = process.env.CLOUDINARY_API_SECRET;
+  const url = process.env.CLOUDINARY_URL;
+  return Boolean((cName && k && s) || url);
 };
 
-if (isCloudinaryConfigured()) {
-  cloudinary.config({
-    cloud_name: cloudName,
-    api_key: apiKey,
-    api_secret: apiSecret,
-    secure: true,
-  });
-}
+export const getCloudinaryInstance = () => {
+  if (process.env.CLOUDINARY_URL) {
+    cloudinary.config({
+      cloudinary_url: process.env.CLOUDINARY_URL,
+      secure: true,
+    });
+  } else if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+      secure: true,
+    });
+  }
+  return cloudinary;
+};
 
 /**
  * Uploads a buffer or file to Cloudinary with automatic optimization (WebP/AVIF, adaptive compression)
@@ -29,16 +37,10 @@ export async function uploadToCloudinary(
     throw new Error("Cloudinary credentials are not configured in environment variables.");
   }
 
-  // Ensure config is applied
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-    secure: true,
-  });
+  const cld = getCloudinaryInstance();
 
   return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
+    const uploadStream = cld.uploader.upload_stream(
       {
         folder,
         resource_type: resourceType,
