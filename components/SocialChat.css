@@ -600,9 +600,7 @@
   flex-direction: column;
   gap: 6px;
   padding: 4px 10px calc(4px + env(safe-area-inset-bottom, 0px));
-  /* Match the chat area background exactly — dock becomes invisible,
-     only the typebox glass is visible */
-  background: var(--dm-bg-main) !important;
+  background: transparent !important;
   z-index: 20;
   pointer-events: none;
 }
