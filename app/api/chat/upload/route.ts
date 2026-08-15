@@ -89,8 +89,8 @@ export async function POST(req: NextRequest) {
     await prisma.hiddenSocialChat.deleteMany({
       where: {
         OR: [
-          { userId: currentUser.id, hiddenUserId: receiverId },
-          { userId: receiverId, hiddenUserId: currentUser.id }
+          { userId: currentUserId, hiddenUserId: receiverId },
+          { userId: receiverId, hiddenUserId: currentUserId }
         ]
       }
     });
