@@ -3319,42 +3319,40 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   };
 
-  // Auto scroll to bottom only on new messages or chat switch
+  // Auto scroll to bottom ONLY when a new message actually arrives or chat switches
   const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
   const lastMsgId = lastMsg?.id || null;
   const prevSelectedChatIdRef = useRef<string | null>(null);
+  const prevLastMsgIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!selectedUser?.id || messages.length === 0 || isLoadingOlder) return;
 
-    const isInitialChatSwitch = prevSelectedChatIdRef.current !== selectedUser.id;
-    if (isInitialChatSwitch) {
+    // Chat Switch
+    if (prevSelectedChatIdRef.current !== selectedUser.id) {
       prevSelectedChatIdRef.current = selectedUser.id;
+      prevLastMsgIdRef.current = lastMsgId;
       isNearBottomRef.current = true;
       if (messagesContainerRef.current) {
         messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
       }
-      const timer = setTimeout(() => {
-        if (messagesContainerRef.current) {
-          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        }
-      }, 50);
-      return () => clearTimeout(timer);
+      return;
     }
 
-    const currentUserId = (session?.user as any)?.id;
-    const isSentByMe = lastMsg && String(lastMsg.senderId) === String(currentUserId);
+    // New Message Arrived
+    if (lastMsgId && lastMsgId !== prevLastMsgIdRef.current) {
+      prevLastMsgIdRef.current = lastMsgId;
+      const currentUserId = (session?.user as any)?.id;
+      const isSentByMe = lastMsg && String(lastMsg.senderId) === String(currentUserId);
 
-    if (isSentByMe || isNearBottomRef.current) {
-      const timer = setTimeout(() => {
+      if (isSentByMe || isNearBottomRef.current) {
         if (messagesContainerRef.current) {
           messagesContainerRef.current.scrollTo({
             top: messagesContainerRef.current.scrollHeight,
             behavior: 'smooth',
           });
         }
-      }, 30);
-      return () => clearTimeout(timer);
+      }
     }
   }, [selectedUser?.id, lastMsgId]);
 
@@ -4423,18 +4421,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               className="ig-textarea"
                               value={inputValue}
                               rows={1}
-                              onFocus={() => {
-                                isNearBottomRef.current = true;
-                                setTimeout(() => {
-                                  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                                }, 60);
-                              }}
-                              onClick={() => {
-                                isNearBottomRef.current = true;
-                                setTimeout(() => {
-                                  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                                }, 40);
-                              }}
                               onChange={(e) => {
                                 const val = e.target.value;
                                 setInputValue(val);
