@@ -605,30 +605,26 @@
   height: 100%;
 }
 
-/* BOTTOM DOCK — sits directly at bottom in natural flex flow; messages stay above it */
+/* BOTTOM FLOATING TYPEBOX — directly at extreme bottom of chat with 100% transparent backing */
 .social-chat-container .chat-bottom-dock {
-  position: relative;
-  flex-shrink: 0;
+  position: absolute;
+  bottom: 0px;
+  left: 0;
+  right: 0;
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 0 8px calc(2px + env(safe-area-inset-bottom, 0px));
+  padding: 0 8px calc(4px + env(safe-area-inset-bottom, 0px));
   background: transparent !important;
   box-shadow: none !important;
   border: none !important;
-  z-index: 10;
+  z-index: 20;
+  pointer-events: none;
 }
 
-.social-chat-container .footer {
-  padding: 0 !important;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  display: flex;
-  align-items: flex-end;
-  gap: 6px;
-  width: 100%;
+.social-chat-container .chat-bottom-dock > * {
+  pointer-events: auto;
 }
 
 .social-chat-container .type-box {
@@ -2263,13 +2259,6 @@
   border-bottom: none !important;
 }
 
-/* Footer Chrome Container (Completely transparent background — no white behind typebox) */
-.social-chat-container .footer {
-  padding: 0 !important;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-}
 
 /* --------------------------------------------------------------------------
    LOVE U THEME (LIGHT & DARK MODE)
