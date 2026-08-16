@@ -718,12 +718,12 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Explore Reels Grid - Edge-to-edge 0px padding, large 2-col vertical reels format */}
+            {/* Explore Reels Grid - Edge-to-edge 0px padding, 3-column horizontal with reduced height */}
             <div className="flex-1 min-h-0 overflow-y-auto px-0 pb-24 pt-0.5 w-full">
               {isExploreLoading ? (
-                <div className="grid grid-cols-2 gap-[2px] w-full px-0">
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="w-full aspect-[9/16] animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+                <div className="grid grid-cols-3 gap-[2px] w-full px-0">
+                  {[...Array(9)].map((_, i) => (
+                    <div key={i} className="w-full aspect-[4/5] animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
                   ))}
                 </div>
               ) : explorePosts.length === 0 ? (
@@ -737,12 +737,12 @@ export default function DashboardPage() {
                   <p className="text-xs text-zinc-500 mt-1">Uploaded video reels will appear here.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-[2px] w-full px-0">
+                <div className="grid grid-cols-3 gap-[2px] w-full px-0">
                   {explorePosts.map((post: any) => (
                     <div
                       key={post.id}
                       onClick={() => setActiveView('reels')}
-                      className="aspect-[9/16] relative cursor-pointer overflow-hidden group w-full"
+                      className="aspect-[4/5] relative cursor-pointer overflow-hidden group w-full"
                       style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
                     >
                       {post.thumbnailUrl || post.imageUrl ? (
@@ -753,31 +753,31 @@ export default function DashboardPage() {
                         />
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center bg-zinc-900">
-                          <svg className="w-8 h-8 mb-1 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-6 h-6 mb-1 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
                           </svg>
                         </div>
                       )}
                       
                       {/* Reels glyph badge top right */}
-                      <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-md p-1.5 rounded-full z-10">
-                        <svg width="13" height="13" fill="#fff" viewBox="0 0 24 24">
+                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md p-1 rounded-full z-10">
+                        <svg width="11" height="11" fill="#fff" viewBox="0 0 24 24">
                           <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/>
                         </svg>
                       </div>
 
                       {/* Bottom creator info */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2.5 pointer-events-none">
-                        <div className="flex items-center gap-1.5 mb-1 pointer-events-auto" onClick={(e) => { e.stopPropagation(); handleOpenOtherProfile(post.user?.id, post.user, e); }}>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2 pointer-events-none">
+                        <div className="flex items-center gap-1 mb-0.5 pointer-events-auto" onClick={(e) => { e.stopPropagation(); handleOpenOtherProfile(post.user?.id, post.user, e); }}>
                           <img
                             src={post.user?.image || '/Avatar.avif'}
                             alt=""
-                            className="w-5 h-5 rounded-full object-cover border border-white/40"
+                            className="w-4 h-4 rounded-full object-cover border border-white/40 flex-shrink-0"
                           />
-                          <p className="text-[12px] font-semibold text-white truncate drop-shadow">@{post.user?.username || 'user'}</p>
+                          <p className="text-[11px] font-semibold text-white truncate drop-shadow">@{post.user?.username || 'user'}</p>
                         </div>
                         {post.caption && (
-                          <p className="text-[11px] text-white/90 line-clamp-1 drop-shadow font-light">{post.caption}</p>
+                          <p className="text-[10px] text-white/90 line-clamp-1 drop-shadow font-light">{post.caption}</p>
                         )}
                       </div>
                     </div>
