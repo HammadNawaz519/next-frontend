@@ -792,7 +792,97 @@ const ChatItem = memo(({
   );
 });
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, chatSwipeOffset, onOpenAlbum }: any) => {
+// Status text component for the last sent message in a consecutive group (Instagram / iMessage style)
+const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup }: { msg: any, isDark: boolean, isLastSentInGroup: boolean }) => {
+  const [isFaded, setIsFaded] = useState(false);
+  const seenTimeRef = useRef<number | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (msg.isSeen && isLastSentInGroup) {
+      if (!seenTimeRef.current) {
+        seenTimeRef.current = Date.now();
+      }
+      const elapsed = Date.now() - (seenTimeRef.current || Date.now());
+      const delay = Math.max(0, 4500 - elapsed);
+      timerRef.current = setTimeout(() => {
+        setIsFaded(true);
+      }, delay);
+      return () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+      };
+    } else {
+      setIsFaded(false);
+      seenTimeRef.current = null;
+    }
+  }, [msg.isSeen, msg.id, isLastSentInGroup]);
+
+  if (!isLastSentInGroup) return null;
+  if (msg.type === 'call' || msg.type === 'deleted') return null;
+
+  const isSending = (msg as any).status === 'sending';
+  if (isSending) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px', fontSize: '0.68rem', color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)', marginTop: '2px', pointerEvents: 'none' }}>
+        <span>Sending...</span>
+      </div>
+    );
+  }
+
+  const formatAgo = (createdAt: any) => {
+    if (!createdAt) return 'just now';
+    const date = new Date(createdAt);
+    const now = new Date();
+    const diffSec = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 1000));
+    if (diffSec < 60) return 'just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
+
+  const statusText = msg.isSeen
+    ? 'Seen just now'
+    : `Sent ${formatAgo(msg.createdAt)}`;
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: '4px',
+        fontSize: '0.68rem',
+        fontWeight: 500,
+        color: msg.isSeen ? '#38bdf8' : (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)'),
+        marginTop: '3px',
+        userSelect: 'none',
+        pointerEvents: 'none',
+        opacity: isFaded ? 0 : 1,
+        transition: 'opacity 0.6s ease-out, color 0.3s ease',
+      }}
+    >
+      <span>{statusText}</span>
+      {msg.isSeen ? (
+        <span style={{ color: '#38bdf8', display: 'inline-flex', alignItems: 'center' }}>
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+            <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
+          </svg>
+        </span>
+      ) : (
+        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+          </svg>
+        </span>
+      )}
+    </div>
+  );
+});
+
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, hasPrevReactions, isLastSentInGroup, chatSwipeOffset, onOpenAlbum }: any) => {
   const isDark = typeof document !== 'undefined' && (document.documentElement.classList.contains('dark') || document.body.classList.contains('dark'));
   if (msg.type === 'system') {
     const isThemeSystemMsg = msg.content.toLowerCase().includes('theme to') || msg.content.toLowerCase().includes('customize chat');
@@ -901,7 +991,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
 
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 6) {
         setIsSwiping(true);
-        const clampedOffset = diffX > 0 ? Math.min(diffX * 0.6, 85) : 0;
+        const clampedOffset = diffX > 0 ? Math.min(diffX * 0.6, 85) : Math.max(diffX * 0.75, -85);
         setSwipeOffset(clampedOffset);
       }
     };
@@ -956,6 +1046,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           if (navigator.vibrate) navigator.vibrate(30);
           (e.currentTarget as any)._hapticsTriggered = true;
         }
+      } else if (diffX < 0) {
+        setIsSwiping(true);
+        const clampedOffset = Math.max(diffX * 0.75, -85);
+        setSwipeOffset(clampedOffset);
       }
     }
   };
@@ -1012,15 +1106,39 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         padding: '0',
         userSelect: 'none',
         position: 'relative',
-        marginBottom: hasReactions ? '14px' : (isNextSameSender ? '1px' : '4px'),
+        marginTop: hasPrevReactions ? '14px' : (isPrevSameSender ? '1px' : '4px'),
+        marginBottom: hasReactions ? '16px' : (isNextSameSender ? '1px' : '4px'),
         transition: isSwiping
           ? 'none'
           : 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)',
-        transform: effectiveSwipeOffset > 0
+        transform: effectiveSwipeOffset !== 0
           ? `translateX(${effectiveSwipeOffset}px)`
           : 'none',
       }}
     >
+      {/* Revealed Timestamp on Swipe Left (Instagram / iOS Messages style) */}
+      <div
+        className="revealed-swipe-timestamp"
+        style={{
+          position: 'absolute',
+          right: '-75px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          opacity: effectiveSwipeOffset < -6 ? Math.min(1, Math.abs(effectiveSwipeOffset) / 38) : 0,
+          transition: isSwiping ? 'none' : 'opacity 0.22s ease',
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          fontSize: '0.70rem',
+          fontWeight: 500,
+          color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.5)',
+          whiteSpace: 'nowrap',
+          letterSpacing: '-0.01em',
+        }}
+      >
+        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+      </div>
+
       {!isSent && !isAI && (
         <img
           src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.avif'}
@@ -1287,7 +1405,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
               <div
                 style={{
                   position: 'absolute',
-                  bottom: '-9px',
+                  bottom: '-10px',
                   [isSent ? 'right' : 'left']: '8px',
                   display: 'flex',
                   gap: '3px',
@@ -1327,47 +1445,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         );
       })()}
 
-      {/* Timestamp row: displayed under the LAST message of a consecutive group */}
-      {(() => {
-        const isSending = (msg as any).status === 'sending';
-        const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
-        // Only show time + tick under the LAST message in a consecutive group
-        if (isNextSameSender) return null;
-        if (msg.type === 'call') return null;
-        const timeStr = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-        return (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '3px',
-              fontSize: '0.68rem',
-              color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)',
-              marginTop: hasReactions ? '4px' : '2px',
-              userSelect: 'none',
-              pointerEvents: 'none',
-            }}
-          >
-            <span>{timeStr}</span>
-            {isSent && (
-              isSending ? (
-                <span className="inline-flex items-center animate-bounce" title="Sending..." style={{ color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)' }}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="19" x2="12" y2="5" />
-                    <polyline points="5 12 12 5 19 12" />
-                  </svg>
-                </span>
-              ) : !isDeletedMsg && (
-                <span className={`seen-status ${msg.isSeen ? 'seen' : ''}`} style={{ color: msg.isSeen ? '#38bdf8' : (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)') }}>
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                    <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-                  </svg>
-                </span>
-              )
-            )}
-          </div>
-        );
-      })()}
+      {/* Status indicator row under the last sent message */}
+      {isSent && (
+        <SentMessageStatus msg={msg} isDark={isDark} isLastSentInGroup={isLastSentInGroup} />
+      )}
       </div>
     </div>
   );
@@ -1807,6 +1888,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [chatSwipeOffset, setChatSwipeOffset] = useState<number>(0);
   const chatTouchStartX = useRef<number>(0);
   const chatTouchStartY = useRef<number>(0);
+  const isDraggingContainerMouse = useRef<boolean>(false);
 
   const handleContainerTouchStart = (e: React.TouchEvent) => {
     chatTouchStartX.current = e.touches[0].clientX;
@@ -1817,13 +1899,40 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const diffX = e.touches[0].clientX - chatTouchStartX.current;
     const diffY = e.touches[0].clientY - chatTouchStartY.current;
     if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 6) {
-      const offset = Math.max(-95, Math.min(95, diffX * 0.75));
+      const offset = Math.max(-85, Math.min(85, diffX * 0.75));
       setChatSwipeOffset(offset);
     }
   };
 
   const handleContainerTouchEnd = () => {
     setChatSwipeOffset(0);
+  };
+
+  const handleContainerMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    chatTouchStartX.current = e.clientX;
+    chatTouchStartY.current = e.clientY;
+    isDraggingContainerMouse.current = true;
+
+    const handleMouseMoveContainer = (moveEv: MouseEvent) => {
+      if (!isDraggingContainerMouse.current) return;
+      const diffX = moveEv.clientX - chatTouchStartX.current;
+      const diffY = moveEv.clientY - chatTouchStartY.current;
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 6) {
+        const offset = Math.max(-85, Math.min(85, diffX * 0.75));
+        setChatSwipeOffset(offset);
+      }
+    };
+
+    const handleMouseUpContainer = () => {
+      isDraggingContainerMouse.current = false;
+      window.removeEventListener('mousemove', handleMouseMoveContainer);
+      window.removeEventListener('mouseup', handleMouseUpContainer);
+      setChatSwipeOffset(0);
+    };
+
+    window.addEventListener('mousemove', handleMouseMoveContainer);
+    window.addEventListener('mouseup', handleMouseUpContainer);
   };
 
   const [inputValue, setInputValue] = useState('');
@@ -4321,7 +4430,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     onTouchStart={handleContainerTouchStart}
                     onTouchMove={handleContainerTouchMove}
                     onTouchEnd={handleContainerTouchEnd}
-                    className="messages"
+                    onMouseDown={handleContainerMouseDown}
+                    className="messages overflow-x-hidden"
                   >
                     {isLoadingMessages && messages.length === 0 && (
                       <div className="chat-skeleton-container">
@@ -4344,6 +4454,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         const nextMsg = filteredMessages[index + 1];
                         const isPrevSameSender = prevMsg && String(prevMsg.senderId) === String(msg.senderId);
                         const isNextSameSender = nextMsg && String(nextMsg.senderId) === String(msg.senderId);
+                        const hasPrevReactions = prevMsg && Array.isArray(prevMsg.reactions) && prevMsg.reactions.length > 0;
+                        const isLastSentInGroup = (!nextMsg || String(nextMsg.senderId) !== String(msg.senderId)) && String(msg.senderId) === String((session?.user as any)?.id);
                         const showSep = !prevMsg || new Date(prevMsg.createdAt).toDateString() !== new Date(msg.createdAt).toDateString();
                         return (
                           <React.Fragment key={msg.id}>
@@ -4373,6 +4485,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                 onOpenThemePicker={() => setShowThemePicker(true)}
                                 isPrevSameSender={isPrevSameSender}
                                 isNextSameSender={isNextSameSender}
+                                hasPrevReactions={hasPrevReactions}
+                                isLastSentInGroup={isLastSentInGroup}
                                 chatSwipeOffset={chatSwipeOffset}
                                 onOpenAlbum={setSelectedAlbum}
                               />
