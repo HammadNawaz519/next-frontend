@@ -1219,179 +1219,45 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                   {msg.type === 'video' && (
                     <div
                       className="relative cursor-pointer group"
-              <div 
-                className="reply-preview-bubble"
-                style={{
-                  padding: '5px 10px',
-                  marginBottom: '6px',
-                  borderRadius: '10px',
-                  background: isSent ? 'rgba(0, 0, 0, 0.18)' : 'rgba(0, 0, 0, 0.06)',
-                  borderLeft: `3px solid ${isSent ? '#ffffff' : (activeTheme?.accentColor || '#6366f1')}`,
-                  fontSize: '0.82rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '2px',
-                  cursor: 'pointer'
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const targetEl = document.getElementById(`msg-item-${msg.replyTo.id}`);
-                  if (targetEl) {
-                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    targetEl.classList.add('reply-highlight-pulse');
-                    setTimeout(() => targetEl.classList.remove('reply-highlight-pulse'), 1500);
-                  }
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, fontSize: '0.75rem', opacity: 0.9 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                    <polyline points="9 17 4 12 9 7" />
-                    <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
-                  </svg>
-                  <span>{msg.replyTo.senderName || (msg.replyTo.senderId === currentUserId ? 'You' : (selectedUser?.name || 'User'))}</span>
-                </div>
-                <div style={{ opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '220px' }}>
-                  {msg.replyTo.type === 'image' ? '📷 Photo' : 
-                   msg.replyTo.type === 'video' ? '📹 Video' : 
-                   msg.replyTo.type === 'voice' ? '🎤 Voice message' : 
-                   msg.replyTo.type === 'file' ? '📁 File' : 
-                   msg.replyTo.content}
-                </div>
-              </div>
-            )}
-
-            {/* AI message badge */}
-            {isAI && (
-              <div className="ai-badge">
-                <span className="ai-dot" />
-                <span>AI Assistant</span>
-              </div>
-            )}
-
-            {/* Media Content */}
-            {isMedia && (
-              <div style={{ borderRadius: '1.25rem', overflow: 'hidden', position: 'relative' }}>
-                {msg.type === 'image' && (
-                  <img
-                    src={msg.mediaUrl || msg.content}
-                    alt="Shared image"
-                    className="chat-media-img"
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: '340px',
-                      borderRadius: '1.25rem',
-                      objectFit: 'cover',
-                      display: 'block',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => onPreviewImage && onPreviewImage(msg.mediaUrl || msg.content)}
-                  />
-                )}
-                {msg.type === 'video' && (
-                  <div style={{ position: 'relative', maxWidth: '100%', maxHeight: '340px', borderRadius: '1.25rem', overflow: 'hidden', cursor: 'pointer' }} onClick={() => onPreviewMedia && onPreviewMedia(msg.mediaUrl || msg.content, 'video')}>
-                    <video
-                      src={msg.mediaUrl || msg.content}
-                      className="chat-media-video"
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '340px',
-                        borderRadius: '1.25rem',
-                        display: 'block',
-                        objectFit: 'cover',
+                      onClick={e => {
+                        e.stopPropagation();
+                        if (onPreviewMedia) onPreviewMedia(msg.content, 'video');
+                        else if (onPreviewImage) onPreviewImage(msg.content);
                       }}
-                      controls={false}
-                    />
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)' }}>
-                      <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-                      </div>
+                    >
+                      <video
+                        src={msg.content}
+                        controls
+                        style={{ userSelect: 'none', WebkitUserSelect: 'none', display: 'block', maxWidth: '100%' }}
+                        onContextMenu={e => { e.preventDefault(); e.stopPropagation(); handleContextMenu(e); }}
+                      />
                     </div>
-                  </div>
-                )}
-                {msg.type === 'media_album' && (
-                  <div className="media-album-grid" onClick={() => onOpenAlbum && onOpenAlbum(msg)}>
-                    {(() => {
-                      let albumItems: any[] = [];
-                      try {
-                        albumItems = typeof msg.content === 'string' ? JSON.parse(msg.content) : (msg.content || []);
-                      } catch {
-                        albumItems = [];
-                      }
-                      const displayItems = albumItems.slice(0, 4);
-                      const extraCount = albumItems.length - 4;
-                      return displayItems.map((item: any, idx: number) => (
-                        <div key={idx} style={{ position: 'relative', width: '100%', height: '110px', borderRadius: '10px', overflow: 'hidden', background: '#111' }}>
-                          {item.type === 'video' ? (
-                            <video src={item.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <img src={item.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          )}
-                          {idx === 3 && extraCount > 0 && (
-                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>
-                              +{extraCount}
-                            </div>
-                          )}
-                        </div>
-                      ));
-                    })()}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Voice Note */}
-            {msg.type === 'voice' && (
-              <VoiceMessagePlayer audioUrl={msg.mediaUrl || msg.content} isSent={isSent} />
-            )}
-
-            {/* File Attachment */}
-            {msg.type === 'file' && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '4px 2px',
-                  cursor: 'pointer',
-                }}
-                onClick={() => window.open(msg.mediaUrl || msg.content, '_blank')}
-              >
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '10px',
-                    background: isSent ? 'rgba(255,255,255,0.2)' : 'var(--dm-bg-active)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                  </svg>
+                  )}
                 </div>
-                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{msg.fileName || 'Attachment'}</div>
-                  <div style={{ fontSize: '0.72rem', opacity: 0.75 }}>Click to download</div>
-                </div>
-              </div>
-            )}
-
-            {/* Text Message Content */}
-            {!isMedia && msg.type !== 'voice' && (
+              )
+            ) : (
               <>
+                {msg.type === 'voice' && <audio src={msg.content} controls />}
+                {msg.type === 'file' && (
+                  <div className="file-attachment">
+                    <a href={msg.content} target="_blank" rel="noreferrer">
+                      Download File
+                    </a>
+                  </div>
+                )}
                 {msg.type === 'call' && (
-                  <div className="call-info-badge">
-                    <div className={`call-icon-wrap ${msg.content.includes('video') ? 'video' : 'audio'}`}>
+                  <div className="call-log-msg">
+                    <div className={`call-icon ${msg.content.includes('Missed') ? 'missed' : msg.content.includes('rejected') ? 'rejected' : 'completed'}`}>
                       {msg.content.includes('video') ? (
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" /></svg>
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>
                       ) : (
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" /></svg>
                       )}
                       {(msg.content.includes('Missed') || msg.content.includes('rejected')) && <div className="call-status-badge">!</div>}
+                    </div>
+                    <div className="call-details">
+                      <span className="call-title">{msg.content.split(' • ')[0]}</span>
+                      {msg.content.includes(' • ') && <span className="call-duration">{msg.content.split(' • ')[1]}</span>}
                     </div>
                   </div>
                 )}
