@@ -702,70 +702,87 @@ export default function DashboardPage() {
           <div className="w-full h-full flex flex-col min-h-0 relative" style={{ background: 'var(--dm-bg-main)' }}>
             
             {/* Top Search Action Bar */}
-            <div className="px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-2 flex-shrink-0">
+            <div className="px-3 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-2 flex-shrink-0">
               <div 
                 onClick={() => setIsSearchOverlayOpen(true)}
-                className="flex items-center gap-3 px-4 py-3 rounded-full cursor-pointer transition-all duration-300 border hover:border-zinc-400"
+                className="flex items-center gap-3 px-4 py-2.5 rounded-full cursor-pointer transition-all duration-300 border hover:border-zinc-400"
                 style={{
                   background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
                   borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
                 }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}>
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <span className="text-sm font-light" style={{ color: 'var(--dm-text-muted)' }}>Search people...</span>
+                <span className="text-sm font-normal" style={{ color: 'var(--dm-text-muted)' }}>Search by username...</span>
               </div>
             </div>
 
-            {/* Explore mixed Grid */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-20 pt-2">
+            {/* Explore Reels Grid - Edge-to-edge 0px padding, large 2-col vertical reels format */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-0 pb-24 pt-0.5 w-full">
               {isExploreLoading ? (
-                <div className="grid grid-cols-3 gap-1">
-                  {[...Array(15)].map((_, i) => (
-                    <div key={i} className="w-full h-36 rounded-lg animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+                <div className="grid grid-cols-2 gap-[2px] w-full px-0">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="w-full aspect-[9/16] animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
                   ))}
                 </div>
+              ) : explorePosts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center mb-3" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }}>
+                    <svg className="w-8 h-8 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                    </svg>
+                  </div>
+                  <p className="text-base font-semibold" style={{ color: 'var(--dm-text-primary)' }}>No reels yet</p>
+                  <p className="text-xs text-zinc-500 mt-1">Uploaded video reels will appear here.</p>
+                </div>
               ) : (
-                <div className="grid grid-cols-3 gap-0">
+                <div className="grid grid-cols-2 gap-[2px] w-full px-0">
                   {explorePosts.map((post: any) => (
                     <div
-                    key={post.id}
-                    onClick={(e) => handleOpenOtherProfile(post.user.id, post.user, e)}
-                    className="aspect-[4/5] relative cursor-pointer overflow-hidden group"
-                    style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
-                  >
-                    {post.thumbnailUrl ? (
-                      <img 
-                        src={post.thumbnailUrl} 
-                        alt="explore post" 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center" style={{ background: isDark ? '#1a1a1f' : '#f4f4f5' }}>
-                        <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}>
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider">{post.postType}</span>
-                      </div>
-                    )}
-                    
-                    {/* Media Type Indicators */}
-                    <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md p-1.5 rounded-full z-10">
-                      {post.postType === 'reel' ? (
-                        <svg width="12" height="12" fill="#fff" viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/></svg>
+                      key={post.id}
+                      onClick={() => setActiveView('reels')}
+                      className="aspect-[9/16] relative cursor-pointer overflow-hidden group w-full"
+                      style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
+                    >
+                      {post.thumbnailUrl || post.imageUrl ? (
+                        <img 
+                          src={post.thumbnailUrl || post.imageUrl} 
+                          alt="reel" 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
                       ) : (
-                        <svg width="12" height="12" fill="#fff" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center bg-zinc-900">
+                          <svg className="w-8 h-8 mb-1 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                          </svg>
+                        </div>
                       )}
-                    </div>
+                      
+                      {/* Reels glyph badge top right */}
+                      <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-md p-1.5 rounded-full z-10">
+                        <svg width="13" height="13" fill="#fff" viewBox="0 0 24 24">
+                          <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/>
+                        </svg>
+                      </div>
 
-                    {/* Overlay info */}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-2.5">
-                      <p className="text-[11px] font-semibold text-white truncate">@{post.user?.username || 'user'}</p>
+                      {/* Bottom creator info */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2.5 pointer-events-none">
+                        <div className="flex items-center gap-1.5 mb-1 pointer-events-auto" onClick={(e) => { e.stopPropagation(); handleOpenOtherProfile(post.user?.id, post.user, e); }}>
+                          <img
+                            src={post.user?.image || '/Avatar.avif'}
+                            alt=""
+                            className="w-5 h-5 rounded-full object-cover border border-white/40"
+                          />
+                          <p className="text-[12px] font-semibold text-white truncate drop-shadow">@{post.user?.username || 'user'}</p>
+                        </div>
+                        {post.caption && (
+                          <p className="text-[11px] text-white/90 line-clamp-1 drop-shadow font-light">{post.caption}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
               )}
             </div>
 
@@ -794,7 +811,7 @@ export default function DashboardPage() {
                   <input
                     type="text"
                     autoFocus
-                    placeholder="Type name or username..."
+                    placeholder="Search @username..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="flex-1 h-10 px-4 rounded-full text-sm font-light border focus:outline-none"
@@ -834,8 +851,8 @@ export default function DashboardPage() {
                                   )}
                                 </div>
                                 <div>
-                                  <p className="text-sm font-semibold" style={{ color: 'var(--dm-text-primary)' }}>{item.name || 'User'}</p>
-                                  <p className="text-xs text-zinc-500">@{item.username || 'username'}</p>
+                                  <p className="text-sm font-semibold" style={{ color: 'var(--dm-text-primary)' }}>@{item.username || 'username'}</p>
+                                  {item.name && <p className="text-xs text-zinc-500">{item.name}</p>}
                                 </div>
                               </div>
                               <button
@@ -853,19 +870,19 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-zinc-500">Search Results</p>
+                      <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-zinc-500">Users</p>
                       {isSearching ? (
                         <div className="flex items-center justify-center py-8 gap-3">
                           <div className="w-5 h-5 rounded-full border-2 border-t-transparent border-orange-500 animate-spin" />
-                          <span className="text-sm text-zinc-500">Searching...</span>
+                          <span className="text-sm text-zinc-500">Searching usernames...</span>
                         </div>
                       ) : searchResults.length === 0 ? (
                         <div className="flex flex-col items-center py-10 gap-3">
                           <svg className="w-10 h-10 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                           </svg>
-                          <p className="text-sm font-medium text-zinc-500">No results for "{searchQuery}"</p>
-                          <p className="text-xs text-zinc-400">Try a different name, username, or email</p>
+                          <p className="text-sm font-medium text-zinc-500">No user found matching "@{searchQuery.replace(/^@/, '')}"</p>
+                          <p className="text-xs text-zinc-400">Search strictly by exact or partial @username</p>
                         </div>
                       ) : (
                         <div className="space-y-1">
@@ -890,8 +907,8 @@ export default function DashboardPage() {
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold truncate" style={{ color: 'var(--dm-text-primary)' }}>{item.name || 'User'}</p>
-                                <p className="text-xs truncate" style={{ color: 'var(--dm-text-muted)' }}>@{item.username || 'username'}{item._count?.followers ? ` · ${item._count.followers} followers` : ''}</p>
+                                <p className="text-sm font-bold truncate" style={{ color: 'var(--dm-text-primary)' }}>@{item.username || 'username'}</p>
+                                <p className="text-xs truncate" style={{ color: 'var(--dm-text-muted)' }}>{item.name || 'User'}{item._count?.followers ? ` · ${item._count.followers} followers` : ''}</p>
                               </div>
                               <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}>
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

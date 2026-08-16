@@ -854,10 +854,15 @@ export async function deletePostAction(postId: string) {
 
 export async function getExploreContent() {
   return await (prisma as any).post.findMany({
+    where: {
+      postType: 'reel'
+    },
     orderBy: { createdAt: 'desc' },
     take: 60,
     include: {
-      user: { select: { id: true, name: true, username: true, email: true, image: true, isPrivate: true } }
+      user: { select: { id: true, name: true, username: true, email: true, image: true, isPrivate: true } },
+      likes: { select: { userId: true } },
+      comments: { select: { id: true } }
     }
   });
 }
@@ -889,11 +894,7 @@ export async function searchUsers(query: string) {
   return await (prisma.user as any).findMany({
     where: {
       id: { not: currentUser.id },
-      OR: [
-        { name: { contains: q, mode: 'insensitive' } },
-        { username: { contains: q, mode: 'insensitive' } },
-        { email: { contains: q, mode: 'insensitive' } },
-      ]
+      username: { contains: q, mode: 'insensitive' }
     },
     select: { id: true, name: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true },
     take: 40,
