@@ -2748,11 +2748,10 @@
 
 .social-chat-container .theme-sea-side .msg.received,
 .social-chat-container .theme-sea-side .msg.ai {
-  background: rgba(255, 235, 245, 0.94) !important;
-  color: #831843 !important;
-  border: 1px solid rgba(244, 114, 182, 0.28) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  background: #E83F78 !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .social-chat-container .theme-sea-side .ig-type-box {
@@ -2788,11 +2787,10 @@
 
 [data-theme="dark"] .social-chat-container .theme-sea-side .msg.received,
 [data-theme="dark"] .social-chat-container .theme-sea-side .msg.ai {
-  background: rgba(80, 7, 45, 0.88) !important;
-  color: #fdf2f8 !important;
-  border: 1px solid rgba(244, 114, 182, 0.32) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  background: #E83F78 !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 [data-theme="dark"] .social-chat-container .theme-sea-side .ig-type-box {
