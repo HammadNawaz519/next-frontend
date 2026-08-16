@@ -823,7 +823,7 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup }: { msg: any, 
   const isSending = (msg as any).status === 'sending';
   if (isSending) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px', fontSize: '0.68rem', color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)', marginTop: '2px', pointerEvents: 'none' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px', fontSize: '0.68rem', fontWeight: 600, color: isDark ? '#e4e4e7' : '#18181b', marginTop: '2px', pointerEvents: 'none' }}>
         <span>Sending...</span>
       </div>
     );
@@ -855,8 +855,8 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup }: { msg: any, 
         justifyContent: 'flex-end',
         gap: '4px',
         fontSize: '0.68rem',
-        fontWeight: 500,
-        color: msg.isSeen ? '#38bdf8' : (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)'),
+        fontWeight: 600,
+        color: msg.isSeen ? '#38bdf8' : (isDark ? '#e4e4e7' : '#18181b'),
         marginTop: '3px',
         userSelect: 'none',
         pointerEvents: 'none',
