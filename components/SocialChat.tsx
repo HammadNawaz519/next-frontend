@@ -1040,7 +1040,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         alignItems: isSent ? 'flex-end' : 'flex-start',
         order: isSent ? 2 : 1,
         minWidth: 0,
-        maxWidth: '75%',
+        maxWidth: '78%',
         width: 'fit-content',
       }}>
       {(() => {
@@ -1254,7 +1254,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
                   </div>
                 )}
                 {msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
-                  <div style={{ fontSize: '0.98rem', lineHeight: '1.45', wordBreak: 'break-word' }}>
+                  <div style={{ fontSize: '1.01rem', lineHeight: '1.44', letterSpacing: '-0.01em', wordBreak: 'break-word' }}>
                     <span>{msg.content}</span>
                   </div>
                 ) : null}

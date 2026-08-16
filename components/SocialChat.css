@@ -299,10 +299,11 @@
 }
 
 .social-chat-container .msg {
-  padding: 7px 13px;
-  border-radius: 1.25rem;
-  font-size: 0.94rem;
-  line-height: 1.45;
+  padding: 8px 14px;
+  border-radius: 1.35rem;
+  font-size: 1.01rem;
+  line-height: 1.44;
+  letter-spacing: -0.01em;
   position: relative;
   word-wrap: break-word;
   transition: background-color 200ms var(--ease-ig), color 200ms var(--ease-ig), border-color 200ms var(--ease-ig);
@@ -2119,8 +2120,8 @@
   border: none;
   outline: none;
   resize: none;
-  font-size: 15px;
-  line-height: 20px;
+  font-size: 16px;
+  line-height: 22px;
   max-height: 100px;
   font-family: inherit;
   scrollbar-width: none;
