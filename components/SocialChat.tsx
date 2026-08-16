@@ -1121,10 +1121,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         className="revealed-swipe-timestamp"
         style={{
           position: 'absolute',
-          right: '-75px',
+          right: '-50px',
           top: '50%',
           transform: 'translateY(-50%)',
-          opacity: effectiveSwipeOffset < -6 ? Math.min(1, Math.abs(effectiveSwipeOffset) / 38) : 0,
+          opacity: effectiveSwipeOffset < -6 ? Math.min(1, Math.abs(effectiveSwipeOffset) / 35) : 0,
           transition: isSwiping ? 'none' : 'opacity 0.22s ease',
           pointerEvents: 'none',
           display: 'flex',
@@ -4449,13 +4449,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     )}
                     {(() => {
                       const filteredMessages = messages.filter(msg => msg.type !== 'accepted');
+                      const currentUserIdStr = String((session?.user as any)?.id);
+                      const lastSentMsg = [...filteredMessages].reverse().find(m => String(m.senderId) === currentUserIdStr && m.type !== 'system' && m.type !== 'call' && m.type !== 'deleted');
+                      const lastSentMsgId = lastSentMsg ? lastSentMsg.id : null;
+
                       return filteredMessages.map((msg, index) => {
                         const prevMsg = filteredMessages[index - 1];
                         const nextMsg = filteredMessages[index + 1];
                         const isPrevSameSender = prevMsg && String(prevMsg.senderId) === String(msg.senderId);
                         const isNextSameSender = nextMsg && String(nextMsg.senderId) === String(msg.senderId);
                         const hasPrevReactions = prevMsg && Array.isArray(prevMsg.reactions) && prevMsg.reactions.length > 0;
-                        const isLastSentInGroup = (!nextMsg || String(nextMsg.senderId) !== String(msg.senderId)) && String(msg.senderId) === String((session?.user as any)?.id);
+                        const isLatestSentInThread = msg.id === lastSentMsgId;
                         const showSep = !prevMsg || new Date(prevMsg.createdAt).toDateString() !== new Date(msg.createdAt).toDateString();
                         return (
                           <React.Fragment key={msg.id}>
@@ -4486,7 +4490,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                 isPrevSameSender={isPrevSameSender}
                                 isNextSameSender={isNextSameSender}
                                 hasPrevReactions={hasPrevReactions}
-                                isLastSentInGroup={isLastSentInGroup}
+                                isLastSentInGroup={isLatestSentInThread}
                                 chatSwipeOffset={chatSwipeOffset}
                                 onOpenAlbum={setSelectedAlbum}
                               />
