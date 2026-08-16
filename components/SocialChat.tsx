@@ -792,7 +792,8 @@ const ChatItem = memo(({
   );
 });
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, chatSwipeOffset, onOpenAlbum, isDark }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, chatSwipeOffset, onOpenAlbum }: any) => {
+  const isDark = typeof document !== 'undefined' && (document.documentElement.classList.contains('dark') || document.body.classList.contains('dark'));
   if (msg.type === 'system') {
     const isThemeSystemMsg = msg.content.toLowerCase().includes('theme to') || msg.content.toLowerCase().includes('customize chat');
     
@@ -4374,7 +4375,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                 isNextSameSender={isNextSameSender}
                                 chatSwipeOffset={chatSwipeOffset}
                                 onOpenAlbum={setSelectedAlbum}
-                                isDark={isDark}
                               />
                             </div>
                           </React.Fragment>
