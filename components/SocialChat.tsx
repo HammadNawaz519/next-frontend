@@ -882,7 +882,7 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup }: { msg: any, 
   );
 });
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, hasPrevReactions, isLastSentInGroup, chatSwipeOffset, onOpenAlbum }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, hasPrevReactions, isLastSentInGroup, chatSwipeOffset, onContainerSwipeOffset, onOpenAlbum }: any) => {
   const isDark = typeof document !== 'undefined' && (document.documentElement.classList.contains('dark') || document.body.classList.contains('dark'));
   if (msg.type === 'system') {
     const isThemeSystemMsg = msg.content.toLowerCase().includes('theme to') || msg.content.toLowerCase().includes('customize chat');
@@ -931,7 +931,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
   const isSwipingHorizontally = useRef<boolean | null>(null);
-  const effectiveSwipeOffset = swipeOffset !== 0 ? swipeOffset : (chatSwipeOffset || 0);
+  const effectiveSwipeOffset = swipeOffset > 0 ? swipeOffset : (chatSwipeOffset || 0);
 
   // Long-press
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -991,8 +991,13 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
 
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 6) {
         setIsSwiping(true);
-        const clampedOffset = diffX > 0 ? Math.min(diffX * 0.6, 85) : Math.max(diffX * 0.75, -85);
-        setSwipeOffset(clampedOffset);
+        if (diffX > 0) {
+          const clampedOffset = Math.min(diffX * 0.6, 85);
+          setSwipeOffset(clampedOffset);
+        } else {
+          const clampedOffset = Math.max(diffX * 0.75, -85);
+          if (onContainerSwipeOffset) onContainerSwipeOffset(clampedOffset);
+        }
       }
     };
 
@@ -1001,6 +1006,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
       window.removeEventListener('mousemove', handleMouseMoveWindow);
       window.removeEventListener('mouseup', handleMouseUpWindow);
       handlePointerUp();
+      if (onContainerSwipeOffset) onContainerSwipeOffset(0);
       setSwipeOffset(prev => {
         if (prev > 40) {
           if (navigator.vibrate) navigator.vibrate(30);
@@ -1049,13 +1055,14 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
       } else if (diffX < 0) {
         setIsSwiping(true);
         const clampedOffset = Math.max(diffX * 0.75, -85);
-        setSwipeOffset(clampedOffset);
+        if (onContainerSwipeOffset) onContainerSwipeOffset(clampedOffset);
       }
     }
   };
 
   const handleTouchEnd = () => {
     handlePointerUp();
+    if (onContainerSwipeOffset) onContainerSwipeOffset(0);
     if (swipeOffset > 40) {
       if (navigator.vibrate) navigator.vibrate(30);
       onReply(msg);
@@ -1085,7 +1092,6 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
   };
 
   const hasReactions = Object.keys(reactionCounts).length > 0;
-  const hasTimeRow = !isNextSameSender && msg.type !== 'call';
 
   return (
     <div
@@ -1121,10 +1127,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
         className="revealed-swipe-timestamp"
         style={{
           position: 'absolute',
-          right: '-50px',
+          right: '-52px',
           top: '50%',
           transform: 'translateY(-50%)',
-          opacity: effectiveSwipeOffset < -6 ? Math.min(1, Math.abs(effectiveSwipeOffset) / 35) : 0,
+          opacity: effectiveSwipeOffset < -6 ? Math.min(1, Math.abs(effectiveSwipeOffset) / 30) : 0,
           transition: isSwiping ? 'none' : 'opacity 0.22s ease',
           pointerEvents: 'none',
           display: 'flex',
@@ -1146,7 +1152,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
           className="msg-small-avatar"
           style={{
             visibility: isNextSameSender ? 'hidden' : 'visible',
-            marginBottom: hasTimeRow ? '18px' : '0px',
+            marginBottom: '2px',
             flexShrink: 0,
           }}
           referrerPolicy="no-referrer"
@@ -4492,6 +4498,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                 hasPrevReactions={hasPrevReactions}
                                 isLastSentInGroup={isLatestSentInThread}
                                 chatSwipeOffset={chatSwipeOffset}
+                                onContainerSwipeOffset={setChatSwipeOffset}
                                 onOpenAlbum={setSelectedAlbum}
                               />
                             </div>
