@@ -265,8 +265,8 @@
   flex-direction: column;
   gap: 2px;
   background-color: transparent;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 45px), rgba(0, 0, 0, 0.3) calc(100% - 15px), transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 45px), rgba(0, 0, 0, 0.3) calc(100% - 15px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 105px), rgba(0, 0, 0, 0.88) calc(100% - 45px), rgba(0, 0, 0, 0.5) calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 105px), rgba(0, 0, 0, 0.88) calc(100% - 45px), rgba(0, 0, 0, 0.5) calc(100% - 20px), transparent 100%);
 }
 
 .social-chat-container .messages::-webkit-scrollbar {
