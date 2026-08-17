@@ -135,6 +135,62 @@ export const formatDateSeparator = (date: Date): string => {
   return `${monthStr} ${d.getDate()}`;
 };
 
+export interface PendingQueueItem {
+  tempId: string;
+  receiverId: string;
+  receiverEmail?: string;
+  content: string;
+  type: string;
+  createdAt: string;
+  replyTo?: any;
+  themeId?: string;
+}
+
+export const getPendingQueue = (): PendingQueueItem[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem('social_pending_messages');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+export const savePendingQueue = (queue: PendingQueueItem[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('social_pending_messages', JSON.stringify(queue));
+  } catch (e) {}
+};
+
+export const addToPendingQueue = (item: PendingQueueItem) => {
+  const queue = getPendingQueue();
+  if (!queue.some(q => q.tempId === item.tempId)) {
+    queue.push(item);
+    savePendingQueue(queue);
+  }
+};
+
+export const removeFromPendingQueue = (tempId: string) => {
+  const queue = getPendingQueue().filter(q => q.tempId !== tempId);
+  savePendingQueue(queue);
+};
+
+export const getPendingMessagesForUser = (userId: string, currentUserId: string): any[] => {
+  const queue = getPendingQueue().filter(q => q.receiverId === userId);
+  return queue.map(p => ({
+    id: p.tempId,
+    senderId: currentUserId,
+    receiverId: p.receiverId,
+    content: p.content,
+    type: p.type as any,
+    createdAt: new Date(p.createdAt),
+    isSeen: false,
+    replyTo: p.replyTo,
+    status: 'sending'
+  }));
+};
+
 export const FONT_OPTIONS = [
   { id: 'default', name: 'Default', family: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
   { id: 'bubble', name: 'Bubble', family: "'Comfortaa', 'Fredoka', cursive, sans-serif" },
@@ -1859,6 +1915,59 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   }, []);
 
   const [requests, setRequests] = useState<User[]>([]);
+  const isFlushingRef = useRef(false);
+  const socketRef = useRef<any>(null);
+
+  const flushPendingQueue = useCallback(async () => {
+    if (isFlushingRef.current) return;
+    const queue = getPendingQueue();
+    if (queue.length === 0) return;
+
+    isFlushingRef.current = true;
+    for (const item of queue) {
+      try {
+        if (socketRef.current) {
+          socketRef.current.emit('send_social_message', {
+            id: item.tempId,
+            senderId: (sessionRef.current?.user as any)?.id,
+            receiverId: item.receiverId,
+            content: item.content,
+            type: item.type,
+            createdAt: item.createdAt,
+            isSeen: false,
+            replyTo: item.replyTo,
+            receiverEmail: item.receiverEmail
+          });
+        }
+
+        const savedMsg = await saveSocialMessage(item.receiverId, item.content, item.type, item.replyTo ?? null);
+        if (savedMsg) {
+          removeFromPendingQueue(item.tempId);
+          const normalized = normalizeMsg(savedMsg as any);
+          setMessages(prev => prev.map(m => m.id === item.tempId ? { ...normalized, id: normalized.id || item.tempId, status: undefined } : m));
+          setMessagesCache(prev => {
+            const current = prev[item.receiverId] || [];
+            return {
+              ...prev,
+              [item.receiverId]: current.map(m => m.id === item.tempId ? { ...normalized, id: normalized.id || item.tempId, status: undefined } : m)
+            };
+          });
+        }
+      } catch (e) {
+        console.warn("Will retry sending pending message when back online:", item.tempId, e);
+      }
+    }
+    isFlushingRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleOnline = () => {
+      flushPendingQueue();
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [flushPendingQueue]);
   // PWA Notification Deep-linking URL Parser: Automatically selects active chat conversation
   useEffect(() => {
     if (typeof window === 'undefined' || users.length === 0) return;
@@ -2362,6 +2471,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       newSocket.on('connect', () => {
         console.log('Socket connected');
         setIsConnected(true);
+        socketRef.current = newSocket;
+        flushPendingQueue();
         if (onStatusChange) onStatusChange(true);
         if (sessionRef.current?.user) {
           const userObj = sessionRef.current.user as any;
@@ -2910,6 +3021,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       newSocket.on('reconnect', () => {
         console.log('Socket reconnected - re-identifying...');
         setIsConnected(true);
+        socketRef.current = newSocket;
+        flushPendingQueue();
         if (onStatusChange) onStatusChange(true);
         // Re-identify immediately so socket rooms are rebuilt after network change
         const userObj = sessionRef.current?.user as any;
@@ -2949,7 +3062,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               const now = Date.now();
               const inFlight = prev.filter(m => {
                 const mTime = new Date(m.createdAt).getTime();
-                return !isMatchInDb(m) && (now - mTime < 15000) && (mTime >= earliestDbTime);
+                const isPending = (m as any).status === 'sending' || getPendingQueue().some(p => p.tempId === m.id);
+                return !isMatchInDb(m) && (isPending || (now - mTime < 300000)) && (mTime >= earliestDbTime);
               });
 
               return [...olderInPrev, ...dbMsgs, ...inFlight].sort(
@@ -3033,7 +3147,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 const now = Date.now();
                 const inFlight = prev.filter(m => {
                   const mTime = new Date(m.createdAt).getTime();
-                  return !isMatchInDb(m) && (now - mTime < 15000) && (mTime >= earliestDbTime);
+                  const isPending = (m as any).status === 'sending' || getPendingQueue().some(p => p.tempId === m.id);
+                  return !isMatchInDb(m) && (isPending || (now - mTime < 300000)) && (mTime >= earliestDbTime);
                 });
 
                 return [...olderInPrev, ...dbMsgs, ...inFlight].sort(
@@ -3388,8 +3503,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           setHasMoreMessages(true);
         }
 
-        setMessages(fresh);
-        setMessagesCache(prev => ({ ...prev, [selectedUser.id]: fresh }));
+        const currentSenderId = (sessionRef.current?.user as any)?.id || '';
+        const pendingMsgs = getPendingMessagesForUser(selectedUser.id, currentSenderId);
+        const freshIds = new Set(fresh.map(m => m.id));
+        const uncommittedPending = pendingMsgs.filter(p => !freshIds.has(p.id));
+
+        const merged = [...fresh, ...uncommittedPending].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+
+        setMessages(merged);
+        setMessagesCache(prev => ({ ...prev, [selectedUser.id]: merged }));
 
         const detectedFreshTheme = detectThemeIdFromMessages(fresh);
         if (detectedFreshTheme && selectedUser) {
@@ -3573,9 +3697,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         const nextList = [updatedUser, ...filtered];
         allContactsRef.current = nextList;
         return nextList;
-      });
-    }
-
     const currentReplyTo = replyToMessage ? {
       id: replyToMessage.id,
       content: replyToMessage.type === 'voice' ? '🎙️ Voice Clip' : replyToMessage.type === 'image' ? '📷 Photo' : replyToMessage.content,
@@ -3606,8 +3727,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       createdAt: new Date(),
       isSeen: false,
       replyTo: currentReplyTo,
+      status: 'sending',
       ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
     } as any;
+
+    addToPendingQueue({
+      tempId: stableId,
+      receiverId: selectedUser.id,
+      receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+      content: currentContent,
+      type: 'text',
+      createdAt: optimisticMsg.createdAt.toISOString(),
+      replyTo: currentReplyTo,
+      themeId: activeThemeId
+    });
 
     setMessages(prev => [...prev, optimisticMsg]);
     setMessagesCache(prev => {
@@ -3626,13 +3759,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       // Background DB Save – pass replyTo so it's persisted in the database
       const savedMsg = await saveSocialMessage(selectedUser.id, currentContent, 'text', currentReplyTo ?? null);
       if (savedMsg) {
+        removeFromPendingQueue(stableId);
         const normalized = normalizeMsg(savedMsg as any);
         setMessages(prev => prev.map(m => {
           if (m.id === stableId) {
             return {
               ...normalized,
               id: normalized.id || stableId,
-              isSeen: m.isSeen || normalized.isSeen || false
+              isSeen: m.isSeen || normalized.isSeen || false,
+              status: undefined
             };
           }
           return m;
