@@ -1918,7 +1918,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const isFlushingRef = useRef(false);
   const socketRef = useRef<any>(null);
 
-  const flushPendingQueue = useCallback(async () => {
+  const flushPendingQueue = React.useCallback(async () => {
     if (isFlushingRef.current) return;
     const queue = getPendingQueue();
     if (queue.length === 0) return;
@@ -3697,6 +3697,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         const nextList = [updatedUser, ...filtered];
         allContactsRef.current = nextList;
         return nextList;
+      });
+    }
+
     const currentReplyTo = replyToMessage ? {
       id: replyToMessage.id,
       content: replyToMessage.type === 'voice' ? '🎙️ Voice Clip' : replyToMessage.type === 'image' ? '📷 Photo' : replyToMessage.content,
