@@ -865,19 +865,6 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup }: { msg: any, 
       }}
     >
       <span>{statusText}</span>
-      {msg.isSeen ? (
-        <span style={{ color: isDark ? '#e4e4e7' : '#18181b', display: 'inline-flex', alignItems: 'center' }}>
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
-            <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17l-4.24-4.24-1.41 1.41 5.66 5.66L23.66 7l-1.42-1.41z" />
-          </svg>
-        </span>
-      ) : (
-        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-          </svg>
-        </span>
-      )}
     </div>
   );
 });
