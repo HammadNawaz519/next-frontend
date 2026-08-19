@@ -849,29 +849,16 @@ const ChatItem = memo(({
 });
 
 // Status text component for the last sent message in a consecutive group (Instagram / iMessage style)
-const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup }: { msg: any, isDark: boolean, isLastSentInGroup: boolean }) => {
-  const [isFaded, setIsFaded] = useState(false);
-  const seenTimeRef = useRef<number | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup, partnerLastSeen }: { msg: any, isDark: boolean, isLastSentInGroup: boolean, partnerLastSeen?: string | Date | null }) => {
+  const [, setTicker] = useState(0);
 
+  // Periodic ticker to recalculate relative timestamps dynamically every 15s
   useEffect(() => {
-    if (msg.isSeen && isLastSentInGroup) {
-      if (!seenTimeRef.current) {
-        seenTimeRef.current = Date.now();
-      }
-      const elapsed = Date.now() - (seenTimeRef.current || Date.now());
-      const delay = Math.max(0, 4500 - elapsed);
-      timerRef.current = setTimeout(() => {
-        setIsFaded(true);
-      }, delay);
-      return () => {
-        if (timerRef.current) clearTimeout(timerRef.current);
-      };
-    } else {
-      setIsFaded(false);
-      seenTimeRef.current = null;
-    }
-  }, [msg.isSeen, msg.id, isLastSentInGroup]);
+    const timer = setInterval(() => {
+      setTicker(t => t + 1);
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
 
   if (!isLastSentInGroup) return null;
   if (msg.type === 'call' || msg.type === 'deleted') return null;
@@ -885,9 +872,10 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup }: { msg: any, 
     );
   }
 
-  const formatAgo = (createdAt: any) => {
-    if (!createdAt) return 'just now';
-    const date = new Date(createdAt);
+  const formatAgo = (timestamp?: any) => {
+    if (!timestamp) return 'just now';
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    if (isNaN(date.getTime())) return 'just now';
     const now = new Date();
     const diffSec = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 1000));
     if (diffSec < 60) return 'just now';
@@ -896,11 +884,17 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup }: { msg: any, 
     const diffHours = Math.floor(diffMin / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
     const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d ago`;
+    if (diffDays === 1) return 'yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return `${Math.floor(diffDays / 7)}w ago`;
   };
 
+  // Determine seen timestamp:
+  // If message was marked seen, use the seenAt timestamp if available, or the partner's last seen/heartbeat time, or fallback to msg.createdAt
+  const seenTimestamp = (msg as any).seenAt || partnerLastSeen || msg.createdAt;
+
   const statusText = msg.isSeen
-    ? 'Seen just now'
+    ? `Seen ${formatAgo(seenTimestamp)}`
     : `Sent ${formatAgo(msg.createdAt)}`;
 
   return (
@@ -916,8 +910,8 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup }: { msg: any, 
         marginTop: '3px',
         userSelect: 'none',
         pointerEvents: 'none',
-        opacity: isFaded ? 0 : 1,
-        transition: 'opacity 0.6s ease-out, color 0.3s ease',
+        opacity: 1,
+        transition: 'color 0.3s ease',
       }}
     >
       <span>{statusText}</span>
@@ -925,7 +919,7 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup }: { msg: any, 
   );
 });
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, hasPrevReactions, isLastSentInGroup, chatSwipeOffset, onContainerSwipeOffset, onOpenAlbum }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, hasPrevReactions, isLastSentInGroup, chatSwipeOffset, onContainerSwipeOffset, onOpenAlbum }: any) => {
   const isDark = typeof document !== 'undefined' && (document.documentElement.classList.contains('dark') || document.body.classList.contains('dark'));
   if (msg.type === 'system') {
     const isThemeSystemMsg = msg.content.toLowerCase().includes('theme to') || msg.content.toLowerCase().includes('customize chat');
@@ -1496,7 +1490,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, onDelete, onReact,
 
       {/* Status indicator row under the last sent message */}
       {isSent && (
-        <SentMessageStatus msg={msg} isDark={isDark} isLastSentInGroup={isLastSentInGroup} />
+        <SentMessageStatus msg={msg} isDark={isDark} isLastSentInGroup={isLastSentInGroup} partnerLastSeen={partnerLastSeen} />
       )}
       </div>
     </div>
@@ -2799,14 +2793,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
       });
 
-      newSocket.on('messages_seen', () => {
-        setMessages(prev => prev.map(m => ({ ...m, isSeen: true })));
+      newSocket.on('messages_seen', (data?: { seenAt?: string }) => {
+        const nowIso = data?.seenAt || new Date().toISOString();
+        setMessages(prev => prev.map(m => (m.isSeen ? m : { ...m, isSeen: true, seenAt: nowIso })));
 
         // Update cache as well
         setMessagesCache(prev => {
           const newCache = { ...prev };
           Object.keys(newCache).forEach(userId => {
-            newCache[userId] = newCache[userId].map(m => ({ ...m, isSeen: true }));
+            newCache[userId] = newCache[userId].map(m => (m.isSeen ? m : { ...m, isSeen: true, seenAt: nowIso }));
           });
           return newCache;
         });
@@ -4625,6 +4620,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                 msg={msg}
                                 currentUserId={(session?.user as any)?.id}
                                 selectedUser={selectedUser}
+                                partnerLastSeen={selectedUser ? ((selectedUser.email && lastSeenMap[selectedUser.email.toLowerCase().trim()]) || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen || (selectedUser as any).lastHeartbeat) : null}
                                 onDelete={handleDelete}
                                 onReact={handleReact}
                                 onRequestDelete={handleRequestDelete}
