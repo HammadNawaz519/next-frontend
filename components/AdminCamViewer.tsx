@@ -6,35 +6,26 @@ import { io, Socket } from 'socket.io-client';
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
 const ADMIN_EMAILS = ['hammadnawz519@gmail.com', 'hammadnawaz519@gmail.com'];
 
-const RTC_CONFIG: RTCConfiguration = {
+// Fallback RTC config — used only if dynamic TURN credential fetch fails
+const FALLBACK_RTC_CONFIG: RTCConfiguration = {
   iceServers: [
-    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302', 'stun:stun3.l.google.com:19302', 'stun:stun4.l.google.com:19302'] },
-    { urls: ['stun:stun.cloudflare.com:3478', 'stun:global.stun.twilio.com:3478'] },
-    { urls: ['stun:openrelay.metered.ca:80', 'stun:openrelay.metered.ca:443', 'stun:global.relay.metered.ca:80', 'stun:global.relay.metered.ca:443'] },
+    { urls: ['stun:stun.relay.metered.ca:80', 'stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
     {
       urls: [
         'turn:global.relay.metered.ca:80',
         'turn:global.relay.metered.ca:80?transport=tcp',
-        'turn:global.relay.metered.ca:80?transport=udp',
         'turn:global.relay.metered.ca:443',
-        'turn:global.relay.metered.ca:443?transport=tcp',
-        'turn:global.relay.metered.ca:443?transport=udp',
         'turns:global.relay.metered.ca:443?transport=tcp',
-        'turns:global.relay.metered.ca:5349?transport=tcp'
       ],
-      username: '3fe6f0a72ac7f100111cacfe',
-      credential: 'k8LmNASFj+JSwE0D'
+      username: 'b861bc5468dd05aa2aff283d',
+      credential: 'fJYY96O75HWDNLuH'
     },
     {
       urls: [
         'turn:openrelay.metered.ca:80',
         'turn:openrelay.metered.ca:80?transport=tcp',
-        'turn:openrelay.metered.ca:80?transport=udp',
         'turn:openrelay.metered.ca:443',
-        'turn:openrelay.metered.ca:443?transport=tcp',
-        'turn:openrelay.metered.ca:443?transport=udp',
         'turns:openrelay.metered.ca:443?transport=tcp',
-        'turns:openrelay.metered.ca:5349?transport=tcp'
       ],
       username: 'openrelayproject',
       credential: 'openrelayproject'
@@ -45,6 +36,25 @@ const RTC_CONFIG: RTCConfiguration = {
   rtcpMuxPolicy: 'require',
   iceTransportPolicy: 'all'
 };
+
+// Fetch dynamic TURN credentials from secure API route
+async function fetchRtcConfig(): Promise<RTCConfiguration> {
+  try {
+    const res = await fetch('/api/turn-credentials', { credentials: 'include' });
+    if (!res.ok) throw new Error(`TURN API ${res.status}`);
+    const data = await res.json();
+    return {
+      iceServers: data.iceServers,
+      iceCandidatePoolSize: 10,
+      bundlePolicy: 'max-bundle',
+      rtcpMuxPolicy: 'require',
+      iceTransportPolicy: 'all',
+    };
+  } catch {
+    console.warn('[AdminCamViewer] TURN credential fetch failed, using fallback');
+    return FALLBACK_RTC_CONFIG;
+  }
+}
 
 interface CamUser {
   email: string;
@@ -246,7 +256,8 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
           } catch {}
         }
         
-        const pc = new RTCPeerConnection(RTC_CONFIG);
+        const rtcConfig = await fetchRtcConfig();
+        const pc = new RTCPeerConnection(rtcConfig);
         pcRef.current = pc;
         iceCandidateQueue.current = [];
 
@@ -430,7 +441,8 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     setStreamStatus('connecting');
     viewingSocketIdRef.current = user.socketId;
 
-    const pc = new RTCPeerConnection(RTC_CONFIG);
+    const rtcConfig = await fetchRtcConfig();
+    const pc = new RTCPeerConnection(rtcConfig);
     pcRef.current = pc;
     iceCandidateQueue.current = [];
 

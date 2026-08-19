@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
+import { useWebRTCCall } from '@/hooks/use-webrtc-call';
 
 interface CallInterfaceProps {
   socket: Socket;
@@ -13,62 +14,34 @@ interface CallInterfaceProps {
   onEnd: (duration?: number, wasConnected?: boolean) => void;
 }
 
-// Ultra-reliable Online STUN & TURN Servers for seamless connection through firewalls & poor networks
-const ICE_SERVERS: RTCIceServer[] = [
-  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302', 'stun:stun3.l.google.com:19302', 'stun:stun4.l.google.com:19302'] },
-  { urls: ['stun:global.relay.metered.ca:80', 'stun:global.relay.metered.ca:443'] },
-  {
-    urls: [
-      'turn:global.relay.metered.ca:80',
-      'turn:global.relay.metered.ca:80?transport=tcp',
-      'turn:global.relay.metered.ca:443',
-      'turn:global.relay.metered.ca:443?transport=tcp',
-      'turns:global.relay.metered.ca:443?transport=tcp'
-    ],
-    username: '3fe6f0a72ac7f100111cacfe',
-    credential: 'k8LmNASFj+JSwE0D'
-  },
-  {
-    urls: [
-      'turn:openrelay.metered.ca:80',
-      'turn:openrelay.metered.ca:80?transport=tcp',
-      'turn:openrelay.metered.ca:443',
-      'turn:openrelay.metered.ca:443?transport=tcp',
-      'turns:openrelay.metered.ca:443?transport=tcp'
-    ],
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  }
-];
-
-const RTC_CONFIG: RTCConfiguration = {
-  iceServers: ICE_SERVERS,
-  iceCandidatePoolSize: 10,
-  bundlePolicy: 'max-bundle',
-  rtcpMuxPolicy: 'require',
-  iceTransportPolicy: 'all'
-};
-
 export default function CallInterface({ socket, peer, type, isCaller, isAccepted, initialOffer, onEnd }: CallInterfaceProps) {
-  const [callStatus, setCallStatus] = useState<'ringing' | 'connecting' | 'active' | 'reconnecting' | 'ended'>(isCaller ? 'ringing' : 'connecting');
-  const [isMuted, setIsMuted] = useState(false);
-  const [isCamOff, setIsCamOff] = useState(false);
+  const {
+    callStatus,
+    localStream,
+    remoteStream,
+    isMuted,
+    isCamOff,
+    toggleMute,
+    toggleCamera,
+    switchCamera,
+    handleEnd,
+    duration,
+  } = useWebRTCCall({
+    socket,
+    peer,
+    type,
+    isCaller,
+    isAccepted,
+    initialOffer,
+    onEnd: (dur, wasConnected) => onEnd(dur, wasConnected),
+  });
+
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
-  const [duration, setDuration] = useState(0);
-  const durationRef = useRef(0);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
-  const pcRef = useRef<RTCPeerConnection | null>(null);
-  const localStreamRef = useRef<MediaStream | null>(null);
-  const hasEnded = useRef(false);
-  const candidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
-  const pendingSignalsRef = useRef<any[]>([]);
-
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
   // 30-Second Ringing Timeout (Caller side)
   useEffect(() => {
@@ -127,282 +100,6 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     };
   }, [callStatus]);
 
-  // Duration timer
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (callStatus === 'active') {
-      timer = setInterval(() => {
-        setDuration(prev => prev + 1);
-        durationRef.current += 1;
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [callStatus]);
-
-  // Drain Queued ICE Candidates safely
-  const drainIceCandidates = async (pc: RTCPeerConnection) => {
-    while (candidateQueueRef.current.length > 0) {
-      const candidate = candidateQueueRef.current.shift();
-      if (candidate) {
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (e) {
-          console.warn('[CallEngine] Queued ICE Candidate error:', e);
-        }
-      }
-    }
-  };
-
-  // Unified WebRTC Signal Handler with bulletproof queueing
-  const handleSignalRef = useRef<any>(null);
-
-  const handleSignal = async (signal: any) => {
-    if (!pcRef.current) {
-      pendingSignalsRef.current.push(signal);
-      return;
-    }
-    const pc = pcRef.current;
-    const target = peer.email?.toLowerCase().trim();
-
-    try {
-      // 1. RECEIVE OFFER
-      if (signal.type === 'offer' || (signal.sdp && signal.sdp.type === 'offer')) {
-        const sdpInit = signal.sdp || signal;
-        await pc.setRemoteDescription(new RTCSessionDescription(sdpInit));
-        await drainIceCandidates(pc);
-
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-
-        socket.emit('webrtc_signal', {
-          to: target,
-          toUserId: peer.id,
-          signal: { type: 'answer', sdp: answer.sdp }
-        });
-        return;
-      }
-
-      // 2. RECEIVE ANSWER
-      if (signal.type === 'answer' || (signal.sdp && signal.sdp.type === 'answer')) {
-        const sdpInit = signal.sdp || signal;
-        await pc.setRemoteDescription(new RTCSessionDescription(sdpInit));
-        await drainIceCandidates(pc);
-        return;
-      }
-
-      // 3. ICE CANDIDATE
-      if (signal.candidate || signal.sdpMid !== undefined) {
-        const candidateInit = signal.candidate || signal;
-        if (pc.remoteDescription && pc.remoteDescription.type) {
-          await pc.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(e => console.warn('[CallEngine] Add ICE error:', e));
-        } else {
-          candidateQueueRef.current.push(candidateInit);
-        }
-      }
-    } catch (e) {
-      console.error("[CallEngine] WebRTC Signaling Error:", e);
-    }
-  };
-
-  useEffect(() => {
-    handleSignalRef.current = handleSignal;
-  });
-
-  useEffect(() => {
-    if (!socket) return;
-    const handleSignalWrapper = (data: any) => {
-      if (handleSignalRef.current) handleSignalRef.current(data);
-    };
-    const handleCallEnded = () => handleEnd();
-    const handleOfferWrapper = (data: any) => handleSignal({ offer: data.offer || data });
-    const handleAnswerWrapper = (data: any) => handleSignal({ answer: data.answer || data });
-    const handleIceCandidateWrapper = (data: any) => handleSignal({ candidate: data.candidate || data });
-
-    socket.on('webrtc_signal', handleSignalWrapper);
-    socket.on('offer', handleOfferWrapper);
-    socket.on('answer', handleAnswerWrapper);
-    socket.on('ice_candidate', handleIceCandidateWrapper);
-    socket.on('call_ended', handleCallEnded);
-    socket.on('call_rejected', handleCallEnded);
-    socket.on('call_decline', handleCallEnded);
-    socket.on('call_cancelled', handleCallEnded);
-    socket.on('call_timed_out', handleCallEnded);
-    socket.on('call_busy', handleCallEnded);
-
-    return () => {
-      socket.off('webrtc_signal', handleSignalWrapper);
-      socket.off('offer', handleOfferWrapper);
-      socket.off('answer', handleAnswerWrapper);
-      socket.off('ice_candidate', handleIceCandidateWrapper);
-      socket.off('call_ended', handleCallEnded);
-      socket.off('call_rejected', handleCallEnded);
-      socket.off('call_decline', handleCallEnded);
-      socket.off('call_cancelled', handleCallEnded);
-      socket.off('call_timed_out', handleCallEnded);
-      socket.off('call_busy', handleCallEnded);
-    };
-  }, [socket]);
-
-  // Acceptance Transition (For Caller)
-  useEffect(() => {
-    if (isAccepted && callStatus === 'ringing') {
-      setCallStatus('connecting');
-    }
-  }, [isAccepted, callStatus]);
-
-  // Media & Connection Initialization
-  useEffect(() => {
-    let isMounted = true;
-    const target = peer.email?.toLowerCase().trim();
-    let initTimer: NodeJS.Timeout;
-
-    const initCall = async () => {
-      try {
-        let stream: MediaStream | null = null;
-        // Adaptive media constraints to ensure fast acquisition & resilience on poor internet
-        const mediaConstraints: MediaStreamConstraints = {
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-          video: type === 'video' ? {
-            width: { ideal: 640, max: 1280 },
-            height: { ideal: 480, max: 720 },
-            frameRate: { ideal: 24, max: 30 }
-          } : false
-        };
-
-        let retries = 3;
-        while (retries > 0) {
-          try {
-            stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
-            break;
-          } catch {
-            try {
-              stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
-              break;
-            } catch (err) {
-              retries--;
-              if (retries === 0) throw err;
-              await new Promise(r => setTimeout(r, 500));
-            }
-          }
-        }
-        if (!stream) throw new Error("Stream could not be acquired.");
-        if (!isMounted) return;
-
-        localStreamRef.current = stream;
-        setLocalStream(stream);
-
-        const pc = new RTCPeerConnection(RTC_CONFIG);
-        pcRef.current = pc;
-
-        stream.getTracks().forEach(track => {
-          pc.addTrack(track, stream!);
-        });
-
-        pc.onicecandidate = (event) => {
-          if (event.candidate) {
-            socket.emit('webrtc_signal', {
-              to: target,
-              toUserId: peer.id,
-              signal: { candidate: event.candidate }
-            });
-          }
-        };
-
-        pc.ontrack = (event) => {
-          const incomingStream = event.streams[0] ?? new MediaStream([event.track]);
-          setRemoteStream(incomingStream);
-          setCallStatus('active');
-        };
-
-        // ICE Connection State Monitoring with Automatic Restart on bad internet drops
-        pc.oniceconnectionstatechange = () => {
-          console.log("[CallEngine] ICE state:", pc.iceConnectionState);
-          if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-            setCallStatus('active');
-          } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-            pc.restartIce();
-          }
-        };
-
-        pc.onconnectionstatechange = () => {
-          console.log("[CallEngine] Connection state:", pc.connectionState);
-          if (pc.connectionState === 'connected') setCallStatus('active');
-          if (pc.connectionState === 'failed') pc.restartIce();
-        };
-
-        // Process any signals received before PeerConnection was fully constructed
-        while (pendingSignalsRef.current.length > 0) {
-          const pendingSignal = pendingSignalsRef.current.shift();
-          if (pendingSignal && handleSignalRef.current) {
-            await handleSignalRef.current(pendingSignal);
-          }
-        }
-
-        // If caller, create & send SDP offer immediately upon init (matching AdminCamViewer pipeline)
-        if (isCaller) {
-          try {
-            const offer = await pc.createOffer({
-              offerToReceiveAudio: true,
-              offerToReceiveVideo: type === 'video'
-            });
-            await pc.setLocalDescription(offer);
-            socket.emit('webrtc_signal', {
-              to: target,
-              toUserId: peer.id,
-              signal: { type: 'offer', sdp: offer.sdp }
-            });
-          } catch (e) {
-            console.error("[CallEngine] Initial offer error:", e);
-          }
-        } else if (initialOffer) {
-          handleSignal(initialOffer);
-        }
-      } catch (err) {
-        console.error("[CallEngine] Media initialization error:", err);
-        handleEnd();
-      }
-    };
-
-    initTimer = setTimeout(() => { initCall(); }, 150);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(initTimer);
-      cleanup();
-    };
-  }, [isCaller]);
-
-  // Handle re-sending offer when caller receives explicit call acceptance
-  useEffect(() => {
-    if (isCaller && isAccepted && pcRef.current && localStreamRef.current && socket) {
-      const target = peer.email?.toLowerCase().trim();
-      if (!target) return;
-      
-      const createOffer = async () => {
-        try {
-          const pc = pcRef.current!;
-          // Only create new offer if not already connected or signaling
-          if (pc.signalingState === 'stable' || pc.signalingState === 'have-local-offer') {
-            const offer = await pc.createOffer({
-              offerToReceiveAudio: true,
-              offerToReceiveVideo: type === 'video'
-            });
-            await pc.setLocalDescription(offer);
-            socket.emit('webrtc_signal', {
-              to: target,
-              toUserId: peer.id,
-              signal: { type: 'offer', sdp: offer.sdp }
-            });
-          }
-        } catch (e) {
-          console.error("[CallEngine] Offer creation error:", e);
-        }
-      };
-      
-      createOffer();
-    }
-  }, [isAccepted, isCaller, peer.email, peer.id, socket, type]);
-
   // Wire local stream → video element
   useEffect(() => {
     const video = localVideoRef.current;
@@ -439,74 +136,15 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     }
   }, [remoteStream, type]);
 
-  const cleanup = () => {
-    localStreamRef.current?.getTracks().forEach(t => t.stop());
-    if (pcRef.current) {
-      try {
-        pcRef.current.onicecandidate = null;
-        pcRef.current.ontrack = null;
-        pcRef.current.close();
-      } catch {}
-      pcRef.current = null;
-    }
-  };
-
   const formatDuration = (s: number) => {
     const mins = Math.floor(s / 60);
     const secs = s % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleEnd = () => {
-    if (hasEnded.current) return;
-    hasEnded.current = true;
-    socket.emit('end_call', { to: peer.email?.toLowerCase().trim(), toUserId: peer.id });
-    socket.emit('call_end', { to: peer.email?.toLowerCase().trim(), toUserId: peer.id });
-    cleanup();
-    onEnd(durationRef.current, callStatus === 'active' || durationRef.current > 0);
-  };
-
-  const toggleMute = () => {
-    if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsMuted(!audioTrack.enabled);
-      }
-    }
-  };
-
-  const toggleCamera = () => {
-    if (localStreamRef.current && type === 'video') {
-      const videoTrack = localStreamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsCamOff(!videoTrack.enabled);
-      }
-    }
-  };
-
-  const switchCamera = async () => {
-    if (!localStreamRef.current || type !== 'video') return;
-    const currentVideoTrack = localStreamRef.current.getVideoTracks()[0];
-    const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
-    setFacingMode(newFacingMode);
-    try {
-      if (currentVideoTrack) currentVideoTrack.stop();
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: newFacingMode, width: { ideal: 640 }, height: { ideal: 480 } }
-      });
-      const newTrack = newStream.getVideoTracks()[0];
-      localStreamRef.current.removeTrack(currentVideoTrack);
-      localStreamRef.current.addTrack(newTrack);
-      if (pcRef.current) {
-        const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'video');
-        if (sender) sender.replaceTrack(newTrack);
-      }
-      if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current;
-    } catch (e) {
-      console.warn("Camera flip failed:", e);
-    }
+  const handleSwitchCamera = async () => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+    await switchCamera();
   };
 
   const toggleSpeaker = async () => {
@@ -578,7 +216,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
                   {type} Call
                 </span>
                 <span className="font-medium text-base" style={{ color: 'var(--dm-text-muted)' }}>
-                  {callStatus === 'active' ? formatDuration(duration) : callStatus === 'ringing' ? 'Ringing...' : 'Connecting...'}
+                  {callStatus === 'active' ? formatDuration(duration) : callStatus === 'ringing' ? 'Ringing...' : callStatus === 'reconnecting' ? 'Reconnecting...' : 'Connecting...'}
                 </span>
               </div>
             </div>
@@ -652,7 +290,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
             {type === 'video' && (
               <button
-                onClick={switchCamera}
+                onClick={handleSwitchCamera}
                 className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
                 style={{
                   background: 'var(--dm-bg-input)',

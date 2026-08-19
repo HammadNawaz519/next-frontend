@@ -2412,10 +2412,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }, [activeCall, onCallStateChange]);
 
-  // Ringing effect for incoming calls
+  // Ringing effect for incoming calls + 30s auto-timeout
   useEffect(() => {
     let ringInterval: NodeJS.Timeout;
     let audioCtx: AudioContext;
+    let incomingTimeout: NodeJS.Timeout;
 
     if (incomingCall && !activeCall) {
       try {
@@ -2442,10 +2443,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       } catch (e) {
         console.error("Audio API blocked");
       }
+
+      // Auto-timeout: if user doesn't answer within 30s, dismiss incoming call
+      incomingTimeout = setTimeout(() => {
+        console.log('[Call] Incoming call auto-timeout (30s)');
+        setIncomingCall(null);
+      }, 30000);
     }
 
     return () => {
       if (ringInterval) clearInterval(ringInterval);
+      if (incomingTimeout) clearTimeout(incomingTimeout);
       if (audioCtx && audioCtx.state !== 'closed') {
         audioCtx.close().catch(() => { });
       }
@@ -2831,6 +2839,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       newSocket.on('incoming_call', (data) => {
         console.log("Incoming call received:", data);
+        // Reject if already in a call (busy)
+        if (activeCall) {
+          newSocket.emit('reject_call', { to: data.from?.email?.toLowerCase().trim(), toUserId: data.from?.id, callId: data.callId });
+          return;
+        }
         setIncomingCall(data);
 
         // Stunning Custom Call Notification Trigger (vibrates with custom cadence!)
@@ -2852,18 +2865,36 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       });
 
       newSocket.on('call_rejected', () => {
+        console.log('[Call] Call was declined');
         setActiveCall(null);
         setIncomingCall(null);
-        alert('Call was declined.');
+      });
+
+      newSocket.on('call_decline', () => {
+        console.log('[Call] Call was declined (decline)');
+        setActiveCall(null);
+        setIncomingCall(null);
       });
 
       newSocket.on('call_busy', () => {
+        console.log('[Call] User is busy');
         setActiveCall(null);
-        alert('User is currently in another call.');
       });
 
       newSocket.on('call_ended', () => {
         console.log("Call ended by peer");
+        setActiveCall(null);
+        setIncomingCall(null);
+      });
+
+      newSocket.on('call_cancelled', () => {
+        console.log('[Call] Call was cancelled by caller');
+        setActiveCall(null);
+        setIncomingCall(null);
+      });
+
+      newSocket.on('call_timed_out', () => {
+        console.log('[Call] Call timed out');
         setActiveCall(null);
         setIncomingCall(null);
       });
