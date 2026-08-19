@@ -77,45 +77,15 @@ export default function CallInterface({
     };
   }, [callStatus, isCaller, peer.email, peer.id, socket, handleEnd]);
 
-  // Ringing Sound Effect & Haptics
+  // Haptics on Ringing (Sound effect removed)
   useEffect(() => {
-    let audioCtx: AudioContext | null = null;
-    let ringInterval: NodeJS.Timeout | null = null;
-
     if (callStatus === 'ringing') {
       try {
         if (typeof window !== 'undefined' && navigator.vibrate) {
-          navigator.vibrate([300, 200, 300, 200, 300]);
+          navigator.vibrate([200, 100, 200]);
         }
-        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const playRing = () => {
-          if (!audioCtx) return;
-          const oscillator = audioCtx.createOscillator();
-          const gainNode = audioCtx.createGain();
-          oscillator.type = 'sine';
-          oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
-          gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-          gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.1);
-          gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime + 1.2);
-          gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.3);
-          oscillator.connect(gainNode);
-          gainNode.connect(audioCtx.destination);
-          oscillator.start(audioCtx.currentTime);
-          oscillator.stop(audioCtx.currentTime + 1.5);
-        };
-        playRing();
-        ringInterval = setInterval(playRing, 3000);
-      } catch {
-        console.warn("Audio API not supported or blocked");
-      }
+      } catch {}
     }
-
-    return () => {
-      if (ringInterval) clearInterval(ringInterval);
-      if (audioCtx && audioCtx.state !== 'closed') {
-        audioCtx.close().catch(() => {});
-      }
-    };
   }, [callStatus]);
 
   // Wire local stream → video element

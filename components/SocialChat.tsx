@@ -2404,7 +2404,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const ringtoneRef = useRef<AudioContext | null>(null);
 
   // Notify parent of active call status to free up camera locks
   useEffect(() => {
@@ -2413,37 +2412,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }, [activeCall, onCallStateChange]);
 
-  // Ringing effect for incoming calls + 30s auto-timeout
+  // Incoming call auto-timeout (30s) + vibration (Sound effect removed)
   useEffect(() => {
-    let ringInterval: NodeJS.Timeout;
-    let audioCtx: AudioContext;
     let incomingTimeout: NodeJS.Timeout;
 
     if (incomingCall && !activeCall) {
       try {
-        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        ringtoneRef.current = audioCtx;
-
-        const playRing = () => {
-          const oscillator = audioCtx.createOscillator();
-          const gainNode = audioCtx.createGain();
-          oscillator.connect(gainNode);
-          gainNode.connect(audioCtx.destination);
-
-          oscillator.type = 'sine';
-          oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
-          gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
-
-          oscillator.start(audioCtx.currentTime);
-          oscillator.stop(audioCtx.currentTime + 1.5);
-        };
-
-        playRing();
-        ringInterval = setInterval(playRing, 3000);
-      } catch (e) {
-        console.error("Audio API blocked");
-      }
+        if (typeof window !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([200, 100, 200]);
+        }
+      } catch {}
 
       // Auto-timeout: if user doesn't answer within 30s, dismiss incoming call
       incomingTimeout = setTimeout(() => {
@@ -2453,11 +2431,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
 
     return () => {
-      if (ringInterval) clearInterval(ringInterval);
       if (incomingTimeout) clearTimeout(incomingTimeout);
-      if (audioCtx && audioCtx.state !== 'closed') {
-        audioCtx.close().catch(() => { });
-      }
     };
   }, [incomingCall, activeCall]);
   // 1. Stable Socket Instance
