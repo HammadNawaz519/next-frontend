@@ -793,11 +793,14 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                 </div>
 
                 {/* MAIN VIDEO STREAM CONTAINER */}
-                <div className="w-full h-full flex items-center justify-center bg-black overflow-hidden relative">
+                <div className="w-full h-full flex items-center justify-center bg-black overflow-hidden relative" style={{ background: '#000000' }}>
                   <video
                     ref={setVideoRef}
                     autoPlay
                     playsInline
+                    controls={false}
+                    disablePictureInPicture
+                    poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                     muted={isAudioMuted}
                     className="w-full h-full object-cover md:object-contain bg-black"
                     style={{ background: '#000000' }}

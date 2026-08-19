@@ -186,6 +186,7 @@ export default function CallInterface({
           muted
           controls={false}
           disablePictureInPicture
+          poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
           className={`absolute inset-0 w-full h-full object-cover z-0 ${callStatus !== 'active' ? 'mirror' : ''}`}
           style={{ background: '#000000' }}
         />
@@ -290,7 +291,16 @@ export default function CallInterface({
       {/* Video Call Local Floating Preview (PiP): ONLY shown when call is ACTIVE / connected */}
       {type === 'video' && callStatus === 'active' && (
         <div className="absolute top-[calc(4.5rem+env(safe-area-inset-top,0px))] right-4 w-24 h-36 sm:w-28 sm:h-40 rounded-2xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.7)] border-2 border-white/20 bg-[#162026] z-20 pointer-events-auto animate-in zoom-in-95 duration-300">
-          <video ref={localPipVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
+          <video
+            ref={localPipVideoRef}
+            autoPlay
+            playsInline
+            muted
+            controls={false}
+            disablePictureInPicture
+            poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+            className="w-full h-full object-cover mirror"
+          />
         </div>
       )}
 
@@ -573,7 +583,20 @@ export default function CallInterface({
         </div>
       )}
 
-      <style>{`.mirror { transform: scaleX(-1); }`}</style>
+      <style>{`
+        .mirror { transform: scaleX(-1); }
+        video::-webkit-media-controls,
+        video::-webkit-media-controls-start-playback-button,
+        video::-webkit-media-controls-play-button,
+        video::-webkit-media-controls-overlay-play-button,
+        video::-webkit-media-controls-enclosure,
+        video::-webkit-media-controls-panel {
+          display: none !important;
+          -webkit-appearance: none !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+        }
+      `}</style>
     </div>
   );
 }
