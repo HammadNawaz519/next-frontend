@@ -1791,6 +1791,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const handleSelectUser = (user: any, e: React.MouseEvent) => {
+    selectedUserRef.current = user;
     setShowChatDetails(false);
     setShowThemePicker(false);
     runCircleTransition(() => setSelectedUser(user), e.clientX, e.clientY, false);
@@ -3066,7 +3067,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         // Fetch any missed messages for the active chat
         const activeUser = selectedUserRef.current;
         if (activeUser) {
-          getSocialMessages(activeUser.id).then((history: any) => {
+          const activeUserId = activeUser.id;
+          getSocialMessages(activeUserId).then((history: any) => {
+            if (selectedUserRef.current?.id !== activeUserId) return;
             setMessages(prev => {
               const deletedRef = deletedMessageIds;
               const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
@@ -3103,7 +3106,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             });
             const normalizedHistory = (history as any[]).map(normalizeMsg);
             setMessagesCache((prev: any) => {
-              const existing = prev[activeUser.id] || [];
+              const existing = prev[activeUserId] || [];
               if (normalizedHistory.length === 0) return prev;
               const dbMsgIds = new Set(normalizedHistory.map(m => m.id));
               const earliestDbTime = new Date(normalizedHistory[0].createdAt).getTime();
@@ -3124,7 +3127,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 return mTime < earliestDbTime && !isMatchInDb(m);
               });
 
-              return { ...prev, [activeUser.id]: [...olderInExisting, ...normalizedHistory] };
+              return { ...prev, [activeUserId]: [...olderInExisting, ...normalizedHistory] };
             });
           }).catch(() => {});
         }
@@ -3151,7 +3154,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           // Sync latest messages for active chat after returning to tab
           const activeUser = selectedUserRef.current;
           if (activeUser) {
-            getSocialMessages(activeUser.id).then((history: any) => {
+            const activeUserId = activeUser.id;
+            getSocialMessages(activeUserId).then((history: any) => {
+              if (selectedUserRef.current?.id !== activeUserId) return;
               setMessages(prev => {
                 const deletedRef = deletedMessageIds;
                 const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
@@ -3188,7 +3193,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               });
               const normalizedHistory = (history as any[]).map(normalizeMsg);
               setMessagesCache((prev: any) => {
-                const existing = prev[activeUser.id] || [];
+                const existing = prev[activeUserId] || [];
                 if (normalizedHistory.length === 0) return prev;
                 const dbMsgIds = new Set(normalizedHistory.map(m => m.id));
                 const earliestDbTime = new Date(normalizedHistory[0].createdAt).getTime();
@@ -3209,7 +3214,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   return mTime < earliestDbTime && !isMatchInDb(m);
                 });
 
-                return { ...prev, [activeUser.id]: [...olderInExisting, ...normalizedHistory] };
+                return { ...prev, [activeUserId]: [...olderInExisting, ...normalizedHistory] };
               });
             }).catch(() => {});
           }
@@ -3483,13 +3488,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   // Load messages
   useEffect(() => {
+    let isCancelled = false;
+
     async function loadMessages() {
       if (!selectedUser) return;
+      const targetUserId = selectedUser.id;
       setSelectedMessageIds(new Set());
       setHasMoreMessages(true);
       setIsLoadingOlder(false);
 
-      const cached = messagesCache[selectedUser.id];
+      const cached = messagesCache[targetUserId];
       if (cached && cached.length > 0) {
         const filteredCached = cached
           .filter(m => !deletedMessageIds.has(m.id))
@@ -3498,10 +3506,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         const detectedCachedTheme = detectThemeIdFromMessages(filteredCached);
         if (detectedCachedTheme && selectedUser) {
           setChatThemes(prev => {
-            if (prev[selectedUser.id] === detectedCachedTheme) return prev;
+            if (prev[targetUserId] === detectedCachedTheme) return prev;
             const updated = {
               ...prev,
-              [selectedUser.id]: detectedCachedTheme,
+              [targetUserId]: detectedCachedTheme,
               ...(selectedUser.email ? { [selectedUser.email.toLowerCase().trim()]: detectedCachedTheme } : {}),
               ...(selectedUser.username ? { [selectedUser.username.toLowerCase().trim()]: detectedCachedTheme } : {})
             };
@@ -3520,10 +3528,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         setMessages([]); // Clear while loading if no cache
       }
 
-      setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, unseenCount: 0 } : u));
+      setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, unseenCount: 0 } : u));
 
       try {
-        const history = await getSocialMessages(selectedUser.id, 30);
+        const history = await getSocialMessages(targetUserId, 30);
+        if (isCancelled || selectedUserRef.current?.id !== targetUserId) return;
+
         // Filter out messages the user deleted locally (persisted in localStorage)
         const deletedRef = deletedMessageIds;
         const fresh = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
@@ -3535,7 +3545,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
 
         const currentSenderId = (sessionRef.current?.user as any)?.id || '';
-        const pendingMsgs = getPendingMessagesForUser(selectedUser.id, currentSenderId);
+        const pendingMsgs = getPendingMessagesForUser(targetUserId, currentSenderId);
         const freshIds = new Set(fresh.map(m => m.id));
         const uncommittedPending = pendingMsgs.filter(p => !freshIds.has(p.id));
 
@@ -3544,15 +3554,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         );
 
         setMessages(merged);
-        setMessagesCache(prev => ({ ...prev, [selectedUser.id]: merged }));
+        setMessagesCache(prev => ({ ...prev, [targetUserId]: merged }));
 
         const detectedFreshTheme = detectThemeIdFromMessages(fresh);
         if (detectedFreshTheme && selectedUser) {
           setChatThemes(prev => {
-            if (prev[selectedUser.id] === detectedFreshTheme) return prev;
+            if (prev[targetUserId] === detectedFreshTheme) return prev;
             const updated = {
               ...prev,
-              [selectedUser.id]: detectedFreshTheme,
+              [targetUserId]: detectedFreshTheme,
               ...(selectedUser.email ? { [selectedUser.email.toLowerCase().trim()]: detectedFreshTheme } : {}),
               ...(selectedUser.username ? { [selectedUser.username.toLowerCase().trim()]: detectedFreshTheme } : {})
             };
@@ -3563,10 +3573,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           });
         }
 
-        markMessagesAsSeen(selectedUser.id).catch(() => {});
+        markMessagesAsSeen(targetUserId).catch(() => {});
         socket?.emit('mark_as_seen', {
           senderEmail: selectedUser.email,
-          senderId: selectedUser.id
+          senderId: targetUserId
         });
 
         requestAnimationFrame(() => {
@@ -3577,10 +3587,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       } catch (err) {
         console.error("Failed to load messages:", err);
       } finally {
-        setIsLoadingMessages(false);
+        if (!isCancelled && selectedUserRef.current?.id === targetUserId) {
+          setIsLoadingMessages(false);
+        }
       }
     }
     loadMessages();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [selectedUser?.id]);
 
   // Load older historical messages on scroll up
