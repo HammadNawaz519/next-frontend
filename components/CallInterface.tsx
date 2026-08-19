@@ -185,11 +185,14 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
       <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
 
       {/* Main UI Layer */}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center" style={{ background: '#000000' }}>
+      <div 
+        className="relative z-10 w-full h-full flex flex-col items-center justify-center pointer-events-none" 
+        style={{ background: (type === 'video' && callStatus === 'active') ? 'transparent' : '#000000' }}
+      >
 
         {/* Timer (video only) */}
         {type === 'video' && callStatus === 'active' && (
-          <div className="absolute top-[calc(1.5rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 px-4 py-2 backdrop-blur-xl rounded-full shadow-lg flex items-center gap-3" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
+          <div className="absolute top-[calc(1.5rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 px-4 py-2 backdrop-blur-xl rounded-full shadow-lg flex items-center gap-3 pointer-events-auto" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
             <div className="w-1.5 h-1.5 bg-zinc-400 dark:bg-white rounded-full animate-pulse" />
             <span className="text-xs font-semibold tracking-wider" style={{ color: 'var(--dm-text-primary)' }}>{formatDuration(duration)}</span>
           </div>
@@ -197,7 +200,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         {/* Center Content (Audio Call or Ringing/Connecting) */}
         {(type === 'audio' || callStatus !== 'active') && (
-          <div className="flex flex-col items-center gap-6 text-center animate-in zoom-in duration-700">
+          <div className="flex flex-col items-center gap-6 text-center animate-in zoom-in duration-700 pointer-events-auto">
             <div className="relative">
               {callStatus === 'ringing' && (
                 <>
@@ -225,13 +228,13 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
         {/* Local Video (PiP) */}
         {type === 'video' && (
-          <div className="absolute top-[calc(1rem+env(safe-area-inset-top,0px))] right-4 md:top-[calc(1.5rem+env(safe-area-inset-top,0px))] md:right-6 w-24 h-32 md:w-32 md:h-44 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl z-20 group hover:scale-105 transition-transform duration-300" style={{ border: '2px solid var(--dm-border)', background: 'var(--dm-bg-sidebar)' }}>
+          <div className="absolute top-[calc(1rem+env(safe-area-inset-top,0px))] right-4 md:top-[calc(1.5rem+env(safe-area-inset-top,0px))] md:right-6 w-24 h-32 md:w-32 md:h-44 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl z-20 group hover:scale-105 transition-transform duration-300 pointer-events-auto" style={{ border: '2px solid var(--dm-border)', background: 'var(--dm-bg-sidebar)' }}>
             <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
           </div>
         )}
 
         {/* Action Bar */}
-        <div className="absolute bottom-4 md:bottom-5 left-1/2 -translate-x-1/2 w-fit min-w-[290px] md:min-w-[340px] max-w-[90vw] z-40">
+        <div className="absolute bottom-4 md:bottom-5 left-1/2 -translate-x-1/2 w-fit min-w-[290px] md:min-w-[340px] max-w-[90vw] z-40 pointer-events-auto">
           <div className="w-full flex items-center justify-between px-5 md:px-7 py-3 md:py-4 rounded-[2rem] md:rounded-full shadow-2xl border" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
 
             <button

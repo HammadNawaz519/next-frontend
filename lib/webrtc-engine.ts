@@ -640,13 +640,19 @@ export class WebRTCEngine {
     pc.ontrack = (event) => {
       console.log('[WebRTCEngine] Remote track received:', event.track.kind);
 
-      if (event.streams?.[0]) {
-        this._remoteStream = event.streams[0];
-      } else {
+      if (!receivedStream.getTracks().some(t => t.id === event.track.id)) {
         receivedStream.addTrack(event.track);
-        this._remoteStream = receivedStream;
       }
 
+      if (event.streams?.[0]) {
+        event.streams[0].getTracks().forEach(t => {
+          if (!receivedStream.getTracks().some(rt => rt.id === t.id)) {
+            receivedStream.addTrack(t);
+          }
+        });
+      }
+
+      this._remoteStream = receivedStream;
       this.emit('remoteStream', this._remoteStream);
 
       if (this._state === 'connecting' || this._state === 'reconnecting') {
