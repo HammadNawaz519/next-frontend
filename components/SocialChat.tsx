@@ -2565,11 +2565,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           if (selectedId !== partnerId && selectedId !== msgSenderId && selectedId !== msgReceiverId) return prev;
           const isDup = prev.some(m =>
             m.id === msg.id ||
-            (m.content === msg.content && String(m.senderId) === msgSenderId && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 25000)
+            (m.status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type)
           );
           if (isDup) {
             return prev.map(m =>
-              (m.id === msg.id || (m.content === msg.content && String(m.senderId) === msgSenderId && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 25000))
+              (m.id === msg.id || (m.status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type))
                 ? { ...m, ...msg, id: msg.id || m.id, status: 'sent' }
                 : m
             );
@@ -2584,12 +2584,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           const current = prev[cacheKey] || [];
           const isDup = current.some(m =>
             m.id === msg.id ||
-            (m.content === msg.content && String(m.senderId) === msgSenderId && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 25000)
+            (m.status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type)
           );
           let updatedList;
           if (isDup) {
             updatedList = current.map(m =>
-              (m.id === msg.id || (m.content === msg.content && String(m.senderId) === msgSenderId && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 25000))
+              (m.id === msg.id || (m.status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type))
                 ? { ...m, ...msg, id: msg.id || m.id, status: 'sent' }
                 : m
             );

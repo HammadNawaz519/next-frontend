@@ -261,16 +261,6 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         pcRef.current = pc;
         iceCandidateQueue.current = [];
 
-        if (stream) {
-          stream.getTracks().forEach(track => {
-            try {
-              pc.addTrack(track, stream);
-            } catch (e) {
-              console.warn('Track add error:', e);
-            }
-          });
-        }
-
         pc.onicecandidate = (e) => {
           if (e.candidate) {
             const candData = {
@@ -286,7 +276,26 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
           }
         };
 
+        // Set Remote Description FIRST to initialize incoming transceivers
         await pc.setRemoteDescription(new RTCSessionDescription(signal));
+
+        // Add local tracks to matching transceivers
+        if (stream) {
+          stream.getTracks().forEach(track => {
+            try {
+              const transceivers = pc.getTransceivers ? pc.getTransceivers() : [];
+              const matchingTransceiver = transceivers.find(t => t.receiver.track.kind === track.kind && !t.sender.track);
+              if (matchingTransceiver && matchingTransceiver.sender) {
+                matchingTransceiver.sender.replaceTrack(track);
+                matchingTransceiver.direction = 'sendonly';
+              } else {
+                pc.addTrack(track, stream);
+              }
+            } catch (e) {
+              console.warn('Track attach error:', e);
+            }
+          });
+        }
 
         // Drain queued ICE candidates
         while (iceCandidateQueue.current.length > 0) {
