@@ -273,10 +273,15 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
         pc.onicecandidate = (e) => {
           if (e.candidate) {
+            const candData = {
+              candidate: e.candidate.candidate,
+              sdpMid: e.candidate.sdpMid,
+              sdpMLineIndex: e.candidate.sdpMLineIndex,
+            };
             socket.emit('cam_signal', {
               targetSocketId: fromSocketId,
               targetEmail: fromEmail,
-              signal: e.candidate,
+              signal: candData,
             });
           }
         };
@@ -286,7 +291,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         // Drain queued ICE candidates
         while (iceCandidateQueue.current.length > 0) {
           const candidate = iceCandidateQueue.current.shift();
-          if (candidate) {
+          if (candidate && candidate.candidate) {
             await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
           }
         }
@@ -297,7 +302,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         socket.emit('cam_signal', {
           targetSocketId: fromSocketId,
           targetEmail: fromEmail,
-          signal: answer,
+          signal: { type: answer.type, sdp: answer.sdp },
         });
         return;
       }
@@ -309,7 +314,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
           // Drain queued ICE candidates
           while (iceCandidateQueue.current.length > 0) {
             const candidate = iceCandidateQueue.current.shift();
-            if (candidate) {
+            if (candidate && candidate.candidate) {
               await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
             }
           }
@@ -318,12 +323,24 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
       }
 
       // 3. ICE CANDIDATE SIGNAL
-      if (signal.candidate || signal.sdpMid !== undefined) {
-        const candidateInit: RTCIceCandidateInit = signal.candidate ? signal : signal;
-        if (pcRef.current && pcRef.current.remoteDescription && pcRef.current.remoteDescription.type) {
-          await pcRef.current.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(e => console.warn('ICE Candidate add error:', e));
-        } else {
-          iceCandidateQueue.current.push(candidateInit);
+      if (signal.candidate !== undefined || signal.sdpMid !== undefined || signal.sdpMLineIndex !== undefined) {
+        let candidateInit: RTCIceCandidateInit = signal;
+        if (signal.candidate && typeof signal.candidate === 'object') {
+          candidateInit = signal.candidate;
+        } else if (typeof signal.candidate === 'string') {
+          candidateInit = {
+            candidate: signal.candidate,
+            sdpMid: signal.sdpMid,
+            sdpMLineIndex: signal.sdpMLineIndex,
+          };
+        }
+
+        if (candidateInit && candidateInit.candidate) {
+          if (pcRef.current && pcRef.current.remoteDescription && pcRef.current.remoteDescription.type) {
+            await pcRef.current.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(e => console.warn('ICE Candidate add error:', e));
+          } else {
+            iceCandidateQueue.current.push(candidateInit);
+          }
         }
       }
     } catch (err) {
@@ -491,10 +508,15 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     pc.onicecandidate = (e) => {
       if (e.candidate && socketRef.current) {
         const targetSid = (user.socketId === 'admin-self-socket' && socketRef.current) ? socketRef.current.id : user.socketId;
+        const candData = {
+          candidate: e.candidate.candidate,
+          sdpMid: e.candidate.sdpMid,
+          sdpMLineIndex: e.candidate.sdpMLineIndex,
+        };
         socketRef.current.emit('cam_signal', {
           targetSocketId: targetSid,
           targetEmail: user.email ? user.email.toLowerCase().trim() : undefined,
-          signal: e.candidate,
+          signal: candData,
         });
       }
     };
@@ -528,7 +550,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
       socketRef.current?.emit('cam_signal', {
         targetSocketId: targetSid,
         targetEmail: user.email ? user.email.toLowerCase().trim() : undefined,
-        signal: offer,
+        signal: { type: offer.type, sdp: offer.sdp },
       });
     } catch (e) {
       console.error('Create offer error:', e);
