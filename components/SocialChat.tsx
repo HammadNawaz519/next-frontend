@@ -3425,13 +3425,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     // Mark online immediately — sets isOnline=true, lastSeen=now, lastHeartbeat=now in DB
     updateActivityStatus('online').catch(() => {});
 
-    // Socket heartbeat every 25s (lightweight — just updates lastHeartbeat via socket)
+    // Socket heartbeat every 25s (keeps WebSocket alive & updates presence on server with 0 Vercel requests)
     const heartbeatInterval = setInterval(() => {
       if (socket?.connected) {
         socket.emit('heartbeat', { userId: myId, email: myEmail });
       }
-      // DB heartbeat every 25s too (lightweight — only writes lastHeartbeat)
-      updateActivityStatus('heartbeat').catch(() => {});
     }, 25000);
 
     // Visibility: come back to foreground → go online again
