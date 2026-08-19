@@ -222,16 +222,16 @@ export default function CallInterface({
         </div>
       )}
 
-      {/* ─── 1. TOP HEADER ─────────────────────────────────────────────────── */}
+      {/* ─── 1. TOP HEADER (Back Button + Caller Info + Add Participant) ──── */}
       <div className="relative z-20 w-full pt-[calc(14px+env(safe-area-inset-top,0px))] px-5 pb-3 flex items-center justify-between pointer-events-auto">
-        {/* Left: Minimize / Diagonal Arrow Button */}
+        {/* Top-Left: Back Button */}
         <button
-          onClick={() => showToast("Call minimized")}
-          className="w-12 h-12 md:w-13 md:h-13 rounded-full flex items-center justify-center bg-[#1c2830]/80 hover:bg-[#253540] active:scale-90 text-white transition-all cursor-pointer shadow-lg backdrop-blur-md border border-white/10"
-          title="Minimize call"
+          onClick={handleEnd}
+          className="w-11 h-11 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-[#1c2830]/80 hover:bg-[#253540] active:scale-90 text-white transition-all cursor-pointer shadow-lg backdrop-blur-md border border-white/10"
+          title="Back"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 14h6v6m10-10h-6V4M10 14L3 21m11-11l7-7" />
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </button>
 
@@ -260,10 +260,10 @@ export default function CallInterface({
           </p>
         </div>
 
-        {/* Right: Add Participant Button */}
+        {/* Top-Right: Add Participant Button */}
         <button
           onClick={() => showToast("Group calling available soon")}
-          className="w-12 h-12 md:w-13 md:h-13 rounded-full flex items-center justify-center bg-[#1c2830]/80 hover:bg-[#253540] active:scale-90 text-white transition-all cursor-pointer shadow-lg backdrop-blur-md border border-white/10"
+          className="w-11 h-11 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-[#1c2830]/80 hover:bg-[#253540] active:scale-90 text-white transition-all cursor-pointer shadow-lg backdrop-blur-md border border-white/10"
           title="Add participant"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -301,7 +301,7 @@ export default function CallInterface({
           <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
           <button
             onClick={handleSwitchCamera}
-            className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/80 active:scale-90 transition-all cursor-pointer border border-white/10"
+            className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/80 active:scale-90 transition-all cursor-pointer border border-white/10 shadow-md"
             title="Flip camera"
           >
             <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
@@ -311,162 +311,230 @@ export default function CallInterface({
         </div>
       )}
 
-      {/* ─── 3. BOTTOM CONTROL PANEL (WhatsApp 3x2 Grid) ───────────────────── */}
+      {/* ─── 3. BOTTOM CONTROLS ────────────────────────────────────────────── */}
       <div className="w-full px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-2 flex flex-col items-center z-30 pointer-events-auto">
-        <div
-          className="w-full max-w-[420px] rounded-[32px] p-5 sm:p-6 bg-[#162026]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)]"
-          style={{ background: 'rgba(22, 32, 38, 0.95)' }}
-        >
-          <div className="grid grid-cols-3 gap-y-5 gap-x-2 sm:gap-x-4 place-items-center">
-
-            {/* 1. SPEAKER BUTTON */}
-            <div className="flex flex-col items-center gap-2">
-              <button
-                onClick={toggleSpeaker}
-                className={`w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
-                  isSpeakerOn
-                    ? 'bg-white text-[#111b21] shadow-lg'
-                    : 'bg-[#2a3942] hover:bg-[#344752] text-white'
-                }`}
-                title={isSpeakerOn ? "Speaker on" : "Speaker off"}
-              >
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                  {isSpeakerOn ? (
-                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
-                  ) : (
-                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                  )}
+        {type === 'video' ? (
+          /* ── VIDEO CALL: Clean Single-Row Toolbar (Video, Mic, Speaker, End) ── */
+          <div
+            className="w-auto max-w-[94vw] rounded-full px-6 py-4 bg-[#162026]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)] flex items-center gap-4 sm:gap-6"
+            style={{ background: 'rgba(22, 32, 38, 0.95)' }}
+          >
+            {/* 1. Video Turn On/Off */}
+            <button
+              onClick={toggleCamera}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
+                isCamOff
+                  ? 'bg-red-500/25 text-red-400 border border-red-500/30'
+                  : 'bg-[#2a3942] hover:bg-[#344752] text-white'
+              }`}
+              title={isCamOff ? "Turn Camera On" : "Turn Camera Off"}
+            >
+              {isCamOff ? (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m4 0h5a2 2 0 0 1 2 2v3m6-2v8l-6-4 6-4Z" />
+                  <line x1="2" y1="2" x2="22" y2="22" />
                 </svg>
-              </button>
-              <span className="text-xs font-medium text-white/90 tracking-wide">Speaker</span>
-            </div>
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m22 8-6 4 6 4V8Z" />
+                  <rect width="14" height="12" x="2" y="6" rx="2" ry="2" />
+                </svg>
+              )}
+            </button>
 
-            {/* 2. VIDEO / CAMERA BUTTON */}
-            <div className="flex flex-col items-center gap-2">
-              <button
-                onClick={type === 'video' ? toggleCamera : () => showToast("Upgrade to video call")}
-                className={`w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
-                  isCamOff
-                    ? 'bg-red-500/25 text-red-400 border border-red-500/30'
-                    : (type === 'video'
-                    ? 'bg-[#2a3942] text-white hover:bg-[#344752]'
-                    : 'bg-[#2a3942] hover:bg-[#344752] text-white')
-                }`}
-                title={type === 'video' ? (isCamOff ? "Turn Camera On" : "Turn Camera Off") : "Video"}
-              >
-                {isCamOff ? (
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m4 0h5a2 2 0 0 1 2 2v3m6-2v8l-6-4 6-4Z" />
-                    <line x1="2" y1="2" x2="22" y2="22" />
-                  </svg>
+            {/* 2. Mic Mute/Unmute */}
+            <button
+              onClick={toggleMute}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
+                isMuted
+                  ? 'bg-white text-[#111b21] shadow-lg'
+                  : 'bg-[#2a3942] hover:bg-[#344752] text-white'
+              }`}
+              title={isMuted ? "Unmute Microphone" : "Mute Microphone"}
+            >
+              {isMuted ? (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="2" y1="2" x2="22" y2="22" />
+                  <path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2" />
+                  <path d="M5 10v2a7 7 0 0 0 12 5" />
+                  <path d="M15 9.34V5a3 3 0 0 0-5.68-1.33" />
+                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
+                  <line x1="12" y1="19" x2="12" y2="22" />
+                </svg>
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="22" />
+                </svg>
+              )}
+            </button>
+
+            {/* 3. Speaker */}
+            <button
+              onClick={toggleSpeaker}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
+                isSpeakerOn
+                  ? 'bg-white text-[#111b21] shadow-lg'
+                  : 'bg-[#2a3942] hover:bg-[#344752] text-white'
+              }`}
+              title={isSpeakerOn ? "Speaker on" : "Speaker off"}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                {isSpeakerOn ? (
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
                 ) : (
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                )}
+              </svg>
+            </button>
+
+            {/* 4. End Call Button */}
+            <button
+              onClick={handleEnd}
+              className="w-14 h-14 rounded-full flex items-center justify-center bg-[#ea394b] hover:bg-[#d92d40] active:scale-90 text-white transition-all shadow-[0_8px_25px_rgba(234,57,75,0.55)] cursor-pointer"
+              title="End Call"
+            >
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.71c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.66c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          /* ── AUDIO CALL: Spacious, Well-Distanced 3x2 Control Panel ───────── */
+          <div
+            className="w-full max-w-[430px] rounded-[36px] px-6 py-7 sm:px-8 sm:py-8 bg-[#162026]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)]"
+            style={{ background: 'rgba(22, 32, 38, 0.95)' }}
+          >
+            <div className="grid grid-cols-3 gap-y-7 gap-x-6 sm:gap-x-8 place-items-center">
+
+              {/* 1. SPEAKER BUTTON */}
+              <div className="flex flex-col items-center gap-2.5">
+                <button
+                  onClick={toggleSpeaker}
+                  className={`w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
+                    isSpeakerOn
+                      ? 'bg-white text-[#111b21] shadow-lg'
+                      : 'bg-[#2a3942] hover:bg-[#344752] text-white'
+                  }`}
+                  title={isSpeakerOn ? "Speaker on" : "Speaker off"}
+                >
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    {isSpeakerOn ? (
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                    ) : (
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                    )}
+                  </svg>
+                </button>
+                <span className="text-xs font-medium text-white/90 tracking-wide">Speaker</span>
+              </div>
+
+              {/* 2. VIDEO UPGRADE BUTTON */}
+              <div className="flex flex-col items-center gap-2.5">
+                <button
+                  onClick={() => showToast("Upgrade to video call")}
+                  className="w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center bg-[#2a3942] hover:bg-[#344752] active:scale-90 text-white transition-all cursor-pointer shadow-md"
+                  title="Video"
+                >
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="m22 8-6 4 6 4V8Z" />
                     <rect width="14" height="12" x="2" y="6" rx="2" ry="2" />
                   </svg>
-                )}
-              </button>
-              <span className="text-xs font-medium text-white/90 tracking-wide">
-                {type === 'video' ? (isCamOff ? 'Turn on' : 'Camera') : 'Video'}
-              </span>
-            </div>
+                </button>
+                <span className="text-xs font-medium text-white/90 tracking-wide">Video</span>
+              </div>
 
-            {/* 3. MUTE BUTTON */}
-            <div className="flex flex-col items-center gap-2">
-              <button
-                onClick={toggleMute}
-                className={`w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
-                  isMuted
-                    ? 'bg-white text-[#111b21] shadow-lg'
-                    : 'bg-[#2a3942] hover:bg-[#344752] text-white'
-                }`}
-                title={isMuted ? "Unmute Microphone" : "Mute Microphone"}
-              >
-                {isMuted ? (
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="2" y1="2" x2="22" y2="22" />
-                    <path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2" />
-                    <path d="M5 10v2a7 7 0 0 0 12 5" />
-                    <path d="M15 9.34V5a3 3 0 0 0-5.68-1.33" />
-                    <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
-                    <line x1="12" y1="19" x2="12" y2="22" />
-                  </svg>
-                ) : (
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="22" />
-                  </svg>
-                )}
-              </button>
-              <span className="text-xs font-medium text-white/90 tracking-wide">Mute</span>
-            </div>
+              {/* 3. MUTE BUTTON */}
+              <div className="flex flex-col items-center gap-2.5">
+                <button
+                  onClick={toggleMute}
+                  className={`w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
+                    isMuted
+                      ? 'bg-white text-[#111b21] shadow-lg'
+                      : 'bg-[#2a3942] hover:bg-[#344752] text-white'
+                  }`}
+                  title={isMuted ? "Unmute Microphone" : "Mute Microphone"}
+                >
+                  {isMuted ? (
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="2" y1="2" x2="22" y2="22" />
+                      <path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2" />
+                      <path d="M5 10v2a7 7 0 0 0 12 5" />
+                      <path d="M15 9.34V5a3 3 0 0 0-5.68-1.33" />
+                      <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
+                      <line x1="12" y1="19" x2="12" y2="22" />
+                    </svg>
+                  ) : (
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="22" />
+                    </svg>
+                  )}
+                </button>
+                <span className="text-xs font-medium text-white/90 tracking-wide">Mute</span>
+              </div>
 
-            {/* 4. MORE / FLIP BUTTON */}
-            <div className="flex flex-col items-center gap-2">
-              <button
-                onClick={type === 'video' ? handleSwitchCamera : () => setShowMoreOptions(prev => !prev)}
-                className="w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center bg-[#2a3942] hover:bg-[#344752] active:scale-90 text-white transition-all cursor-pointer shadow-md"
-                title={type === 'video' ? "Switch Camera" : "More options"}
-              >
-                {type === 'video' ? (
-                  <svg width="26" height="26" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                ) : (
+              {/* 4. MORE BUTTON */}
+              <div className="flex flex-col items-center gap-2.5">
+                <button
+                  onClick={() => setShowMoreOptions(prev => !prev)}
+                  className="w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center bg-[#2a3942] hover:bg-[#344752] active:scale-90 text-white transition-all cursor-pointer shadow-md"
+                  title="More options"
+                >
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
                     <circle cx="5" cy="12" r="2" />
                     <circle cx="12" cy="12" r="2" />
                     <circle cx="19" cy="12" r="2" />
                   </svg>
-                )}
-              </button>
-              <span className="text-xs font-medium text-white/90 tracking-wide">
-                {type === 'video' ? 'Flip' : 'More'}
-              </span>
-            </div>
+                </button>
+                <span className="text-xs font-medium text-white/90 tracking-wide">More</span>
+              </div>
 
-            {/* 5. SHARE BUTTON */}
-            <div className="flex flex-col items-center gap-2">
-              <button
-                onClick={() => {
-                  if (typeof navigator !== 'undefined' && (navigator as any).share) {
-                    (navigator as any).share({ title: 'Connect Call', text: `In a call with ${callerDisplayName}` }).catch(() => {});
-                  } else {
-                    showToast("Screen sharing enabled on desktop");
-                  }
-                }}
-                className="w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center bg-[#2a3942] hover:bg-[#344752] active:scale-90 text-white transition-all cursor-pointer shadow-md"
-                title="Share"
-              >
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                  <line x1="8" y1="21" x2="16" y2="21" />
-                  <line x1="12" y1="17" x2="12" y2="21" />
-                  <path d="m16 9-4-4-4 4" />
-                  <path d="M12 5v7" />
-                </svg>
-              </button>
-              <span className="text-xs font-medium text-white/90 tracking-wide">Share</span>
-            </div>
+              {/* 5. SHARE BUTTON */}
+              <div className="flex flex-col items-center gap-2.5">
+                <button
+                  onClick={() => {
+                    if (typeof navigator !== 'undefined' && (navigator as any).share) {
+                      (navigator as any).share({ title: 'Connect Call', text: `In a call with ${callerDisplayName}` }).catch(() => {});
+                    } else {
+                      showToast("Call shared");
+                    }
+                  }}
+                  className="w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center bg-[#2a3942] hover:bg-[#344752] active:scale-90 text-white transition-all cursor-pointer shadow-md"
+                  title="Share"
+                >
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                    <path d="m16 9-4-4-4 4" />
+                    <path d="M12 5v7" />
+                  </svg>
+                </button>
+                <span className="text-xs font-medium text-white/90 tracking-wide">Share</span>
+              </div>
 
-            {/* 6. END CALL BUTTON */}
-            <div className="flex flex-col items-center gap-2">
-              <button
-                onClick={handleEnd}
-                className="w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center bg-[#ea394b] hover:bg-[#d92d40] active:scale-90 text-white transition-all shadow-[0_8px_25px_rgba(234,57,75,0.55)] cursor-pointer"
-                title="End Call"
-              >
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.71c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.66c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
-                </svg>
-              </button>
-              <span className="text-xs font-semibold text-white tracking-wide">End</span>
-            </div>
+              {/* 6. END CALL BUTTON */}
+              <div className="flex flex-col items-center gap-2.5">
+                <button
+                  onClick={handleEnd}
+                  className="w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center bg-[#ea394b] hover:bg-[#d92d40] active:scale-90 text-white transition-all shadow-[0_8px_25px_rgba(234,57,75,0.55)] cursor-pointer"
+                  title="End Call"
+                >
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.71c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.66c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
+                  </svg>
+                </button>
+                <span className="text-xs font-semibold text-white tracking-wide">End</span>
+              </div>
 
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ─── MORE OPTIONS MODAL ────────────────────────────────────────────── */}
