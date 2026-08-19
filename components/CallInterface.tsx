@@ -52,8 +52,8 @@ export default function CallInterface({
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const fullScreenVideoRef = useRef<HTMLVideoElement>(null);
+  const localPipVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const showToast = (msg: string) => {
@@ -88,39 +88,46 @@ export default function CallInterface({
     }
   }, [callStatus]);
 
-  // Wire local stream → local preview video element
+  // Wire full-screen video stream:
+  // 1. When calling / ringing / connecting: Show own camera (localStream) in full screen
+  // 2. When call is connected (active): Show remote partner video (remoteStream) in full screen
   useEffect(() => {
-    const video = localVideoRef.current;
-    if (!video || !localStream) return;
-    if (video.srcObject !== localStream) {
-      video.srcObject = localStream;
-      video.play().catch(e => console.warn('Local video play:', e));
-    }
-  }, [localStream]);
+    if (type !== 'video') return;
+    const videoEl = fullScreenVideoRef.current;
+    if (!videoEl) return;
 
-  // Wire remote stream → remote video & dedicated audio element
-  useEffect(() => {
-    if (!remoteStream) return;
-
-    // 1. Audio playback (dedicated audio element ensures crystal clear voice without video mute conflicts)
-    if (remoteAudioRef.current) {
-      const audioEl = remoteAudioRef.current;
-      if (audioEl.srcObject !== remoteStream) {
-        audioEl.srcObject = remoteStream;
-      }
-      audioEl.play().catch(e => console.warn('Remote audio play:', e));
-    }
-
-    // 2. Video playback (muted=true ensures mobile browsers never block autoplay or show play button)
-    if (type === 'video' && remoteVideoRef.current) {
-      const videoEl = remoteVideoRef.current;
-      if (videoEl.srcObject !== remoteStream) {
-        videoEl.srcObject = remoteStream;
+    const streamToShow = callStatus === 'active' ? remoteStream : localStream;
+    if (streamToShow) {
+      if (videoEl.srcObject !== streamToShow) {
+        videoEl.srcObject = streamToShow;
       }
       videoEl.muted = true;
-      videoEl.play().catch(e => console.warn('Remote video play:', e));
+      videoEl.play().catch(e => console.warn('Full-screen video play error:', e));
     }
-  }, [remoteStream, type]);
+  }, [type, callStatus, remoteStream, localStream]);
+
+  // Wire small floating PiP video stream (shows localStream when active video call is connected)
+  useEffect(() => {
+    if (type !== 'video' || callStatus !== 'active') return;
+    const pipEl = localPipVideoRef.current;
+    if (!pipEl || !localStream) return;
+
+    if (pipEl.srcObject !== localStream) {
+      pipEl.srcObject = localStream;
+    }
+    pipEl.muted = true;
+    pipEl.play().catch(e => console.warn('PiP video play error:', e));
+  }, [type, callStatus, localStream]);
+
+  // Wire remote audio stream to dedicated audio element (ensures uninterrupted voice)
+  useEffect(() => {
+    if (!remoteStream || !remoteAudioRef.current) return;
+    const audioEl = remoteAudioRef.current;
+    if (audioEl.srcObject !== remoteStream) {
+      audioEl.srcObject = remoteStream;
+    }
+    audioEl.play().catch(e => console.warn('Remote audio play error:', e));
+  }, [remoteStream]);
 
   const formatDuration = (s: number) => {
     const mins = Math.floor(s / 60);
@@ -134,7 +141,7 @@ export default function CallInterface({
   };
 
   const toggleSpeaker = async () => {
-    const targetAudio = type === 'video' ? remoteVideoRef.current : remoteAudioRef.current;
+    const targetAudio = type === 'video' ? fullScreenVideoRef.current : remoteAudioRef.current;
     if (!targetAudio) return;
     const nextState = !isSpeakerOn;
     setIsSpeakerOn(nextState);
@@ -167,17 +174,22 @@ export default function CallInterface({
         color: '#ffffff',
       }}
     >
-      {/* Background Remote Video for Video Calls */}
-      <video
-        ref={remoteVideoRef}
-        autoPlay
-        playsInline
-        muted
-        controls={false}
-        disablePictureInPicture
-        className={`absolute inset-0 w-full h-full object-cover z-0 ${type !== 'video' ? 'hidden' : ''}`}
-        style={{ background: '#000000' }}
-      />
+      {/* Background Video Layer for Video Calls:
+          - During ringing / connecting: Shows your local camera full-screen with mirror effect
+          - Once active: Shows remote video full-screen
+      */}
+      {type === 'video' && (
+        <video
+          ref={fullScreenVideoRef}
+          autoPlay
+          playsInline
+          muted
+          controls={false}
+          disablePictureInPicture
+          className={`absolute inset-0 w-full h-full object-cover z-0 ${callStatus !== 'active' ? 'mirror' : ''}`}
+          style={{ background: '#000000' }}
+        />
+      )}
       <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
 
       {/* Floating Toast Notification */}
@@ -261,7 +273,7 @@ export default function CallInterface({
         </div>
       )}
 
-      {/* Video Call: Avatar fallback only if active call has camera turned off */}
+      {/* Video Call: Avatar fallback only if active connected call has remote camera turned off */}
       {type === 'video' && callStatus === 'active' && isCamOff && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
           <div className="w-28 h-28 rounded-full overflow-hidden shadow-2xl border-2 border-white/15 bg-[#162026]">
@@ -275,19 +287,19 @@ export default function CallInterface({
         </div>
       )}
 
-      {/* Video Call Local Floating Preview (PiP) */}
-      {type === 'video' && (
-        <div className="absolute top-[calc(4.5rem+env(safe-area-inset-top,0px))] right-4 w-24 h-36 sm:w-28 sm:h-40 rounded-2xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.7)] border-2 border-white/20 bg-[#162026] z-20 pointer-events-auto">
-          <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
+      {/* Video Call Local Floating Preview (PiP): ONLY shown when call is ACTIVE / connected */}
+      {type === 'video' && callStatus === 'active' && (
+        <div className="absolute top-[calc(4.5rem+env(safe-area-inset-top,0px))] right-4 w-24 h-36 sm:w-28 sm:h-40 rounded-2xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.7)] border-2 border-white/20 bg-[#162026] z-20 pointer-events-auto animate-in zoom-in-95 duration-300">
+          <video ref={localPipVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
         </div>
       )}
 
-      {/* ─── 3. BOTTOM CONTROLS ────────────────────────────────────────────── */}
-      <div className="w-full px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-2 flex flex-col items-center z-30 pointer-events-auto">
+      {/* ─── 3. BOTTOM CONTROLS (Lowered closer to bottom) ─────────────────── */}
+      <div className="w-full px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-0 flex flex-col items-center z-30 pointer-events-auto">
         {type === 'video' ? (
           /* ── VIDEO CALL: Single-Row Toolbar (Video, Mic, Speaker, End) ── */
           <div
-            className="w-auto max-w-[94vw] rounded-full px-6 py-3.5 bg-[#162026]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)] flex items-center gap-5 sm:gap-6"
+            className="w-auto max-w-[94vw] rounded-full px-6 py-3 bg-[#162026]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)] flex items-center gap-5 sm:gap-6"
             style={{ background: 'rgba(22, 32, 38, 0.95)' }}
           >
             {/* 1. Video Turn On / Off */}
@@ -375,7 +387,7 @@ export default function CallInterface({
         ) : (
           /* ── AUDIO CALL: Spacious, Well-Distanced 3x2 Control Panel ───────── */
           <div
-            className="w-full max-w-[430px] rounded-[36px] px-6 py-7 sm:px-8 sm:py-8 bg-[#162026]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)]"
+            className="w-full max-w-[430px] rounded-[36px] px-6 py-6 sm:px-8 sm:py-7 bg-[#162026]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)]"
             style={{ background: 'rgba(22, 32, 38, 0.95)' }}
           >
             <div className="grid grid-cols-3 gap-y-7 gap-x-6 sm:gap-x-8 place-items-center">

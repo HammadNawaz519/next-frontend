@@ -91,14 +91,15 @@ let cachedIceConfig: RTCConfiguration | null = null;
 let iceConfigFetchedAt = 0;
 let iceConfigCacheTtl = 3600 * 1000; // 1 hour default
 
-// Fallback ICE config if API fetch fails — using user's Metered TURN configuration
+// Fallback ICE config if API fetch fails — using dual Google STUN and Metered TURN
 const FALLBACK_ICE_CONFIG: RTCConfiguration = {
   iceServers: [
     {
       urls: [
-        'stun:stun.relay.metered.ca:80',
         'stun:stun.l.google.com:19302',
         'stun:stun1.l.google.com:19302',
+        'stun:stun2.l.google.com:19302',
+        'stun:stun.relay.metered.ca:80',
       ],
     },
     {
@@ -122,7 +123,7 @@ const FALLBACK_ICE_CONFIG: RTCConfiguration = {
       credential: 'openrelayproject',
     },
   ],
-  iceCandidatePoolSize: 10,
+  iceCandidatePoolSize: 0,
   bundlePolicy: 'max-bundle' as RTCBundlePolicy,
   rtcpMuxPolicy: 'require' as RTCRtcpMuxPolicy,
   iceTransportPolicy: 'all' as RTCIceTransportPolicy,
@@ -146,8 +147,18 @@ export async function fetchIceConfig(): Promise<RTCConfiguration> {
     const data = await res.json();
 
     cachedIceConfig = {
-      iceServers: data.iceServers,
-      iceCandidatePoolSize: 10,
+      iceServers: [
+        {
+          urls: [
+            'stun:stun.l.google.com:19302',
+            'stun:stun1.l.google.com:19302',
+            'stun:stun2.l.google.com:19302',
+            'stun:stun.relay.metered.ca:80',
+          ],
+        },
+        ...(data.iceServers || []),
+      ],
+      iceCandidatePoolSize: 0,
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require',
       iceTransportPolicy: 'all',
