@@ -9,7 +9,14 @@ const ADMIN_EMAILS = ['hammadnawz519@gmail.com', 'hammadnawaz519@gmail.com'];
 // Fallback RTC config — used only if dynamic TURN credential fetch fails
 const FALLBACK_RTC_CONFIG: RTCConfiguration = {
   iceServers: [
-    { urls: ['stun:stun.relay.metered.ca:80', 'stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+    {
+      urls: [
+        'stun:stun.l.google.com:19302',
+        'stun:stun1.l.google.com:19302',
+        'stun:stun2.l.google.com:19302',
+        'stun:stun.relay.metered.ca:80',
+      ]
+    },
     {
       urls: [
         'turn:global.relay.metered.ca:80',
@@ -31,7 +38,7 @@ const FALLBACK_RTC_CONFIG: RTCConfiguration = {
       credential: 'openrelayproject'
     }
   ],
-  iceCandidatePoolSize: 10,
+  iceCandidatePoolSize: 0,
   bundlePolicy: 'max-bundle',
   rtcpMuxPolicy: 'require',
   iceTransportPolicy: 'all'
@@ -44,8 +51,18 @@ async function fetchRtcConfig(): Promise<RTCConfiguration> {
     if (!res.ok) throw new Error(`TURN API ${res.status}`);
     const data = await res.json();
     return {
-      iceServers: data.iceServers,
-      iceCandidatePoolSize: 10,
+      iceServers: [
+        {
+          urls: [
+            'stun:stun.l.google.com:19302',
+            'stun:stun1.l.google.com:19302',
+            'stun:stun2.l.google.com:19302',
+            'stun:stun.relay.metered.ca:80',
+          ]
+        },
+        ...(data.iceServers || []),
+      ],
+      iceCandidatePoolSize: 0,
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require',
       iceTransportPolicy: 'all',
