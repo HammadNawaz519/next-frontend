@@ -77,7 +77,7 @@ export default function CallInterface({
     };
   }, [callStatus, isCaller, peer.email, peer.id, socket, handleEnd]);
 
-  // Haptics on Ringing (Sound effect removed)
+  // Haptics on Ringing
   useEffect(() => {
     if (callStatus === 'ringing') {
       try {
@@ -88,7 +88,7 @@ export default function CallInterface({
     }
   }, [callStatus]);
 
-  // Wire local stream → video element
+  // Wire local stream → local preview video element
   useEffect(() => {
     const video = localVideoRef.current;
     if (!video || !localStream) return;
@@ -98,7 +98,7 @@ export default function CallInterface({
     }
   }, [localStream]);
 
-  // Wire remote stream → video & audio element
+  // Wire remote stream → remote video & dedicated audio element
   useEffect(() => {
     if (!remoteStream) return;
 
@@ -111,21 +111,14 @@ export default function CallInterface({
       audioEl.play().catch(e => console.warn('Remote audio play:', e));
     }
 
-    // 2. Video playback
+    // 2. Video playback (muted=true ensures mobile browsers never block autoplay or show play button)
     if (type === 'video' && remoteVideoRef.current) {
       const videoEl = remoteVideoRef.current;
       if (videoEl.srcObject !== remoteStream) {
         videoEl.srcObject = remoteStream;
       }
-      videoEl.play().catch(() => {
-        const retryPlay = () => {
-          videoEl.play().catch(() => {});
-          document.removeEventListener('click', retryPlay);
-          document.removeEventListener('touchstart', retryPlay);
-        };
-        document.addEventListener('click', retryPlay, { once: true });
-        document.addEventListener('touchstart', retryPlay, { once: true });
-      });
+      videoEl.muted = true;
+      videoEl.play().catch(e => console.warn('Remote video play:', e));
     }
   }, [remoteStream, type]);
 
@@ -170,7 +163,7 @@ export default function CallInterface({
     <div
       className="fixed inset-0 z-[1500] flex flex-col justify-between overflow-hidden select-none font-sans text-white"
       style={{
-        background: '#0b141a',
+        background: '#000000',
         color: '#ffffff',
       }}
     >
@@ -179,9 +172,11 @@ export default function CallInterface({
         ref={remoteVideoRef}
         autoPlay
         playsInline
+        muted
         controls={false}
+        disablePictureInPicture
         className={`absolute inset-0 w-full h-full object-cover z-0 ${type !== 'video' ? 'hidden' : ''}`}
-        style={{ background: '#0b141a' }}
+        style={{ background: '#000000' }}
       />
       <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
 
@@ -192,12 +187,12 @@ export default function CallInterface({
         </div>
       )}
 
-      {/* ─── 1. TOP HEADER (Back Button + Caller Info + Add Participant) ──── */}
+      {/* ─── 1. TOP HEADER (Back Button + Caller Info + Flip Camera Button) ──── */}
       <div className="relative z-20 w-full pt-[calc(14px+env(safe-area-inset-top,0px))] px-5 pb-3 flex items-center justify-between pointer-events-auto">
         {/* Top-Left: Back Button */}
         <button
           onClick={handleEnd}
-          className="w-11 h-11 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-[#1c2830]/80 hover:bg-[#253540] active:scale-90 text-white transition-all cursor-pointer shadow-lg backdrop-blur-md border border-white/10"
+          className="w-11 h-11 rounded-full flex items-center justify-center bg-[#1c2830]/80 hover:bg-[#253540] active:scale-90 text-white transition-all cursor-pointer shadow-lg backdrop-blur-md border border-white/10"
           title="Back"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -206,8 +201,8 @@ export default function CallInterface({
         </button>
 
         {/* Center: Caller Information */}
-        <div className="flex flex-col items-center text-center max-w-[62%] px-2">
-          <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight truncate max-w-full drop-shadow-md">
+        <div className="flex flex-col items-center text-center max-w-[65%] px-2">
+          <h2 className="text-lg md:text-xl font-bold text-white tracking-tight truncate max-w-full drop-shadow-md">
             {callerDisplayName}
           </h2>
 
@@ -230,30 +225,31 @@ export default function CallInterface({
           </p>
         </div>
 
-        {/* Top-Right: Add Participant Button */}
-        <button
-          onClick={() => showToast("Group calling available soon")}
-          className="w-11 h-11 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-[#1c2830]/80 hover:bg-[#253540] active:scale-90 text-white transition-all cursor-pointer shadow-lg backdrop-blur-md border border-white/10"
-          title="Add participant"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="8.5" cy="7" r="4" />
-            <line x1="20" y1="8" x2="20" y2="14" />
-            <line x1="23" y1="11" x2="17" y2="11" />
-          </svg>
-        </button>
+        {/* Top-Right: Camera Flip Button in Video Mode, or Empty Spacer in Audio */}
+        {type === 'video' ? (
+          <button
+            onClick={handleSwitchCamera}
+            className="w-11 h-11 rounded-full flex items-center justify-center bg-[#1c2830]/80 hover:bg-[#253540] active:scale-90 text-white transition-all cursor-pointer shadow-lg backdrop-blur-md border border-white/10"
+            title="Flip camera"
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        ) : (
+          <div className="w-11 h-11" />
+        )}
       </div>
 
       {/* ─── 2. CENTER SECTION ─────────────────────────────────────────────── */}
-      {/* Audio Call or Connecting / Video Paused Fallback */}
-      {(type === 'audio' || callStatus !== 'active' || isCamOff) && (
+      {/* Audio Call: Compact Small Profile Picture */}
+      {type === 'audio' && (
         <div className="flex-1 flex flex-col items-center justify-center px-4 my-auto z-10 w-full animate-in zoom-in-95 duration-500">
-          <div className="relative w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 rounded-full overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.85)] border-2 border-white/10 bg-[#162026] flex items-center justify-center">
+          <div className="relative w-32 h-32 md:w-36 md:h-36 rounded-full overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.85)] border-2 border-white/10 bg-[#162026] flex items-center justify-center">
             {callStatus === 'ringing' && (
               <>
                 <div className="absolute inset-0 rounded-full animate-ping opacity-25 bg-emerald-500 [animation-duration:2.5s]" />
-                <div className="absolute -inset-4 rounded-full animate-pulse opacity-20 bg-emerald-400 [animation-duration:3s]" />
+                <div className="absolute -inset-3 rounded-full animate-pulse opacity-20 bg-emerald-400 [animation-duration:3s]" />
               </>
             )}
             {peer.image && peer.image.length > 5 ? (
@@ -265,34 +261,39 @@ export default function CallInterface({
         </div>
       )}
 
-      {/* Video Call Local Video (Floating PiP Preview) */}
+      {/* Video Call: Avatar fallback only if active call has camera turned off */}
+      {type === 'video' && callStatus === 'active' && isCamOff && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+          <div className="w-28 h-28 rounded-full overflow-hidden shadow-2xl border-2 border-white/15 bg-[#162026]">
+            {peer.image && peer.image.length > 5 ? (
+              <img src={peer.image} className="w-full h-full object-cover" alt="caller" referrerPolicy="no-referrer" />
+            ) : (
+              <img src="/Avatar.avif" className="w-full h-full object-cover" alt="avatar" />
+            )}
+          </div>
+          <span className="text-xs text-zinc-400 font-medium mt-3">Camera is turned off</span>
+        </div>
+      )}
+
+      {/* Video Call Local Floating Preview (PiP) */}
       {type === 'video' && (
-        <div className="absolute top-[calc(5rem+env(safe-area-inset-top,0px))] right-4 md:right-6 w-28 h-40 sm:w-32 sm:h-44 md:w-36 md:h-48 rounded-2xl md:rounded-3xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.7)] border-2 border-white/20 bg-[#162026] z-20 group hover:scale-105 transition-all duration-300 pointer-events-auto">
+        <div className="absolute top-[calc(4.5rem+env(safe-area-inset-top,0px))] right-4 w-24 h-36 sm:w-28 sm:h-40 rounded-2xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.7)] border-2 border-white/20 bg-[#162026] z-20 pointer-events-auto">
           <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
-          <button
-            onClick={handleSwitchCamera}
-            className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/80 active:scale-90 transition-all cursor-pointer border border-white/10 shadow-md"
-            title="Flip camera"
-          >
-            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
         </div>
       )}
 
       {/* ─── 3. BOTTOM CONTROLS ────────────────────────────────────────────── */}
       <div className="w-full px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-2 flex flex-col items-center z-30 pointer-events-auto">
         {type === 'video' ? (
-          /* ── VIDEO CALL: Clean Single-Row Toolbar (Video, Mic, Speaker, End) ── */
+          /* ── VIDEO CALL: Single-Row Toolbar (Video, Mic, Speaker, End) ── */
           <div
-            className="w-auto max-w-[94vw] rounded-full px-6 py-4 bg-[#162026]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)] flex items-center gap-4 sm:gap-6"
+            className="w-auto max-w-[94vw] rounded-full px-6 py-3.5 bg-[#162026]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)] flex items-center gap-5 sm:gap-6"
             style={{ background: 'rgba(22, 32, 38, 0.95)' }}
           >
-            {/* 1. Video Turn On/Off */}
+            {/* 1. Video Turn On / Off */}
             <button
               onClick={toggleCamera}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
+              className={`w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
                 isCamOff
                   ? 'bg-red-500/25 text-red-400 border border-red-500/30'
                   : 'bg-[#2a3942] hover:bg-[#344752] text-white'
@@ -312,10 +313,10 @@ export default function CallInterface({
               )}
             </button>
 
-            {/* 2. Mic Mute/Unmute */}
+            {/* 2. Mic Mute / Unmute */}
             <button
               onClick={toggleMute}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
+              className={`w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
                 isMuted
                   ? 'bg-white text-[#111b21] shadow-lg'
                   : 'bg-[#2a3942] hover:bg-[#344752] text-white'
@@ -340,10 +341,10 @@ export default function CallInterface({
               )}
             </button>
 
-            {/* 3. Speaker */}
+            {/* 3. Speaker On / Off */}
             <button
               onClick={toggleSpeaker}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
+              className={`w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
                 isSpeakerOn
                   ? 'bg-white text-[#111b21] shadow-lg'
                   : 'bg-[#2a3942] hover:bg-[#344752] text-white'
@@ -363,7 +364,7 @@ export default function CallInterface({
             {/* 4. End Call Button */}
             <button
               onClick={handleEnd}
-              className="w-14 h-14 rounded-full flex items-center justify-center bg-[#ea394b] hover:bg-[#d92d40] active:scale-90 text-white transition-all shadow-[0_8px_25px_rgba(234,57,75,0.55)] cursor-pointer"
+              className="w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center bg-[#ea394b] hover:bg-[#d92d40] active:scale-90 text-white transition-all shadow-[0_8px_25px_rgba(234,57,75,0.55)] cursor-pointer"
               title="End Call"
             >
               <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
@@ -464,28 +465,23 @@ export default function CallInterface({
                 <span className="text-xs font-medium text-white/90 tracking-wide">More</span>
               </div>
 
-              {/* 5. SHARE BUTTON */}
+              {/* 5. SPEAKERPHONE STATUS INDICATOR */}
               <div className="flex flex-col items-center gap-2.5">
                 <button
-                  onClick={() => {
-                    if (typeof navigator !== 'undefined' && (navigator as any).share) {
-                      (navigator as any).share({ title: 'Connect Call', text: `In a call with ${callerDisplayName}` }).catch(() => {});
-                    } else {
-                      showToast("Call shared");
-                    }
-                  }}
-                  className="w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center bg-[#2a3942] hover:bg-[#344752] active:scale-90 text-white transition-all cursor-pointer shadow-md"
-                  title="Share"
+                  onClick={toggleSpeaker}
+                  className={`w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
+                    isSpeakerOn
+                      ? 'bg-white text-[#111b21] shadow-lg'
+                      : 'bg-[#2a3942] hover:bg-[#344752] text-white'
+                  }`}
+                  title="Speaker Output"
                 >
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                    <line x1="8" y1="21" x2="16" y2="21" />
-                    <line x1="12" y1="17" x2="12" y2="21" />
-                    <path d="m16 9-4-4-4 4" />
-                    <path d="M12 5v7" />
+                    <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
                   </svg>
                 </button>
-                <span className="text-xs font-medium text-white/90 tracking-wide">Share</span>
+                <span className="text-xs font-medium text-white/90 tracking-wide">Audio</span>
               </div>
 
               {/* 6. END CALL BUTTON */}
