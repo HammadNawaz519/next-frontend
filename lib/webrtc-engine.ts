@@ -951,32 +951,7 @@ export class WebRTCEngine {
 
     const handlers: Record<string, (...args: any[]) => void> = {
       'webrtc_signal': (data: any) => {
-        // Validate this signal is for our active call
-        if (data.callId && data.callId !== this._callId) return;
         this.handleSignal(data);
-      },
-
-      'offer': (data: any) => {
-        this.handleSignal({
-          type: 'offer',
-          sdp: data.offer?.sdp || data.offer || data.sdp || data,
-          from: data.from,
-        });
-      },
-
-      'answer': (data: any) => {
-        this.handleSignal({
-          type: 'answer',
-          sdp: data.answer?.sdp || data.answer || data.sdp || data,
-          from: data.from,
-        });
-      },
-
-      'ice_candidate': (data: any) => {
-        this.handleSignal({
-          candidate: data.candidate || data,
-          from: data.from,
-        });
       },
 
       'call_ended': () => {

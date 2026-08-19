@@ -3274,7 +3274,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     socket.emit('call_user', payload);
     socket.emit('call_request', payload);
 
-    setActiveCall({ peer: { ...selectedUser, email: targetEmail }, type, isCaller: true });
+    setActiveCall({ peer: { ...selectedUser, email: targetEmail }, type, isCaller: true, callId } as any);
   };
 
   const handleAcceptCall = () => {
@@ -3283,7 +3283,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const payload = {
       to: incomingCall.from.email?.toLowerCase().trim(),
       toUserId: incomingCall.from.id,
-      from: session?.user
+      from: session?.user,
+      callId: incomingCall.callId
     };
 
     socket.emit('accept_call', payload);
@@ -3293,8 +3294,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       peer: incomingCall.from,
       type: incomingCall.type,
       isCaller: false,
+      callId: incomingCall.callId,
       initialOffer: incomingCall.offer
-    });
+    } as any);
     setIncomingCall(null);
   };
 
@@ -5583,6 +5585,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           isCaller={activeCall.isCaller}
           isAccepted={(activeCall as any).connected}
           initialOffer={(activeCall as any).initialOffer}
+          callId={(activeCall as any).callId}
           onEnd={(duration, wasConnected) => {
             const callData = activeCall;
             setActiveCall(null);

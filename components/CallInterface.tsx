@@ -11,10 +11,11 @@ interface CallInterfaceProps {
   isCaller: boolean;
   isAccepted?: boolean;
   initialOffer?: any;
+  callId?: string;
   onEnd: (duration?: number, wasConnected?: boolean) => void;
 }
 
-export default function CallInterface({ socket, peer, type, isCaller, isAccepted, initialOffer, onEnd }: CallInterfaceProps) {
+export default function CallInterface({ socket, peer, type, isCaller, isAccepted, initialOffer, callId, onEnd }: CallInterfaceProps) {
   const {
     callStatus,
     localStream,
@@ -33,6 +34,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     isCaller,
     isAccepted,
     initialOffer,
+    callId,
     onEnd: (dur, wasConnected) => onEnd(dur, wasConnected),
   });
 
@@ -110,30 +112,34 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     }
   }, [localStream]);
 
-  // Wire remote stream → video/audio element
+  // Wire remote stream → video & audio element
   useEffect(() => {
     if (!remoteStream) return;
+
+    // 1. Audio playback (dedicated audio element ensures crystal clear voice without video mute conflicts)
+    if (remoteAudioRef.current) {
+      const audioEl = remoteAudioRef.current;
+      if (audioEl.srcObject !== remoteStream) {
+        audioEl.srcObject = remoteStream;
+      }
+      audioEl.play().catch(e => console.warn('Remote audio play:', e));
+    }
+
+    // 2. Video playback
     if (type === 'video' && remoteVideoRef.current) {
       const videoEl = remoteVideoRef.current;
       if (videoEl.srcObject !== remoteStream) {
         videoEl.srcObject = remoteStream;
-        videoEl.play().catch(() => {
-          const retryPlay = () => {
-            videoEl.play().catch(() => {});
-            document.removeEventListener('click', retryPlay);
-            document.removeEventListener('touchstart', retryPlay);
-          };
-          document.addEventListener('click', retryPlay, { once: true });
-          document.addEventListener('touchstart', retryPlay, { once: true });
-        });
       }
-    } else if (type === 'audio' && remoteAudioRef.current) {
-      const audioEl = remoteAudioRef.current;
-      if (audioEl.srcObject !== remoteStream) {
-        audioEl.srcObject = remoteStream;
-        audioEl.play().catch(e => console.warn('Remote audio play:', e));
-      }
-    }
+      videoEl.play().catch(() => {
+        const retryPlay = () => {
+          videoEl.play().catch(() => {});
+          document.removeEventListener('click', retryPlay);
+          document.removeEventListener('touchstart', retryPlay);
+        };
+        document.addEventListener('click', retryPlay, { once: true });
+        document.addEventListener('touchstart', retryPlay, { once: true });
+      });
   }, [remoteStream, type]);
 
   const formatDuration = (s: number) => {
