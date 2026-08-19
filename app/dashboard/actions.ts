@@ -289,6 +289,12 @@ export async function saveSocialMessage(
     }
   }
 
+  // Update sender's activity timestamp in DB
+  prisma.user.update({
+    where: { id: currentUser.id },
+    data: { isOnline: true, lastSeen: new Date(), lastHeartbeat: new Date() }
+  }).catch(() => {});
+
   return await prisma.socialMessage.create({
     data: {
       content: finalContent,
@@ -496,8 +502,13 @@ export async function getRecentChats() {
     if (partners.has(partnerId)) continue; // We already have the newest message for this partner!
 
     const isRequest = !isSentByMe && !contactIdsSet.has(partnerId);
+    const latestActiveTime = partner.lastSeen && partner.lastHeartbeat
+      ? (new Date(partner.lastHeartbeat).getTime() > new Date(partner.lastSeen).getTime() ? partner.lastHeartbeat : partner.lastSeen)
+      : (partner.lastSeen || partner.lastHeartbeat || null);
+
     partners.set(partnerId, {
       ...partner,
+      lastSeen: latestActiveTime,
       lastMessage: formatLastMessage(m),
       lastTime: m.createdAt,
       isRequest: isRequest,

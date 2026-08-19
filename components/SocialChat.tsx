@@ -4529,7 +4529,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               </span>
                             );
                           }
-                          const lastSeenVal = lastSeenMap[(selectedUser.email || '').toLowerCase().trim()] || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen;
+                          const lastSeenVal = (selectedUser.email && lastSeenMap[selectedUser.email.toLowerCase().trim()]) || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen || (selectedUser as any).lastHeartbeat;
                           const ago = formatLastSeenAgo(lastSeenVal);
                           if (!ago) return null;
                           return (
