@@ -140,6 +140,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
         document.addEventListener('click', retryPlay, { once: true });
         document.addEventListener('touchstart', retryPlay, { once: true });
       });
+    }
   }, [remoteStream, type]);
 
   const formatDuration = (s: number) => {

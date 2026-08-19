@@ -2054,8 +2054,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const isCancelingRecordingRef = useRef(false);
 
   // Call States
-  const [incomingCall, setIncomingCall] = useState<{ from: any, type: 'audio' | 'video', offer?: any } | null>(null);
-  const [activeCall, setActiveCall] = useState<{ peer: any, type: 'audio' | 'video', isCaller: boolean, initialOffer?: any } | null>(null);
+  const [incomingCall, setIncomingCall] = useState<{ from: any, type: 'audio' | 'video', offer?: any, callId?: string } | null>(null);
+  const [activeCall, setActiveCall] = useState<{ peer: any, type: 'audio' | 'video', isCaller: boolean, callId?: string, initialOffer?: any } | null>(null);
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
@@ -2565,11 +2565,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           if (selectedId !== partnerId && selectedId !== msgSenderId && selectedId !== msgReceiverId) return prev;
           const isDup = prev.some(m =>
             m.id === msg.id ||
-            (m.status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type)
+            ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type)
           );
           if (isDup) {
             return prev.map(m =>
-              (m.id === msg.id || (m.status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type))
+              (m.id === msg.id || ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type))
                 ? { ...m, ...msg, id: msg.id || m.id, status: 'sent' }
                 : m
             );
@@ -2584,12 +2584,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           const current = prev[cacheKey] || [];
           const isDup = current.some(m =>
             m.id === msg.id ||
-            (m.status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type)
+            ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type)
           );
           let updatedList;
           if (isDup) {
             updatedList = current.map(m =>
-              (m.id === msg.id || (m.status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type))
+              (m.id === msg.id || ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type))
                 ? { ...m, ...msg, id: msg.id || m.id, status: 'sent' }
                 : m
             );
