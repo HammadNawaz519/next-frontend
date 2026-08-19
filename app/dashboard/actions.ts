@@ -209,14 +209,16 @@ export async function markMessagesAsSeen(senderId: string) {
 
   if (!currentUser) return null;
 
-  return await prisma.socialMessage.updateMany({
+  const now = new Date();
+  return await (prisma.socialMessage as any).updateMany({
     where: {
       senderId: senderId,
       receiverId: currentUser.id,
       isSeen: false
     },
     data: {
-      isSeen: true
+      isSeen: true,
+      seenAt: now
     }
   });
 }

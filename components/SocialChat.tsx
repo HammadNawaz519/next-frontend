@@ -889,12 +889,23 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup, partnerLastSee
     return `${Math.floor(diffDays / 7)}w ago`;
   };
 
-  // Determine seen timestamp:
-  // If message was marked seen, use the seenAt timestamp if available, or the partner's last seen/heartbeat time, or fallback to msg.createdAt
-  const seenTimestamp = (msg as any).seenAt || partnerLastSeen || msg.createdAt;
+  // Determine fixed seen timestamp:
+  // Once a message is seen, its seenAt timestamp is IMMUTABLE and saved in memory/localStorage.
+  // It NEVER uses partnerLastSeen, preventing any time resets when the partner comes online/offline again later.
+  let fixedSeenAt = (msg as any).seenAt;
+  if (msg.isSeen && !fixedSeenAt && typeof window !== 'undefined') {
+    const key = `seen_at_${msg.id}`;
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      fixedSeenAt = stored;
+    } else {
+      fixedSeenAt = new Date().toISOString();
+      try { localStorage.setItem(key, fixedSeenAt); } catch {}
+    }
+  }
 
   const statusText = msg.isSeen
-    ? `Seen ${formatAgo(seenTimestamp)}`
+    ? `Seen ${formatAgo(fixedSeenAt || msg.createdAt)}`
     : `Sent ${formatAgo(msg.createdAt)}`;
 
   return (
