@@ -420,7 +420,6 @@ export async function reactToSocialMessage(messageId: string, emoji: string) {
     });
   }
 }
-
 export async function getRecentChats() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return [];
@@ -437,37 +436,30 @@ export async function getRecentChats() {
   });
   const hiddenUserIds = hiddenChats.map((chat: { hiddenUserId: string }) => chat.hiddenUserId);
 
-  // 1. Get all receiverIds this user has EVER sent a message to
+  // 1. Get all receiverIds this user has EVER sent a message to (to distinguish contacts vs requests)
   const sentMessages = await prisma.socialMessage.findMany({
     where: {
       senderId: currentUser.id,
       receiverId: { notIn: hiddenUserIds }
     },
-    select: { receiverId: true },
-    distinct: ['receiverId']
+    select: { receiverId: true }
   });
   const contactIdsSet = new Set(sentMessages.map((m: { receiverId: string }) => m.receiverId));
 
-  const sent = await (prisma.socialMessage as any).findMany({
+  // 2. Fetch all recent messages for this user (both sent and received)
+  const allMessages = await (prisma.socialMessage as any).findMany({
     where: {
-      senderId: currentUser.id,
-      receiverId: { notIn: hiddenUserIds },
-      deletedBySender: false
+      OR: [
+        { senderId: currentUser.id, receiverId: { notIn: hiddenUserIds }, deletedBySender: false },
+        { receiverId: currentUser.id, senderId: { notIn: hiddenUserIds }, deletedByReceiver: false }
+      ]
     },
-    distinct: ['receiverId'],
     orderBy: { createdAt: 'desc' },
-    include: { receiver: { select: { id: true, name: true, username: true, email: true, image: true, lastSeen: true, isOnline: true, lastHeartbeat: true, showActivityStatus: true } } }
-  });
-
-  const received = await (prisma.socialMessage as any).findMany({
-    where: {
-      receiverId: currentUser.id,
-      senderId: { notIn: hiddenUserIds },
-      deletedByReceiver: false
-    },
-    distinct: ['senderId'],
-    orderBy: { createdAt: 'desc' },
-    include: { sender: { select: { id: true, name: true, username: true, email: true, image: true, lastSeen: true, isOnline: true, lastHeartbeat: true, showActivityStatus: true } } }
+    take: 1000,
+    include: {
+      sender: { select: { id: true, name: true, username: true, email: true, image: true, lastSeen: true, isOnline: true, lastHeartbeat: true, showActivityStatus: true } },
+      receiver: { select: { id: true, name: true, username: true, email: true, image: true, lastSeen: true, isOnline: true, lastHeartbeat: true, showActivityStatus: true } }
+    }
   });
 
   const formatLastMessage = (m: any) => {
@@ -477,12 +469,10 @@ export async function getRecentChats() {
     if (m.type === 'file') return 'Attachment';
     if (m.type === 'deleted') return 'Message deleted';
     if (m.type === 'accepted') return 'Request accepted';
-    return m.content.length > 30 ? m.content.substring(0, 30) + '...' : m.content;
+    if (m.type === 'call') return m.content || 'Call';
+    return (m.content && m.content.length > 30) ? m.content.substring(0, 30) + '...' : (m.content || '');
   };
 
-  // Merge and sort
-  const partners = new Map();
-  
   // Get unseen counts for each sender
   const unseenMessages = await prisma.socialMessage.groupBy({
     by: ['senderId'],
@@ -495,34 +485,28 @@ export async function getRecentChats() {
   });
   const unseenMap = new Map(unseenMessages.map((m: { senderId: string; _count: number }) => [m.senderId, m._count]));
 
-  sent.forEach((m: any) => {
-    partners.set(m.receiverId, { 
-      ...m.receiver, 
-      lastMessage: formatLastMessage(m), 
-      lastTime: m.createdAt, 
-      isRequest: false, 
-      unseenCount: 0 
+  // Merge into unique partner list
+  const partners = new Map();
+  for (const m of allMessages) {
+    const isSentByMe = m.senderId === currentUser.id;
+    const partner = isSentByMe ? m.receiver : m.sender;
+    const partnerId = isSentByMe ? m.receiverId : m.senderId;
+
+    if (!partner || !partnerId) continue;
+    if (partners.has(partnerId)) continue; // We already have the newest message for this partner!
+
+    const isRequest = !isSentByMe && !contactIdsSet.has(partnerId);
+    partners.set(partnerId, {
+      ...partner,
+      lastMessage: formatLastMessage(m),
+      lastTime: m.createdAt,
+      isRequest: isRequest,
+      unseenCount: unseenMap.get(partnerId) || 0
     });
-  });
+  }
 
-  received.forEach((m: any) => {
-    const existing = partners.get(m.senderId);
-    const isRequest = !contactIdsSet.has(m.senderId);
-    
-    if (!existing || m.createdAt > existing.lastTime) {
-      partners.set(m.senderId, { 
-        ...m.sender, 
-        lastMessage: formatLastMessage(m), 
-        lastTime: m.createdAt,
-        isRequest: isRequest,
-        unseenCount: unseenMap.get(m.senderId) || 0
-      });
-    }
-  });
-
-  return Array.from(partners.values()).sort((a, b) => (b.lastTime as any) - (a.lastTime as any));
+  return Array.from(partners.values()).sort((a, b) => (new Date(b.lastTime).getTime()) - (new Date(a.lastTime).getTime()));
 }
-
 
 export async function saveCall(receiverId: string, type: 'audio' | 'video', status: 'missed' | 'completed' | 'rejected', duration?: number) {
   const session = await getServerSession(authOptions);

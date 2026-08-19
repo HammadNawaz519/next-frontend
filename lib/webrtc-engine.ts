@@ -383,6 +383,31 @@ export class WebRTCEngine {
 
       this.setState('ringing');
 
+      // Create initial SDP offer immediately
+      try {
+        const offer = await this.pc!.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: this._callType === 'video',
+        });
+        await this.pc!.setLocalDescription(offer);
+
+        const target = this._peer?.email?.toLowerCase().trim();
+        const signalPayload = { type: 'offer', sdp: offer.sdp };
+        this.socket?.emit('webrtc_signal', {
+          to: target,
+          toUserId: this._peer?.id,
+          callId: this._callId,
+          signal: signalPayload,
+        });
+        this.socket?.emit('offer', {
+          to: target,
+          toUserId: this._peer?.id,
+          offer: signalPayload,
+        });
+      } catch (offerErr) {
+        console.warn('[WebRTCEngine] Initial offer creation error:', offerErr);
+      }
+
       // Process any signals that arrived before PC was ready
       await this.drainPendingSignals();
     } catch (err: any) {
@@ -838,11 +863,17 @@ export class WebRTCEngine {
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
 
+        const signalPayload = { type: 'answer', sdp: answer.sdp };
         this.socket?.emit('webrtc_signal', {
           to: target,
           toUserId: this._peer?.id,
           callId: this._callId,
-          signal: { type: 'answer', sdp: answer.sdp },
+          signal: signalPayload,
+        });
+        this.socket?.emit('answer', {
+          to: target,
+          toUserId: this._peer?.id,
+          answer: signalPayload,
         });
         return;
       }
