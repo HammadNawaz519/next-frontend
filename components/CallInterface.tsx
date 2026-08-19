@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import { useWebRTCCall } from '@/hooks/use-webrtc-call';
 
@@ -15,7 +15,16 @@ interface CallInterfaceProps {
   onEnd: (duration?: number, wasConnected?: boolean) => void;
 }
 
-export default function CallInterface({ socket, peer, type, isCaller, isAccepted, initialOffer, callId, onEnd }: CallInterfaceProps) {
+export default function CallInterface({
+  socket,
+  peer,
+  type,
+  isCaller,
+  isAccepted,
+  initialOffer,
+  callId,
+  onEnd,
+}: CallInterfaceProps) {
   const {
     callStatus,
     localStream,
@@ -40,10 +49,17 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
 
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2500);
+  };
 
   // 30-Second Ringing Timeout (Caller side)
   useEffect(() => {
@@ -59,7 +75,7 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     return () => {
       if (timeoutTimer) clearTimeout(timeoutTimer);
     };
-  }, [callStatus, isCaller, peer.email, peer.id, socket]);
+  }, [callStatus, isCaller, peer.email, peer.id, socket, handleEnd]);
 
   // Ringing Sound Effect & Haptics
   useEffect(() => {
@@ -178,156 +194,338 @@ export default function CallInterface({ socket, peer, type, isCaller, isAccepted
     }
   };
 
+  const callerDisplayName = peer.name || peer.username || peer.email?.split('@')[0] || 'User';
+
   return (
-    <div className="fixed inset-0 z-[1500] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-500 overflow-hidden font-sans" style={{ background: '#000000', color: '#ffffff' }}>
-      {/* Remote video/audio */}
+    <div
+      className="fixed inset-0 z-[1500] flex flex-col justify-between overflow-hidden select-none font-sans text-white"
+      style={{
+        background: '#0b141a',
+        color: '#ffffff',
+      }}
+    >
+      {/* Background Remote Video for Video Calls */}
       <video
         ref={remoteVideoRef}
         autoPlay
         playsInline
         controls={false}
-        className={`absolute inset-0 w-full h-full object-cover ${type !== 'video' ? 'hidden' : ''}`}
-        style={{ background: '#000000' }}
+        className={`absolute inset-0 w-full h-full object-cover z-0 ${type !== 'video' ? 'hidden' : ''}`}
+        style={{ background: '#0b141a' }}
       />
       <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
 
-      {/* Main UI Layer */}
-      <div 
-        className="relative z-10 w-full h-full flex flex-col items-center justify-center pointer-events-none" 
-        style={{ background: (type === 'video' && callStatus === 'active') ? 'transparent' : '#000000' }}
-      >
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/80 backdrop-blur-md border border-white/15 text-xs font-semibold text-white shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
+          {toastMessage}
+        </div>
+      )}
 
-        {/* Timer (video only) */}
-        {type === 'video' && callStatus === 'active' && (
-          <div className="absolute top-[calc(1.5rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 px-4 py-2 backdrop-blur-xl rounded-full shadow-lg flex items-center gap-3 pointer-events-auto" style={{ background: 'var(--dm-bg-sidebar)', border: '1px solid var(--dm-border)' }}>
-            <div className="w-1.5 h-1.5 bg-zinc-400 dark:bg-white rounded-full animate-pulse" />
-            <span className="text-xs font-semibold tracking-wider" style={{ color: 'var(--dm-text-primary)' }}>{formatDuration(duration)}</span>
+      {/* ─── 1. TOP HEADER ─────────────────────────────────────────────────── */}
+      <div className="relative z-20 w-full pt-[calc(14px+env(safe-area-inset-top,0px))] px-5 pb-3 flex items-center justify-between pointer-events-auto">
+        {/* Left: Minimize / Diagonal Arrow Button */}
+        <button
+          onClick={() => showToast("Call minimized")}
+          className="w-12 h-12 md:w-13 md:h-13 rounded-full flex items-center justify-center bg-[#1c2830]/80 hover:bg-[#253540] active:scale-90 text-white transition-all cursor-pointer shadow-lg backdrop-blur-md border border-white/10"
+          title="Minimize call"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 14h6v6m10-10h-6V4M10 14L3 21m11-11l7-7" />
+          </svg>
+        </button>
+
+        {/* Center: Caller Information */}
+        <div className="flex flex-col items-center text-center max-w-[62%] px-2">
+          <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight truncate max-w-full drop-shadow-md">
+            {callerDisplayName}
+          </h2>
+
+          <div className="flex items-center justify-center gap-1.5 mt-0.5 text-xs text-zinc-400 font-medium">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span className="tracking-wide">End-to-end encrypted</span>
           </div>
-        )}
 
-        {/* Center Content (Audio Call or Ringing/Connecting) */}
-        {(type === 'audio' || callStatus !== 'active') && (
-          <div className="flex flex-col items-center gap-6 text-center animate-in zoom-in duration-700 pointer-events-auto">
-            <div className="relative">
-              {callStatus === 'ringing' && (
-                <>
-                  <div className="absolute inset-0 rounded-full animate-ping [animation-duration:2s]" style={{ background: 'var(--dm-bg-active)' }} />
-                  <div className="absolute -inset-6 rounded-full animate-pulse [animation-duration:3s]" style={{ background: 'var(--dm-bg-input)', opacity: 0.5 }} />
-                </>
-              )}
-              <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 shadow-2xl flex items-center justify-center text-4xl font-bold" style={{ borderColor: 'var(--dm-border)', background: 'var(--dm-bg-sidebar)', color: 'var(--dm-text-primary)' }}>
-                {peer.image ? <img src={peer.image} className="w-full h-full object-cover" alt="peer" /> : <img src="/Avatar.avif" className="w-full h-full object-cover" alt="avatar" />}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-extrabold tracking-tight" style={{ color: 'var(--dm-text-primary)' }}>{peer.name}</h2>
-              <div className="flex items-center justify-center gap-2">
-                <span className="px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest" style={{ background: 'var(--dm-bg-active)', color: 'var(--dm-text-secondary)' }}>
-                  {type} Call
-                </span>
-                <span className="font-medium text-base" style={{ color: 'var(--dm-text-muted)' }}>
-                  {callStatus === 'active' ? formatDuration(duration) : callStatus === 'ringing' ? 'Ringing...' : callStatus === 'reconnecting' ? 'Reconnecting...' : 'Connecting...'}
-                </span>
-              </div>
-            </div>
+          <p className="text-xs md:text-sm font-semibold text-zinc-300 mt-1">
+            {callStatus === 'active'
+              ? formatDuration(duration)
+              : callStatus === 'ringing'
+              ? 'Ringing...'
+              : callStatus === 'reconnecting'
+              ? 'Reconnecting...'
+              : 'Connecting...'}
+          </p>
+        </div>
+
+        {/* Right: Add Participant Button */}
+        <button
+          onClick={() => showToast("Group calling available soon")}
+          className="w-12 h-12 md:w-13 md:h-13 rounded-full flex items-center justify-center bg-[#1c2830]/80 hover:bg-[#253540] active:scale-90 text-white transition-all cursor-pointer shadow-lg backdrop-blur-md border border-white/10"
+          title="Add participant"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="8.5" cy="7" r="4" />
+            <line x1="20" y1="8" x2="20" y2="14" />
+            <line x1="23" y1="11" x2="17" y2="11" />
+          </svg>
+        </button>
+      </div>
+
+      {/* ─── 2. CENTER SECTION ─────────────────────────────────────────────── */}
+      {/* Audio Call or Connecting / Video Paused Fallback */}
+      {(type === 'audio' || callStatus !== 'active' || isCamOff) && (
+        <div className="flex-1 flex flex-col items-center justify-center px-4 my-auto z-10 w-full animate-in zoom-in-95 duration-500">
+          <div className="relative w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 rounded-full overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.85)] border-2 border-white/10 bg-[#162026] flex items-center justify-center">
+            {callStatus === 'ringing' && (
+              <>
+                <div className="absolute inset-0 rounded-full animate-ping opacity-25 bg-emerald-500 [animation-duration:2.5s]" />
+                <div className="absolute -inset-4 rounded-full animate-pulse opacity-20 bg-emerald-400 [animation-duration:3s]" />
+              </>
+            )}
+            {peer.image && peer.image.length > 5 ? (
+              <img src={peer.image} className="w-full h-full object-cover" alt="caller" referrerPolicy="no-referrer" />
+            ) : (
+              <img src="/Avatar.avif" className="w-full h-full object-cover" alt="avatar" />
+            )}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Local Video (PiP) */}
-        {type === 'video' && (
-          <div className="absolute top-[calc(1rem+env(safe-area-inset-top,0px))] right-4 md:top-[calc(1.5rem+env(safe-area-inset-top,0px))] md:right-6 w-24 h-32 md:w-32 md:h-44 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl z-20 group hover:scale-105 transition-transform duration-300 pointer-events-auto" style={{ border: '2px solid var(--dm-border)', background: 'var(--dm-bg-sidebar)' }}>
-            <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
-          </div>
-        )}
+      {/* Video Call Local Video (Floating PiP Preview) */}
+      {type === 'video' && (
+        <div className="absolute top-[calc(5rem+env(safe-area-inset-top,0px))] right-4 md:right-6 w-28 h-40 sm:w-32 sm:h-44 md:w-36 md:h-48 rounded-2xl md:rounded-3xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.7)] border-2 border-white/20 bg-[#162026] z-20 group hover:scale-105 transition-all duration-300 pointer-events-auto">
+          <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
+          <button
+            onClick={handleSwitchCamera}
+            className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/80 active:scale-90 transition-all cursor-pointer border border-white/10"
+            title="Flip camera"
+          >
+            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
+      )}
 
-        {/* Action Bar */}
-        <div className="absolute bottom-4 md:bottom-5 left-1/2 -translate-x-1/2 w-fit min-w-[290px] md:min-w-[340px] max-w-[90vw] z-40 pointer-events-auto">
-          <div className="w-full flex items-center justify-between px-5 md:px-7 py-3 md:py-4 rounded-[2rem] md:rounded-full shadow-2xl border" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border)' }}>
+      {/* ─── 3. BOTTOM CONTROL PANEL (WhatsApp 3x2 Grid) ───────────────────── */}
+      <div className="w-full px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-2 flex flex-col items-center z-30 pointer-events-auto">
+        <div
+          className="w-full max-w-[420px] rounded-[32px] p-5 sm:p-6 bg-[#162026]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)]"
+          style={{ background: 'rgba(22, 32, 38, 0.95)' }}
+        >
+          <div className="grid grid-cols-3 gap-y-5 gap-x-2 sm:gap-x-4 place-items-center">
 
-            <button
-              onClick={toggleSpeaker}
-              className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
-              style={{
-                background: isSpeakerOn ? 'var(--dm-bg-active)' : 'var(--dm-bg-input)',
-                color: isSpeakerOn ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)',
-                border: '1px solid var(--dm-border)',
-                cursor: 'pointer'
-              }}
-            >
-              {isSpeakerOn ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                </svg>
-              )}
-            </button>
-
-            <button
-              onClick={toggleMute}
-              className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
-              style={{
-                background: isMuted ? 'var(--dm-bg-active)' : 'var(--dm-bg-input)',
-                color: isMuted ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)',
-                border: '1px solid var(--dm-border)',
-                cursor: 'pointer'
-              }}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
-            </button>
-
-            {type === 'video' && (
+            {/* 1. SPEAKER BUTTON */}
+            <div className="flex flex-col items-center gap-2">
               <button
-                onClick={toggleCamera}
-                className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
-                style={{
-                  background: isCamOff ? 'var(--dm-bg-active)' : 'var(--dm-bg-input)',
-                  color: isCamOff ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)',
-                  border: '1px solid var(--dm-border)',
-                  cursor: 'pointer'
-                }}
-                title="Toggle Camera"
+                onClick={toggleSpeaker}
+                className={`w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
+                  isSpeakerOn
+                    ? 'bg-white text-[#111b21] shadow-lg'
+                    : 'bg-[#2a3942] hover:bg-[#344752] text-white'
+                }`}
+                title={isSpeakerOn ? "Speaker on" : "Speaker off"}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                  {isSpeakerOn ? (
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                  ) : (
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                  )}
                 </svg>
               </button>
-            )}
+              <span className="text-xs font-medium text-white/90 tracking-wide">Speaker</span>
+            </div>
 
-            {type === 'video' && (
+            {/* 2. VIDEO / CAMERA BUTTON */}
+            <div className="flex flex-col items-center gap-2">
               <button
-                onClick={handleSwitchCamera}
-                className="w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-105"
-                style={{
-                  background: 'var(--dm-bg-input)',
-                  color: 'var(--dm-text-muted)',
-                  border: '1px solid var(--dm-border)',
-                  cursor: 'pointer'
-                }}
-                title="Switch Camera"
+                onClick={type === 'video' ? toggleCamera : () => showToast("Upgrade to video call")}
+                className={`w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
+                  isCamOff
+                    ? 'bg-red-500/25 text-red-400 border border-red-500/30'
+                    : (type === 'video'
+                    ? 'bg-[#2a3942] text-white hover:bg-[#344752]'
+                    : 'bg-[#2a3942] hover:bg-[#344752] text-white')
+                }`}
+                title={type === 'video' ? (isCamOff ? "Turn Camera On" : "Turn Camera Off") : "Video"}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                {isCamOff ? (
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m4 0h5a2 2 0 0 1 2 2v3m6-2v8l-6-4 6-4Z" />
+                    <line x1="2" y1="2" x2="22" y2="22" />
+                  </svg>
+                ) : (
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m22 8-6 4 6 4V8Z" />
+                    <rect width="14" height="12" x="2" y="6" rx="2" ry="2" />
+                  </svg>
+                )}
+              </button>
+              <span className="text-xs font-medium text-white/90 tracking-wide">
+                {type === 'video' ? (isCamOff ? 'Turn on' : 'Camera') : 'Video'}
+              </span>
+            </div>
+
+            {/* 3. MUTE BUTTON */}
+            <div className="flex flex-col items-center gap-2">
+              <button
+                onClick={toggleMute}
+                className={`w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md ${
+                  isMuted
+                    ? 'bg-white text-[#111b21] shadow-lg'
+                    : 'bg-[#2a3942] hover:bg-[#344752] text-white'
+                }`}
+                title={isMuted ? "Unmute Microphone" : "Mute Microphone"}
+              >
+                {isMuted ? (
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="2" y1="2" x2="22" y2="22" />
+                    <path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2" />
+                    <path d="M5 10v2a7 7 0 0 0 12 5" />
+                    <path d="M15 9.34V5a3 3 0 0 0-5.68-1.33" />
+                    <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                  </svg>
+                ) : (
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                  </svg>
+                )}
+              </button>
+              <span className="text-xs font-medium text-white/90 tracking-wide">Mute</span>
+            </div>
+
+            {/* 4. MORE / FLIP BUTTON */}
+            <div className="flex flex-col items-center gap-2">
+              <button
+                onClick={type === 'video' ? handleSwitchCamera : () => setShowMoreOptions(prev => !prev)}
+                className="w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center bg-[#2a3942] hover:bg-[#344752] active:scale-90 text-white transition-all cursor-pointer shadow-md"
+                title={type === 'video' ? "Switch Camera" : "More options"}
+              >
+                {type === 'video' ? (
+                  <svg width="26" height="26" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                ) : (
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="5" cy="12" r="2" />
+                    <circle cx="12" cy="12" r="2" />
+                    <circle cx="19" cy="12" r="2" />
+                  </svg>
+                )}
+              </button>
+              <span className="text-xs font-medium text-white/90 tracking-wide">
+                {type === 'video' ? 'Flip' : 'More'}
+              </span>
+            </div>
+
+            {/* 5. SHARE BUTTON */}
+            <div className="flex flex-col items-center gap-2">
+              <button
+                onClick={() => {
+                  if (typeof navigator !== 'undefined' && (navigator as any).share) {
+                    (navigator as any).share({ title: 'Connect Call', text: `In a call with ${callerDisplayName}` }).catch(() => {});
+                  } else {
+                    showToast("Screen sharing enabled on desktop");
+                  }
+                }}
+                className="w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center bg-[#2a3942] hover:bg-[#344752] active:scale-90 text-white transition-all cursor-pointer shadow-md"
+                title="Share"
+              >
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                  <line x1="8" y1="21" x2="16" y2="21" />
+                  <line x1="12" y1="17" x2="12" y2="21" />
+                  <path d="m16 9-4-4-4 4" />
+                  <path d="M12 5v7" />
                 </svg>
               </button>
-            )}
+              <span className="text-xs font-medium text-white/90 tracking-wide">Share</span>
+            </div>
 
-            <button
-              onClick={handleEnd}
-              className="w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 transition-all active:scale-90"
-              style={{ background: 'var(--dm-text-primary)', color: 'var(--dm-bg-main)', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.25)' }}
-            >
-              <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.71c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.66c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
-              </svg>
-            </button>
+            {/* 6. END CALL BUTTON */}
+            <div className="flex flex-col items-center gap-2">
+              <button
+                onClick={handleEnd}
+                className="w-16 h-16 sm:w-[68px] sm:h-[68px] rounded-full flex items-center justify-center bg-[#ea394b] hover:bg-[#d92d40] active:scale-90 text-white transition-all shadow-[0_8px_25px_rgba(234,57,75,0.55)] cursor-pointer"
+                title="End Call"
+              >
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.71c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.66c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
+                </svg>
+              </button>
+              <span className="text-xs font-semibold text-white tracking-wide">End</span>
+            </div>
+
           </div>
         </div>
       </div>
+
+      {/* ─── MORE OPTIONS MODAL ────────────────────────────────────────────── */}
+      {showMoreOptions && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setShowMoreOptions(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl p-5 bg-[#182229] border border-white/10 shadow-2xl space-y-3 animate-in slide-in-from-bottom-6 duration-300"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-sm font-bold text-white tracking-tight">Call Options</h3>
+              <button
+                onClick={() => setShowMoreOptions(false)}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                onClick={() => {
+                  toggleSpeaker();
+                  setShowMoreOptions(false);
+                }}
+                className="w-full py-3 px-4 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-between text-xs font-medium text-white transition-all"
+              >
+                <span>Speakerphone Output</span>
+                <span className="text-zinc-400 font-bold">{isSpeakerOn ? 'On' : 'Off'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  toggleMute();
+                  setShowMoreOptions(false);
+                }}
+                className="w-full py-3 px-4 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-between text-xs font-medium text-white transition-all"
+              >
+                <span>Mute Microphone</span>
+                <span className="text-zinc-400 font-bold">{isMuted ? 'Muted' : 'Unmuted'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  handleSwitchCamera();
+                  setShowMoreOptions(false);
+                }}
+                className="w-full py-3 px-4 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-between text-xs font-medium text-white transition-all"
+              >
+                <span>Switch Camera (Front/Back)</span>
+                <span className="text-zinc-400 font-bold">Flip</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`.mirror { transform: scaleX(-1); }`}</style>
     </div>
