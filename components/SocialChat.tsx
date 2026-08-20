@@ -115,7 +115,7 @@ export const PRESET_TAGS: MessageTag[] = [
 export const formatLastSeenAgo = (lastSeenRaw?: string | Date | null): string => {
   if (!lastSeenRaw) return '';
 
-  const d = typeof lastSeenRaw === 'string' ? new Date(lastSeenRaw) : lastSeenRaw;
+  const d = typeof lastSeenRaw === 'string' ? new Date(lastSeenRaw) : (lastSeenRaw instanceof Date ? lastSeenRaw : new Date(lastSeenRaw));
   if (isNaN(d.getTime())) return '';
 
   const now = new Date();
@@ -2482,8 +2482,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         getRecentChats().then(results => {
           const freshLastSeen: Record<string, string> = {};
           results.forEach((u: any) => {
-            if (u.email && u.lastSeen) {
-              freshLastSeen[u.email.toLowerCase().trim()] = u.lastSeen;
+            const timeVal = u.lastSeen ? (typeof u.lastSeen === 'string' ? u.lastSeen : new Date(u.lastSeen).toISOString()) : null;
+            if (timeVal) {
+              if (u.email) freshLastSeen[u.email.toLowerCase().trim()] = timeVal;
+              if (u.id) freshLastSeen[u.id] = timeVal;
             }
           });
           if (Object.keys(freshLastSeen).length > 0) {
@@ -3197,14 +3199,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           }
 
           // ── Refresh lastSeenMap from DB so missed offline events are caught ──
-          // If the app was closed/backgrounded when a user went offline, we missed
-          // the activity_update socket event. Re-fetching contacts gives us the
-          // freshest lastSeen timestamps from the database.
           getRecentChats().then(results => {
             const freshLastSeen: Record<string, string> = {};
             results.forEach((u: any) => {
-              if (u.email && u.lastSeen) {
-                freshLastSeen[u.email.toLowerCase().trim()] = u.lastSeen;
+              const timeVal = u.lastSeen ? (typeof u.lastSeen === 'string' ? u.lastSeen : new Date(u.lastSeen).toISOString()) : null;
+              if (timeVal) {
+                if (u.email) freshLastSeen[u.email.toLowerCase().trim()] = timeVal;
+                if (u.id) freshLastSeen[u.id] = timeVal;
               }
             });
             if (Object.keys(freshLastSeen).length > 0) {
@@ -3376,8 +3377,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           results.forEach((u: any) => {
             if (u.isRequest) reqs.push(u);
             else contacts.push(u);
-            if (u.email && u.lastSeen) {
-              initialLastSeen[u.email.toLowerCase().trim()] = u.lastSeen;
+            const timeVal = u.lastSeen ? (typeof u.lastSeen === 'string' ? u.lastSeen : new Date(u.lastSeen).toISOString()) : null;
+            if (timeVal) {
+              if (u.email) initialLastSeen[u.email.toLowerCase().trim()] = timeVal;
+              if (u.id) initialLastSeen[u.id] = timeVal;
             }
           });
           if (Object.keys(initialLastSeen).length > 0) {
@@ -3402,23 +3405,25 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     // Mark online immediately — sets isOnline=true, lastSeen=now, lastHeartbeat=now in DB
     updateActivityStatus('online').catch(() => {});
 
-    // Socket heartbeat every 25s (keeps WebSocket alive & updates presence on server with 0 Vercel requests)
+    // Socket heartbeat every 20s (keeps WebSocket alive & updates presence on server with 0 Vercel requests)
     const heartbeatInterval = setInterval(() => {
-      if (socket?.connected) {
-        socket.emit('heartbeat', { userId: myId, email: myEmail });
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('heartbeat', { userId: myId, email: myEmail });
       }
-    }, 25000);
+    }, 20000);
 
-    // Visibility: come back to foreground → go online again
+    // Periodic DB heartbeat every 60s so DB stays fresh during continuous usage
+    const dbHeartbeatInterval = setInterval(() => {
+      updateActivityStatus('heartbeat').catch(() => {});
+    }, 60000);
+
+    // Visibility: come back to foreground → refresh online status
     const handleVisible = () => {
       if (document.visibilityState === 'visible') {
         updateActivityStatus('online').catch(() => {});
-        if (socket?.connected) {
-          socket.emit('heartbeat', { userId: myId, email: myEmail });
+        if (socketRef.current?.connected) {
+          socketRef.current.emit('heartbeat', { userId: myId, email: myEmail });
         }
-      } else {
-        // Going to background — mark offline immediately
-        updateActivityStatus('offline').catch(() => {});
       }
     };
 
@@ -3439,13 +3444,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     return () => {
       clearInterval(heartbeatInterval);
+      clearInterval(dbHeartbeatInterval);
       document.removeEventListener('visibilitychange', handleVisible);
       window.removeEventListener('pagehide', handleUnload);
       window.removeEventListener('beforeunload', handleUnload);
       // Mark offline on component unmount (logout / route change)
       updateActivityStatus('offline').catch(() => {});
     };
-  }, [session?.user?.email, socket]);
+  }, [session?.user?.email]);
 
   // Periodic ticker to recalculate relative timestamps dynamically
   const [, setTimeTicker] = useState(0);
@@ -4424,7 +4430,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 const showActivity = (user as any).showActivityStatus !== false;
                 const isOnline = showActivity && ((userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(user.id));
                 const isPinned = pinnedChats.has(user.id);
-                const lastSeenVal = lastSeenMap[userEmail] || lastSeenMap[user.id] || (user as any).lastSeen;
+                const lastSeenVal = (userEmail && lastSeenMap[userEmail]) || lastSeenMap[user.id] || (user as any).lastSeen || (user as any).lastHeartbeat;
                 return (
                   <ChatItem
                     key={user.id}
@@ -4520,7 +4526,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             // User has disabled activity status — show nothing
                             return null;
                           }
-                          const isOnline = (selectedUser.email && onlineUsers.has(selectedUser.email.toLowerCase().trim())) || onlineUsers.has(selectedUser.id);
+                          const userEmail = (selectedUser.email || '').toLowerCase().trim();
+                          const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
                           if (isOnline) {
                             return (
                               <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
@@ -4529,11 +4536,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               </span>
                             );
                           }
-                          const lastSeenVal = (selectedUser.email && lastSeenMap[selectedUser.email.toLowerCase().trim()]) || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen || (selectedUser as any).lastHeartbeat;
+                          const lastSeenVal = (userEmail && lastSeenMap[userEmail]) || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen || (selectedUser as any).lastHeartbeat;
                           const ago = formatLastSeenAgo(lastSeenVal);
                           if (!ago) return null;
                           return (
-                            <span style={{ fontSize: '11px', opacity: 0.75 }}>
+                            <span style={{ fontSize: '11px', opacity: 0.85 }}>
                               Active {ago}
                             </span>
                           );
