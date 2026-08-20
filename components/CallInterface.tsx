@@ -54,7 +54,17 @@ export default function CallInterface({
 
   const fullScreenVideoRef = useRef<HTMLVideoElement>(null);
   const localPipVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  // *** FIX Bug 9: Create audio element imperatively so it always exists when stream arrives ***
+  // If we rely on the JSX <audio> ref, it may be null when the first ontrack fires (race condition)
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(
+    typeof window !== 'undefined' ? (() => {
+      const el = document.createElement('audio');
+      el.autoplay = true;
+      // playsInline is not on HTMLAudioElement type but is valid HTML — set via attribute
+      el.setAttribute('playsinline', '');
+      return el;
+    })() : null
+  );
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -120,13 +130,29 @@ export default function CallInterface({
   }, [type, callStatus, localStream]);
 
   // Wire remote audio stream to dedicated audio element (ensures uninterrupted voice)
+  // Works even if remoteAudioRef was created imperatively above
   useEffect(() => {
-    if (!remoteStream || !remoteAudioRef.current) return;
+    if (!remoteStream) return;
     const audioEl = remoteAudioRef.current;
+    if (!audioEl) return;
     if (audioEl.srcObject !== remoteStream) {
       audioEl.srcObject = remoteStream;
     }
-    audioEl.play().catch(e => console.warn('Remote audio play error:', e));
+    // Ensure it plays — browsers may have autoplay policy
+    const playPromise = audioEl.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(e => {
+        console.warn('Remote audio play error:', e);
+        // Retry on user interaction
+        const retryPlay = () => {
+          audioEl.play().catch(() => {});
+          document.removeEventListener('click', retryPlay);
+          document.removeEventListener('touchstart', retryPlay);
+        };
+        document.addEventListener('click', retryPlay, { once: true });
+        document.addEventListener('touchstart', retryPlay, { once: true });
+      });
+    }
   }, [remoteStream]);
 
   const formatDuration = (s: number) => {
@@ -141,25 +167,33 @@ export default function CallInterface({
   };
 
   const toggleSpeaker = async () => {
-    const targetAudio = type === 'video' ? fullScreenVideoRef.current : remoteAudioRef.current;
-    if (!targetAudio) return;
+    // *** FIX Bug 9 (speaker): Always use remoteAudioRef — it reliably contains the remote audio ***
+    // For video calls the <video> element is muted, so audio always flows through the audio element.
+    const audioEl = remoteAudioRef.current;
+    if (!audioEl) return;
     const nextState = !isSpeakerOn;
     setIsSpeakerOn(nextState);
-    if (typeof (targetAudio as any).setSinkId !== 'undefined') {
+    if (typeof (audioEl as any).setSinkId !== 'undefined') {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
         if (audioOutputs.length > 0) {
           if (nextState) {
-            const speaker = audioOutputs.find(d => d.label.toLowerCase().includes('speaker')) || audioOutputs[audioOutputs.length - 1];
-            if (speaker) await (targetAudio as any).setSinkId(speaker.deviceId);
+            const speaker = audioOutputs.find(d =>
+              d.label.toLowerCase().includes('speaker') ||
+              d.label.toLowerCase().includes('loudspeaker')
+            ) || audioOutputs[audioOutputs.length - 1];
+            if (speaker) await (audioEl as any).setSinkId(speaker.deviceId);
           } else {
-            const earpiece = audioOutputs.find(d => d.label.toLowerCase().includes('earpiece') || d.label.toLowerCase().includes('receiver')) || audioOutputs[0];
-            if (earpiece) await (targetAudio as any).setSinkId(earpiece.deviceId);
+            const earpiece = audioOutputs.find(d =>
+              d.label.toLowerCase().includes('earpiece') ||
+              d.label.toLowerCase().includes('receiver')
+            ) || audioOutputs[0];
+            if (earpiece) await (audioEl as any).setSinkId(earpiece.deviceId);
           }
         }
       } catch {
-        console.log('Audio routing not supported');
+        console.log('Audio output routing not supported on this device');
       }
     }
   };
@@ -191,7 +225,10 @@ export default function CallInterface({
           style={{ background: '#000000' }}
         />
       )}
-      <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+      {/* Hidden audio element for remote audio — used as srcObject target for all call types.
+          For video calls the <video> element is always muted (avoids echo), audio flows here.
+          This element was created imperatively in remoteAudioRef to avoid null-on-mount race. */}
+      {/* No JSX <audio> needed — element is created imperatively in the ref initializer above */}
 
       {/* Floating Toast Notification */}
       {toastMessage && (

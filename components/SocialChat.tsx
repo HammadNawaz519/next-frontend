@@ -2067,6 +2067,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   // Call States
   const [incomingCall, setIncomingCall] = useState<{ from: any, type: 'audio' | 'video', offer?: any, callId?: string } | null>(null);
   const [activeCall, setActiveCall] = useState<{ peer: any, type: 'audio' | 'video', isCaller: boolean, callId?: string, initialOffer?: any } | null>(null);
+  // *** FIX Bug 3: Ref mirror of activeCall so socket closures always read current value ***
+  const activeCallRef = useRef<{ peer: any, type: 'audio' | 'video', isCaller: boolean, callId?: string, initialOffer?: any } | null>(null);
+  const incomingCallDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
@@ -2415,34 +2418,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Notify parent of active call status to free up camera locks
+  // Notify parent of active call status and keep ref in sync
   useEffect(() => {
     if (onCallStateChange) {
       onCallStateChange(!!activeCall);
     }
+    activeCallRef.current = activeCall;
   }, [activeCall, onCallStateChange]);
 
-  // Incoming call auto-timeout (30s) + vibration (Sound effect removed)
+  // Incoming call vibration haptics
   useEffect(() => {
-    let incomingTimeout: NodeJS.Timeout;
-
     if (incomingCall && !activeCall) {
       try {
         if (typeof window !== 'undefined' && navigator.vibrate) {
           navigator.vibrate([200, 100, 200]);
         }
       } catch {}
-
-      // Auto-timeout: if user doesn't answer within 30s, dismiss incoming call
-      incomingTimeout = setTimeout(() => {
-        console.log('[Call] Incoming call auto-timeout (30s)');
-        setIncomingCall(null);
-      }, 30000);
     }
-
-    return () => {
-      if (incomingTimeout) clearTimeout(incomingTimeout);
-    };
+    // Auto-dismiss (45s) is handled imperatively in the incoming_call socket handler
   }, [incomingCall, activeCall]);
   // 1. Stable Socket Instance
   useEffect(() => {
@@ -2825,17 +2818,28 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       newSocket.on('incoming_call', (data) => {
         console.log("Incoming call received:", data);
-        // Reject if already in a call (busy)
-        if (activeCall) {
+        // *** FIX Bug 3: Use activeCallRef (not stale closure) to check busy state ***
+        if (activeCallRef.current) {
           newSocket.emit('reject_call', { to: data.from?.email?.toLowerCase().trim(), toUserId: data.from?.id, callId: data.callId });
           return;
         }
         setIncomingCall(data);
 
-        // Stunning Custom Call Notification Trigger (vibrates with custom cadence!)
+        // *** FIX Bug 13: Auto-dismiss incoming call after 45 seconds ***
+        if (incomingCallDismissTimer.current) clearTimeout(incomingCallDismissTimer.current);
+        incomingCallDismissTimer.current = setTimeout(() => {
+          setIncomingCall(prev => {
+            if (prev && prev.callId === data.callId) {
+              // Auto-dismiss — no need to emit rejection since caller will time out too
+              return null;
+            }
+            return prev;
+          });
+        }, 45000);
+
+        // Push notification if app is backgrounded
         const callerName = data.from?.name || data.from?.email?.split('@')[0] || 'Someone';
         const isAppBackgrounded = typeof document !== 'undefined' && document.visibilityState === 'hidden';
-
         if (isAppBackgrounded) {
           triggerStunningNotification(
             'call',
@@ -2846,43 +2850,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
       });
 
+      // *** FIX Bug 7: Only keep call_accepted here (triggers engine's onCallAccepted via isAccepted prop) ***
+      // Termination events (call_ended, call_rejected, etc.) are handled by the WebRTC engine
+      // which fires onEnd() → the hook fires onEnd → CallInterface calls onEnd → SocialChat clears activeCall.
+      // Having BOTH listeners caused double state mutations.
       newSocket.on('call_accepted', (data) => {
+        // Mark the active call as connected so CallInterface passes isAccepted=true to the engine
         setActiveCall(prev => prev ? { ...prev, connected: true } as any : null);
       });
 
-      newSocket.on('call_rejected', () => {
-        console.log('[Call] Call was declined');
-        setActiveCall(null);
-        setIncomingCall(null);
-      });
-
-      newSocket.on('call_decline', () => {
-        console.log('[Call] Call was declined (decline)');
-        setActiveCall(null);
-        setIncomingCall(null);
-      });
-
-      newSocket.on('call_busy', () => {
+      // call_busy needs to be handled here because the engine may not have started yet
+      // (caller gets busy before the engine's socket listeners are even set up)
+      newSocket.on('call_busy', (data) => {
         console.log('[Call] User is busy');
+        if (!activeCallRef.current) return; // Ignore if no active call on our side
         setActiveCall(null);
-      });
-
-      newSocket.on('call_ended', () => {
-        console.log("Call ended by peer");
-        setActiveCall(null);
-        setIncomingCall(null);
-      });
-
-      newSocket.on('call_cancelled', () => {
-        console.log('[Call] Call was cancelled by caller');
-        setActiveCall(null);
-        setIncomingCall(null);
-      });
-
-      newSocket.on('call_timed_out', () => {
-        console.log('[Call] Call timed out');
-        setActiveCall(null);
-        setIncomingCall(null);
       });
 
       newSocket.on('user_typing', ({ email }) => {
@@ -3261,8 +3243,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       callId
     };
 
+    // *** FIX Bug 14: Emit only once — server handles both event names via handleCallRequest ***
     socket.emit('call_user', payload);
-    socket.emit('call_request', payload);
 
     setActiveCall({ peer: { ...selectedUser, email: targetEmail }, type, isCaller: true, callId } as any);
   };
@@ -3277,8 +3259,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       callId: incomingCall.callId
     };
 
+    // Emit once — server handles both 'accept_call' and 'call_accept' via handleCallAccept
     socket.emit('accept_call', payload);
-    socket.emit('call_accept', payload);
 
     setActiveCall({
       peer: incomingCall.from,
@@ -3298,8 +3280,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       toUserId: incomingCall.from.id
     };
 
+    // Emit once — server handles both 'reject_call' and 'call_decline' via handleCallDecline
     socket.emit('reject_call', payload);
-    socket.emit('call_decline', payload);
 
     const result = await saveCall(incomingCall.from.id, incomingCall.type, 'rejected');
     if (result?.message) {
@@ -3314,15 +3296,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     setIncomingCall(null);
   };
 
-  const handleEndCall = () => {
-    if (!activeCall || !socket) return;
-    const payload = {
-      to: activeCall.peer.email?.toLowerCase().trim(),
-      toUserId: activeCall.peer.id
-    };
-    socket.emit('end_call', payload);
-    socket.emit('call_end', payload);
-  };
+  // *** FIX Bug 6: handleEndCall removed — engine.endCall() already emits 'end_call'. ***
+  // Keeping a separate handleEndCall caused duplicate 'end_call' emissions to the peer.
 
   // Search or Load Recent
   useEffect(() => {
@@ -5589,6 +5564,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           initialOffer={(activeCall as any).initialOffer}
           callId={(activeCall as any).callId}
           onEnd={(duration, wasConnected) => {
+            // Clear any pending dismiss timer
+            if (incomingCallDismissTimer.current) {
+              clearTimeout(incomingCallDismissTimer.current);
+              incomingCallDismissTimer.current = null;
+            }
             const callData = activeCall;
             setActiveCall(null);
             setIncomingCall(null);

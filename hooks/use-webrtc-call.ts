@@ -185,9 +185,14 @@ export function useWebRTCCall({
   }, [socket, isCaller]);
 
   // ── Handle caller-side acceptance (remote peer accepted the call) ──────
+  // Guard with hasAccepted ref so onCallAccepted() fires EXACTLY ONCE per call.
+  // Without this, any parent re-render while isAccepted=true would re-trigger it.
+
+  const hasAccepted = useRef(false);
 
   useEffect(() => {
-    if (isCaller && isAccepted && engineRef.current) {
+    if (isCaller && isAccepted && engineRef.current && !hasAccepted.current) {
+      hasAccepted.current = true;
       engineRef.current.onCallAccepted();
     }
   }, [isAccepted, isCaller]);
