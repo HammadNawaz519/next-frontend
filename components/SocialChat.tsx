@@ -2552,10 +2552,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         // 1. Update Message Stream safely without duplicates
         setMessages((prev) => {
-          if (selectedId !== partnerId && selectedId !== msgSenderId && selectedId !== msgReceiverId) return prev;
+          // Only update messages state if this message belongs to the active conversation
+          if (selectedId && selectedId !== partnerId && selectedId !== msgSenderId && selectedId !== msgReceiverId) return prev;
           const isDup = prev.some(m =>
-            m.id === msg.id ||
-            ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type)
+            // Exact ID match
+            (msg.id && m.id === msg.id) ||
+            // Optimistic message match — replace sending placeholder
+            ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type) ||
+            // Already-committed duplicate (server echo of our own sent msg)
+            (String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type &&
+              Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 10000)
           );
           if (isDup) {
             return prev.map(m =>
@@ -2763,13 +2769,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return { ...prev, [partnerId]: [...current, msg] };
         });
 
-        // 4. Mark as seen if active
-        if (selectedUserRef.current?.id === partnerId) {
+        // 4. Mark as seen if active chat is open and this message is incoming
+        if (selectedUserRef.current?.id === partnerId && msgSenderId !== String((sessionRef.current?.user as any)?.id || '')) {
           markMessagesAsSeen(partnerId).catch(() => {});
+          const seenAt = new Date().toISOString();
           newSocket.emit('mark_as_seen', {
-            senderEmail: selectedUserRef.current.email,
+            senderEmail: selectedUserRef.current.email ? selectedUserRef.current.email.toLowerCase().trim() : undefined,
             senderId: partnerId
           });
+          // Update our own messages state immediately so Seen just now shows
+          setMessages(prev => prev.map(m => (m.isSeen ? m : { ...m, isSeen: true, seenAt })));
         }
 
         // 5. Stunning Custom PWA / Local Notification Trigger
@@ -3232,13 +3241,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   }, [session?.user?.email]); // Run when session loads
 
   // 2. Identify once when socket connects or session loads
+  // Note: identify is already done inside the connect event handler above.
+  // This effect is a safety net in case socket was already connected when session loaded.
   useEffect(() => {
     if (socket && socket.connected && session?.user?.email) {
       const email = session.user.email.toLowerCase().trim();
       const username = session.user.name || email.split('@')[0];
       socket.emit('identify', { email, userId: (session.user as any).id, username });
     }
-  }, [socket, session]);
+  }, [session?.user?.email]); // Only re-run when session email changes, not on every socket state change
 
   const handleCall = async (type: 'audio' | 'video') => {
     if (!selectedUser || !session?.user || !socket) return;
@@ -3551,7 +3562,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         markMessagesAsSeen(targetUserId).catch(() => {});
         socket?.emit('mark_as_seen', {
-          senderEmail: selectedUser.email,
+          senderEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
           senderId: targetUserId
         });
 
