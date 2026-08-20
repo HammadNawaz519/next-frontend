@@ -4633,13 +4633,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       const lastSentMsg = [...filteredMessages].reverse().find(m => String(m.senderId) === currentUserIdStr && m.type !== 'system' && m.type !== 'call' && m.type !== 'deleted');
                       const lastSentMsgId = lastSentMsg ? lastSentMsg.id : null;
 
+                      // Check if the partner has replied after our last message
+                      // If they have, suppress Seen status — it's no longer meaningful
+                      const partnerHasRepliedAfterLastSent = lastSentMsg
+                        ? filteredMessages.some(m =>
+                            String(m.senderId) !== currentUserIdStr &&
+                            m.type !== 'system' &&
+                            new Date(m.createdAt).getTime() > new Date(lastSentMsg.createdAt).getTime()
+                          )
+                        : false;
+
                       return filteredMessages.map((msg, index) => {
                         const prevMsg = filteredMessages[index - 1];
                         const nextMsg = filteredMessages[index + 1];
                         const isPrevSameSender = prevMsg && String(prevMsg.senderId) === String(msg.senderId);
                         const isNextSameSender = nextMsg && String(nextMsg.senderId) === String(msg.senderId);
                         const hasPrevReactions = prevMsg && Array.isArray(prevMsg.reactions) && prevMsg.reactions.length > 0;
-                        const isLatestSentInThread = msg.id === lastSentMsgId;
+                        // isLatestSentInThread: only true for the last sent msg AND only if partner hasn't replied after it
+                        const isLatestSentInThread = msg.id === lastSentMsgId && !partnerHasRepliedAfterLastSent;
                         const showSep = !prevMsg || new Date(prevMsg.createdAt).toDateString() !== new Date(msg.createdAt).toDateString();
                         return (
                           <React.Fragment key={msg.id}>
