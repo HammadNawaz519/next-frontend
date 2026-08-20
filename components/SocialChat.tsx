@@ -4446,7 +4446,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               backgroundSize: activeTheme?.wallpaperUrl ? 'cover' : undefined,
               backgroundPosition: activeTheme?.wallpaperUrl ? 'center' : undefined,
               backgroundAttachment: activeTheme?.wallpaperUrl ? 'fixed' : undefined,
-              transition: 'background 300ms ease'
+              transition: 'background 300ms ease',
+              // Inject per-theme CSS variables so ALL child CSS rules respond to the active theme
+              ['--theme-accent' as any]: activeTheme.accentColor,
+              ['--theme-input-border' as any]: activeTheme.inputBorderColor,
+              ['--theme-input-bg' as any]: activeTheme.id !== 'default'
+                ? `${activeTheme.accentColor}18`   // very subtle tint of accent
+                : 'var(--dm-bg-hover)',
+              ['--theme-icon-color' as any]: activeTheme.id !== 'default' ? '#E2E8F0' : 'var(--dm-text-primary)',
+              ['--theme-outgoing-gradient' as any]: activeTheme.outgoingGradient,
+              ['--theme-incoming-bg' as any]: activeTheme.incomingBubbleColor,
+              ['--theme-incoming-text' as any]: activeTheme.incomingTextColor,
+              ['--theme-reaction-accent' as any]: activeTheme.reactionAccent,
+              ['--theme-cam-container-bg' as any]: activeTheme.id !== 'default'
+                ? `${activeTheme.accentColor}30`
+                : 'var(--dm-bg-hover)',
             }}
           >
             {selectedUser ? (
