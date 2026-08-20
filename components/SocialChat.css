@@ -2202,7 +2202,7 @@
    LOVE, LOVE U & WHALE THEME CUSTOM STYLES (LIGHT & DARK MODE)
    ========================================================================== */
 
-/* Wallpapers (Applied ONLY when custom wallpaper theme is active) */
+/* Wallpapers (Applied when custom wallpaper theme is active) */
 .social-chat-container .theme-love .messages,
 .social-chat-container .theme-love.chat-area {
   background-image: url("/Love.jpg") !important;
@@ -2228,6 +2228,88 @@
   background-position: center !important;
   background-attachment: fixed !important;
   background-repeat: no-repeat !important;
+}
+
+.social-chat-container .theme-alpha .messages,
+.social-chat-container .theme-alpha.chat-area {
+  background-image: url("/Alpha.jpg") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+.social-chat-container .theme-dark-alpha .messages,
+.social-chat-container .theme-dark-alpha.chat-area {
+  background-image: url("/Dark Alpha.jpg") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+.social-chat-container .theme-pattern .messages,
+.social-chat-container .theme-pattern.chat-area {
+  background-image: url("/Pattern.jpg") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+.social-chat-container .theme-view .messages,
+.social-chat-container .theme-view.chat-area {
+  background-image: url("/View.jpg") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+.social-chat-container .theme-purply .messages,
+.social-chat-container .theme-purply.chat-area {
+  background-image: url("/Purply.jpg") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+.social-chat-container .theme-couple .messages,
+.social-chat-container .theme-couple.chat-area {
+  background-image: url("/Couple.jpg") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+.social-chat-container .theme-mono .messages,
+.social-chat-container .theme-mono.chat-area {
+  background-image: url("/Mono.jpg") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+.social-chat-container .theme-sea-side .messages,
+.social-chat-container .theme-sea-side.chat-area {
+  background-image: url("/sea-side.jpg") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Ensure messages layer is completely transparent on wallpaper themes so wallpaper shines through */
+.social-chat-container .chat-area:not(.theme-default) .messages {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+[data-theme="dark"] .social-chat-container .chat-area:not(.theme-default) .messages {
+  background-color: transparent !important;
+  background: transparent !important;
 }
 
 /* Glassmorphic Top Header (Translucent overlay tint, backdrop blur, contrast luminance & no bottom line) */
@@ -2269,6 +2351,66 @@
 
 [data-theme="dark"] .social-chat-container .theme-whale .chat-header {
   background: rgba(18, 38, 58, 0.2) !important;
+  color: #ffffff !important;
+  border-bottom: none !important;
+}
+
+.social-chat-container .theme-alpha .chat-header {
+  background: rgba(224, 231, 255, 0.2) !important;
+  color: #3730a3 !important;
+  border-bottom: none !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-alpha .chat-header {
+  background: rgba(15, 10, 35, 0.25) !important;
+  color: #ffffff !important;
+  border-bottom: none !important;
+}
+
+.social-chat-container .theme-dark-alpha .chat-header {
+  background: rgba(224, 231, 255, 0.2) !important;
+  color: #1e1b4b !important;
+  border-bottom: none !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-dark-alpha .chat-header {
+  background: rgba(8, 8, 24, 0.3) !important;
+  color: #ffffff !important;
+  border-bottom: none !important;
+}
+
+.social-chat-container .theme-pattern .chat-header {
+  background: rgba(224, 242, 254, 0.2) !important;
+  color: #0369a1 !important;
+  border-bottom: none !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-pattern .chat-header {
+  background: rgba(8, 22, 42, 0.25) !important;
+  color: #ffffff !important;
+  border-bottom: none !important;
+}
+
+.social-chat-container .theme-view .chat-header {
+  background: rgba(254, 243, 199, 0.2) !important;
+  color: #92400e !important;
+  border-bottom: none !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-view .chat-header {
+  background: rgba(28, 20, 8, 0.25) !important;
+  color: #ffffff !important;
+  border-bottom: none !important;
+}
+
+.social-chat-container .theme-purply .chat-header {
+  background: rgba(243, 232, 255, 0.2) !important;
+  color: #6b21a8 !important;
+  border-bottom: none !important;
+}
+
+[data-theme="dark"] .social-chat-container .theme-purply .chat-header {
+  background: rgba(28, 10, 48, 0.25) !important;
   color: #ffffff !important;
   border-bottom: none !important;
 }
@@ -2856,53 +2998,56 @@
 /* ============================================================================
    ALPHA THEME — Indigo/Violet on Alpha.jpg wallpaper
    ============================================================================ */
+/* ============================================================================
+   ALPHA THEME — Indigo/Electric Violet on Alpha.jpg wallpaper
+   ============================================================================ */
 .social-chat-container .theme-alpha .msg.sent {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%) !important;
   color: #ffffff !important;
 }
 .social-chat-container .theme-alpha .msg.received,
 .social-chat-container .theme-alpha .msg.ai {
-  background: rgba(0, 0, 0, 0.5) !important;
-  color: #ffffff !important;
+  background: rgba(238, 242, 255, 0.92) !important;
+  color: #312e81 !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
 }
 .social-chat-container .theme-alpha .ig-type-box {
-  background: rgba(10, 10, 30, 0.72) !important;
+  background: rgba(238, 242, 255, 0.85) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   border-color: rgba(99, 102, 241, 0.4) !important;
 }
 .social-chat-container .theme-alpha .ig-textarea {
-  color: #ffffff !important;
+  color: #312e81 !important;
 }
 .social-chat-container .theme-alpha .ig-textarea::placeholder {
-  color: rgba(255, 255, 255, 0.55) !important;
+  color: rgba(49, 46, 129, 0.6) !important;
 }
 .social-chat-container .theme-alpha .ig-cam-container,
 .social-chat-container .theme-alpha .ig-send-container {
-  background: #6366f1 !important;
-  border: 1px solid #4f46e5 !important;
+  background: #4f46e5 !important;
+  border: 1px solid #4338ca !important;
 }
 .social-chat-container .theme-alpha .ig-cam-btn,
 .social-chat-container .theme-alpha .ig-send-btn,
 .social-chat-container .theme-alpha .ig-mic-btn {
   color: #ffffff !important;
 }
-/* Dark mode — same wallpaper darker tints */
+
 [data-theme="dark"] .social-chat-container .theme-alpha .msg.sent {
   background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
   color: #ffffff !important;
 }
 [data-theme="dark"] .social-chat-container .theme-alpha .msg.received,
 [data-theme="dark"] .social-chat-container .theme-alpha .msg.ai {
-  background: rgba(0, 0, 0, 0.6) !important;
-  color: #ffffff !important;
+  background: rgba(18, 14, 45, 0.85) !important;
+  color: #e0e7ff !important;
   backdrop-filter: blur(14px) !important;
   -webkit-backdrop-filter: blur(14px) !important;
 }
 [data-theme="dark"] .social-chat-container .theme-alpha .ig-type-box {
-  background: rgba(8, 8, 24, 0.82) !important;
+  background: rgba(14, 10, 32, 0.84) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
 }
@@ -2910,7 +3055,7 @@
   color: #ffffff !important;
 }
 [data-theme="dark"] .social-chat-container .theme-alpha .ig-textarea::placeholder {
-  color: rgba(255, 255, 255, 0.5) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
 }
 [data-theme="dark"] .social-chat-container .theme-alpha .ig-cam-container,
 [data-theme="dark"] .social-chat-container .theme-alpha .ig-send-container {
@@ -2924,54 +3069,55 @@
 }
 
 /* ============================================================================
-   DARK ALPHA THEME — Deep indigo on Dark Alpha.jpg wallpaper
+   DARK ALPHA THEME — Deep Midnight / Cyber Indigo on Dark Alpha.jpg wallpaper
    ============================================================================ */
 .social-chat-container .theme-dark-alpha .msg.sent {
-  background: linear-gradient(135deg, #312e81 0%, #1e1b4b 100%) !important;
+  background: linear-gradient(135deg, #3730a3 0%, #1e1b4b 100%) !important;
   color: #ffffff !important;
 }
 .social-chat-container .theme-dark-alpha .msg.received,
 .social-chat-container .theme-dark-alpha .msg.ai {
-  background: rgba(0, 0, 0, 0.65) !important;
-  color: #ffffff !important;
+  background: rgba(224, 231, 255, 0.92) !important;
+  color: #1e1b4b !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
 }
 .social-chat-container .theme-dark-alpha .ig-type-box {
-  background: rgba(5, 5, 20, 0.80) !important;
-  backdrop-filter: blur(24px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+  background: rgba(224, 231, 255, 0.85) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   border-color: rgba(67, 56, 202, 0.5) !important;
 }
 .social-chat-container .theme-dark-alpha .ig-textarea {
-  color: #e0e7ff !important;
+  color: #1e1b4b !important;
 }
 .social-chat-container .theme-dark-alpha .ig-textarea::placeholder {
-  color: rgba(224, 231, 255, 0.55) !important;
+  color: rgba(30, 27, 75, 0.6) !important;
 }
 .social-chat-container .theme-dark-alpha .ig-cam-container,
 .social-chat-container .theme-dark-alpha .ig-send-container {
-  background: #4338ca !important;
-  border: 1px solid #3730a3 !important;
+  background: #312e81 !important;
+  border: 1px solid #1e1b4b !important;
 }
 .social-chat-container .theme-dark-alpha .ig-cam-btn,
 .social-chat-container .theme-dark-alpha .ig-send-btn,
 .social-chat-container .theme-dark-alpha .ig-mic-btn {
   color: #ffffff !important;
 }
+
 [data-theme="dark"] .social-chat-container .theme-dark-alpha .msg.sent {
-  background: linear-gradient(135deg, #4338ca 0%, #312e81 100%) !important;
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%) !important;
   color: #ffffff !important;
 }
 [data-theme="dark"] .social-chat-container .theme-dark-alpha .msg.received,
 [data-theme="dark"] .social-chat-container .theme-dark-alpha .msg.ai {
-  background: rgba(0, 0, 0, 0.72) !important;
+  background: rgba(12, 10, 30, 0.85) !important;
   color: #e0e7ff !important;
   backdrop-filter: blur(14px) !important;
   -webkit-backdrop-filter: blur(14px) !important;
 }
 [data-theme="dark"] .social-chat-container .theme-dark-alpha .ig-type-box {
-  background: rgba(4, 4, 18, 0.88) !important;
+  background: rgba(8, 8, 24, 0.88) !important;
   backdrop-filter: blur(24px) saturate(200%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
 }
@@ -2979,7 +3125,7 @@
   color: #c7d2fe !important;
 }
 [data-theme="dark"] .social-chat-container .theme-dark-alpha .ig-textarea::placeholder {
-  color: rgba(199, 210, 254, 0.5) !important;
+  color: rgba(199, 210, 254, 0.55) !important;
 }
 [data-theme="dark"] .social-chat-container .theme-dark-alpha .ig-cam-container,
 [data-theme="dark"] .social-chat-container .theme-dark-alpha .ig-send-container {
@@ -2993,54 +3139,55 @@
 }
 
 /* ============================================================================
-   PATTERN THEME — Sky blue / Cyan on Pattern.jpg wallpaper
+   PATTERN THEME — Sky Blue / Ocean Cyan on Pattern.jpg wallpaper
    ============================================================================ */
 .social-chat-container .theme-pattern .msg.sent {
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
   color: #ffffff !important;
 }
 .social-chat-container .theme-pattern .msg.received,
 .social-chat-container .theme-pattern .msg.ai {
-  background: rgba(15, 23, 42, 0.6) !important;
-  color: #ffffff !important;
+  background: rgba(224, 242, 254, 0.92) !important;
+  color: #075985 !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
 }
 .social-chat-container .theme-pattern .ig-type-box {
-  background: rgba(8, 20, 40, 0.78) !important;
+  background: rgba(224, 242, 254, 0.85) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   border-color: rgba(14, 165, 233, 0.4) !important;
 }
 .social-chat-container .theme-pattern .ig-textarea {
-  color: #e0f2fe !important;
+  color: #075985 !important;
 }
 .social-chat-container .theme-pattern .ig-textarea::placeholder {
-  color: rgba(224, 242, 254, 0.55) !important;
+  color: rgba(7, 89, 133, 0.6) !important;
 }
 .social-chat-container .theme-pattern .ig-cam-container,
 .social-chat-container .theme-pattern .ig-send-container {
-  background: #0ea5e9 !important;
-  border: 1px solid #0284c7 !important;
+  background: #0284c7 !important;
+  border: 1px solid #0369a1 !important;
 }
 .social-chat-container .theme-pattern .ig-cam-btn,
 .social-chat-container .theme-pattern .ig-send-btn,
 .social-chat-container .theme-pattern .ig-mic-btn {
   color: #ffffff !important;
 }
+
 [data-theme="dark"] .social-chat-container .theme-pattern .msg.sent {
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
   color: #ffffff !important;
 }
 [data-theme="dark"] .social-chat-container .theme-pattern .msg.received,
 [data-theme="dark"] .social-chat-container .theme-pattern .msg.ai {
-  background: rgba(8, 20, 40, 0.72) !important;
+  background: rgba(8, 24, 46, 0.85) !important;
   color: #bae6fd !important;
   backdrop-filter: blur(14px) !important;
   -webkit-backdrop-filter: blur(14px) !important;
 }
 [data-theme="dark"] .social-chat-container .theme-pattern .ig-type-box {
-  background: rgba(5, 15, 30, 0.86) !important;
+  background: rgba(6, 18, 35, 0.86) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
 }
@@ -3048,7 +3195,7 @@
   color: #bae6fd !important;
 }
 [data-theme="dark"] .social-chat-container .theme-pattern .ig-textarea::placeholder {
-  color: rgba(186, 230, 253, 0.5) !important;
+  color: rgba(186, 230, 253, 0.55) !important;
 }
 [data-theme="dark"] .social-chat-container .theme-pattern .ig-cam-container,
 [data-theme="dark"] .social-chat-container .theme-pattern .ig-send-container {
@@ -3062,54 +3209,55 @@
 }
 
 /* ============================================================================
-   VIEW THEME — Amber / Warm gold on View.jpg wallpaper
+   VIEW THEME — Warm Sunset Amber / Gold on View.jpg wallpaper
    ============================================================================ */
 .social-chat-container .theme-view .msg.sent {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
   color: #ffffff !important;
 }
 .social-chat-container .theme-view .msg.received,
 .social-chat-container .theme-view .msg.ai {
-  background: rgba(30, 41, 59, 0.6) !important;
-  color: #ffffff !important;
+  background: rgba(254, 243, 199, 0.92) !important;
+  color: #78350f !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
 }
 .social-chat-container .theme-view .ig-type-box {
-  background: rgba(20, 15, 5, 0.75) !important;
+  background: rgba(254, 243, 199, 0.85) !important;
   backdrop-filter: blur(24px) saturate(160%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
   border-color: rgba(245, 158, 11, 0.45) !important;
 }
 .social-chat-container .theme-view .ig-textarea {
-  color: #fef3c7 !important;
+  color: #78350f !important;
 }
 .social-chat-container .theme-view .ig-textarea::placeholder {
-  color: rgba(254, 243, 199, 0.55) !important;
+  color: rgba(120, 53, 15, 0.6) !important;
 }
 .social-chat-container .theme-view .ig-cam-container,
 .social-chat-container .theme-view .ig-send-container {
-  background: #d97706 !important;
-  border: 1px solid #b45309 !important;
+  background: #b45309 !important;
+  border: 1px solid #92400e !important;
 }
 .social-chat-container .theme-view .ig-cam-btn,
 .social-chat-container .theme-view .ig-send-btn,
 .social-chat-container .theme-view .ig-mic-btn {
   color: #ffffff !important;
 }
+
 [data-theme="dark"] .social-chat-container .theme-view .msg.sent {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
   color: #ffffff !important;
 }
 [data-theme="dark"] .social-chat-container .theme-view .msg.received,
 [data-theme="dark"] .social-chat-container .theme-view .msg.ai {
-  background: rgba(20, 15, 5, 0.72) !important;
+  background: rgba(35, 22, 6, 0.85) !important;
   color: #fde68a !important;
   backdrop-filter: blur(14px) !important;
   -webkit-backdrop-filter: blur(14px) !important;
 }
 [data-theme="dark"] .social-chat-container .theme-view .ig-type-box {
-  background: rgba(12, 8, 2, 0.86) !important;
+  background: rgba(22, 14, 4, 0.86) !important;
   backdrop-filter: blur(24px) saturate(160%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
 }
@@ -3117,7 +3265,7 @@
   color: #fde68a !important;
 }
 [data-theme="dark"] .social-chat-container .theme-view .ig-textarea::placeholder {
-  color: rgba(253, 230, 138, 0.5) !important;
+  color: rgba(253, 230, 138, 0.55) !important;
 }
 [data-theme="dark"] .social-chat-container .theme-view .ig-cam-container,
 [data-theme="dark"] .social-chat-container .theme-view .ig-send-container {
@@ -3131,30 +3279,30 @@
 }
 
 /* ============================================================================
-   PURPLY THEME — Deep purple on Purply.jpg wallpaper
+   PURPLY THEME — Royal Amethyst / Deep Violet on Purply.jpg wallpaper
    ============================================================================ */
 .social-chat-container .theme-purply .msg.sent {
-  background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%) !important;
+  background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%) !important;
   color: #ffffff !important;
 }
 .social-chat-container .theme-purply .msg.received,
 .social-chat-container .theme-purply .msg.ai {
-  background: rgba(36, 12, 64, 0.65) !important;
-  color: #ffffff !important;
+  background: rgba(243, 232, 255, 0.92) !important;
+  color: #581c87 !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
 }
 .social-chat-container .theme-purply .ig-type-box {
-  background: rgba(18, 6, 32, 0.78) !important;
+  background: rgba(243, 232, 255, 0.85) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   border-color: rgba(168, 85, 247, 0.4) !important;
 }
 .social-chat-container .theme-purply .ig-textarea {
-  color: #f3e8ff !important;
+  color: #581c87 !important;
 }
 .social-chat-container .theme-purply .ig-textarea::placeholder {
-  color: rgba(243, 232, 255, 0.55) !important;
+  color: rgba(88, 28, 135, 0.6) !important;
 }
 .social-chat-container .theme-purply .ig-cam-container,
 .social-chat-container .theme-purply .ig-send-container {
@@ -3166,19 +3314,20 @@
 .social-chat-container .theme-purply .ig-mic-btn {
   color: #ffffff !important;
 }
+
 [data-theme="dark"] .social-chat-container .theme-purply .msg.sent {
   background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%) !important;
   color: #ffffff !important;
 }
 [data-theme="dark"] .social-chat-container .theme-purply .msg.received,
 [data-theme="dark"] .social-chat-container .theme-purply .msg.ai {
-  background: rgba(20, 6, 38, 0.75) !important;
+  background: rgba(32, 10, 52, 0.85) !important;
   color: #e9d5ff !important;
   backdrop-filter: blur(14px) !important;
   -webkit-backdrop-filter: blur(14px) !important;
 }
 [data-theme="dark"] .social-chat-container .theme-purply .ig-type-box {
-  background: rgba(10, 3, 20, 0.88) !important;
+  background: rgba(20, 6, 36, 0.88) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
 }
@@ -3186,7 +3335,7 @@
   color: #e9d5ff !important;
 }
 [data-theme="dark"] .social-chat-container .theme-purply .ig-textarea::placeholder {
-  color: rgba(233, 213, 255, 0.5) !important;
+  color: rgba(233, 213, 255, 0.55) !important;
 }
 [data-theme="dark"] .social-chat-container .theme-purply .ig-cam-container,
 [data-theme="dark"] .social-chat-container .theme-purply .ig-send-container {
@@ -3198,3 +3347,4 @@
 [data-theme="dark"] .social-chat-container .theme-purply .ig-mic-btn {
   color: #3b0764 !important;
 }
+

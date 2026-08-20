@@ -73,11 +73,11 @@ export interface ChatTheme {
 
 export const INSTAGRAM_THEMES: ChatTheme[] = [
   { id: 'default', name: 'Default', category: 'Ambient', outgoingGradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'var(--dm-bg-hover)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#6366f1', inputBorderColor: 'var(--dm-border)', reactionAccent: '#6366f1', previewWallpaper: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' },
-  { id: 'alpha', name: 'Alpha', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(0,0,0,0.5)', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#818cf8', inputBorderColor: '#6366f1', reactionAccent: '#818cf8', previewWallpaper: '/Alpha.jpg', wallpaperUrl: '/Alpha.jpg' },
-  { id: 'dark-alpha', name: 'Dark Alpha', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #312e81 0%, #1e1b4b 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(0,0,0,0.65)', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#a5b4fc', inputBorderColor: '#4338ca', reactionAccent: '#a5b4fc', previewWallpaper: '/Dark Alpha.jpg', wallpaperUrl: '/Dark Alpha.jpg' },
-  { id: 'pattern', name: 'Pattern', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(15,23,42,0.6)', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#38bdf8', inputBorderColor: '#0ea5e9', reactionAccent: '#38bdf8', previewWallpaper: '/Pattern.jpg', wallpaperUrl: '/Pattern.jpg' },
-  { id: 'view', name: 'View', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(30,41,59,0.6)', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#fbbf24', inputBorderColor: '#f59e0b', reactionAccent: '#fbbf24', previewWallpaper: '/View.jpg', wallpaperUrl: '/View.jpg' },
-  { id: 'purply', name: 'Purply', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(36,12,64,0.65)', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#c084fc', inputBorderColor: '#a855f7', reactionAccent: '#c084fc', previewWallpaper: '/Purply.jpg', wallpaperUrl: '/Purply.jpg' },
+  { id: 'alpha', name: 'Alpha', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(238, 242, 255, 0.92)', incomingTextColor: '#312e81', chatBg: 'transparent', accentColor: '#6366f1', inputBorderColor: '#6366f1', reactionAccent: '#6366f1', previewWallpaper: '/Alpha.jpg', wallpaperUrl: '/Alpha.jpg' },
+  { id: 'dark-alpha', name: 'Dark Alpha', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #4338ca 0%, #312e81 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(224, 231, 255, 0.92)', incomingTextColor: '#1e1b4b', chatBg: 'transparent', accentColor: '#818cf8', inputBorderColor: '#4338ca', reactionAccent: '#818cf8', previewWallpaper: '/Dark Alpha.jpg', wallpaperUrl: '/Dark Alpha.jpg' },
+  { id: 'pattern', name: 'Pattern', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(224, 242, 254, 0.92)', incomingTextColor: '#075985', chatBg: 'transparent', accentColor: '#0ea5e9', inputBorderColor: '#0ea5e9', reactionAccent: '#0ea5e9', previewWallpaper: '/Pattern.jpg', wallpaperUrl: '/Pattern.jpg' },
+  { id: 'view', name: 'View', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(254, 243, 199, 0.92)', incomingTextColor: '#78350f', chatBg: 'transparent', accentColor: '#d97706', inputBorderColor: '#d97706', reactionAccent: '#d97706', previewWallpaper: '/View.jpg', wallpaperUrl: '/View.jpg' },
+  { id: 'purply', name: 'Purply', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #9333ea 0%, #7e22ce 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(243, 232, 255, 0.92)', incomingTextColor: '#581c87', chatBg: 'transparent', accentColor: '#9333ea', inputBorderColor: '#9333ea', reactionAccent: '#9333ea', previewWallpaper: '/Purply.jpg', wallpaperUrl: '/Purply.jpg' },
   { id: 'love', name: 'Love', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #ff7597 0%, #e63946 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: '#4d0522', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#ff7597', inputBorderColor: '#ff7597', reactionAccent: '#ff7597', previewWallpaper: '/Love.jpg', wallpaperUrl: '/Love.jpg' },
   { id: 'love-u', name: 'Love U', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #ff4d6d 0%, #c9184a 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: '#590d22', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#ff4d6d', inputBorderColor: '#ff4d6d', reactionAccent: '#ff4d6d', previewWallpaper: '/Love-2.jpg', wallpaperUrl: '/Love-2.jpg' },
   { id: 'whale', name: 'Whale', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: '#092038', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#38bdf8', inputBorderColor: '#38bdf8', reactionAccent: '#38bdf8', previewWallpaper: '/Whale.jpg', wallpaperUrl: '/Whale.jpg' },
@@ -2246,13 +2246,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   }, [selectedUser?.id]);
 
   const activeThemeId = (selectedUser ? (
+    liveThemeId ||
     chatThemes[selectedUser.id] ||
     (selectedUser.email ? chatThemes[selectedUser.email.toLowerCase().trim()] : null) ||
     (selectedUser.username ? chatThemes[selectedUser.username.toLowerCase().trim()] : null)
   ) : null) || 'default';
   const activeTheme = useMemo(() => {
     return INSTAGRAM_THEMES.find(t => t.id === activeThemeId) || INSTAGRAM_THEMES[0];
-  }, [activeThemeId, selectedUser, chatThemes]);
+  }, [activeThemeId, selectedUser, chatThemes, liveThemeId]);
 
   // Message Tagging System State
   const [msgTags, setMsgTags] = useState<Record<string, MessageTag>>({});
