@@ -99,6 +99,12 @@ export function useWebRTCCall({
 
   // ── Initialize engine and start/accept call ────────────────────────────
 
+  // *** FIX: Both refs declared here so the initCall closure and the isAccepted
+  // watcher effect below share the SAME ref objects. hasAccepted must be before
+  // the useEffect that references it inside the async initCall closure.
+  const pendingAccepted = useRef(false);
+  const hasAccepted = useRef(false);
+
   useEffect(() => {
     if (!socket || typeof window === 'undefined') return;
 
@@ -155,6 +161,13 @@ export function useWebRTCCall({
       try {
         if (isCaller) {
           await engine.startCall(peer, type, socket as any, callId);
+          // *** FIX: Drain any call_accepted that arrived before init completed ***
+          if (pendingAccepted.current && !hasAccepted.current) {
+            hasAccepted.current = true;
+            pendingAccepted.current = false;
+            console.log('[useWebRTCCall] Draining pending call_accepted after engine init');
+            engine.onCallAccepted();
+          }
         } else {
           await engine.acceptCall(
             peer,
@@ -187,13 +200,20 @@ export function useWebRTCCall({
   // ── Handle caller-side acceptance (remote peer accepted the call) ──────
   // Guard with hasAccepted ref so onCallAccepted() fires EXACTLY ONCE per call.
   // Without this, any parent re-render while isAccepted=true would re-trigger it.
-
-  const hasAccepted = useRef(false);
+  // (hasAccepted ref is declared above, before the init useEffect)
 
   useEffect(() => {
-    if (isCaller && isAccepted && engineRef.current && !hasAccepted.current) {
-      hasAccepted.current = true;
-      engineRef.current.onCallAccepted();
+    if (isCaller && isAccepted && !hasAccepted.current) {
+      if (engineRef.current) {
+        // Engine is ready — fire immediately
+        hasAccepted.current = true;
+        engineRef.current.onCallAccepted();
+      } else {
+        // *** FIX: Engine not ready yet (within 100ms init window) — queue it ***
+        // The init function above will drain pendingAccepted once startCall() completes.
+        console.log('[useWebRTCCall] call_accepted arrived before engine ready — queuing');
+        pendingAccepted.current = true;
+      }
     }
   }, [isAccepted, isCaller]);
 

@@ -3233,10 +3233,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // ── Keep-alive: ping the Render.com socket server every 4 minutes ──────────
+    // Render free tier sleeps after 15 minutes of inactivity. A cold start takes
+    // 30-60s — long enough to silently drop any call initiation during that window.
+    // This lightweight HTTP ping keeps the server warm at near-zero cost.
+    const SOCKET_URL_FOR_PING = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
+    const keepAliveInterval = setInterval(() => {
+      fetch(`${SOCKET_URL_FOR_PING}/ping`, { method: 'GET', cache: 'no-store' })
+        .catch(() => {}); // fire-and-forget, never throw
+    }, 4 * 60 * 1000); // every 4 minutes
+
     return () => {
       console.log("Cleaning up socket...");
       socketInstancePromise.then(s => s?.disconnect());
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(keepAliveInterval);
     };
   }, [session?.user?.email]); // Run when session loads
 
@@ -3254,6 +3265,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const handleCall = async (type: 'audio' | 'video') => {
     if (!selectedUser || !session?.user || !socket) return;
 
+    // *** FIX: If socket is disconnected (e.g. Render.com cold start), reconnect
+    // before emitting call_user — otherwise the event drops silently.
+    if (!socket.connected) {
+      socket.connect();
+      // Wait up to 3 seconds for reconnection
+      await new Promise<void>(resolve => {
+        const timeout = setTimeout(resolve, 3000);
+        socket.once('connect', () => { clearTimeout(timeout); resolve(); });
+      });
+      if (!socket.connected) {
+        console.warn('[Call] Socket still disconnected after reconnect attempt — aborting call');
+        return;
+      }
+    }
+
     const targetEmail = selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined;
     const callId = `call-${Date.now()}`;
 
@@ -3265,7 +3291,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       callId
     };
 
-    // *** FIX Bug 14: Emit only once — server handles both event names via handleCallRequest ***
+    // Emit only once — server handles both event names via handleCallRequest
     socket.emit('call_user', payload);
 
     setActiveCall({ peer: { ...selectedUser, email: targetEmail }, type, isCaller: true, callId } as any);
