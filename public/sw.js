@@ -33,8 +33,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for navigation/pages; cache-first for static immutable assets
-  if (url.pathname.startsWith('/_next/static') || url.pathname.startsWith('/Themes')) {
+  // Cache-first for static immutable assets, wallpapers, icons, and next.js chunks
+  const isStaticAsset =
+    url.pathname.startsWith('/_next/static') ||
+    url.pathname.startsWith('/Themes') ||
+    /\.(jpg|jpeg|png|webp|svg|ico|avif|woff|woff2|ttf|mp3|mp4|webm)$/i.test(url.pathname);
+
+  if (isStaticAsset) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         if (cachedResponse) {

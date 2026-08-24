@@ -630,7 +630,7 @@ export default function DashboardPage() {
                 <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center font-normal text-xs shadow-sm transition-transform duration-300 group-hover/profile:scale-105" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: isProfileOpen ? 'var(--dm-bg-main)' : 'var(--dm-text-secondary)' }}>
                   {displaySession.user?.image
                     ? <img src={displaySession.user.image} alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    : <img src="/Avatar.avif" alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                    : <img src="/Avatar.png" alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
                 </div>
               </div>
               <div className="flex-1 min-w-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden">
@@ -770,7 +770,7 @@ export default function DashboardPage() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2 pointer-events-none">
                         <div className="flex items-center gap-1 mb-0.5 pointer-events-auto" onClick={(e) => { e.stopPropagation(); handleOpenOtherProfile(post.user?.id, post.user, e); }}>
                           <img
-                            src={post.user?.image || '/Avatar.avif'}
+                            src={post.user?.image || '/Avatar.png'}
                             alt=""
                             className="w-4 h-4 rounded-full object-cover border border-white/40 flex-shrink-0"
                           />
@@ -847,7 +847,7 @@ export default function DashboardPage() {
                                   {item.image ? (
                                     <img src={item.image} alt="user" className="w-full h-full object-cover" />
                                   ) : (
-                                    <img src="/Avatar.avif" alt="user" className="w-full h-full object-cover" />
+                                    <img src="/Avatar.png" alt="user" className="w-full h-full object-cover" />
                                   )}
                                 </div>
                                 <div>
@@ -903,7 +903,7 @@ export default function DashboardPage() {
                                 {item.image ? (
                                   <img src={item.image} alt="user" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                 ) : (
-                                  <img src="/Avatar.avif" alt="user" className="w-full h-full object-cover" />
+                                  <img src="/Avatar.png" alt="user" className="w-full h-full object-cover" />
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -1039,7 +1039,7 @@ export default function DashboardPage() {
             }}
           >
             <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-active)', color: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}>
-              <img src="/Avatar.avif" alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <img src="/Avatar.png" alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
           </button>
         </nav>

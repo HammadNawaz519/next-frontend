@@ -305,7 +305,7 @@ export default function CallInterface({
             {peer.image && peer.image.length > 5 ? (
               <img src={peer.image} className="w-full h-full object-cover" alt="caller" referrerPolicy="no-referrer" />
             ) : (
-              <img src="/Avatar.avif" className="w-full h-full object-cover" alt="avatar" />
+              <img src="/Avatar.png" className="w-full h-full object-cover" alt="avatar" />
             )}
           </div>
         </div>
@@ -318,7 +318,7 @@ export default function CallInterface({
             {peer.image && peer.image.length > 5 ? (
               <img src={peer.image} className="w-full h-full object-cover" alt="caller" referrerPolicy="no-referrer" />
             ) : (
-              <img src="/Avatar.avif" className="w-full h-full object-cover" alt="avatar" />
+              <img src="/Avatar.png" className="w-full h-full object-cover" alt="avatar" />
             )}
           </div>
           <span className="text-xs text-zinc-400 font-medium mt-3">Camera is turned off</span>

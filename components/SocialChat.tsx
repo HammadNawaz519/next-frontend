@@ -16,7 +16,6 @@ import {
   getChatSharedMedia,
   askAI,
   saveCall,
-  updateActivityStatus,
   toggleShowActivityStatus,
 } from '@/app/dashboard/actions';
 import CallInterface from './CallInterface';
@@ -829,7 +828,7 @@ const ChatItem = memo(({
         <div className="user-pfp">
           {user.image && user.image.length > 5
             ? <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
-            : <img src="/Avatar.avif" alt="avatar" />
+            : <img src="/Avatar.png" alt="avatar" />
           }
         </div>
         {showActivity && (
@@ -1214,7 +1213,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
       {!isSent && !isAI && (
         <img
-          src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.avif'}
+          src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.png'}
           alt=""
           className="msg-small-avatar"
           style={{
@@ -1535,7 +1534,7 @@ const SidebarItem = memo(({ user, isActive, onClick }: { user: User, isActive: b
         {user.image && user.image.length > 5 ? (
           <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
         ) : (
-          <img src="/Avatar.avif" alt="avatar" />
+          <img src="/Avatar.png" alt="avatar" />
         )}
       </div>
       <div className="meta">
@@ -3444,9 +3443,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const myEmail = session.user.email.toLowerCase().trim();
     const myId = (session.user as any)?.id;
 
-    // Mark online immediately in DB on initial connection
-    updateActivityStatus('online').catch(() => {});
-
     // Socket heartbeat every 20s (keeps WebSocket alive & updates presence on Render server with 0 Vercel requests)
     const heartbeatInterval = setInterval(() => {
       if (socketRef.current?.connected) {
@@ -3461,28 +3457,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       }
     };
 
-    // Page close / navigate away — use sendBeacon for fire-and-forget offline status
-    const handleUnload = () => {
-      const blob = new Blob(
-        [JSON.stringify({ action: 'offline' })],
-        { type: 'application/json' }
-      );
-      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-        navigator.sendBeacon('/api/user/activity', blob);
-      }
-    };
-
     document.addEventListener('visibilitychange', handleVisible);
-    window.addEventListener('pagehide', handleUnload);
-    window.addEventListener('beforeunload', handleUnload);
 
     return () => {
       clearInterval(heartbeatInterval);
       document.removeEventListener('visibilitychange', handleVisible);
-      window.removeEventListener('pagehide', handleUnload);
-      window.removeEventListener('beforeunload', handleUnload);
-      // Mark offline on component unmount (logout / route change)
-      updateActivityStatus('offline').catch(() => {});
     };
   }, [session?.user?.email]);
 
@@ -4410,7 +4389,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   return (
     <>
-      <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Comfortaa:wght@600&family=Fira+Code:wght@500&family=Oswald:wght@600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet" />
       <div className="social-chat-container" style={{ display: isActive ? 'flex' : 'none', width: '100%', height: '100%', fontFamily: currentFontFamily }}>
         <div className="main-wrap">
           <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'}`}>
@@ -4545,7 +4523,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       {selectedUser.image && selectedUser.image.length > 5 ? (
                         <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
                       ) : (
-                        <img src="/Avatar.avif" alt="avatar" />
+                        <img src="/Avatar.png" alt="avatar" />
                       )}
                     </div>
                     <div className="info">
@@ -4720,7 +4698,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           {selectedUser.image && selectedUser.image.length > 5 ? (
                             <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
                           ) : (
-                            <img src="/Avatar.avif" alt="avatar" />
+                            <img src="/Avatar.png" alt="avatar" />
                           )}
                         </div>
                         <h3>Start a conversation</h3>
@@ -4743,7 +4721,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         }}
                       >
                         <img
-                          src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.avif'}
+                          src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.png'}
                           alt=""
                           className="msg-small-avatar"
                           referrerPolicy="no-referrer"
@@ -5012,7 +4990,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         {selectedUser.image && selectedUser.image.length > 5 ? (
                           <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover" />
                         ) : (
-                          <img src="/Avatar.avif" alt="avatar" className="w-full h-full object-cover" />
+                          <img src="/Avatar.png" alt="avatar" className="w-full h-full object-cover" />
                         )}
                       </div>
                       <h2 className="text-xl font-extrabold text-[var(--dm-text-primary)]">
@@ -5586,7 +5564,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 <div className="absolute inset-0 rounded-full animate-ping [animation-duration:2s]" style={{ background: 'var(--dm-bg-input)' }} />
                 <div className="absolute -inset-6 rounded-full animate-pulse [animation-duration:3s]" style={{ background: 'var(--dm-bg-active)', opacity: 0.5 }} />
                 <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 shadow-2xl flex items-center justify-center text-4xl font-bold" style={{ borderColor: 'var(--dm-bg-main)', background: 'var(--dm-bg-input)', color: 'var(--dm-text-primary)' }}>
-                  {incomingCall.from.image ? <img src={incomingCall.from.image} className="w-full h-full object-cover" /> : <img src="/Avatar.avif" className="w-full h-full object-cover" />}
+                  {incomingCall.from.image ? <img src={incomingCall.from.image} className="w-full h-full object-cover" /> : <img src="/Avatar.png" className="w-full h-full object-cover" />}
                 </div>
               </div>
               <div className="space-y-2">
@@ -5685,7 +5663,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             <div className="flex items-center gap-3.5 pb-4 mb-2 border-b" style={{ borderColor: 'var(--dm-border)' }}>
               <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'var(--dm-bg-hover)' }}>
                 <img
-                  src={selectedChatForOptions.image || '/Avatar.avif'}
+                  src={selectedChatForOptions.image || '/Avatar.png'}
                   alt={selectedChatForOptions.name}
                   className="w-full h-full object-cover"
                 />
@@ -6215,7 +6193,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           {targetUser.image && targetUser.image.length > 5 ? (
                             <img src={targetUser.image} alt={targetUser.name} className="w-full h-full object-cover" />
                           ) : (
-                            <img src="/Avatar.avif" alt="avatar" className="w-full h-full object-cover" />
+                            <img src="/Avatar.png" alt="avatar" className="w-full h-full object-cover" />
                           )}
                         </div>
                         <div className="min-w-0">

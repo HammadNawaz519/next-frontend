@@ -172,7 +172,6 @@ export default function AccountsPage() {
         resetSignupSheet();
         if (signInRes?.ok) {
           router.push('/dashboard');
-          router.refresh();
         }
       }
     } catch (err) {
@@ -198,7 +197,6 @@ export default function AccountsPage() {
         setShowLoginSheet(false);
         resetLoginSheet();
         router.push('/dashboard');
-        router.refresh();
       }
     } catch (err) {
       setLoginError('An unexpected error occurred.');
@@ -360,7 +358,6 @@ export default function AccountsPage() {
           await DeviceAccountStore.refreshCredential(acc.userId, acc.provider);
           DeviceAccountStore.setCurrentAccountId(acc.userId);
           router.push('/dashboard');
-          router.refresh();
           return;
         }
         // Credential invalidated by backend — fall through to password prompt
@@ -407,7 +404,6 @@ export default function AccountsPage() {
         loadAccounts();
         setSelectedAccount(null);
         router.push('/dashboard');
-        router.refresh();
       }
     } catch (err) {
       setError('An error occurred.');

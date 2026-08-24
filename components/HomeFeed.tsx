@@ -267,7 +267,7 @@ function StoryCreatorModal({ isOpen, onClose, userAvatar, onStoryCreated }: { is
               <img src={selectedImg} alt="Preview" className="w-full h-full object-cover" />
               <div className="absolute top-3 left-3 flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20">
-                  <img src={userAvatar || "/Avatar.avif"} className="w-full h-full object-cover" alt="avatar" />
+                  <img src={userAvatar || "/Avatar.png"} className="w-full h-full object-cover" alt="avatar" />
                 </div>
                 <span className="text-[12px] font-semibold text-white drop-shadow-md">Your story</span>
               </div>
@@ -794,15 +794,14 @@ export default function HomeFeed({ isDark, session, onNavigate, isAdmin, onOpenA
   };
 
   const userObj = session?.user;
-  const userAvatar = userObj?.image || "/Avatar.avif";
+  const userAvatar = userObj?.image || "/Avatar.png";
   const userDisplayName = userObj?.name || userObj?.email?.split('@')[0] || "User";
   const userHandle = userObj?.email?.split('@')[0] || "user";
 
   return (
     <>
-      {/* Global keyframes and Satisfy Google Font injected */}
+      {/* Global keyframes */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Satisfy&display=swap');
         .hide-hf-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
         .hide-hf-scrollbar::-webkit-scrollbar { display:none; }
         @keyframes hf-slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }

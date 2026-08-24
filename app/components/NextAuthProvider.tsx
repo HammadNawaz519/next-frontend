@@ -14,5 +14,14 @@ export const NextAuthProvider = ({ children }: { children: React.ReactNode }) =>
     ? 'https://myconnectapp.vercel.app/api/auth'
     : undefined;
 
-  return <SessionProvider basePath={basePath} refetchOnWindowFocus={false}>{children}</SessionProvider>;
+  return (
+    <SessionProvider 
+      basePath={basePath} 
+      refetchInterval={0} 
+      refetchOnWindowFocus={false} 
+      refetchWhenOffline={false}
+    >
+      {children}
+    </SessionProvider>
+  );
 };

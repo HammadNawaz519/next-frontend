@@ -4,7 +4,6 @@ import { signIn, useSession } from 'next-auth/react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import DashboardPage from './dashboard/page';
 import { DeviceAccountStore } from '@/lib/deviceAccountStore';
 
 const GrainGradient = dynamic(
@@ -298,7 +297,6 @@ export default function LoginPage() {
         } catch (e) {}
 
         router.push('/dashboard');
-        router.refresh();
       } else {
         setError('Sign in failed. Please try again.');
         setLoading(false);
@@ -628,7 +626,7 @@ export default function LoginPage() {
                 <p className="text-[12px] text-gray-500 truncate">{successUser.email}</p>
               </div>
             </div>
-            <button type="button" onClick={() => { router.push('/dashboard'); router.refresh(); }} className="w-full h-[46px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors">Continue to app</button>
+            <button type="button" onClick={() => { router.push('/dashboard'); }} className="w-full h-[46px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors">Continue to app</button>
           </div>
         </div>
       );
@@ -1285,7 +1283,6 @@ export default function LoginPage() {
         <button
           onClick={() => {
             router.push('/dashboard');
-            router.refresh();
           }}
           className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md"
         >

@@ -77,7 +77,7 @@ const ReelIcon = () => (
 
 const DefaultAvatarSvg = ({ size = 32, color, style }: { size?: number; color?: string; style?: React.CSSProperties }) => (
   <img
-    src="/Avatar.avif"
+    src="/Avatar.png"
     alt="Default Avatar"
     style={{ display: 'block', width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', ...style }}
   />
