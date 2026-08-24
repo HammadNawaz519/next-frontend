@@ -4,6 +4,7 @@ import { signIn, useSession } from 'next-auth/react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import DashboardPage from './dashboard/page';
 import { DeviceAccountStore } from '@/lib/deviceAccountStore';
 
 const GrainGradient = dynamic(
