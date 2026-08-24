@@ -526,10 +526,13 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
           });
         }
       } else {
-        receivedStream.addTrack(e.track);
-        setRemoteStream(receivedStream);
+        if (!receivedStream.getTrackById(e.track.id)) {
+          receivedStream.addTrack(e.track);
+        }
+        const freshStream = new MediaStream(receivedStream.getTracks());
+        setRemoteStream(freshStream);
         if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = receivedStream;
+          remoteVideoRef.current.srcObject = freshStream;
           remoteVideoRef.current.play().catch(() => {
             if (remoteVideoRef.current) {
               remoteVideoRef.current.muted = true;

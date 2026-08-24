@@ -141,11 +141,11 @@ export function useWebRTCCall({
     });
 
     engine.on('localStream', (stream: MediaStream) => {
-      setLocalStream(stream);
+      setLocalStream(new MediaStream(stream.getTracks()));
     });
 
     engine.on('remoteStream', (stream: MediaStream) => {
-      setRemoteStream(stream);
+      setRemoteStream(new MediaStream(stream.getTracks()));
     });
 
     engine.on('stats', (s: CallStats) => {
