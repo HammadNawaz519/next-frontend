@@ -42,29 +42,38 @@ interface PostData {
 /* ─────────────────────────────────────────
    Avatar
    ───────────────────────────────────────── */
-const Avatar = ({ image, hue = 220, size = 32, style }: { image?: string; hue?: number; size?: number; style?: React.CSSProperties }) => (
-  <div
-    style={{
-      width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: image ? 'transparent' : `linear-gradient(135deg, hsl(${hue},60%,68%), hsl(${hue + 55},65%,52%))`,
-      overflow: 'hidden',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      border: '1px solid rgba(0,0,0,0.06)',
-      ...style,
-    }}
-  >
-    <img 
-      src={image || "/Avatar.avif"} 
-      alt="avatar" 
-      className="w-full h-full object-cover" 
-      onError={(e) => {
-        (e.target as HTMLImageElement).src = "/Avatar.avif";
+const DEFAULT_AVATAR = "/Avatar.png";
+
+const Avatar = ({ image, hue = 220, size = 32, style }: { image?: string; hue?: number; size?: number; style?: React.CSSProperties }) => {
+  const [hasError, setHasError] = useState(false);
+  const src = (image && !hasError) ? image : DEFAULT_AVATAR;
+
+  return (
+    <div
+      style={{
+        width: size, height: size, borderRadius: '50%', flexShrink: 0,
+        background: `linear-gradient(135deg, hsl(${hue},60%,68%), hsl(${hue + 55},65%,52%))`,
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border: '1px solid rgba(0,0,0,0.06)',
+        ...style,
       }}
-    />
-  </div>
-);
+    >
+      <img 
+        src={src} 
+        alt="avatar" 
+        className="w-full h-full object-cover" 
+        onError={() => {
+          if (!hasError) {
+            setHasError(true);
+          }
+        }}
+      />
+    </div>
+  );
+};
 
 /* ─────────────────────────────────────────
    Story Ring (gradient border)

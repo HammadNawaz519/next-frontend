@@ -3439,32 +3439,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const myEmail = session.user.email.toLowerCase().trim();
     const myId = (session.user as any)?.id;
 
-    // Mark online immediately — sets isOnline=true, lastSeen=now, lastHeartbeat=now in DB
+    // Mark online immediately in DB on initial connection
     updateActivityStatus('online').catch(() => {});
 
-    // Socket heartbeat every 20s (keeps WebSocket alive & updates presence on server with 0 Vercel requests)
+    // Socket heartbeat every 20s (keeps WebSocket alive & updates presence on Render server with 0 Vercel requests)
     const heartbeatInterval = setInterval(() => {
       if (socketRef.current?.connected) {
         socketRef.current.emit('heartbeat', { userId: myId, email: myEmail });
       }
     }, 20000);
 
-    // Periodic DB heartbeat every 60s so DB stays fresh during continuous usage
-    const dbHeartbeatInterval = setInterval(() => {
-      updateActivityStatus('heartbeat').catch(() => {});
-    }, 60000);
-
-    // Visibility: come back to foreground → refresh online status
+    // Visibility: come back to foreground → emit socket heartbeat immediately
     const handleVisible = () => {
-      if (document.visibilityState === 'visible') {
-        updateActivityStatus('online').catch(() => {});
-        if (socketRef.current?.connected) {
-          socketRef.current.emit('heartbeat', { userId: myId, email: myEmail });
-        }
+      if (document.visibilityState === 'visible' && socketRef.current?.connected) {
+        socketRef.current.emit('heartbeat', { userId: myId, email: myEmail });
       }
     };
 
-    // Page close / navigate away — use sendBeacon for fire-and-forget
+    // Page close / navigate away — use sendBeacon for fire-and-forget offline status
     const handleUnload = () => {
       const blob = new Blob(
         [JSON.stringify({ action: 'offline' })],
@@ -3481,7 +3473,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     return () => {
       clearInterval(heartbeatInterval);
-      clearInterval(dbHeartbeatInterval);
       document.removeEventListener('visibilitychange', handleVisible);
       window.removeEventListener('pagehide', handleUnload);
       window.removeEventListener('beforeunload', handleUnload);

@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
 
+  images: {
+    unoptimized: true,
+  },
+
   // Cache static assets and wallpapers in the browser/CDN to avoid repeated 304 re-fetches
   async headers() {
     return [
@@ -44,6 +48,12 @@ const nextConfig: NextConfig = {
     "@tensorflow/tfjs-converter",
     "@tensorflow-models/body-segmentation",
   ],
+
+  turbopack: {
+    resolveAlias: {
+      "@mediapipe/selfie_segmentation": "./lib/mediapipe-stub.js",
+    },
+  },
 
   // Webpack alias (if fallback is used)
   webpack(config) {

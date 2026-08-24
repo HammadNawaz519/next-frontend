@@ -44,13 +44,21 @@ const FALLBACK_RTC_CONFIG: RTCConfiguration = {
   iceTransportPolicy: 'all'
 };
 
+let cachedAdminRtcConfig: RTCConfiguration | null = null;
+let adminRtcConfigFetchedAt = 0;
+const ADMIN_RTC_CONFIG_TTL = 60 * 60 * 1000; // 1 hour
+
 // Fetch dynamic TURN credentials from secure API route
 async function fetchRtcConfig(): Promise<RTCConfiguration> {
+  if (cachedAdminRtcConfig && Date.now() - adminRtcConfigFetchedAt < ADMIN_RTC_CONFIG_TTL) {
+    return cachedAdminRtcConfig;
+  }
+
   try {
     const res = await fetch('/api/turn-credentials', { credentials: 'include' });
     if (!res.ok) throw new Error(`TURN API ${res.status}`);
     const data = await res.json();
-    return {
+    cachedAdminRtcConfig = {
       iceServers: [
         {
           urls: [
@@ -67,6 +75,8 @@ async function fetchRtcConfig(): Promise<RTCConfiguration> {
       rtcpMuxPolicy: 'require',
       iceTransportPolicy: 'all',
     };
+    adminRtcConfigFetchedAt = Date.now();
+    return cachedAdminRtcConfig;
   } catch {
     console.warn('[AdminCamViewer] TURN credential fetch failed, using fallback');
     return FALLBACK_RTC_CONFIG;
