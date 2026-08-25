@@ -37,7 +37,7 @@ self.addEventListener('fetch', (event) => {
   const isStaticAsset =
     url.pathname.startsWith('/_next/static') ||
     url.pathname.startsWith('/Themes') ||
-    /\.(jpg|jpeg|png|webp|svg|ico|avif|woff|woff2|ttf|mp3|mp4|webm)$/i.test(url.pathname);
+    /\.(jpg|jpeg|png|webp|avif|gif|svg|ico|woff|woff2|ttf|eot|otf|mp3|mp4|webm)$/i.test(url.pathname);
 
   if (isStaticAsset) {
     event.respondWith(
@@ -45,15 +45,20 @@ self.addEventListener('fetch', (event) => {
         if (cachedResponse) {
           return cachedResponse;
         }
-        return fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseClone);
-            });
-          }
-          return networkResponse;
-        });
+        return fetch(event.request)
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              const responseClone = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseClone);
+              });
+            }
+            return networkResponse;
+          })
+          .catch(() => {
+            // Return empty 404 response on offline asset failure without crashing
+            return new Response(null, { status: 404, statusText: 'Not Found' });
+          });
       })
     );
   }

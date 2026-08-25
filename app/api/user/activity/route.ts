@@ -3,8 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // POST /api/user/activity — update online/offline/heartbeat status
 export async function POST(req: NextRequest) {
+  const headers = { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" };
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {

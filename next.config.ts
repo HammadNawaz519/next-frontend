@@ -24,7 +24,34 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/:file((?:.*)\\.(?:jpg|jpeg|png|webp|svg|ico|woff|woff2|ttf|mp3|mp4|webm))",
+        source: "/:file((?:.*)\\.(?:jpg|jpeg|png|webp|avif|gif|svg|ico|woff|woff2|ttf|eot|otf|mp3|mp4|webm))",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+        ],
+      },
+      {
+        source: "/manifest.json",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, stale-while-revalidate=604800",
+          },
+        ],
+      },
+      {
+        source: "/favicon.ico",
         headers: [
           {
             key: "Cache-Control",

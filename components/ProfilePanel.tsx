@@ -1064,7 +1064,7 @@ export default function ProfilePanel({
                       onTouchStart={() => startPress(post.id)}
                       onTouchEnd={cancelPress}
                       onClick={() => {
-                        if (typeof window !== 'undefined') window.location.href = `/p/${post.id}`;
+                        setLongPressedPostId(post.id);
                       }}
                       style={{
                         aspectRatio: '1/1', position: 'relative', overflow: 'hidden', cursor: 'pointer',
@@ -1942,7 +1942,7 @@ export default function ProfilePanel({
                   <div
                     key={post.id}
                     onClick={() => {
-                      if (typeof window !== 'undefined') window.location.href = `/p/${post.id}`;
+                      setLongPressedPostId(post.id);
                     }}
                     style={{
                       aspectRatio: '1/1', position: 'relative', overflow: 'hidden', cursor: 'pointer',
