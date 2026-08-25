@@ -18,6 +18,7 @@ import {
   toggleProfilePrivacy,
   getSavedPostsAction
 } from '@/app/dashboard/actions';
+import { optimizeImageClient } from '@/lib/media-optimizer';
 
 /* ─── Types ─── */
 export interface UserProfile {
@@ -477,20 +478,26 @@ export default function ProfilePanel({
     const file = e.target.files?.[0];
     if (!file || isAvatarUploading) return;
     setIsAvatarUploading(true);
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64String = reader.result as string;
-      try {
-        await updateProfileImageAction(base64String);
-        if (refreshProfile) refreshProfile();
-        setShowAvatarModal(false);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsAvatarUploading(false);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const optimized = await optimizeImageClient(file, 512, 0.85);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result as string;
+        try {
+          await updateProfileImageAction(base64String);
+          if (refreshProfile) refreshProfile();
+          setShowAvatarModal(false);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setIsAvatarUploading(false);
+        }
+      };
+      reader.readAsDataURL(optimized.file);
+    } catch (err) {
+      console.error("Avatar compression error:", err);
+      setIsAvatarUploading(false);
+    }
   };
 
   const handleRemoveAvatar = async () => {

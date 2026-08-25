@@ -5,7 +5,15 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
-import { isCloudinaryConfigured, uploadToCloudinary } from "@/lib/cloudinary";
+import {
+  uploadBufferToStorage,
+  deleteFilesFromStorage,
+  generateChatStoragePath,
+  generateAvatarStoragePath,
+  generatePostStoragePath,
+  CHAT_MEDIA_BUCKET,
+  PUBLIC_MEDIA_BUCKET,
+} from "@/lib/media-storage";
 
 export async function askAI(prompt: string) {
   const apiKey = process.env.VITE_GROQ_API_KEY;
@@ -228,7 +236,17 @@ export async function saveSocialMessage(
   receiverId: string,
   content: string,
   type: string = "text",
-  replyTo?: { id: string; content: string; senderName: string } | null
+  replyTo?: { id: string; content: string; senderName: string } | null,
+  metadata?: {
+    mediaUrl?: string;
+    thumbnailUrl?: string;
+    mimeType?: string;
+    fileSize?: number;
+    width?: number;
+    height?: number;
+    duration?: number;
+    storagePath?: string;
+  } | null
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
@@ -252,42 +270,25 @@ export async function saveSocialMessage(
 
   let finalContent = content;
 
-  // Fallback: If content is base64 image/video/voice, upload to Cloudinary or write to disk
+  // Fallback: If content is base64 image/video/voice, upload directly to Supabase Storage
   if (content && content.startsWith("data:")) {
     try {
       const matches = content.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
       if (matches && matches.length === 3) {
         const mimeType = matches[1];
         const rawBuffer = Buffer.from(matches[2], "base64");
-
-        if (isCloudinaryConfigured()) {
-          const resourceType = mimeType.startsWith("image/") ? "image" : mimeType.startsWith("video/") || mimeType.startsWith("audio/") ? "video" : "auto";
-          const result = await uploadToCloudinary(rawBuffer, `connect/chat/${currentUser.id}`, resourceType);
-          finalContent = result.url;
-        } else {
-          const fs = require("fs");
-          const path = require("path");
-          let ext = ".bin";
-          if (mimeType.includes("png")) ext = ".png";
-          else if (mimeType.includes("jpeg") || mimeType.includes("jpg")) ext = ".jpg";
-          else if (mimeType.includes("gif")) ext = ".gif";
-          else if (mimeType.includes("webm")) ext = ".webm";
-          else if (mimeType.includes("mp4")) ext = ".mp4";
-          else if (mimeType.includes("ogg")) ext = ".ogg";
-
-          const uploadsDir = path.join(process.cwd(), "public", "uploads", "chat");
-          if (!fs.existsSync(uploadsDir)) {
-            fs.mkdirSync(uploadsDir, { recursive: true });
-          }
-
-          const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}${ext}`;
-          const filePath = path.join(uploadsDir, filename);
-          fs.writeFileSync(filePath, rawBuffer);
-          finalContent = `/uploads/chat/${filename}`;
-        }
+        const storagePath = generateChatStoragePath(
+          currentUser.id,
+          receiverId,
+          "msg-" + Date.now(),
+          "media",
+          mimeType
+        );
+        const result = await uploadBufferToStorage(CHAT_MEDIA_BUCKET, storagePath, rawBuffer, mimeType);
+        finalContent = result.url;
       }
     } catch (e) {
-      console.error("Failed to parse base64 media in saveSocialMessage fallback:", e);
+      console.error("Failed to upload fallback base64 to Supabase Storage:", e);
     }
   }
 
@@ -307,6 +308,16 @@ export async function saveSocialMessage(
         replyToId: replyTo.id,
         replyToContent: replyTo.content,
         replyToSenderName: replyTo.senderName,
+      } : {}),
+      ...(metadata ? {
+        mediaUrl: metadata.mediaUrl || finalContent,
+        thumbnailUrl: metadata.thumbnailUrl,
+        mimeType: metadata.mimeType,
+        fileSize: metadata.fileSize,
+        width: metadata.width,
+        height: metadata.height,
+        duration: metadata.duration,
+        storagePath: metadata.storagePath,
       } : {})
     },
     include: {
@@ -371,11 +382,27 @@ export async function deleteSocialMessage(messageId: string, deleteFor: 'me' | '
   if (deleteFor === 'everyone') {
     if (msg.senderId !== currentUser.id) return null;
 
-    return await prisma.socialMessage.update({
+    // Clean up associated files in Supabase Storage
+    const pathsToDelete: string[] = [];
+    if ((msg as any).storagePath) pathsToDelete.push((msg as any).storagePath);
+    if (msg.content && (msg.content.includes("supabase.co") || msg.content.includes("chat/"))) {
+      pathsToDelete.push(msg.content);
+    }
+    if ((msg as any).thumbnailUrl && ((msg as any).thumbnailUrl.includes("supabase.co") || (msg as any).thumbnailUrl.includes("chat/"))) {
+      pathsToDelete.push((msg as any).thumbnailUrl);
+    }
+    if (pathsToDelete.length > 0) {
+      deleteFilesFromStorage(CHAT_MEDIA_BUCKET, pathsToDelete).catch(() => {});
+    }
+
+    return await (prisma.socialMessage as any).update({
       where: { id: messageId },
       data: { 
         content: "This message was deleted", 
-        type: "deleted"
+        type: "deleted",
+        mediaUrl: null,
+        thumbnailUrl: null,
+        storagePath: null
       }
     });
   } else {
@@ -742,9 +769,31 @@ export async function updateProfileImageAction(imageUrl: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return { error: 'Not authenticated' };
 
-  const updated = await prisma.user.update({
+  const currentUser = await prisma.user.findUnique({
     where: { email: session.user.email },
-    data: { image: imageUrl }
+    select: { id: true }
+  });
+  if (!currentUser) return { error: 'User not found' };
+
+  let finalUrl = imageUrl;
+  if (imageUrl && imageUrl.startsWith("data:")) {
+    try {
+      const matches = imageUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mimeType = matches[1];
+        const rawBuffer = Buffer.from(matches[2], "base64");
+        const storagePath = generateAvatarStoragePath(currentUser.id, "avatar.jpg", mimeType);
+        const res = await uploadBufferToStorage(PUBLIC_MEDIA_BUCKET, storagePath, rawBuffer, mimeType);
+        finalUrl = res.url;
+      }
+    } catch (e) {
+      console.error("Failed to upload avatar to Supabase Storage:", e);
+    }
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: currentUser.id },
+    data: { image: finalUrl }
   });
   return { success: true, image: updated.image };
 }
@@ -811,10 +860,26 @@ export async function createPostAction(data: { imageUrl: string; thumbnailUrl?: 
 
   if (!user) return { error: 'User not found' };
 
+  let finalImageUrl = data.imageUrl;
+  if (data.imageUrl && data.imageUrl.startsWith("data:")) {
+    try {
+      const matches = data.imageUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mimeType = matches[1];
+        const rawBuffer = Buffer.from(matches[2], "base64");
+        const storagePath = generatePostStoragePath(user.id, "post.jpg", mimeType);
+        const res = await uploadBufferToStorage(PUBLIC_MEDIA_BUCKET, storagePath, rawBuffer, mimeType);
+        finalImageUrl = res.url;
+      }
+    } catch (e) {
+      console.error("Failed to upload post image to Supabase Storage:", e);
+    }
+  }
+
   const post = await (prisma as any).post.create({
     data: {
-      imageUrl: data.imageUrl,
-      thumbnailUrl: data.thumbnailUrl || data.imageUrl,
+      imageUrl: finalImageUrl,
+      thumbnailUrl: data.thumbnailUrl || finalImageUrl,
       caption: data.caption,
       postType: data.postType,
       userId: user.id
@@ -1057,9 +1122,25 @@ export async function createStoryAction(imageUrl: string) {
   });
   if (!user) return { error: 'User not found' };
 
+  let finalImageUrl = imageUrl;
+  if (imageUrl && imageUrl.startsWith("data:")) {
+    try {
+      const matches = imageUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mimeType = matches[1];
+        const rawBuffer = Buffer.from(matches[2], "base64");
+        const storagePath = generatePostStoragePath(user.id, "story.jpg", mimeType);
+        const res = await uploadBufferToStorage(PUBLIC_MEDIA_BUCKET, storagePath, rawBuffer, mimeType);
+        finalImageUrl = res.url;
+      }
+    } catch (e) {
+      console.error("Failed to upload story image to Supabase Storage:", e);
+    }
+  }
+
   const story = await (prisma as any).story.create({
     data: {
-      imageUrl,
+      imageUrl: finalImageUrl,
       userId: user.id
     }
   });

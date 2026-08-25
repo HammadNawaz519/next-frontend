@@ -92,6 +92,16 @@ model SocialMessage {
   replyToContent      String?  @db.Text
   replyToSenderName   String?
 
+  // Media metadata fields
+  mediaUrl            String?  @db.Text
+  thumbnailUrl        String?  @db.Text
+  mimeType            String?
+  fileSize            Int?
+  width               Int?
+  height              Int?
+  duration            Float?
+  storagePath         String?  @db.Text
+
   sender    User             @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   receiver  User             @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
   reactions SocialReaction[]

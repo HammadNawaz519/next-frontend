@@ -18,6 +18,12 @@ import {
   saveCall,
   toggleShowActivityStatus,
 } from '@/app/dashboard/actions';
+import {
+  optimizeImageClient,
+  extractVideoMetadataAndThumbnail,
+  validateMediaFile,
+  uploadBinaryWithProgress,
+} from '@/lib/media-optimizer';
 import CallInterface from './CallInterface';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { triggerHaptic } from '@/lib/haptics';
@@ -948,7 +954,7 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup, partnerLastSee
   );
 });
 
-const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, hasPrevReactions, isLastSentInGroup, chatSwipeOffset, onContainerSwipeOffset, onOpenAlbum }: any) => {
+const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, onDelete, onReact, onRequestDelete, isSelected, isInSelectionMode, toggleMessageSelection, onShowIGMenu, onReply, activeTheme, onPreviewImage, onPreviewMedia, msgTag, onOpenTagPicker, onOpenThemePicker, isPrevSameSender, isNextSameSender, hasPrevReactions, isLastSentInGroup, chatSwipeOffset, onContainerSwipeOffset, onOpenAlbum, onRetryUpload }: any) => {
   const isDark = typeof document !== 'undefined' && (document.documentElement.classList.contains('dark') || document.body.classList.contains('dark'));
   if (msg.type === 'system') {
     const isThemeSystemMsg = msg.content.toLowerCase().includes('theme to') || msg.content.toLowerCase().includes('customize chat');
@@ -1287,7 +1293,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
             {isAI && <div className="system-sender">AI Assistant</div>}
             {isMedia ? (
               msg.type === 'media_album' ? (() => {
-                let items: Array<{ url: string; type: string; name?: string }> = [];
+                let items: Array<{ url: string; type: string; name?: string; thumbnailUrl?: string }> = [];
                 try {
                   items = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
                 } catch (e) {
@@ -1299,19 +1305,33 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                 if (items.length === 1) {
                   const item = items[0];
                   return (
-                    <div className="relative group rounded-[1.25rem] overflow-hidden" style={{ width: 'fit-content' }}>
+                    <div className="relative group rounded-[1.25rem] overflow-hidden" style={{ width: 'fit-content', maxWidth: '320px' }}>
                       {item.type === 'video' ? (
                         <div
-                          className="relative cursor-pointer group"
+                          className="relative cursor-pointer group rounded-[1.25rem] overflow-hidden bg-black/40"
+                          style={{ minWidth: '200px', minHeight: '140px', maxWidth: '300px' }}
                           onClick={e => { e.stopPropagation(); if (onPreviewMedia) onPreviewMedia(item.url, 'video'); }}
                         >
-                          <video src={item.url} controls className="block max-w-full rounded-[1.25rem]" />
+                          <img
+                            src={item.thumbnailUrl || item.url}
+                            alt="video preview"
+                            className="w-full h-full object-cover rounded-[1.25rem] transition-transform duration-300 group-hover:scale-105"
+                            style={{ maxHeight: '340px', display: 'block' }}
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-black/25 flex items-center justify-center pointer-events-none group-hover:bg-black/35 transition-colors">
+                            <div className="w-12 h-12 rounded-full bg-black/60 backdrop-blur-xs flex items-center justify-center text-white shadow-lg border border-white/20 transition-transform duration-200 group-hover:scale-110">
+                              <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                            </div>
+                          </div>
                         </div>
                       ) : (
                         <img
-                          src={item.url}
+                          src={item.thumbnailUrl || item.url}
                           alt="media"
-                          className="cursor-pointer hover:opacity-95 transition-opacity rounded-[1.25rem]"
+                          loading="lazy"
+                          className="cursor-pointer hover:opacity-95 transition-opacity rounded-[1.25rem] object-cover"
+                          style={{ maxHeight: '340px', maxWidth: '100%', display: 'block' }}
                           onClick={e => { e.stopPropagation(); if (onPreviewMedia) onPreviewMedia(item.url, 'image'); else if (onPreviewImage) onPreviewImage(item.url); }}
                         />
                       )}
@@ -1340,11 +1360,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                     <div className="grid grid-cols-2 gap-1 bg-black/20 p-1 rounded-[1.25rem]">
                       {/* First item */}
                       <div className={`relative overflow-hidden rounded-xl bg-black/30 ${items.length >= 3 ? 'row-span-2 aspect-[9/16]' : 'aspect-square'}`}>
-                        {displayItems[0].type === 'video' ? (
-                          <video src={displayItems[0].url} className="w-full h-full object-cover pointer-events-none" />
-                        ) : (
-                          <img src={displayItems[0].url} alt="" className="w-full h-full object-cover" />
-                        )}
+                        <img src={displayItems[0].thumbnailUrl || displayItems[0].url} alt="" className="w-full h-full object-cover" loading="lazy" />
                         {displayItems[0].type === 'video' && (
                           <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center text-white">
                             <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
@@ -1355,11 +1371,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                       {/* Second item */}
                       {displayItems[1] && (
                         <div className="relative overflow-hidden rounded-xl bg-black/30 aspect-square">
-                          {displayItems[1].type === 'video' ? (
-                            <video src={displayItems[1].url} className="w-full h-full object-cover pointer-events-none" />
-                          ) : (
-                            <img src={displayItems[1].url} alt="" className="w-full h-full object-cover" />
-                          )}
+                          <img src={displayItems[1].thumbnailUrl || displayItems[1].url} alt="" className="w-full h-full object-cover" loading="lazy" />
                           {displayItems[1].type === 'video' && (
                             <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center text-white">
                               <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
@@ -1371,11 +1383,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                       {/* Third item */}
                       {displayItems[2] && (
                         <div className="relative overflow-hidden rounded-xl bg-black/30 aspect-square">
-                          {displayItems[2].type === 'video' ? (
-                            <video src={displayItems[2].url} className="w-full h-full object-cover pointer-events-none" />
-                          ) : (
-                            <img src={displayItems[2].url} alt="" className="w-full h-full object-cover" />
-                          )}
+                          <img src={displayItems[2].thumbnailUrl || displayItems[2].url} alt="" className="w-full h-full object-cover" loading="lazy" />
                           {remainingCount > 0 ? (
                             <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center text-white font-bold">
                               <span className="text-lg leading-none">+{remainingCount + 1}</span>
@@ -1391,44 +1399,104 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                         </div>
                       )}
                     </div>
-
                   </div>
                 );
               })() : (
-                <div className="relative group rounded-[1.25rem] overflow-hidden" style={{ width: 'fit-content' }}>
+                <div className="relative group rounded-[1.25rem] overflow-hidden" style={{ width: 'fit-content', maxWidth: '320px' }}>
                   {msg.type === 'image' && (
                     <img
-                      src={msg.content}
+                      src={msg.thumbnailUrl || msg.content}
                       alt="media"
                       draggable={false}
-                      className="cursor-pointer hover:opacity-95 transition-opacity"
-                      style={{ userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
-                      onClick={e => { e.stopPropagation(); if (onPreviewMedia) onPreviewMedia(msg.content, 'image'); else if (onPreviewImage) onPreviewImage(msg.content); else window.open(msg.content, '_blank'); }}
+                      loading="lazy"
+                      className="cursor-pointer hover:opacity-95 transition-opacity rounded-[1.25rem] object-cover"
+                      style={{
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        WebkitTouchCallout: 'none',
+                        maxHeight: '360px',
+                        width: msg.width ? `${Math.min(320, msg.width)}px` : 'auto',
+                        aspectRatio: msg.width && msg.height ? `${msg.width} / ${msg.height}` : 'auto'
+                      }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        if (onPreviewMedia) onPreviewMedia(msg.content, 'image');
+                        else if (onPreviewImage) onPreviewImage(msg.content);
+                        else window.open(msg.content, '_blank');
+                      }}
                       onContextMenu={e => { e.preventDefault(); e.stopPropagation(); handleContextMenu(e); }}
                     />
                   )}
                   {msg.type === 'video' && (
                     <div
-                      className="relative cursor-pointer group"
+                      className="relative cursor-pointer group rounded-[1.25rem] overflow-hidden bg-black/40"
+                      style={{ minWidth: '200px', minHeight: '140px', maxWidth: '300px' }}
                       onClick={e => {
                         e.stopPropagation();
                         if (onPreviewMedia) onPreviewMedia(msg.content, 'video');
                         else if (onPreviewImage) onPreviewImage(msg.content);
                       }}
                     >
-                      <video
-                        src={msg.content}
-                        controls
-                        style={{ userSelect: 'none', WebkitUserSelect: 'none', display: 'block', maxWidth: '100%' }}
-                        onContextMenu={e => { e.preventDefault(); e.stopPropagation(); handleContextMenu(e); }}
+                      <img
+                        src={msg.thumbnailUrl || msg.content}
+                        alt="video preview"
+                        className="w-full h-full object-cover rounded-[1.25rem] transition-transform duration-300 group-hover:scale-105"
+                        style={{ maxHeight: '340px', display: 'block' }}
+                        loading="lazy"
                       />
+                      <div className="absolute inset-0 bg-black/25 flex items-center justify-center pointer-events-none group-hover:bg-black/35 transition-colors">
+                        <div className="w-12 h-12 rounded-full bg-black/60 backdrop-blur-xs flex items-center justify-center text-white shadow-lg border border-white/20 transition-transform duration-200 group-hover:scale-110">
+                          <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                      {msg.duration && (
+                        <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-[10px] font-semibold text-white pointer-events-none">
+                          {Math.floor(msg.duration / 60)}:{(Math.floor(msg.duration % 60)).toString().padStart(2, '0')}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Real-time Upload Progress Overlay */}
+                  {isSending && (
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex flex-col items-center justify-center rounded-[1.25rem] text-white z-10">
+                      <div className="w-8 h-8 rounded-full border-2 border-white/30 border-t-white animate-spin mb-1.5" />
+                      <span className="text-[10px] font-bold tracking-wider">
+                        {msg.uploadProgress !== undefined && msg.uploadProgress > 0 ? `${msg.uploadProgress}%` : 'Uploading...'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Failed Upload Retry Button */}
+                  {(msg as any).status === 'error' && (
+                    <div className="absolute inset-0 bg-black/65 backdrop-blur-xs flex flex-col items-center justify-center rounded-[1.25rem] text-white z-10 p-2">
+                      <span className="text-[11px] text-red-400 font-semibold mb-2">Upload Failed</span>
+                      {onRetryUpload && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onRetryUpload(msg); }}
+                          className="px-3 py-1 bg-white/25 hover:bg-white/35 rounded-full text-[10px] font-bold transition-all cursor-pointer shadow-md"
+                        >
+                          Retry
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
               )
             ) : (
               <>
-                {msg.type === 'voice' && <audio src={msg.content} controls />}
+                {msg.type === 'voice' && (
+                  <div className="relative">
+                    <audio src={msg.content} controls className="max-w-[240px]" />
+                    {isSending && (
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center rounded-lg text-white text-[10px] font-medium">
+                        Uploading voice...
+                      </div>
+                    )}
+                  </div>
+                )}
                 {msg.type === 'file' && (
                   <div className="file-attachment">
                     <a href={msg.content} target="_blank" rel="noreferrer">
@@ -3810,22 +3878,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           }
           return m;
         }));
-        setMessagesCache(prev => {
-          const current = prev[selectedUser.id] || [];
-          return {
-            ...prev,
-            [selectedUser.id]: current.map(m => {
-              if (m.id === stableId) {
-                return {
-                  ...normalized,
-                  id: normalized.id || stableId,
-                  isSeen: m.isSeen || normalized.isSeen || false
-                };
-              }
-              return m;
-            })
-          };
-        });
       }
     } catch (err) {
       console.error("Failed to persist message:", err);
@@ -3852,71 +3904,132 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
 
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64Audio = reader.result as string;
-          if (selectedUser && socket && session?.user) {
-            const senderId = (session.user as any).id;
-
-            // Immediate Update
-            const stableId = 'voice-' + Date.now() + Math.random().toString(36).substring(7);
-            const optimisticMsg: any = {
-              id: stableId,
-              senderId: senderId,
-              receiverId: selectedUser.id,
-              content: base64Audio,
-              type: 'voice',
-              createdAt: new Date(),
-              isSeen: false
-            };
-            setMessages(prev => [...prev, optimisticMsg]);
-            setMessagesCache(prev => {
-              const current = prev[selectedUser.id] || [];
-              return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
-            });
-            socket.emit('send_social_message', {
-              ...optimisticMsg,
-              receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
-              ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
-            });
-
-            try {
-              const savedMsg = await saveSocialMessage(selectedUser.id, base64Audio, 'voice');
-              if (savedMsg) {
-                setMessages(prev => prev.map(m => {
-                  if (m.id === stableId) {
-                    return {
-                      ...(savedMsg as any),
-                      id: (savedMsg as any).id || stableId,
-                      isSeen: m.isSeen || (savedMsg as any).isSeen || false
-                    };
-                  }
-                  return m;
-                }));
-                setMessagesCache(prev => {
-                  const current = prev[selectedUser.id] || [];
-                  return {
-                    ...prev,
-                    [selectedUser.id]: current.map(m => {
-                      if (m.id === stableId) {
-                        return {
-                          ...(savedMsg as any),
-                          id: (savedMsg as any).id || stableId,
-                          isSeen: m.isSeen || (savedMsg as any).isSeen || false
-                        };
-                      }
-                      return m;
-                    })
-                  };
-                });
-              }
-            } catch (err) {
-              console.error("Failed to save voice message:", err);
-            }
-          }
-        };
-        reader.readAsDataURL(audioBlob);
         stream.getTracks().forEach(track => track.stop());
+
+        if (selectedUser && socket && session?.user) {
+          const senderId = (session.user as any).id;
+          const stableId = 'voice-' + Date.now() + Math.random().toString(36).substring(7);
+          const localPreview = URL.createObjectURL(audioBlob);
+
+          const optimisticMsg: any = {
+            id: stableId,
+            senderId: senderId,
+            receiverId: selectedUser.id,
+            content: localPreview,
+            type: 'voice',
+            createdAt: new Date(),
+            isSeen: false,
+            status: 'sending',
+            uploadProgress: 0,
+          };
+          setMessages(prev => [...prev, optimisticMsg]);
+          setMessagesCache(prev => {
+            const current = prev[selectedUser.id] || [];
+            return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
+          });
+
+          try {
+            // 1. Get presigned ticket for direct upload
+            const presignRes = await fetch('/api/chat/media/presign', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                receiverId: selectedUser.id,
+                messageId: stableId,
+                filename: 'voice.webm',
+                mimeType: 'audio/webm',
+                hasThumbnail: false,
+              }),
+            });
+
+            let finalAudioUrl = '';
+            let storagePath = '';
+            if (presignRes.ok) {
+              const { ticket } = await presignRes.json();
+              if (ticket?.uploadUrl) {
+                await uploadBinaryWithProgress(
+                  ticket.uploadUrl,
+                  audioBlob,
+                  'audio/webm',
+                  (pct) => {
+                    setMessages(prev => prev.map(m => m.id === stableId ? { ...m, uploadProgress: pct } : m));
+                  }
+                );
+                finalAudioUrl = ticket.publicUrl;
+                storagePath = ticket.storagePath;
+              }
+            }
+
+            // If direct upload was not supported, use fallback
+            if (!finalAudioUrl) {
+              const formData = new FormData();
+              formData.append('file', audioBlob, 'voice.webm');
+              formData.append('receiverId', selectedUser.id);
+              formData.append('type', 'voice');
+              const res = await fetch('/api/chat/upload', { method: 'POST', body: formData });
+              const resData = await res.json();
+              if (resData?.success && resData?.message) {
+                finalAudioUrl = resData.message.content;
+                storagePath = resData.storagePath || '';
+              }
+            }
+
+            if (!finalAudioUrl) throw new Error('Voice upload failed');
+
+            // 2. Save message with metadata
+            const savedMsg = await saveSocialMessage(
+              selectedUser.id,
+              finalAudioUrl,
+              'voice',
+              null,
+              {
+                mediaUrl: finalAudioUrl,
+                mimeType: 'audio/webm',
+                fileSize: audioBlob.size,
+                storagePath,
+              }
+            );
+
+            if (savedMsg) {
+              setMessages(prev => prev.map(m => {
+                if (m.id === stableId) {
+                  return {
+                    ...(savedMsg as any),
+                    id: (savedMsg as any).id || stableId,
+                    isSeen: m.isSeen || (savedMsg as any).isSeen || false,
+                    status: 'sent'
+                  };
+                }
+                return m;
+              }));
+
+              setMessagesCache(prev => {
+                const current = prev[selectedUser.id] || [];
+                return {
+                  ...prev,
+                  [selectedUser.id]: current.map(m => m.id === stableId ? {
+                    ...(savedMsg as any),
+                    id: (savedMsg as any).id || stableId,
+                    isSeen: m.isSeen || (savedMsg as any).isSeen || false,
+                    status: 'sent'
+                  } : m)
+                };
+              });
+
+              // Emit clean URL over Socket.io — ZERO base64!
+              socket.emit('send_social_message', {
+                ...(savedMsg as any),
+                id: (savedMsg as any).id || stableId,
+                receiverId: selectedUser.id,
+                receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+                ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
+              });
+            }
+          } catch (err) {
+            console.error('Failed to upload voice message:', err);
+            setMessages(prev => prev.map(m => m.id === stableId ? { ...m, status: 'error' } : m));
+          }
+        }
       };
 
       mediaRecorder.start();
@@ -3940,53 +4053,49 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     isCancelingRecordingRef.current = true;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
+      setIsRecording(false);
     }
-    audioChunksRef.current = [];
-    setIsRecording(false);
   };
 
   const startVoiceToText = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Speech recognition is not supported in this browser.');
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert("Speech recognition is not supported in this browser.");
       return;
     }
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.continuous = true;
-    recognition.interimResults = true;
+    try {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
 
-    let finalText = '';
-
-    recognition.onresult = (event: any) => {
-      let interim = '';
-      for (let i = 0; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          finalText += event.results[i][0].transcript + ' ';
-        } else {
-          interim += event.results[i][0].transcript;
+      recognition.onresult = (event: any) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
         }
-      }
-      setInputValue((finalText + interim).trim());
-    };
+        if (finalTranscript) {
+          setInputValue(prev => prev + (prev ? ' ' : '') + finalTranscript);
+        }
+      };
 
-    recognition.onerror = (e: any) => {
-      console.error('Voice-to-text error:', e.error);
-      if (e.error !== 'no-speech') {
-        stopVoiceToText();
-      }
-    };
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        setIsVoiceToText(false);
+      };
 
-    recognition.onend = () => {
-      // Auto-restart if still in voice-to-text mode
-      if (isVoiceToText) {
-        try { recognition.start(); } catch (e) { }
-      }
-    };
+      recognition.onend = () => {
+        setIsVoiceToText(false);
+      };
 
-    voiceToTextRef.current = recognition;
-    setIsVoiceToText(true);
-    try { recognition.start(); } catch (e) { console.error(e); }
+      recognition.start();
+      voiceToTextRef.current = recognition;
+      setIsVoiceToText(true);
+    } catch (e) {
+      console.error("Voice-to-text error", e);
+    }
   };
 
   const stopVoiceToText = () => {
@@ -3998,63 +4107,148 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     setIsVoiceToText(false);
   };
 
-  const compressImageClient = async (file: File): Promise<File> => {
-    if (!file || !file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') {
-      return file;
+  const uploadMediaItemDirect = async (
+    rawFile: File,
+    stableId: string,
+    onProgress?: (pct: number) => void
+  ) => {
+    if (!selectedUser) {
+      throw new Error("No chat selected");
     }
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => resolve(file), 1500);
-      try {
-        const url = URL.createObjectURL(file);
-        const img = new Image();
-        img.onload = () => {
-          try {
-            URL.revokeObjectURL(url);
-            const maxDim = 1920;
-            let { width, height } = img;
-            if (width > maxDim || height > maxDim) {
-              if (width > height) {
-                height = Math.round((height * maxDim) / width);
-                width = maxDim;
-              } else {
-                width = Math.round((width * maxDim) / height);
-                height = maxDim;
-              }
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-              clearTimeout(timeout);
-              resolve(file);
-              return;
-            }
-            ctx.drawImage(img, 0, 0, width, height);
-            canvas.toBlob((blob) => {
-              clearTimeout(timeout);
-              if (blob && blob.size < file.size) {
-                resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' }));
-              } else {
-                resolve(file);
-              }
-            }, 'image/jpeg', 0.85);
-          } catch (err) {
-            clearTimeout(timeout);
-            resolve(file);
-          }
-        };
-        img.onerror = () => {
-          try { URL.revokeObjectURL(url); } catch (e) {}
-          clearTimeout(timeout);
-          resolve(file);
-        };
-        img.src = url;
-      } catch (e) {
-        clearTimeout(timeout);
-        resolve(file);
-      }
+    const currentSelectedUser = selectedUser;
+
+    // 1. Validate
+    const validation = validateMediaFile(rawFile);
+    if (!validation.isValid) {
+      throw new Error(validation.error || 'File validation failed');
+    }
+
+    const isImage = rawFile.type.startsWith('image/');
+    const isVideo = rawFile.type.startsWith('video/');
+    const isAudio = rawFile.type.startsWith('audio/');
+    const msgType = isImage ? 'image' : isVideo ? 'video' : isAudio ? 'voice' : 'file';
+
+    // 2. Client-side optimization & thumbnail generation
+    let optimizedFile: File | Blob = rawFile;
+    let thumbnailBlob: Blob | undefined;
+    let width: number | undefined;
+    let height: number | undefined;
+    let duration: number | undefined;
+    let mimeType = rawFile.type;
+
+    if (isImage) {
+      const imgOpt = await optimizeImageClient(rawFile);
+      optimizedFile = imgOpt.file;
+      thumbnailBlob = imgOpt.thumbnailBlob;
+      width = imgOpt.width;
+      height = imgOpt.height;
+      mimeType = imgOpt.mimeType;
+    } else if (isVideo) {
+      const vidOpt = await extractVideoMetadataAndThumbnail(rawFile);
+      optimizedFile = vidOpt.file;
+      thumbnailBlob = vidOpt.thumbnailBlob;
+      width = vidOpt.width;
+      height = vidOpt.height;
+      duration = vidOpt.duration;
+      mimeType = vidOpt.mimeType;
+    }
+
+    // 3. Request presigned upload authorization ticket
+    const presignRes = await fetch('/api/chat/media/presign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        receiverId: currentSelectedUser.id,
+        messageId: stableId,
+        filename: rawFile.name,
+        mimeType,
+        hasThumbnail: !!thumbnailBlob,
+      }),
     });
+
+    let mediaUrl = '';
+    let thumbnailUrl = '';
+    let storagePath = '';
+
+    if (presignRes.ok) {
+      const presignData = await presignRes.json();
+      const ticket = presignData.ticket;
+      if (ticket?.uploadUrl) {
+        // Direct upload to Supabase Storage
+        await uploadBinaryWithProgress(ticket.uploadUrl, optimizedFile, mimeType, onProgress);
+        if (thumbnailBlob && ticket.thumbnailUploadUrl) {
+          await uploadBinaryWithProgress(ticket.thumbnailUploadUrl, thumbnailBlob, 'image/jpeg');
+        }
+        mediaUrl = ticket.publicUrl;
+        thumbnailUrl = ticket.thumbnailUrl || ticket.publicUrl;
+        storagePath = ticket.storagePath;
+      }
+    }
+
+    // Fallback: multipart upload
+    if (!mediaUrl) {
+      const formData = new FormData();
+      formData.append('file', optimizedFile);
+      formData.append('receiverId', currentSelectedUser.id);
+      formData.append('type', msgType);
+
+      const upRes = await fetch('/api/chat/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!upRes.ok) {
+        throw new Error(`Upload error status: ${upRes.status}`);
+      }
+
+      const upData = await upRes.json();
+      if (upData?.success && upData?.message) {
+        return {
+          message: upData.message,
+          mediaUrl: upData.message.content,
+          thumbnailUrl: upData.message.content,
+          type: msgType,
+          width,
+          height,
+          duration,
+        };
+      }
+      throw new Error('Upload failed');
+    }
+
+    // Finalize database record with metadata
+    const saveRes = await fetch('/api/chat/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        receiverId: currentSelectedUser.id,
+        mediaUrl,
+        thumbnailUrl,
+        type: msgType,
+        mimeType,
+        fileSize: optimizedFile.size,
+        width,
+        height,
+        duration,
+        storagePath,
+        replyTo: replyToMessage ? {
+          id: replyToMessage.id,
+          content: replyToMessage.content,
+          senderName: replyToMessage.senderId === (session?.user as any)?.id ? 'You' : (currentSelectedUser.name || currentSelectedUser.username)
+        } : undefined
+      }),
+    });
+
+    const saveData = await saveRes.json();
+    return {
+      message: saveData.message,
+      mediaUrl,
+      thumbnailUrl,
+      type: msgType,
+      width,
+      height,
+      duration,
+    };
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -4080,7 +4274,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         type: type,
         createdAt: new Date(),
         isSeen: false,
-        status: 'sending'
+        status: 'sending',
+        uploadProgress: 0,
+        _rawFile: rawFile,
       };
 
       setMessages(prev => [...prev, optimisticMsg]);
@@ -4097,38 +4293,29 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       }
 
       try {
-        const uploadFile = type === 'image' ? await compressImageClient(rawFile) : rawFile;
-        const formData = new FormData();
-        formData.append('file', uploadFile);
-        formData.append('receiverId', selectedUser.id);
-        formData.append('type', type);
-
-        const res = await fetch('/api/chat/upload', {
-          method: 'POST',
-          body: formData
+        const result = await uploadMediaItemDirect(rawFile, stableId, (pct) => {
+          setMessages(prev => prev.map(m => m.id === stableId ? { ...m, uploadProgress: pct } : m));
         });
 
-        if (!res.ok) {
-          console.error("Upload error status:", res.status);
-          setMessages(prev => prev.map(m => m.id === stableId ? { ...m, status: 'error' } : m));
-          return;
-        }
-
-        const resData = await res.json();
-
-        if (resData?.success && resData?.message) {
-          const savedMsg = resData.message;
+        if (result?.message) {
+          const savedMsg = result.message;
           setMessages(prev => prev.map(m => {
             if (m.id === stableId) {
               return {
                 ...(savedMsg as any),
                 id: (savedMsg as any).id || stableId,
+                thumbnailUrl: result.thumbnailUrl,
+                width: result.width,
+                height: result.height,
+                duration: result.duration,
                 isSeen: m.isSeen || (savedMsg as any).isSeen || false,
-                status: 'sent'
+                status: 'sent',
+                uploadProgress: 100,
               };
             }
             return m;
           }));
+
           setMessagesCache(prev => {
             const current = prev[selectedUser.id] || [];
             const updated = current.map(m => {
@@ -4136,6 +4323,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 return {
                   ...(savedMsg as any),
                   id: (savedMsg as any).id || stableId,
+                  thumbnailUrl: result.thumbnailUrl,
+                  width: result.width,
+                  height: result.height,
+                  duration: result.duration,
                   isSeen: m.isSeen || (savedMsg as any).isSeen || false,
                   status: 'sent'
                 };
@@ -4149,24 +4340,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             return nextCache;
           });
 
-          // Add to sharedMedia Pics & Videos
-          setSharedMedia(prev => {
-            if (type === 'image' || type === 'video') {
-              return {
-                ...prev,
-                picsAndVideos: [{ id: savedMsg.id, content: savedMsg.content, type: type as 'image' | 'video', createdAt: savedMsg.createdAt, senderId }, ...prev.picsAndVideos]
-              };
-            }
-            return {
-              ...prev,
-              files: [{ id: savedMsg.id, content: savedMsg.content, type, createdAt: savedMsg.createdAt, senderId }, ...prev.files]
-            };
-          });
-
           // Emit real-time message with saved permanent file URL
           socket.emit('send_social_message', {
             ...(savedMsg as any),
             id: (savedMsg as any).id || stableId,
+            thumbnailUrl: result.thumbnailUrl,
+            width: result.width,
+            height: result.height,
+            duration: result.duration,
             receiverId: selectedUser.id,
             receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
             ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
@@ -4174,6 +4355,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
       } catch (err) {
         console.error("Failed to upload media file:", err);
+        setMessages(prev => prev.map(m => m.id === stableId ? { ...m, status: 'error' } : m));
       }
     } else {
       // Multi-file batch
@@ -4191,7 +4373,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         type: 'media_album',
         createdAt: new Date(),
         isSeen: false,
-        status: 'sending'
+        status: 'sending',
+        uploadProgress: 0,
+        _rawFiles: rawFiles,
       };
 
       setMessages(prev => [...prev, optimisticMsg]);
@@ -4208,37 +4392,49 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       }
 
       try {
-        const uploadFiles = await Promise.all(rawFiles.map(f => f.type.startsWith('image/') ? compressImageClient(f) : Promise.resolve(f)));
-        const formData = new FormData();
-        uploadFiles.forEach(f => formData.append('files', f));
-        formData.append('receiverId', selectedUser.id);
+        let completed = 0;
+        const uploadedItems = await Promise.all(
+          rawFiles.map(async (f) => {
+            const subId = 'sub-' + Date.now() + Math.random().toString(36).substring(7);
+            const itemRes = await uploadMediaItemDirect(f, subId);
+            completed++;
+            const pct = Math.round((completed / rawFiles.length) * 100);
+            setMessages(prev => prev.map(m => m.id === stableId ? { ...m, uploadProgress: pct } : m));
+            return {
+              url: itemRes.mediaUrl,
+              thumbnailUrl: itemRes.thumbnailUrl,
+              type: itemRes.type,
+              name: f.name || "media",
+            };
+          })
+        );
 
-        const res = await fetch('/api/chat/upload', {
+        const albumRes = await fetch('/api/chat/upload', {
           method: 'POST',
-          body: formData
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            receiverId: selectedUser.id,
+            mediaUrl: JSON.stringify(uploadedItems),
+            type: 'media_album',
+          }),
         });
 
-        if (!res.ok) {
-          console.error("Multi upload error status:", res.status);
-          setMessages(prev => prev.map(m => m.id === stableId ? { ...m, status: 'error' } : m));
-          return;
-        }
-
-        const resData = await res.json();
-
-        if (resData?.success && resData?.message) {
-          const savedMsg = resData.message;
+        const albumData = await albumRes.json();
+        if (albumData?.success && albumData?.message) {
+          const savedMsg = albumData.message;
           setMessages(prev => prev.map(m => {
             if (m.id === stableId) {
               return {
                 ...(savedMsg as any),
                 id: (savedMsg as any).id || stableId,
                 isSeen: m.isSeen || (savedMsg as any).isSeen || false,
-                status: 'sent'
+                status: 'sent',
+                uploadProgress: 100,
               };
             }
             return m;
           }));
+
           setMessagesCache(prev => {
             const current = prev[selectedUser.id] || [];
             const updated = current.map(m => {
@@ -4260,20 +4456,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           });
 
           // Update sharedMedia Pics & Videos
-          if (resData.items && Array.isArray(resData.items)) {
-            setSharedMedia(prev => {
-              const newPicsAndVideos = [...prev.picsAndVideos];
-              const newFiles = [...prev.files];
-              resData.items.forEach((it: any, idx: number) => {
-                if (it.type === 'video' || it.type === 'image') {
-                  newPicsAndVideos.unshift({ id: `${savedMsg.id}-${idx}`, content: it.url, type: it.type, createdAt: savedMsg.createdAt, senderId });
-                } else {
-                  newFiles.unshift({ id: `${savedMsg.id}-${idx}`, content: it.url, type: it.type, createdAt: savedMsg.createdAt, senderId });
-                }
-              });
-              return { picsAndVideos: newPicsAndVideos, files: newFiles };
+          setSharedMedia(prev => {
+            const newPicsAndVideos = [...prev.picsAndVideos];
+            const newFiles = [...prev.files];
+            uploadedItems.forEach((it: any, idx: number) => {
+              if (it.type === 'video' || it.type === 'image') {
+                newPicsAndVideos.unshift({ id: `${savedMsg.id}-${idx}`, content: it.url, type: it.type, createdAt: savedMsg.createdAt, senderId });
+              } else {
+                newFiles.unshift({ id: `${savedMsg.id}-${idx}`, content: it.url, type: it.type, createdAt: savedMsg.createdAt, senderId });
+              }
             });
-          }
+            return { picsAndVideos: newPicsAndVideos, files: newFiles };
+          });
 
           socket.emit('send_social_message', {
             ...(savedMsg as any),
@@ -4285,6 +4479,37 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
       } catch (err) {
         console.error("Failed to upload media batch:", err);
+        setMessages(prev => prev.map(m => m.id === stableId ? { ...m, status: 'error' } : m));
+      }
+    }
+  };
+
+  const handleRetryUpload = async (failedMsg: any) => {
+    if (!failedMsg || !selectedUser) return;
+    if (failedMsg._rawFile) {
+      setMessages(prev => prev.map(m => m.id === failedMsg.id ? { ...m, status: 'sending', uploadProgress: 0 } : m));
+      try {
+        const result = await uploadMediaItemDirect(failedMsg._rawFile, failedMsg.id, (pct) => {
+          setMessages(prev => prev.map(m => m.id === failedMsg.id ? { ...m, uploadProgress: pct } : m));
+        });
+        if (result?.message) {
+          const savedMsg = result.message;
+          setMessages(prev => prev.map(m => m.id === failedMsg.id ? {
+            ...(savedMsg as any),
+            id: (savedMsg as any).id || failedMsg.id,
+            thumbnailUrl: result.thumbnailUrl,
+            status: 'sent',
+            uploadProgress: 100
+          } : m));
+          socket?.emit('send_social_message', {
+            ...(savedMsg as any),
+            id: (savedMsg as any).id || failedMsg.id,
+            receiverId: selectedUser.id,
+            receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+          });
+        }
+      } catch (err) {
+        setMessages(prev => prev.map(m => m.id === failedMsg.id ? { ...m, status: 'error' } : m));
       }
     }
   };
@@ -4686,6 +4911,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                 chatSwipeOffset={chatSwipeOffset}
                                 onContainerSwipeOffset={setChatSwipeOffset}
                                 onOpenAlbum={setSelectedAlbum}
+                                onRetryUpload={handleRetryUpload}
                               />
                             </div>
                           </React.Fragment>
