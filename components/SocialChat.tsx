@@ -2172,33 +2172,44 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const handleDownloadMedia = async (url: string, type?: 'image' | 'video') => {
+    if (!url) return;
+    const ext = type === 'video' ? 'mp4' : (url.includes('.png') ? 'png' : url.includes('.webp') ? 'webp' : 'jpg');
+    const filename = `connect_media_${Date.now()}.${ext}`;
+
     try {
       const isDataOrBlob = url.startsWith('data:') || url.startsWith('blob:');
-      let blobUrl = url;
-      if (!isDataOrBlob) {
-        const res = await fetch(url);
+      if (isDataOrBlob) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      }
+
+      // 1. Try direct fetch & blob
+      const res = await fetch(url, { mode: 'cors' });
+      if (res.ok) {
         const blob = await res.blob();
-        blobUrl = URL.createObjectURL(blob);
-      }
-      const ext = type === 'video' ? 'mp4' : (url.includes('.png') ? 'png' : url.includes('.webp') ? 'webp' : 'jpg');
-      const filename = `connect_media_${Date.now()}.${ext}`;
-
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      if (!isDataOrBlob) {
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+        return;
       }
+      throw new Error(`Direct fetch failed: ${res.status}`);
     } catch (err) {
-      console.error("Failed to download media via blob, falling back:", err);
+      console.warn("Direct blob download failed, falling back to server download proxy:", err);
+      // 2. Direct server proxy with Content-Disposition: attachment
+      const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
       const link = document.createElement('a');
-      link.href = url;
-      link.download = `connect_media_${Date.now()}`;
-      link.target = '_blank';
+      link.href = proxyUrl;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -6024,46 +6035,32 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           className="fixed inset-0 z-[2000] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setLightboxMedia(null)}
         >
-          {/* Top-left Back Button: No circle radius, no border, clean back icon */}
+          {/* Top-left Back Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               setLightboxMedia(null);
             }}
-            className="absolute top-6 left-5 md:top-8 md:left-8 text-white/90 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90 z-30 p-2"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              borderRadius: 0,
-              outline: 'none',
-              boxShadow: 'none'
-            }}
+            className="absolute top-12 left-5 md:top-14 md:left-8 w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white/90 hover:text-white hover:bg-black/80 flex items-center justify-center cursor-pointer transition-all active:scale-90 z-30 shadow-xl"
             title="Go back"
             aria-label="Go back"
           >
-            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </button>
 
-          {/* Top-right Download Button: Exact to extreme right, download SVG, no border, no circle */}
+          {/* Top-right Download Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               handleDownloadMedia(lightboxMedia.url, lightboxMedia.type);
             }}
-            className="absolute top-6 right-5 md:top-8 md:right-8 text-white/90 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90 z-30 p-2"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              borderRadius: 0,
-              outline: 'none',
-              boxShadow: 'none'
-            }}
-            title="Download media"
-            aria-label="Download media"
+            className="absolute top-12 right-5 md:top-14 md:right-8 w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white/90 hover:text-white hover:bg-black/80 flex items-center justify-center cursor-pointer transition-all active:scale-90 z-30 shadow-xl"
+            title="Save to device"
+            aria-label="Save to device"
           >
-            <svg width="26" height="26" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
           </button>
