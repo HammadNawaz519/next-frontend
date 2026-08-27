@@ -24,10 +24,15 @@ import {
   validateMediaFile,
   uploadBinaryWithProgress,
 } from '@/lib/media-optimizer';
-import CallInterface from './CallInterface';
+import dynamic from 'next/dynamic';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { triggerHaptic } from '@/lib/haptics';
 import './SocialChat.css';
+
+// Code-split CallInterface so WebRTC and media engines load strictly on-demand when a call starts
+const CallInterface = dynamic(() => import('./CallInterface'), {
+  ssr: false,
+});
 
 // ── Request Coalescing and In-Flight Caching for getRecentChats ─────────────
 let recentChatsInFlightPromise: Promise<any[]> | null = null;
@@ -1824,6 +1829,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
+  const [isRecentLoading, setIsRecentLoading] = useState<boolean>(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [hasMoreMessages, setHasMoreMessages] = useState<boolean>(true);
@@ -2017,6 +2023,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
+      // 0ms Optimistic Contact List Restore for instant First Paint
+      const cachedContacts = localStorage.getItem('social_contacts_cache');
+      if (cachedContacts) {
+        try {
+          const parsed = JSON.parse(cachedContacts);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            allContactsRef.current = parsed;
+            setUsers(parsed);
+            setIsRecentLoading(false);
+          }
+        } catch (e) {}
+      }
+
       const cachedMsgs = localStorage.getItem('social_messages_cache');
       if (cachedMsgs) {
         try {
@@ -3628,6 +3647,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           allRequestsRef.current = reqs.filter(r => !contacts.some(c => c.id === r.id));
           setUsers(allContactsRef.current);
           setRequests(allRequestsRef.current);
+          setIsRecentLoading(false);
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('social_contacts_cache', JSON.stringify(contacts));
+            } catch (e) {}
+          }
+        }).catch(() => {
+          setIsRecentLoading(false);
         });
       }
     }
@@ -4980,6 +5007,25 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       const bp = pinnedChats.has(b.id) ? 0 : 1;
                       return ap - bp;
                     });
+
+                  if (isRecentLoading && filtered.length === 0) {
+                    return (
+                      <div className="flex flex-col gap-3.5 pt-1">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <div key={i} className="flex items-center gap-3.5 p-2 rounded-2xl animate-pulse">
+                            <div className="w-14 h-14 rounded-full bg-zinc-200 flex-shrink-0" />
+                            <div className="flex-1 min-w-0 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div className="w-28 h-4 bg-zinc-200 rounded" />
+                                <div className="w-10 h-3 bg-zinc-200 rounded" />
+                              </div>
+                              <div className="w-40 h-3 bg-zinc-100 rounded" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }
 
                   if (filtered.length === 0) {
                     return (

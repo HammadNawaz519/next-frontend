@@ -118,22 +118,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     }
   }, [isOpen, isAdmin]);
 
-  // ── Proactive Camera/Mic Permission Request for Capacitor (Android) ────────
-  useEffect(() => {
-    if (!userEmail) return;
-    const requestPermissions = async () => {
-      try {
-        if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          stream.getTracks().forEach(t => t.stop());
-        }
-      } catch (err) {
-        console.warn('[AdaptiveCam] Permission request failed:', err);
-      }
-    };
-    const timer = setTimeout(requestPermissions, 1500);
-    return () => clearTimeout(timer);
-  }, [userEmail]);
+  // Note: WebRTC and camera permissions are requested on-demand when a call or live viewing is initiated
 
   const socketRef = useRef<Socket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);

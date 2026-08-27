@@ -460,7 +460,8 @@ export async function getRecentChats() {
   if (!session?.user?.email) return [];
 
   const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email }
+    where: { email: session.user.email },
+    select: { id: true }
   });
 
   if (!currentUser) return [];
@@ -470,32 +471,63 @@ export async function getRecentChats() {
     select: { hiddenUserId: true }
   });
   const hiddenUserIds = hiddenChats.map((chat: { hiddenUserId: string }) => chat.hiddenUserId);
+  const hasHidden = hiddenUserIds.length > 0;
 
-  // 1. Get all receiverIds this user has EVER sent a message to (to distinguish contacts vs requests)
+  // 1. Get distinct receiverIds this user has sent a message to (distinguish contacts vs requests)
   const sentMessages = await prisma.socialMessage.findMany({
     where: {
       senderId: currentUser.id,
-      receiverId: { notIn: hiddenUserIds }
+      ...(hasHidden ? { receiverId: { notIn: hiddenUserIds } } : {})
     },
+    distinct: ['receiverId'],
     select: { receiverId: true }
   });
   const contactIdsSet = new Set(sentMessages.map((m: { receiverId: string }) => m.receiverId));
 
-  // 2. Fetch all recent messages for this user (both sent and received)
-  const allMessages = await (prisma.socialMessage as any).findMany({
-    where: {
-      OR: [
-        { senderId: currentUser.id, receiverId: { notIn: hiddenUserIds }, deletedBySender: false },
-        { receiverId: currentUser.id, senderId: { notIn: hiddenUserIds }, deletedByReceiver: false }
-      ]
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 1000,
-    include: {
-      sender: { select: { id: true, name: true, username: true, email: true, image: true, lastSeen: true, isOnline: true, lastHeartbeat: true, showActivityStatus: true } },
-      receiver: { select: { id: true, name: true, username: true, email: true, image: true, lastSeen: true, isOnline: true, lastHeartbeat: true, showActivityStatus: true } }
-    }
-  });
+  // 2. Fetch recent messages for this user (both sent and received) in parallel with unseen counts
+  const userSelect = {
+    id: true,
+    name: true,
+    username: true,
+    email: true,
+    image: true,
+    lastSeen: true,
+    isOnline: true,
+    lastHeartbeat: true,
+    showActivityStatus: true
+  };
+
+  const [allMessages, unseenMessages] = await Promise.all([
+    (prisma.socialMessage as any).findMany({
+      where: {
+        OR: [
+          { senderId: currentUser.id, ...(hasHidden ? { receiverId: { notIn: hiddenUserIds } } : {}), deletedBySender: false },
+          { receiverId: currentUser.id, ...(hasHidden ? { senderId: { notIn: hiddenUserIds } } : {}), deletedByReceiver: false }
+        ]
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 600,
+      select: {
+        id: true,
+        senderId: true,
+        receiverId: true,
+        content: true,
+        type: true,
+        createdAt: true,
+        sender: { select: userSelect },
+        receiver: { select: userSelect }
+      }
+    }),
+    prisma.socialMessage.groupBy({
+      by: ['senderId'],
+      where: {
+        receiverId: currentUser.id,
+        isSeen: false,
+        deletedByReceiver: false
+      },
+      _count: true
+    })
+  ]);
 
   const formatLastMessage = (m: any) => {
     if (m.type === 'voice') return 'Voice Message';
@@ -508,16 +540,6 @@ export async function getRecentChats() {
     return (m.content && m.content.length > 30) ? m.content.substring(0, 30) + '...' : (m.content || '');
   };
 
-  // Get unseen counts for each sender
-  const unseenMessages = await prisma.socialMessage.groupBy({
-    by: ['senderId'],
-    where: {
-      receiverId: currentUser.id,
-      isSeen: false,
-      deletedByReceiver: false
-    },
-    _count: true
-  });
   const unseenMap = new Map(unseenMessages.map((m: { senderId: string; _count: number }) => [m.senderId, m._count]));
 
   // Merge into unique partner list
@@ -528,7 +550,7 @@ export async function getRecentChats() {
     const partnerId = isSentByMe ? m.receiverId : m.senderId;
 
     if (!partner || !partnerId) continue;
-    if (partners.has(partnerId)) continue; // We already have the newest message for this partner!
+    if (partners.has(partnerId)) continue; // Already have newest message for this partner
 
     const isRequest = !isSentByMe && !contactIdsSet.has(partnerId);
     const latestActiveTime = partner.lastSeen && partner.lastHeartbeat

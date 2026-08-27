@@ -62,10 +62,19 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Connect" />
         {/* Theme */}
         <meta name="theme-color" content="#000000" />
-        {/* Google Fonts */}
+        {/* Google Fonts (Non-blocking async load) */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Comfortaa:wght@600&family=Fira+Code:wght@500&family=Oswald:wght@600&family=Playfair+Display:wght@600&family=Satisfy&display=swap" rel="stylesheet" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Comfortaa:wght@600&family=Fira+Code:wght@500&family=Oswald:wght@600&family=Playfair+Display:wght@600&family=Satisfy&display=swap"
+          rel="stylesheet"
+          media="print"
+          // @ts-ignore
+          onLoad="this.media='all'"
+        />
+        <noscript>
+          <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Comfortaa:wght@600&family=Fira+Code:wght@500&family=Oswald:wght@600&family=Playfair+Display:wght@600&family=Satisfy&display=swap" rel="stylesheet" />
+        </noscript>
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>

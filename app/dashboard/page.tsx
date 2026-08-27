@@ -17,16 +17,40 @@ import {
   toggleFollowUser,
   createPostAction
 } from './actions';
+import dynamic from 'next/dynamic';
 import SocialChat from '@/components/SocialChat';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/app/components/ThemeProvider';
-import ProfilePanel from '@/components/ProfilePanel';
 import DashboardSkeleton from '@/components/DashboardSkeleton';
-import HomeFeed from '@/components/HomeFeed';
-import ReelsPlayer from '@/components/ReelsPlayer';
-import AdminCamViewer from '@/components/AdminCamViewer';
 import { triggerHaptic } from '@/lib/haptics';
 import { DeviceAccountStore } from '@/lib/deviceAccountStore';
+
+// Code-split heavy non-immediate components to keep startup JS bundle ultra-fast
+const HomeFeed = dynamic(() => import('@/components/HomeFeed'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-[#141111]">
+      <div className="w-6 h-6 rounded-full border-2 border-t-transparent border-white/40 animate-spin" />
+    </div>
+  ),
+});
+
+const ReelsPlayer = dynamic(() => import('@/components/ReelsPlayer'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-black">
+      <div className="w-6 h-6 rounded-full border-2 border-t-transparent border-white/40 animate-spin" />
+    </div>
+  ),
+});
+
+const ProfilePanel = dynamic(() => import('@/components/ProfilePanel'), {
+  ssr: false,
+});
+
+const AdminCamViewer = dynamic(() => import('@/components/AdminCamViewer'), {
+  ssr: false,
+});
 
 interface Message {
   id: string;
@@ -285,17 +309,34 @@ export default function DashboardPage() {
   }, []);
 
 
-  // Eager load User Details for Profile Panel
+  // Progressively load User Details for Profile Panel (on idle or when profile is opened)
   const hasLoadedUser = useRef(false);
   const refreshProfile = () => {
     if (status === 'authenticated') {
-      getProfileDetails().then(setFullUser);
+      getProfileDetails().then(setFullUser).catch(() => {});
     }
   };
+
+  // Fetch profile details when the user opens their profile or in idle background
   useEffect(() => {
-    if (status === 'authenticated' && !hasLoadedUser.current) {
+    if (status !== 'authenticated') return;
+    if (isProfileOpen && !hasLoadedUser.current) {
       hasLoadedUser.current = true;
       refreshProfile();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isProfileOpen, status]);
+
+  // Non-blocking idle prefetch after the main chat shell is already interactive
+  useEffect(() => {
+    if (status === 'authenticated' && !hasLoadedUser.current) {
+      const timer = setTimeout(() => {
+        if (!hasLoadedUser.current) {
+          hasLoadedUser.current = true;
+          refreshProfile();
+        }
+      }, 3500);
+      return () => clearTimeout(timer);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
