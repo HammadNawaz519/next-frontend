@@ -1,42 +1,38 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { signOut, signIn } from 'next-auth/react';
+import React, { useState, useEffect, useRef } from 'react';
+import { signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/app/components/ThemeProvider';
+import { triggerHaptic } from '@/lib/haptics';
 import { DeviceAccountStore, DeviceAccountMeta } from '@/lib/deviceAccountStore';
-import { Mail, Lock, User, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import {
+  Bell,
+  Camera,
+  Sparkles,
+  ShieldCheck,
+  BellRing,
+  FolderDown,
+  Lock,
+  Palette,
+  ChevronRight,
+  ChevronLeft,
+  LogOut,
+  User,
+  Check,
+  X,
+  Moon,
+  Sun,
+  KeyRound,
+  Trash2,
+  Share2
+} from 'lucide-react';
 import {
   updateProfileDetails,
   updateProfileImageAction,
-  getFollowRequests,
-  respondToFollowRequest,
-  createPostAction,
-  deletePostAction,
-  toggleProfilePrivacy,
-  getSavedPostsAction
+  toggleProfilePrivacy
 } from '@/app/dashboard/actions';
 import { optimizeImageClient } from '@/lib/media-optimizer';
-
-/* ─── Types ─── */
-export interface UserProfile {
-  avatarUrl?: string;
-  displayName: string;
-  username: string;
-  email?: string;
-  bio?: string;
-  website?: string;
-  metrics: { posts: number; followers: number; following: number };
-}
-
-export interface Post {
-  id: string;
-  thumbnailUrl?: string;
-  postType: 'single_image' | 'carousel' | 'reel';
-  hue?: number;
-}
 
 interface Props {
   isOpen: boolean;
@@ -46,12 +42,9 @@ interface Props {
   fullUser: any;
   targetUser?: any;
   isDark: boolean;
-  onEditName: () => void;
-  onInstall: () => void;
+  onEditName?: () => void;
+  onInstall?: () => void;
   hasUnreadNotifications?: boolean;
-  posts?: Post[];
-  reels?: Post[];
-  tagged?: Post[];
   refreshProfile?: () => void;
   onToggleFollow?: (targetUserId: string) => void;
   onOpenChat?: (user: any) => void;
@@ -59,2642 +52,616 @@ interface Props {
   onOpenUpload?: (type: 'single_image' | 'reel') => void;
 }
 
-/* ─── Default data ─── */
-const DEFAULT_POSTS: Post[] = [];
-const DEFAULT_REELS: Post[] = [];
-const DEFAULT_TAGGED: Post[] = [];
-
-/* ─── Icon helpers ─── */
-const CarouselIcon = () => (
-  <svg width="16" height="16" fill="#fff" viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,.5))' }}>
-    <path d="M2 6a2 2 0 012-2h11a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm16 1.5v5a3.5 3.5 0 01-3.5 3.5H7A3.5 3.5 0 0110.5 19H18a3.5 3.5 0 003.5-3.5V9l-3.5-1.5z" />
-  </svg>
-);
-const ReelIcon = () => (
-  <svg width="16" height="16" fill="#fff" viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,.5))' }}>
-    <path d="M8 5v14l11-7z" />
-  </svg>
-);
-
-const DefaultAvatarSvg = ({ size = 32, color, style }: { size?: number; color?: string; style?: React.CSSProperties }) => (
-  <img
-    src="/Avatar.png"
-    alt="Default Avatar"
-    style={{ display: 'block', width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', ...style }}
-  />
-);
-
-/* ─── Main component ─── */
 export default function ProfilePanel({
-  isOpen, isClosing, onClose, session, fullUser, targetUser, isDark,
-  onEditName, onInstall,
-  hasUnreadNotifications = false,
+  isOpen,
+  isClosing,
+  onClose,
+  session,
+  fullUser,
+  targetUser,
+  isDark,
+  onEditName,
   refreshProfile,
-  onToggleFollow,
   onOpenChat,
-  onAccountSheetChange,
-  onOpenUpload,
+  onAccountSheetChange
 }: Props) {
-  const { theme, toggleTheme } = useTheme();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'tagged'>('grid');
-  const [copyToast, setCopyToast] = useState(false);
-  const [savedPostsList, setSavedPostsList] = useState<any[]>([]);
-  const [loadingSaved, setLoadingSaved] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
-  // Switch account state
-  const [activeAccountSheet, setActiveAccountSheet] = useState<'none' | 'accounts' | 'options' | 'signIn' | 'signUp' | 'verify' | 'success'>('none');
-  const [activeAuthSheet, setActiveAuthSheet] = useState<'none' | 'signIn' | 'signUp'>('none');
-  const [targetAccountSheet, setTargetAccountSheet] = useState<'none' | 'accounts' | 'options' | 'signIn' | 'signUp' | 'verify' | 'success'>('none');
-  const [showAvatarModal, setShowAvatarModal] = useState(false);
-  const [avatarInputUrl, setAvatarInputUrl] = useState('');
-  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
-  const [showAvatarPreview, setShowAvatarPreview] = useState(false);
-  const avatarTouchTimer = useRef<NodeJS.Timeout | null>(null);
+  // Active settings sub-modal
+  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAvatarTouchStart = () => {
-    if (avatarTouchTimer.current) clearTimeout(avatarTouchTimer.current);
-    avatarTouchTimer.current = setTimeout(() => {
-      setShowAvatarPreview(true);
-    }, 450);
-  };
+  // Edit Name & Bio State
+  const [editNameValue, setEditNameValue] = useState('');
+  const [editBioValue, setEditBioValue] = useState('');
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
 
-  const handleAvatarTouchEnd = () => {
-    if (avatarTouchTimer.current) {
-      clearTimeout(avatarTouchTimer.current);
-      avatarTouchTimer.current = null;
-    }
-  };
+  // Saved accounts for Account & Security switcher
   const [savedAccounts, setSavedAccounts] = useState<DeviceAccountMeta[]>([]);
 
-  const [showManualSignIn, setShowManualSignIn] = useState(false);
-  const [switchEmail, setSwitchEmail] = useState('');
-  const [switchPassword, setSwitchPassword] = useState('');
-  const [switchUsername, setSwitchUsername] = useState('');
-  const [switchPhone, setSwitchPhone] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [switchOtp, setSwitchOtp] = useState(['', '', '', '', '', '']);
-  const [switchError, setSwitchError] = useState('');
-  const [switchLoading, setSwitchLoading] = useState(false);
-  const [switchCooldown, setSwitchCooldown] = useState(0);
-  const switchOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  const curUserId = (session?.user as any)?.id || '';
-  const curEmail = (fullUser?.email || session?.user?.email || '').toLowerCase().trim();
-  const curUsername = fullUser?.username || (session?.user as any)?.username || (curEmail ? curEmail.split('@')[0] : 'user');
-  const curName = fullUser?.name || session?.user?.name || 'User';
-  const curImage = fullUser?.image || session?.user?.image || '';
-  const curProvider = (session?.user as any)?.provider || 'credentials';
-
-  // ── Load saved accounts from DeviceAccountStore on mount and when session changes ──
-  useEffect(() => {
-    if (session?.user && curUserId) {
-      const meta = DeviceAccountStore.metaFromSession(session.user);
-      if (curUsername) meta.username = curUsername;
-      if (curName) meta.displayName = curName;
-      if (curImage) meta.profilePicture = curImage;
-      DeviceAccountStore.addOrUpdateAccount(meta, false);
-    }
-    const accounts = DeviceAccountStore.getSavedAccounts();
-    setSavedAccounts(accounts);
-  }, [curUserId, curEmail, curUsername, curName, curImage]);
-
-  // ── displayAccounts: current account first (active badge), then rest sorted by lastUsedAt ──
-  const displayAccounts = React.useMemo(() => {
-    return savedAccounts.map(acc => ({
-      ...acc,
-      isCurrent: acc.userId === curUserId || acc.email === curEmail,
-    })).sort((a, b) => {
-      if (a.isCurrent) return -1;
-      if (b.isCurrent) return 1;
-      return new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime();
-    });
-  }, [savedAccounts, curUserId, curEmail]);
-
-
-  // Transition helper
-  const triggerAccountSheetTransition = (nextSheet: typeof activeAccountSheet) => {
-    setTargetAccountSheet(nextSheet);
-    setActiveAccountSheet('none');
-    setTimeout(() => {
-      setActiveAccountSheet(nextSheet);
-    }, 250);
-  };
-
-  const handleAccountSwitch = async (acc: DeviceAccountMeta) => {
-    // If this is already the current account, just close the sheet
-    if (acc.userId === curUserId || acc.email === curEmail) {
-      triggerAccountSheetTransition('none');
-      return;
-    }
-
-    // Check if this account has a valid saved credential on this device
-    const hasCredential = await DeviceAccountStore.hasValidCredential(acc.userId);
-
-    if (hasCredential && acc.isSavedOnDevice) {
-      // ── RULE 6: Instant passwordless switch for saved accounts ──
-      setSwitchLoading(true);
-      try {
-        const res = await signIn('credentials', {
-          redirect: false,
-          email: acc.email,
-          // We sign in using email only — backend validates the existing JWT session
-          // For a proper refresh-token flow, this would use the stored refresh token.
-          // Since NextAuth uses HTTP-only cookies, re-signing forces a session swap.
-          password: '__session_restore__',
-        });
-
-        if (res?.ok) {
-          // Update the credential and current account
-          await DeviceAccountStore.refreshCredential(acc.userId, acc.provider);
-          DeviceAccountStore.setCurrentAccountId(acc.userId);
-          // Reload to apply the new session cookie
-          triggerAccountSheetTransition('none');
-          window.location.reload();
-          return;
-        }
-        // Credential exists but signIn failed — fall through to password prompt
-      } catch (err) {
-        // fall through
-      } finally {
-        setSwitchLoading(false);
-      }
-    }
-
-    // ── RULE 7: No valid credential — show authentication screen ──
-    setSwitchEmail(acc.email);
-    setSwitchPassword('');
-    setSwitchError('');
-    triggerAccountSheetTransition('signIn');
-  };
-
-  const handleSwitchLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSwitchLoading(true);
-    setSwitchError('');
-    try {
-      const res = await signIn('credentials', { redirect: false, email: switchEmail, password: switchPassword });
-      if (res?.error === 'EMAIL_NOT_VERIFIED') {
-        setSwitchOtp(['', '', '', '', '', '']);
-        triggerAccountSheetTransition('verify');
-        fetch('/api/resend-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: switchEmail }),
-        });
-        setSwitchCooldown(60);
-      } else if (res?.error) {
-        setSwitchError('Invalid email or password.');
-      } else {
-        // ── RULE 2 & RULE 10: Add this account to device store without removing others ──
-        // We need to fetch the new session's userId. Use a temporary approach:
-        // the dashboard useEffect will do the final upsert with real userId.
-        try {
-          const cleanEmail = switchEmail.toLowerCase().trim();
-          const tempMeta = {
-            userId: `pending_${cleanEmail}`,
-            email: cleanEmail,
-            username: cleanEmail.split('@')[0],
-            displayName: cleanEmail.split('@')[0],
-            profilePicture: '',
-            provider: 'credentials' as const,
-          };
-          await DeviceAccountStore.addOrUpdateAccount(tempMeta, true);
-        } catch (e) { }
-
-        if (refreshProfile) refreshProfile();
-        triggerAccountSheetTransition('none');
-        window.location.reload();
-      }
-    } catch (err) {
-      setSwitchError('An error occurred.');
-    } finally {
-      setSwitchLoading(false);
-    }
-  };
-
-  const handleSwitchSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSwitchLoading(true);
-    setSwitchError('');
-    try {
-      const res = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: switchUsername, email: switchEmail, password: switchPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSwitchError(data.message || 'Registration failed.');
-      } else {
-        setSwitchOtp(['', '', '', '', '', '']);
-        setSwitchCooldown(60);
-        triggerAccountSheetTransition('verify');
-      }
-    } catch (err) {
-      setSwitchError('An error occurred.');
-    } finally {
-      setSwitchLoading(false);
-    }
-  };
-
-  const handleSwitchVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = switchOtp.join('');
-    if (code.length < 6) { setSwitchError('Please enter the full code.'); return; }
-    setSwitchLoading(true);
-    setSwitchError('');
-    try {
-      const res = await fetch('/api/verify-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: switchEmail, code }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSwitchError(data.message || 'Verification failed.');
-      } else {
-        const signInRes = await signIn('credentials', { redirect: false, email: switchEmail, password: switchPassword });
-        if (signInRes?.ok) {
-          try {
-            const stored = localStorage.getItem('connected_accounts');
-            let list = stored ? JSON.parse(stored) : [];
-            if (!Array.isArray(list)) list = [];
-            const idx = list.findIndex((a: any) => a.email === switchEmail);
-            if (idx !== -1) {
-              list[idx].password = switchPassword;
-            } else {
-              list.push({ email: switchEmail, password: switchPassword, provider: 'credentials' });
-            }
-            localStorage.setItem('connected_accounts', JSON.stringify(list));
-          } catch (e) { }
-          triggerAccountSheetTransition('success');
-        } else {
-          setSwitchError('Verified! Please sign in.');
-          triggerAccountSheetTransition('signIn');
-        }
-      }
-    } catch (err) {
-      setSwitchError('An error occurred.');
-    } finally {
-      setSwitchLoading(false);
-    }
-  };
-
-  /* Multi-page Navigation States */
-  const [subView, setSubView] = useState<'profile' | 'followers' | 'following' | 'edit_profile' | 'follow_requests' | 'settings' | 'notifications' | 'saved'>('profile');
-
-  /* Profile ownership */
-  const isOwnProfile = !targetUser || targetUser.isCurrentUser;
-
-  // Sync sheet state with parent (accounts sheet, avatar picker sheet, subviews, target profile)
-  useEffect(() => {
-    if (onAccountSheetChange) {
-      if (isClosing) {
-        onAccountSheetChange(false);
-      } else {
-        const shouldHideBottomNav =
-          activeAccountSheet !== 'none' ||
-          activeAuthSheet !== 'none' ||
-          showAvatarModal ||
-          subView !== 'profile' ||
-          !isOwnProfile;
-        onAccountSheetChange(shouldHideBottomNav);
-      }
-    }
-  }, [activeAccountSheet, activeAuthSheet, showAvatarModal, subView, isOwnProfile, isClosing, onAccountSheetChange]);
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [longPressedPostId, setLongPressedPostId] = useState<string | null>(null);
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
-
-  /* Form edit states */
-  const [editName, setEditName] = useState('');
-  const [editUsername, setEditUsername] = useState('');
-  const [editBio, setEditBio] = useState('');
-  const [editWebsite, setEditWebsite] = useState('');
-  const [profileError, setProfileError] = useState('');
-
-  /* Preferences toggles (no emojis) */
-  const [prefNotifications, setPrefNotifications] = useState(true);
-  const [prefReadReceipts, setPrefReadReceipts] = useState(true);
-  const [prefOnlineStatus, setPrefOnlineStatus] = useState(true);
-
-  // Sync preferences from local storage on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setPrefNotifications(localStorage.getItem('pref_notifications') !== 'false');
-      setPrefReadReceipts(localStorage.getItem('pref_read_receipts') !== 'false');
-      setPrefOnlineStatus(localStorage.getItem('pref_online_status') !== 'false');
-    }
-  }, []);
-
-  const savePreference = (key: string, value: boolean, setter: (v: boolean) => void) => {
-    setter(value);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(key, String(value));
-    }
-  };
+  const curEmail = (targetUser?.email || fullUser?.email || session?.user?.email || '').toLowerCase().trim();
+  const curUsername = targetUser?.username || fullUser?.username || (session?.user as any)?.username || (curEmail ? curEmail.split('@')[0] : 'hammad');
+  const curName = targetUser?.name || fullUser?.name || session?.user?.name || 'Muhammad Hammad';
+  const curImage = targetUser?.image || fullUser?.image || session?.user?.image || '';
+  const isSelf = !targetUser || targetUser.id === (session?.user as any)?.id;
 
   useEffect(() => {
     if (fullUser) {
-      setEditName(fullUser.name || 'User');
-      setEditUsername(fullUser.username || '');
-      setEditBio(fullUser.bio || '');
-      setEditWebsite(fullUser.website || '');
+      setEditNameValue(fullUser.name || '');
+      setEditBioValue(fullUser.bio || '');
     }
   }, [fullUser]);
 
-  /* Derived profile data from Database */
-  const name = fullUser?.name || session?.user?.name || 'User';
-  const email = fullUser?.email || session?.user?.email || '';
-  const image = fullUser?.image || session?.user?.image;
-  const username = (fullUser?.username || email.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, '');
-  const bio = fullUser?.bio || '';
-  const website = fullUser?.website || '';
-
-  // Actual DB entries
-  const dbPosts = fullUser?.posts || [];
-  const followersList = fullUser?.followers || [];
-  const followingList = fullUser?.following || [];
-  const followRequestsList = fullUser?.receivedFollowRequests || [];
-
-  const metrics = {
-    posts: dbPosts.length,
-    followers: followersList.length,
-    following: followingList.length,
-  };
-
-  /* Action callbacks */
-  const handleSaveProfile = async () => {
-    setIsSavingProfile(true);
-    setProfileError('');
-    try {
-      const res = await updateProfileDetails({
-        name: editName,
-        username: editUsername,
-        bio: editBio,
-        website: editWebsite
-      });
-      if (res.error) {
-        setProfileError(res.error);
-      } else {
-        if (curUserId) {
-          const existing = DeviceAccountStore.getSavedAccount(curUserId);
-          if (existing) {
-            DeviceAccountStore.addOrUpdateAccount({
-              ...existing,
-              username: editUsername,
-              displayName: editName,
-            }, existing.isSavedOnDevice);
-          }
-        }
-        if (refreshProfile) refreshProfile();
-        setSubView('profile');
-      }
-    } catch (err) {
-      setProfileError('Failed to save profile');
-    } finally {
-      setIsSavingProfile(false);
+  useEffect(() => {
+    if (isOpen) {
+      DeviceAccountStore.getAllAccounts().then(setSavedAccounts).catch(() => {});
     }
+  }, [isOpen]);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2500);
   };
 
-  const handleUpdateAvatar = async (url: string) => {
-    if (!url.trim() || isAvatarUploading) return;
-    setIsAvatarUploading(true);
-    try {
-      await updateProfileImageAction(url.trim());
-      if (refreshProfile) refreshProfile();
-      setShowAvatarModal(false);
-      setAvatarInputUrl('');
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsAvatarUploading(false);
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || isAvatarUploading) return;
-    setIsAvatarUploading(true);
+    if (!file) return;
+
     try {
-      const optimized = await optimizeImageClient(file, 512, 0.85);
+      setIsUploadingAvatar(true);
+      triggerHaptic('medium');
+      const optimized = await optimizeImageClient(file, 600, 600, 0.85);
+
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const base64String = reader.result as string;
-        try {
-          await updateProfileImageAction(base64String);
-          if (refreshProfile) refreshProfile();
-          setShowAvatarModal(false);
-        } catch (err) {
-          console.error(err);
-        } finally {
-          setIsAvatarUploading(false);
+        const base64 = reader.result as string;
+        const res = await updateProfileImageAction(base64);
+        if (res.success) {
+          showToast('Profile photo updated!');
+          refreshProfile?.();
+        } else {
+          showToast(res.error || 'Failed to update photo');
         }
+        setIsUploadingAvatar(false);
       };
-      reader.readAsDataURL(optimized.file);
+      reader.readAsDataURL(optimized);
     } catch (err) {
-      console.error("Avatar compression error:", err);
-      setIsAvatarUploading(false);
+      console.error(err);
+      setIsUploadingAvatar(false);
+      showToast('Error uploading image');
     }
   };
 
-  const handleRemoveAvatar = async () => {
-    if (isAvatarUploading) return;
-    setIsAvatarUploading(true);
+  const handleSaveProfileDetails = async () => {
+    if (!editNameValue.trim()) return;
+    setIsSavingDetails(true);
     try {
-      await updateProfileImageAction('');
-      if (refreshProfile) refreshProfile();
-      setShowAvatarModal(false);
+      const res = await updateProfileDetails({
+        name: editNameValue.trim(),
+        bio: editBioValue.trim()
+      });
+      if (res.success) {
+        showToast('Profile updated!');
+        setActiveModal(null);
+        refreshProfile?.();
+      } else {
+        showToast(res.error || 'Failed to update profile');
+      }
     } catch (err) {
-      console.error(err);
+      showToast('Failed to save profile');
     } finally {
-      setIsAvatarUploading(false);
+      setIsSavingDetails(false);
     }
   };
 
-  const handleCreatePost = async (type: 'single_image' | 'carousel' | 'reel') => {
+  const handleLogout = async () => {
+    triggerHaptic('medium');
     try {
-      await createPostAction({ imageUrl: '', caption: '', postType: type as 'single_image' | 'reel' });
-      if (refreshProfile) refreshProfile();
-    } catch (err) {
-      console.error(err);
-    }
+      localStorage.removeItem('has_active_session');
+      localStorage.removeItem('last_logged_user');
+      localStorage.removeItem('social_messages_cache');
+      localStorage.removeItem('social_contacts_cache');
+    } catch (e) {}
+    signOut({ callbackUrl: '/accounts' });
   };
-
-  const handleDeletePost = async () => {
-    if (!longPressedPostId) return;
-    try {
-      await deletePostAction(longPressedPostId);
-      if (refreshProfile) refreshProfile();
-      setLongPressedPostId(null);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleRespondRequest = async (reqId: string, action: 'accept' | 'decline') => {
-    try {
-      await respondToFollowRequest(reqId, action);
-      if (refreshProfile) refreshProfile();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleTogglePrivacy = async (newVal: boolean) => {
-    try {
-      await toggleProfilePrivacy(newVal);
-      if (refreshProfile) refreshProfile();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  /* Share / copy handler */
-  const handleShare = useCallback(async () => {
-    const url = typeof window !== 'undefined' ? window.location.href : '';
-    const data = { title: name, text: `Check out ${name} on Connect!`, url };
-    if (navigator.share) {
-      try { await navigator.share(data); return; } catch { }
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopyToast(true);
-      setTimeout(() => setCopyToast(false), 2500);
-    } catch { }
-  }, [name]);
-
-  /* Grid content per tab from DB */
-  const gridItems = activeTab === 'reels'
-    ? dbPosts.filter((p: any) => p.postType === 'reel')
-    : activeTab === 'tagged'
-      ? []
-      : dbPosts.filter((p: any) => p.postType !== 'reel');
 
   if (!isOpen) return null;
 
-  const border = isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0';
-  const txt = isDark ? '#fff' : '#111';
-  const sub = isDark ? '#a1a1aa' : '#6b7280';
-  const btnBg = isDark ? 'rgba(255,255,255,0.10)' : '#f3f4f6';
-  const btnBdr = isDark ? 'rgba(255,255,255,0.15)' : '#e5e7eb';
-  const bg = isDark ? '#1c1c1e' : '#ffffff';
-
-  /* Long press handler for touch & mouse */
-  let pressTimer: NodeJS.Timeout;
-  const startPress = (postId: string) => {
-    if (!isOwnProfile) return; // Only allow deletion of own posts
-    pressTimer = setTimeout(() => {
-      setLongPressedPostId(postId);
-    }, 600);
-  };
-  const cancelPress = () => {
-    clearTimeout(pressTimer);
-  };
-
-  // Determine if other profile content is accessible
-  const isPrivateAndUnfollowed = !isOwnProfile && targetUser?.isPrivate && !targetUser?.isFollowing;
-
   return (
-    <div
-      className={isClosing ? 'ig-profile-exit' : 'ig-profile-enter'}
-      style={{
-        position: 'absolute', inset: 0, zIndex: 60, display: 'flex',
-        flexDirection: 'column', overflow: 'hidden',
-        background: isDark ? '#0e0e11' : '#fff',
-      }}
-    >
-      {/* Spacer for status bar/camera cutout safe area top */}
-      <div style={{ height: 'env(safe-area-inset-top, 0px)', width: '100%', flexShrink: 0 }} />
+    <div className="fixed inset-0 z-50 h-screen w-full flex flex-col bg-[#141111] overflow-hidden font-sans select-none animate-in fade-in duration-200">
+      
+      {/* Toast Alert */}
+      {toastMessage && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 bg-zinc-900/90 backdrop-blur-md text-white text-xs font-semibold rounded-full shadow-lg border border-white/10 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+          <Check className="w-3.5 h-3.5 text-green-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
-      {/* ── Avatar Changing Bottom Sheet ── */}
-      <div
-        style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
-          background: isDark ? '#1c1c1e' : '#ffffff',
-          borderTop: `1px solid ${border}`,
-          borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
-          padding: '24px 24px 32px',
-          boxShadow: isDark ? '0 -15px 40px rgba(0,0,0,0.4)' : '0 -15px 40px rgba(0,0,0,0.15)',
-          transform: (showAvatarModal && isOwnProfile) ? 'translateY(0)' : 'translateY(100%)',
-          opacity: (showAvatarModal && isOwnProfile) ? 1 : 0,
-          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
-          pointerEvents: (showAvatarModal && isOwnProfile) ? 'auto' : 'none',
-        }}
-      >
-        <div style={{ width: 48, height: 4, background: isDark ? '#3a3a3c' : '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
-        <h2 style={{ fontSize: 18, fontWeight: 800, color: txt, marginBottom: 18, textAlign: 'center' }}>Change Profile Picture</h2>
+      {/* Hidden File Input for Avatar */}
+      <input 
+        ref={fileInputRef}
+        type="file" 
+        accept="image/*" 
+        className="hidden" 
+        onChange={handleAvatarFileChange} 
+      />
 
-        {isAvatarUploading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 0', gap: 12 }}>
-            <div className="w-8 h-8 rounded-full border-3 border-t-transparent border-blue-500 animate-spin" />
-            <p style={{ fontSize: 14, fontWeight: 600, color: sub }}>Updating profile picture...</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
-            {/* Direct File Upload Option */}
-            <label style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px',
-              background: '#0095f6',
-              color: '#ffffff',
-              borderRadius: '100px',
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: 'pointer',
-              textAlign: 'center',
-              transition: 'all 0.2s',
-              boxShadow: '0 4px 12px rgba(0, 149, 246, 0.25)'
-            }}>
-              Upload New Photo
-              <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isAvatarUploading} style={{ display: 'none' }} />
-            </label>
-
-            {/* Remove Picture Option */}
-            {image && (
-              <button
-                onClick={handleRemoveAvatar}
-                disabled={isAvatarUploading}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  borderRadius: '100px',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  background: isDark ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239, 68, 68, 0.06)',
-                  color: '#ef4444',
-                  fontWeight: 700,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
+      {/* ── 2. Dark Header & Profile Identity (Top 36%) ── */}
+      <div className="w-full bg-[#141111] pt-14 px-6 pb-8 flex flex-col items-center relative select-none">
+        
+        {/* Header Nav Row */}
+        <div className="w-full flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            {!isSelf && (
+              <button 
+                onClick={onClose}
+                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-95 transition-transform mr-1 cursor-pointer"
               >
-                Remove Current Picture
+                <ChevronLeft className="w-5 h-5 text-white" />
               </button>
             )}
-          </div>
-        )}
-
-        <button
-          onClick={() => setShowAvatarModal(false)}
-          disabled={isAvatarUploading}
-          style={{
-            width: '100%',
-            padding: '12px 0',
-            background: 'none',
-            color: sub,
-            fontWeight: 600,
-            fontSize: 14,
-            cursor: 'pointer',
-            border: 'none'
-          }}
-        >
-          Cancel
-        </button>
-      </div>
-
-      {/* ── Fullscreen Avatar Preview Lightbox Modal ── */}
-      {showAvatarPreview && (
-        <div
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in"
-          onClick={() => setShowAvatarPreview(false)}
-        >
-          {/* Header Bar */}
-          <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-            <div className="flex items-center gap-3">
-              <span className="text-white font-bold text-base">{name}</span>
-              <span className="text-white/60 text-xs">@{username}</span>
-            </div>
-            <button
-              onClick={() => setShowAvatarPreview(false)}
-              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
-            >
-              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <h1 className="text-[24px] font-bold text-white tracking-tight">
+              Profile
+            </h1>
           </div>
 
-          {/* Large Avatar Card */}
-          <div
-            className="w-72 h-72 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-white/20 shadow-2xl bg-zinc-900 flex items-center justify-center transition-transform transform hover:scale-[1.02]"
-            onClick={e => e.stopPropagation()}
+          {/* Right: Bell Icon Button */}
+          <button 
+            onClick={() => showToast('No new notifications')}
+            className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center relative cursor-pointer active:scale-95 transition-transform"
           >
-            {image ? (
-              <img src={image} alt={name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              <DefaultAvatarSvg size={180} color="#ffffff" />
-            )}
-          </div>
-
-          <p className="text-white/70 text-xs mt-6 font-medium">Tap anywhere to close</p>
+            <Bell className="w-5 h-5 text-white" strokeWidth={2} />
+          </button>
         </div>
-      )}
 
-      {/* ── Center Confirm Delete Post Modal ── */}
-      {longPressedPostId && isOwnProfile && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-          }}
-          onClick={() => setLongPressedPostId(null)}
-        >
-          <div
-            style={{
-              width: '80%', maxWidth: 300, background: isDark ? '#1c1c1e' : '#fff', borderRadius: '24px', padding: 24,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center'
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <h4 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: txt, textAlign: 'center' }}>Delete this post?</h4>
-            <p style={{ margin: 0, fontSize: 13, color: sub, textAlign: 'center' }}>This action is permanent and will remove it from the database.</p>
-            <div style={{ display: 'flex', gap: 12, width: '100%', marginTop: 8 }}>
-              <button
-                onClick={() => setLongPressedPostId(null)}
-                style={{
-                  flex: 1, padding: '12px', background: btnBg, border: `1px solid ${btnBdr}`, color: txt,
-                  borderRadius: '20px', fontWeight: 600, cursor: 'pointer', borderStyle: 'solid'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeletePost}
-                style={{
-                  flex: 1, padding: '12px', background: '#ef4444', border: 'none', color: '#fff',
-                  borderRadius: '20px', fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Copy toast ── */}
-      {copyToast && (
-        <div style={{
-          position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-          background: '#10b981', color: '#fff', padding: '8px 20px',
-          borderRadius: 100, fontSize: 13, fontWeight: 600, zIndex: 99, whiteSpace: 'nowrap',
-        }}>
-          Link copied to clipboard
-        </div>
-      )}
-
-      {/* ========================================================
-          VIEW: PROFILE PAGE
-          ======================================================== */}
-      {subView === 'profile' && (
-        <>
-          {/* Top Nav Bar */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
-          }}>
-            <button onClick={(e) => (onClose as any)(e)} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: txt, padding: 0
-            }}>
-              <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-
-            <span
-              onClick={() => triggerAccountSheetTransition('options')}
-              style={{
-                fontWeight: 700,
-                fontSize: 16,
-                color: txt,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              {username}
-              <svg
-                width="14"
-                height="14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                viewBox="0 0 24 24"
-                style={{
-                  transform: (activeAccountSheet === 'options' || activeAccountSheet === 'accounts') ? 'rotate(180deg)' : 'none',
-                  transition: 'transform 0.25s ease'
-                }}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </span>
-
-            <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-              {/* Options/Settings trigger - only for own profile */}
-              {isOwnProfile && (
-                <button
-                  onClick={() => setSubView('settings')}
-                  style={{
-                    width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', color: txt,
-                    transition: 'all 0.2s'
-                  }}
-                  title="Settings & Privacy"
-                >
-                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            {/* Header (Stats) */}
-            <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 8px', gap: 24 }}>
-              <div
-                onMouseDown={handleAvatarTouchStart}
-                onMouseUp={handleAvatarTouchEnd}
-                onMouseLeave={handleAvatarTouchEnd}
-                onTouchStart={handleAvatarTouchStart}
-                onTouchEnd={handleAvatarTouchEnd}
-                onTouchCancel={handleAvatarTouchEnd}
-                onContextMenu={(e) => { e.preventDefault(); setShowAvatarPreview(true); }}
-                onClick={() => {
-                  if (isOwnProfile) setShowAvatarModal(true);
-                  else setShowAvatarPreview(true);
-                }}
-                style={{
-                  width: 80, height: 80, borderRadius: '50%', flexShrink: 0,
-                  background: isDark ? '#26262d' : '#e5e7eb',
-                  border: `0.5px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db'}`,
-                  overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', position: 'relative'
-                }}
-                title={isOwnProfile ? "Tap to change picture, hold to view full size" : "Hold to view full size"}
-              >
-                {image
-                  ? <img src={image} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
-                  : <DefaultAvatarSvg size={60} color={isDark ? '#fff' : '#374151'} />
-                }
-              </div>
-
-              {/* Stats */}
-              <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around' }}>
-                {[
-                  { num: metrics.posts, label: 'Posts', action: () => { } },
-                  { num: metrics.followers, label: 'Followers', action: () => { if (!isPrivateAndUnfollowed) setSubView('followers'); } },
-                  { num: metrics.following, label: 'Following', action: () => { if (!isPrivateAndUnfollowed) setSubView('following'); } },
-                ].map(s => (
-                  <div key={s.label} onClick={s.action} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, cursor: isPrivateAndUnfollowed ? 'default' : 'pointer' }}>
-                    <span style={{ fontWeight: 700, fontSize: 17, color: txt }}>{s.num}</span>
-                    <span style={{ fontSize: 12, color: sub }}>{s.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Bio Section */}
-            <div style={{ padding: '4px 16px 12px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontWeight: 700, fontSize: 14, color: txt }}>{name}</span>
-              {bio && bio.split('\n').map((line: string, i: number) => (
-                <span key={i} style={{ fontSize: 13, color: sub }}>{line}</span>
-              ))}
-
-              {website && (
-                <a
-                  href={website.startsWith('http') ? website : `https://${website}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none', marginTop: 2 }}
-                >
-                  <svg width="12" height="12" fill="none" stroke={sub} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                  </svg>
-                  <span style={{ fontSize: 12, color: sub, fontWeight: 600 }}>{website}</span>
-                </a>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', padding: '0 16px 12px', gap: 8 }}>
-              {isOwnProfile ? (
-                <>
-                  <button onClick={() => setSubView('edit_profile')} style={{
-                    flex: 1, padding: '8px', borderRadius: '20px', fontWeight: 600, fontSize: 13,
-                    background: btnBg, border: `1px solid ${btnBdr}`, color: txt, cursor: 'pointer', transition: 'all 0.2s',
-                  }}>
-                    Edit Profile
-                  </button>
-                  <button onClick={handleShare} style={{
-                    flex: 1, padding: '8px', borderRadius: '20px', fontWeight: 600, fontSize: 13,
-                    background: btnBg, border: `1px solid ${btnBdr}`, color: txt, cursor: 'pointer', transition: 'all 0.2s',
-                  }}>
-                    Share Profile
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => onToggleFollow && onToggleFollow(targetUser.id)}
-                    style={{
-                      flex: 1, padding: '8px', borderRadius: '20px', fontWeight: 600, fontSize: 13,
-                      background: targetUser?.isFollowing
-                        ? btnBg
-                        : targetUser?.hasSentRequest
-                          ? btnBg
-                          : (isDark ? '#fff' : '#111'),
-                      border: targetUser?.isFollowing || targetUser?.hasSentRequest
-                        ? `1px solid ${btnBdr}`
-                        : 'none',
-                      color: targetUser?.isFollowing || targetUser?.hasSentRequest
-                        ? txt
-                        : (isDark ? '#000' : '#fff'),
-                      cursor: 'pointer', transition: 'all 0.2s',
-                    }}
-                  >
-                    {targetUser?.isFollowing
-                      ? 'Following'
-                      : targetUser?.hasSentRequest
-                        ? 'Requested'
-                        : targetUser?.isPrivate
-                          ? 'Request'
-                          : 'Follow'}
-                  </button>
-                  {!isPrivateAndUnfollowed && (
-                    <button
-                      onClick={() => {
-                        if (onOpenChat) {
-                          onOpenChat(targetUser);
-                        } else if (typeof window !== 'undefined') {
-                          onClose();
-                          window.location.href = `/dashboard?chat=${targetUser.id}`;
-                        }
-                      }}
-                      style={{
-                        flex: 1, padding: '8px', borderRadius: '20px', fontWeight: 600, fontSize: 13,
-                        background: btnBg, border: `1px solid ${btnBdr}`, color: txt, cursor: 'pointer', transition: 'all 0.2s',
-                      }}
-                    >
-                      Message
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Private Profile Check Card */}
-            {isPrivateAndUnfollowed ? (
-              <div style={{
-                padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', textAlign: 'center', gap: 12, borderTop: `1px solid ${border}`,
-                marginTop: 20
-              }}>
-                <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: sub }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: txt }}>This account is private</h3>
-                <p style={{ fontSize: 13, color: sub, maxWidth: 260 }}>Follow this account to see their posts and reels.</p>
-              </div>
-            ) : (
-              <>
-
-
-                {/* Tab Navigation */}
-                <div style={{
-                  display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-                  borderTop: `1px solid ${border}`, borderBottom: `1px solid ${border}`,
-                }}>
-                  {([
-                    { id: 'grid' as const, icon: <svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M3 3h7v7H3zm0 11h7v7H3zm11-11h7v7h-7zm0 11h7v7h-7z" /></svg> },
-                    { id: 'reels' as const, icon: <svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" /></svg> },
-                    { id: 'tagged' as const, icon: <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> },
-                  ]).map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      style={{
-                        flex: 1, display: 'flex', justifyContent: 'center', padding: '12px 0',
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        borderBottom: activeTab === tab.id ? `2px solid ${txt}` : '2px solid transparent',
-                        color: activeTab === tab.id ? txt : sub,
-                        transition: 'all 0.2s',
-                      }}
-                    >
-                      {tab.icon}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Add Post/Reel Action Bar */}
-                {isOwnProfile && (
-                  <div style={{ display: 'flex', padding: '12px 16px', gap: 8 }}>
-                    <button
-                      onClick={() => onOpenUpload?.('single_image')}
-                      style={{
-                        flex: 1, padding: '10px', borderRadius: '12px', border: `1px solid ${btnBdr}`,
-                        background: btnBg, color: txt, fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
-                      }}
-                    >
-                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                      Add Post
-                    </button>
-                    <button
-                      onClick={() => onOpenUpload?.('reel')}
-                      style={{
-                        flex: 1, padding: '10px', borderRadius: '12px', border: `1px solid ${btnBdr}`,
-                        background: btnBg, color: txt, fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
-                      }}
-                    >
-                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                      Add Reel
-                    </button>
-                  </div>
-                )}
-
-                {/* Dynamic Content Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 2 }}>
-                  {gridItems.map((post: any, i: number) => (
-                    <div
-                      key={post.id}
-                      onMouseDown={() => startPress(post.id)}
-                      onMouseUp={cancelPress}
-                      onMouseLeave={cancelPress}
-                      onTouchStart={() => startPress(post.id)}
-                      onTouchEnd={cancelPress}
-                      onClick={() => {
-                        setLongPressedPostId(post.id);
-                      }}
-                      style={{
-                        aspectRatio: '1/1', position: 'relative', overflow: 'hidden', cursor: 'pointer',
-                        background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
-                      }}
-                    >
-                      {post.thumbnailUrl ? (
-                        <img
-                          src={post.thumbnailUrl}
-                          alt="thumbnail"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <div style={{
-                          width: '100%', height: '100%',
-                          background: isDark ? `hsl(${post.hue || 200},40%,22%)` : `hsl(${post.hue || 200},60%,92%)`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? '#fff' : '#4b5563', textTransform: 'uppercase' }}>
-                            {post.postType}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Icon overlay depending on media type */}
-                      <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}>
-                        {post.postType === 'carousel' && <CarouselIcon />}
-                        {post.postType === 'reel' && <ReelIcon />}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {gridItems.length === 0 && (
-                  <div style={{ padding: '60px 20px', textAlign: 'center', color: sub, fontSize: 14 }}>
-                    No posts yet.
-                  </div>
-                )}
-              </>
-            )}
-
-            <div style={{ height: 100 }} />
-          </div>
-        </>
-      )}
-
-      {/* ========================================================
-          VIEW: SETTINGS PAGE (No emojis)
-          ======================================================== */}
-      {/* ========================================================
-          VIEW: SETTINGS & PRIVACY PAGE
-          ======================================================== */}
-      {subView === 'settings' && (
-        <>
-          {/* Top Navigation Bar */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '16px 20px', borderBottom: `1px solid ${border}`, flexShrink: 0,
-            background: isDark ? '#0e0e11' : '#fff'
-          }}>
-            <button onClick={() => setSubView('profile')} style={{
-              background: 'none', border: 'none', color: txt, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0
-            }}>
-              <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-
-            <span style={{ fontWeight: 800, fontSize: 17, color: txt, letterSpacing: '-0.02em' }}>Settings & Privacy</span>
-
-            <div style={{ width: 22 }} />
-          </div>
-
-          {/* Settings Options Scrollable Body */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-            {/* User Profile Header Card */}
-            <div style={{
-              background: isDark ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)' : '#f9fafb',
-              border: `1px solid ${border}`, borderRadius: 24, padding: '18px 20px',
-              display: 'flex', alignItems: 'center', gap: 16,
-              boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.3)' : '0 4px 16px rgba(0,0,0,0.04)'
-            }}>
-              <div style={{
-                width: 64, height: 64, borderRadius: '50%', overflow: 'hidden',
-                background: isDark ? '#26262d' : '#e5e7eb', flexShrink: 0,
-                border: `2px solid ${isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db'}`
-              }}>
-                {image
-                  ? <img src={image} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
-                  : <DefaultAvatarSvg size={48} color={txt} />
-                }
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <span style={{ fontSize: 17, fontWeight: 800, color: txt }}>{name}</span>
-                <span style={{ fontSize: 12, color: sub, fontWeight: 500 }}>@{username} · {fullUser?.email || (username + '@connect.app')}</span>
-              </div>
-            </div>
-
-            {/* Account Settings Section */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub, paddingLeft: 4, margin: 0 }}>Account & Privacy</p>
-              <div style={{
-                background: isDark ? 'rgba(255,255,255,0.02)' : '#fff',
-                border: `1px solid ${border}`, borderRadius: 20, overflow: 'hidden'
-              }}>
-                {/* Manage Profile */}
-                <div
-                  onClick={() => setSubView('edit_profile')}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '16px 18px', borderBottom: `1px solid ${border}`, cursor: 'pointer',
-                    transition: 'background 0.15s'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <span style={{ color: txt, display: 'flex', alignItems: 'center' }}>
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    </span>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: txt }}>Edit Profile</span>
-                  </div>
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: sub }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-
-                {/* Private Account Switch Row */}
-                <div
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '16px 18px', borderBottom: `1px solid ${border}`
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <span style={{ color: txt, display: 'flex', alignItems: 'center' }}>
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                    </span>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: txt }}>Private Account</span>
-                  </div>
-                  <button
-                    onClick={() => handleTogglePrivacy(!fullUser?.isPrivate)}
-                    style={{
-                      width: 44, height: 24, borderRadius: 100, border: 'none',
-                      background: fullUser?.isPrivate ? (isDark ? '#fff' : '#111') : (isDark ? '#3a3a3c' : '#d1d5db'),
-                      position: 'relative', cursor: 'pointer', transition: 'background-color 0.2s'
-                    }}
-                  >
-                    <div style={{
-                      width: 18, height: 18, borderRadius: '50%',
-                      background: fullUser?.isPrivate && isDark ? '#000' : '#fff',
-                      position: 'absolute', top: 3,
-                      left: fullUser?.isPrivate ? 23 : 3,
-                      transition: 'left 0.2s'
-                    }} />
-                  </button>
-                </div>
-
-                {/* Password & Security */}
-                <div
-                  onClick={() => router.push('/security')}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '16px 18px', cursor: 'pointer'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <span style={{ color: txt, display: 'flex', alignItems: 'center' }}>
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                      </svg>
-                    </span>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: txt }}>Password & Security</span>
-                  </div>
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: sub }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Content & Display Section */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub, paddingLeft: 4, margin: 0 }}>Content & Display</p>
-              <div style={{
-                background: isDark ? 'rgba(255,255,255,0.02)' : '#fff',
-                border: `1px solid ${border}`, borderRadius: 20, overflow: 'hidden'
-              }}>
-                {/* Saved Posts & Reels */}
-                <div
-                  onClick={() => {
-                    setSubView('saved');
-                    setLoadingSaved(true);
-                    getSavedPostsAction().then(res => {
-                      if (Array.isArray(res)) {
-                        setSavedPostsList(res.map((item: any) => item.post));
-                      }
-                      setLoadingSaved(false);
-                    }).catch(e => {
-                      console.error(e);
-                      setLoadingSaved(false);
-                    });
-                  }}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '16px 18px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <span style={{ color: txt, display: 'flex', alignItems: 'center' }}>
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                      </svg>
-                    </span>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: txt }}>Saved Posts & Reels</span>
-                  </div>
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: sub }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-
-                {/* Dark Theme */}
-                <div
-                  onClick={toggleTheme}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '16px 18px', borderBottom: `1px solid ${border}`, cursor: 'pointer'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <span style={{ color: txt, display: 'flex', alignItems: 'center' }}>
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                      </svg>
-                    </span>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: txt }}>Dark Theme</span>
-                  </div>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: sub }}>{theme === 'dark' ? 'On' : 'Off'}</span>
-                </div>
-
-                {/* Notifications */}
-                <div
-                  onClick={() => setSubView('notifications')}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '16px 18px', cursor: 'pointer'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <span style={{ color: txt, display: 'flex', alignItems: 'center' }}>
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                      </svg>
-                    </span>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: txt }}>Notifications</span>
-                  </div>
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: sub }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Support & Sign Out Section */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: sub, paddingLeft: 4, margin: 0 }}>Session</p>
-              <div style={{
-                background: isDark ? 'rgba(255,255,255,0.02)' : '#fff',
-                border: `1px solid ${border}`, borderRadius: 20, overflow: 'hidden'
-              }}>
-                <div
-                  onClick={() => {
-                    try {
-                      localStorage.removeItem('has_active_session');
-                      localStorage.removeItem('last_logged_user');
-                      localStorage.removeItem('social_messages_cache');
-                    } catch (e) { }
-                    signOut({ callbackUrl: '/accounts' });
-                  }}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '16px 18px', cursor: 'pointer'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center' }}>
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                    </span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: '#ef4444' }}>Log Out</span>
-                  </div>
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ color: '#ef4444' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ height: 60 }} />
-          </div>
-        </>
-      )}
-
-      {/* ========================================================
-          VIEW: EDIT PROFILE PAGE
-          ======================================================== */}
-      {subView === 'edit_profile' && (
-        <>
-          {/* Top Navigation Bar */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
-          }}>
-            <button onClick={() => { setSubView(isOwnProfile ? 'profile' : 'settings'); setProfileError(''); }} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: txt, padding: 0
-            }}>
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-
-            <span style={{ fontWeight: 700, fontSize: 16, color: txt }}>Edit Profile</span>
-
-            {/* Save Button */}
-            <button
-              onClick={handleSaveProfile}
-              disabled={isSavingProfile}
-              style={{
-                background: 'none', border: 'none', color: txt, fontWeight: 700, fontSize: 14, cursor: 'pointer',
-                opacity: isSavingProfile ? 0.5 : 1
-              }}
-            >
-              {isSavingProfile ? 'Saving...' : 'Done'}
-            </button>
-          </div>
-
-          {/* Form scrollable area */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
-
-            {profileError && (
-              <div style={{ color: '#ef4444', fontSize: 13, fontWeight: 600, textAlign: 'center', marginBottom: 12 }}>
-                {profileError}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Name */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: sub }}>Name</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={e => setEditName(e.target.value)}
-                  style={{
-                    padding: '12px 18px', borderRadius: '24px', border: `1px solid ${border}`,
-                    background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none'
-                  }}
-                />
-              </div>
-
-              {/* Username */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: sub }}>Username</label>
-                <input
-                  type="text"
-                  value={editUsername}
-                  onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
-                  style={{
-                    padding: '12px 18px', borderRadius: '24px', border: `1px solid ${border}`,
-                    background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none'
-                  }}
-                />
-              </div>
-
-              {/* Website */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: sub }}>Website</label>
-                <input
-                  type="text"
-                  value={editWebsite}
-                  placeholder="https://yourwebsite.com"
-                  onChange={e => setEditWebsite(e.target.value)}
-                  style={{
-                    padding: '12px 18px', borderRadius: '24px', border: `1px solid ${border}`,
-                    background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none'
-                  }}
-                />
-              </div>
-
-              {/* Bio */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: sub }}>Bio</label>
-                <textarea
-                  value={editBio}
-                  onChange={e => setEditBio(e.target.value)}
-                  rows={4}
-                  placeholder="Tell us about yourself..."
-                  style={{
-                    padding: '12px 18px', borderRadius: '16px', border: `1px solid ${border}`,
-                    background: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb', color: txt, fontSize: 14, outline: 'none',
-                    resize: 'none', lineHeight: '1.4'
-                  }}
-                />
-              </div>
-            </div>
-            <div style={{ height: 60 }} />
-          </div>
-        </>
-      )}
-
-      {/* ========================================================
-          VIEW: FOLLOWERS PAGE
-          ======================================================== */}
-      {subView === 'followers' && (
-        <>
-          {/* Top Navigation Bar */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
-          }}>
-            <button onClick={() => { setSubView('profile'); setSearchQuery(''); }} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: txt, padding: 0
-            }}>
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-
-            <span style={{ fontWeight: 700, fontSize: 16, color: txt }}>Followers</span>
-
-            <div style={{ width: 36 }} />
-          </div>
-
-          {/* Search Box */}
-          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${border}` }}>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <input
-                type="text"
-                placeholder="Search followers..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%', padding: '10px 14px 10px 38px', borderRadius: '24px', border: `1px solid ${border}`,
-                  background: isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6', color: txt, fontSize: 14, outline: 'none'
-                }}
+        {/* Avatar Section */}
+        <div className="relative mt-1">
+          <div className="w-24 h-24 rounded-full ring-4 ring-white/10 ring-offset-4 ring-offset-[#141111] overflow-hidden bg-zinc-800 flex items-center justify-center">
+            {curImage ? (
+              <img 
+                src={curImage} 
+                alt={curName} 
+                className="w-full h-full object-cover" 
+                referrerPolicy="no-referrer"
               />
-              <svg style={{ position: 'absolute', left: 14, color: sub }} width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
+            ) : (
+              <img 
+                src="/Avatar.png" 
+                alt="Avatar" 
+                className="w-full h-full object-cover" 
+              />
+            )}
+            {isUploadingAvatar && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full">
+                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              </div>
+            )}
           </div>
 
-          {/* Follow Requests Button - only for own profile */}
-          {isOwnProfile && (
-            <div style={{ padding: '12px 16px' }}>
-              <button
-                onClick={() => setSubView('follow_requests')}
-                style={{
-                  width: '100%', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)', color: txt, borderRadius: '24px',
-                  border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span>Follow Requests</span>
-                </div>
-                <div style={{
-                  background: isDark ? '#fff' : '#111', color: isDark ? '#000' : '#fff', fontSize: 11, padding: '2px 8px', borderRadius: '12px'
-                }}>
-                  {followRequestsList.length}
-                </div>
-              </button>
-            </div>
+          {/* Edit Badge (Bottom Right) */}
+          {isSelf && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#9D4EDD] text-white flex items-center justify-center shadow-md cursor-pointer hover:bg-[#8338ec] active:scale-90 transition-all border-2 border-[#141111]"
+              title="Change Profile Photo"
+            >
+              <Camera className="w-3.5 h-3.5 text-white" strokeWidth={2} />
+            </button>
           )}
-
-          {/* Followers List */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px' }}>
-            {followersList
-              .filter((f: any) =>
-                (f.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (f.username || '').toLowerCase().includes(searchQuery.toLowerCase())
-              )
-              .map((f: any) => (
-                <div key={f.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${border}` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{
-                      width: 44, height: 44, borderRadius: '50%', background: isDark ? '#26262d' : '#e5e7eb',
-                      overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                      {f.image
-                        ? <img src={f.image} alt={f.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : <DefaultAvatarSvg size={28} color={txt} />
-                      }
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: txt }}>{f.name}</span>
-                      <span style={{ fontSize: 12, color: sub }}>@{f.username || 'user'}</span>
-                    </div>
-                  </div>
-                  {isOwnProfile && (
-                    <button style={{
-                      padding: '6px 14px', background: btnBg, border: `1px solid ${btnBdr}`,
-                      color: txt, borderRadius: '20px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
-                    }}>
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-
-            {followersList.length === 0 && (
-              <div style={{ padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13 }}>
-                No followers yet.
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* ========================================================
-          VIEW: FOLLOWING PAGE
-          ======================================================== */}
-      {subView === 'following' && (
-        <>
-          {/* Top Navigation Bar */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
-          }}>
-            <button onClick={() => { setSubView('profile'); setSearchQuery(''); }} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: txt, padding: 0
-            }}>
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-
-            <span style={{ fontWeight: 700, fontSize: 16, color: txt }}>Following</span>
-
-            <div style={{ width: 36 }} />
-          </div>
-
-          {/* Search Box */}
-          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${border}` }}>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <input
-                type="text"
-                placeholder="Search following..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%', padding: '10px 14px 10px 38px', borderRadius: '24px', border: `1px solid ${border}`,
-                  background: isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6', color: txt, fontSize: 14, outline: 'none'
-                }}
-              />
-              <svg style={{ position: 'absolute', left: 14, color: sub }} width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-          </div>
-
-          {/* Following List */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-            {followingList
-              .filter((f: any) =>
-                (f.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (f.username || '').toLowerCase().includes(searchQuery.toLowerCase())
-              )
-              .map((f: any) => (
-                <div key={f.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${border}` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{
-                      width: 44, height: 44, borderRadius: '50%', background: isDark ? '#26262d' : '#e5e7eb',
-                      overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                      {f.image
-                        ? <img src={f.image} alt={f.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : <DefaultAvatarSvg size={28} color={txt} />
-                      }
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: txt }}>{f.name}</span>
-                      <span style={{ fontSize: 12, color: sub }}>@{f.username || 'user'}</span>
-                    </div>
-                  </div>
-                  {isOwnProfile && (
-                    <button style={{
-                      padding: '6px 14px', background: btnBg, border: `1px solid ${btnBdr}`,
-                      color: txt, borderRadius: '20px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
-                    }}>
-                      Following
-                    </button>
-                  )}
-                </div>
-              ))}
-
-            {followingList.length === 0 && (
-              <div style={{ padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13 }}>
-                Not following anyone yet.
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* ========================================================
-          VIEW: FOLLOW REQUESTS
-          ======================================================== */}
-      {subView === 'follow_requests' && (
-        <>
-          {/* Top Navigation Bar */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
-          }}>
-            <button onClick={() => setSubView('followers')} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: txt, padding: 0
-            }}>
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-
-            <span style={{ fontWeight: 700, fontSize: 16, color: txt }}>Follow Requests</span>
-
-            <div style={{ width: 36 }} />
-          </div>
-
-          {/* List of Requests */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-            {followRequestsList.map((req: any) => (
-              <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${border}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{
-                    width: 44, height: 44, borderRadius: '50%', background: isDark ? '#26262d' : '#e5e7eb',
-                    overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}>
-                    {req.sender.image
-                      ? <img src={req.sender.image} alt={req.sender.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <DefaultAvatarSvg size={28} color={txt} />
-                    }
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: txt }}>{req.sender.name}</span>
-                    <span style={{ fontSize: 12, color: sub }}>@{req.sender.username || 'user'}</span>
-                  </div>
-                </div>
-
-                {/* Accept / Decline actions */}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => handleRespondRequest(req.id, 'accept')}
-                    style={{
-                      padding: '6px 14px', background: isDark ? '#fff' : '#111', color: isDark ? '#000' : '#fff',
-                      border: 'none', borderRadius: '20px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
-                    }}
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleRespondRequest(req.id, 'decline')}
-                    style={{
-                      padding: '6px 14px', background: btnBg, border: `1px solid ${btnBdr}`,
-                      color: txt, borderRadius: '20px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
-                    }}
-                  >
-                    Decline
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {followRequestsList.length === 0 && (
-              <div style={{ padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13 }}>
-                No pending requests.
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* ========================================================
-          VIEW: NOTIFICATIONS & SYSTEM ALERTS
-          ======================================================== */}
-      {subView === 'notifications' && (
-        <>
-          {/* Top Navigation Bar */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
-          }}>
-            <button onClick={() => setSubView('profile')} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: txt, padding: 0
-            }}>
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-
-            <span style={{ fontWeight: 700, fontSize: 16, color: txt }}>Activity & Alerts</span>
-
-            <div style={{ width: 36 }} />
-          </div>
-
-          {/* Activity Logs scrollable list */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-            {/* Follow Requests inside notifications alert */}
-            {followRequestsList.length > 0 && (
-              <div style={{
-                background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
-                border: `1px solid ${border}`, borderRadius: '16px', padding: 16
-              }}>
-                <h3 style={{ fontSize: 12, fontWeight: 700, color: txt, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Follow Requests ({followRequestsList.length})
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {followRequestsList.map((req: any) => (
-                    <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, borderBottom: `1px solid ${border}` }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{
-                          width: 38, height: 38, borderRadius: '50%', background: isDark ? '#26262d' : '#e5e7eb',
-                          overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }}>
-                          {req.sender.image
-                            ? <img src={req.sender.image} alt={req.sender.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            : <DefaultAvatarSvg size={24} color={txt} />
-                          }
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: txt }}>{req.sender.name}</span>
-                          <span style={{ fontSize: 11, color: sub }}>@{req.sender.username || 'user'}</span>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          onClick={() => handleRespondRequest(req.id, 'accept')}
-                          style={{
-                            padding: '6px 12px', background: isDark ? '#fff' : '#111', color: isDark ? '#000' : '#fff',
-                            border: 'none', borderRadius: '20px', fontSize: 11, fontWeight: 600, cursor: 'pointer'
-                          }}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => handleRespondRequest(req.id, 'decline')}
-                          style={{
-                            padding: '6px 12px', background: btnBg, border: `1px solid ${btnBdr}`,
-                            color: txt, borderRadius: '20px', fontSize: 11, fontWeight: 600, cursor: 'pointer'
-                          }}
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* General Activity */}
-            <div style={{
-              background: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
-              border: `1px solid ${border}`, borderRadius: '16px', padding: 16
-            }}>
-              <h3 style={{ fontSize: 12, fontWeight: 700, color: txt, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Recent Activity
-              </h3>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ display: 'flex', gap: 12, fontSize: 13, color: txt }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7 }} />
-                  <div>
-                    <span style={{ fontWeight: 600 }}>System Guard</span>
-                    <p style={{ fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4' }}>Your account privacy mode is fully synchronized with Connect PostgreSQL.</p>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 12, fontSize: 13, color: txt }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7 }} />
-                  <div>
-                    <span style={{ fontWeight: 600 }}>Direct Messaging</span>
-                    <p style={{ fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4' }}>All chats are configured with secure low-latency WebSockets.</p>
-                  </div>
-                </div>
-
-                {followersList.length > 0 && (
-                  <div style={{ display: 'flex', gap: 12, fontSize: 13, color: txt }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7 }} />
-                    <div>
-                      <span style={{ fontWeight: 600 }}>New Follower</span>
-                      <p style={{ fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4' }}>
-                        @{followersList[0]?.username || 'user'} started following you recently.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: 12, fontSize: 13, color: txt }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 7 }} />
-                  <div>
-                    <span style={{ fontWeight: 600 }}>Welcome to Connect</span>
-                    <p style={{ fontSize: 12, color: sub, marginTop: 3, lineHeight: '1.4' }}>Your profile is live! Customize your avatar, web links, or bio anytime.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </>
-      )}
-
-      {/* ========================================================
-          VIEW: SAVED POSTS PAGE
-          ======================================================== */}
-      {subView === 'saved' && (
-        <>
-          {/* Top Navigation Bar */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0,
-          }}>
-            <button onClick={() => setSubView('settings')} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: txt, padding: 0
-            }}>
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-
-            <span style={{ fontWeight: 700, fontSize: 16, color: txt }}>Saved</span>
-
-            <div style={{ width: 36 }} />
-          </div>
-
-          {/* Grid area */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            {loadingSaved ? (
-              <div style={{ padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13 }}>
-                Loading saved items...
-              </div>
-            ) : savedPostsList.length === 0 ? (
-              <div style={{
-                padding: '80px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', textAlign: 'center', gap: 12
-              }}>
-                <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: sub }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                </svg>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: txt }}>Save Photos and Videos</h3>
-                <p style={{ fontSize: 13, color: sub, maxWidth: 260 }}>
-                  When you save photos and videos, they will appear here. Only you can see what you've saved.
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 2 }}>
-                {savedPostsList.map((post: any) => (
-                  <div
-                    key={post.id}
-                    onClick={() => {
-                      setLongPressedPostId(post.id);
-                    }}
-                    style={{
-                      aspectRatio: '1/1', position: 'relative', overflow: 'hidden', cursor: 'pointer',
-                      background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
-                    }}
-                  >
-                    {post.thumbnailUrl || post.imageUrl ? (
-                      <img
-                        src={post.thumbnailUrl || post.imageUrl}
-                        alt="saved thumbnail"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <div style={{
-                        width: '100%', height: '100%',
-                        background: isDark ? `hsl(200,40%,22%)` : `hsl(200,60%,92%)`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? '#fff' : '#4b5563', textTransform: 'uppercase' }}>
-                          {post.postType}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Icon overlay depending on media type */}
-                    <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}>
-                      {post.postType === 'carousel' && <CarouselIcon />}
-                      {post.postType === 'reel' && <ReelIcon />}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div style={{ height: 80 }} />
-          </div>
-        </>
-      )}
-
-      {/* ── Sheets Overlay & Backdrop ── */}
-      {(activeAccountSheet !== 'none' || (showAvatarModal && isOwnProfile)) && (
-        <div
-          onClick={() => {
-            triggerAccountSheetTransition('none');
-            setShowAvatarModal(false);
-          }}
-          style={{
-            position: 'absolute', inset: 0, zIndex: 90,
-            background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
-            transition: 'opacity 0.3s ease',
-          }}
-        />
-      )}
-
-      {/* 1. Accounts list sheet */}
-      <div
-        style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
-          background: '#ffffff', borderTop: '1px solid #e5e7eb', borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
-          padding: '24px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.15)',
-          transform: activeAccountSheet === 'accounts' ? 'translateY(0)' : 'translateY(100%)',
-          opacity: activeAccountSheet === 'accounts' ? 1 : 0,
-          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
-          pointerEvents: activeAccountSheet === 'accounts' ? 'auto' : 'none',
-        }}
-      >
-        <div style={{ width: 48, height: 4, background: '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
-        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#121214', marginBottom: 16, textAlign: 'center' }}>Switch Account</h2>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20, maxHeight: 260, overflowY: 'auto' }}>
-          {displayAccounts.map((acc) => {
-            const isActive = acc.isCurrent;
-            const accountName = acc.displayName || acc.username || acc.email.split('@')[0];
-            const username = acc.username || acc.email.split('@')[0];
-            return (
-              <div
-                key={acc.userId || acc.email}
-                onClick={() => {
-                  if (isActive) {
-                    setActiveAccountSheet('none');
-                  } else {
-                    handleAccountSwitch(acc);
-                  }
-                }}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '12px 16px', borderRadius: '16px',
-                  background: isActive ? (isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)') : (isDark ? '#1a1a1e' : '#f9fafb'),
-                  cursor: isActive ? 'default' : 'pointer',
-                  border: isActive ? '1.5px solid #3b82f6' : (isDark ? '1px solid #27272a' : '1px solid transparent'),
-                  transition: 'all 0.2s',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: '50%', background: '#e5e7eb',
-                    overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: isActive ? '2px solid #3b82f6' : 'none'
-                  }}>
-                    {acc.profilePicture
-                      ? <img src={acc.profilePicture} alt={accountName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <DefaultAvatarSvg size={24} color="#374151" />
-                    }
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#ffffff' : '#121214' }}>{accountName}</span>
-                      {isActive && (
-                        <span style={{ fontSize: 9, fontWeight: 700, background: '#3b82f6', color: '#fff', padding: '1px 6px', borderRadius: 10 }}>
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ fontSize: 11, color: isDark ? '#a1a1aa' : '#6b7280' }}>@{username}</span>
-                      {!isActive && (
-                        <span style={{
-                          fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 8,
-                          background: acc.isSavedOnDevice ? 'rgba(34,197,94,0.15)' : 'rgba(161,161,170,0.2)',
-                          color: acc.isSavedOnDevice ? '#16a34a' : '#6b7280',
-                        }}>
-                          {acc.isSavedOnDevice ? '✓ Saved' : 'Sign in required'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {isActive ? (
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="12" height="12" fill="none" stroke="#ffffff" strokeWidth="3" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                ) : switchLoading ? (
-                  <div style={{ width: 18, height: 18, border: '2px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                ) : (
-                  <svg width="16" height="16" fill="none" stroke={isDark ? '#71717a' : '#9ca3af'} strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                )}
-              </div>
-            );
-          })}
         </div>
 
-        <div
-          onClick={() => triggerAccountSheetTransition('options')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '12px 16px', borderRadius: '16px', background: '#f3f4f6',
-            cursor: 'pointer', transition: 'all 0.2s',
-          }}
-        >
-          <div style={{
-            width: 38, height: 38, borderRadius: '50%', background: '#121214',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
-          }}>
-            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-          </div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#121214' }}>Add Account</span>
-        </div>
-      </div>
-
-      {/* 2. Options Popup Sheet — Accounts List + Log into existing + Create new */}
-      <div
-        style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
-          background: isDark ? '#16161a' : '#ffffff',
-          color: isDark ? '#ffffff' : '#121214',
-          borderTop: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
-          borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
-          padding: '24px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.3)',
-          transform: activeAccountSheet === 'options' ? 'translateY(0)' : 'translateY(100%)',
-          opacity: activeAccountSheet === 'options' ? 1 : 0,
-          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
-          pointerEvents: activeAccountSheet === 'options' ? 'auto' : 'none',
-        }}
-      >
-        <div style={{ width: 48, height: 4, background: isDark ? '#3f3f46' : '#e5e7eb', borderRadius: 2, margin: '0 auto 20px' }} />
-        <h2 style={{ fontSize: 18, fontWeight: 800, color: isDark ? '#ffffff' : '#121214', marginBottom: 16, textAlign: 'center' }}>
-          Switch Account
+        {/* User Details */}
+        <h2 className="text-[20px] font-bold text-white mt-3 leading-tight text-center">
+          {curName}
         </h2>
-
-        {/* Accounts List in Bottom Menu */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20, maxHeight: 260, overflowY: 'auto' }}>
-          {displayAccounts.map((acc) => {
-            const isActive = acc.isCurrent;
-            const displayHandle = acc.username
-              ? acc.username.replace(/^@/, '').split('@')[0]
-              : (acc.displayName ? acc.displayName : (acc.email ? acc.email.split('@')[0] : 'User'));
-
-            return (
-              <div
-                key={acc.userId || acc.email}
-                onClick={() => {
-                  if (isActive) {
-                    setActiveAccountSheet('none');
-                  } else {
-                    handleAccountSwitch(acc);
-                  }
-                }}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '12px 18px', borderRadius: '100px',
-                  background: isDark ? '#16161a' : '#f9fafb',
-                  border: isActive ? (isDark ? '1.5px solid #52525b' : '1.5px solid #18181b') : (isDark ? '1px solid #27272a' : '1px solid #e5e7eb'),
-                  cursor: isActive ? 'default' : 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: '50%', background: isDark ? '#27272a' : '#e5e7eb',
-                    overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: 'none'
-                  }}>
-                    {acc.profilePicture
-                      ? <img src={acc.profilePicture} alt={displayHandle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <DefaultAvatarSvg size={24} color="#374151" />
-                    }
-                  </div>
-                  <div style={{ textAlign: 'left' }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#ffffff' : '#121214' }}>
-                      {displayHandle}
-                    </span>
-                  </div>
-                </div>
-
-                {isActive ? (
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: isDark ? '#3f3f46' : '#18181b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="12" height="12" fill="none" stroke="#ffffff" strokeWidth="3" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                ) : switchLoading ? (
-                  <div style={{ width: 18, height: 18, border: '2px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                ) : (
-                  <svg width="16" height="16" fill="none" stroke={isDark ? '#71717a' : '#9ca3af'} strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Action buttons under the accounts list */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
-          <button
-            onClick={() => triggerAccountSheetTransition('signIn')}
-            style={{
-              width: '100%', padding: '14px 0',
-              background: '#1c1c1e',
-              color: '#ffffff',
-              borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 13,
-            }}
-          >
-            Log into Existing Account
-          </button>
-
-          <button
-            onClick={() => triggerAccountSheetTransition('signUp')}
-            style={{
-              width: '100%', padding: '14px 0',
-              background: '#ffffff',
-              color: '#121214',
-              borderRadius: '100px', fontWeight: 700, cursor: 'pointer',
-              border: '1px solid #e5e7eb', fontSize: 13,
-            }}
-          >
-            Create New Account
-          </button>
-        </div>
+        <p className="text-[13px] text-[#D8B4E2] font-medium mt-0.5 text-center">
+          @{curUsername} • Online
+        </p>
       </div>
 
-      {/* 3. Log into Existing Account — FULL PAGE View */}
-      <div
-        style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: isDark ? '#09090b' : '#ffffff',
-          color: isDark ? '#ffffff' : '#121214',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center',
-          padding: '24px', overflowY: 'auto',
-          transform: activeAccountSheet === 'signIn' ? 'scale(1)' : 'scale(0.95)',
-          opacity: activeAccountSheet === 'signIn' ? 1 : 0,
-          transition: 'transform 0.3s ease, opacity 0.3s ease',
-          pointerEvents: activeAccountSheet === 'signIn' ? 'auto' : 'none',
-        }}
-      >
-        {/* Top Header Back Button (Shifted Down) */}
-        <div style={{ position: 'absolute', top: 36, left: 24, zIndex: 10 }}>
-          <button
-            type="button"
-            onClick={() => { setActiveAuthSheet('none'); triggerAccountSheetTransition('options'); }}
-            style={{
-              background: isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6',
-              border: 'none', color: isDark ? '#fff' : '#121214',
-              borderRadius: '50%', width: 42, height: 42, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.2s'
-            }}
+      {/* ── 3. Light Settings Sheet (Bottom 64%) ── */}
+      <div className="w-full flex-1 bg-white rounded-t-[32px] px-6 pt-6 pb-28 flex flex-col gap-5 relative shadow-[0_-12px_30px_rgba(0,0,0,0.15)] overflow-y-auto no-scrollbar">
+        
+        {/* Drag Handle */}
+        <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-2 mb-2 shrink-0" />
+
+        {/* Status Card */}
+        <div className="w-full bg-[#FFF3CD] border border-yellow-200/60 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-yellow-400/20 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-zinc-900" strokeWidth={2} />
+            </div>
+            <div>
+              <h3 className="text-[14px] font-bold text-zinc-900 leading-tight">
+                Connect Pro Active
+              </h3>
+              <p className="text-[12px] text-zinc-600 mt-0.5">
+                High-speed cloud sync & AI chat
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setActiveModal('pro')}
+            className="bg-zinc-950 text-white text-[11px] font-semibold px-3 py-1.5 rounded-xl cursor-pointer active:scale-95 transition-transform shrink-0"
           >
-            <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
+            Manage
           </button>
         </div>
 
-        {/* Centered Card Content */}
-        <div style={{ width: '100%', maxWidth: 400, margin: '0 auto', display: 'flex', flexDirection: 'column', height: '100%' }}>
-
-          {/* IF SAVED ACCOUNTS EXIST -> SHOW ACCOUNT CENTER LIST */}
-          {displayAccounts.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              
-              {/* Account Center Header (Shifted Up, Left-Aligned 2-Line) */}
-              <div style={{ textAlign: 'left', marginTop: '64px', marginBottom: '24px' }}>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 900, lineHeight: 1.08, color: isDark ? '#ffffff' : '#1c1c22', letterSpacing: '-0.02em', margin: 0 }}>
-                  Account<br />Center
-                </h1>
+        {/* Settings List Group */}
+        <div className="flex flex-col bg-zinc-50 border border-zinc-100 rounded-2xl overflow-hidden divide-y divide-zinc-100 shadow-sm">
+          
+          {/* 1. Account & Security */}
+          <div 
+            onClick={() => setActiveModal('account')}
+            className="flex items-center justify-between p-3.5 hover:bg-zinc-100/70 transition-colors cursor-pointer active:bg-zinc-100"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-zinc-200/60 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-[18px] h-[18px] text-zinc-700" strokeWidth={2} />
               </div>
-
-              {switchError && (
-                <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '10px 16px', borderRadius: 14, fontSize: 12, fontWeight: 600, marginBottom: 16 }}>
-                  {switchError}
-                </div>
-              )}
-
-              {/* Account Center Saved Accounts List — Uniform & Clean */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
-                {displayAccounts.map((acc) => {
-                  const displayHandle = acc.username
-                    ? acc.username.replace(/^@/, '').split('@')[0]
-                    : (acc.displayName ? acc.displayName : (acc.email ? acc.email.split('@')[0] : 'User'));
-                  return (
-                    <div
-                      key={acc.userId || acc.email}
-                      onClick={() => handleAccountSwitch(acc)}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '14px 20px', borderRadius: '100px',
-                        background: isDark ? '#16161a' : '#f9fafb',
-                        border: `1px solid ${isDark ? '#27272a' : '#e5e7eb'}`,
-                        cursor: 'pointer', transition: 'all 0.2s',
-                        boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.03)'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                        <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: 'none' }}>
-                          {acc.profilePicture ? (
-                            <img src={acc.profilePicture} alt={displayHandle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <DefaultAvatarSvg size={28} color="#374151" />
-                          )}
-                        </div>
-                        <div style={{ textAlign: 'left' }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, display: 'block', color: isDark ? '#ffffff' : '#121214' }}>{displayHandle}</span>
-                        </div>
-                      </div>
-
-                      <svg width="18" height="18" fill="none" stroke={isDark ? '#a1a1aa' : '#6b7280'} strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Bottom Action Buttons (Pushed to bottom) */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 'auto', paddingBottom: '24px' }}>
-                <Button
-                  type="button"
-                  onClick={() => setActiveAuthSheet('signIn')}
-                  className="w-full bg-[#1c1c1e] hover:bg-zinc-800 text-white border border-zinc-800 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-md"
-                >
-                  Log Into Existing Account
-                </Button>
-
-                <Button
-                  type="button"
-                  onClick={() => setActiveAuthSheet('signUp')}
-                  className="w-full bg-white hover:bg-zinc-100 text-[#121214] border border-gray-200 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-sm"
-                >
-                  Create a New Account
-                </Button>
+              <div>
+                <p className="text-[14px] font-semibold text-zinc-900">Account & Security</p>
+                <p className="text-[12px] text-zinc-500">Password, 2FA, Email</p>
               </div>
             </div>
-          ) : null}
-        </div>
-      </div>
-
-      {/* ── SIGN IN BOTTOM SHEET (Copied 1-to-1 from login menu in app/page.tsx) ── */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-[10000] bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
-          activeAuthSheet === 'signIn'
-            ? 'translate-y-0 opacity-100 pointer-events-auto' 
-            : 'translate-y-full opacity-0 pointer-events-none'
-        }`}
-      >
-        {/* Backdrop overlay */}
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-md -z-10" 
-          onClick={() => setActiveAuthSheet('none')}
-        />
-
-        {/* Top bar back button */}
-        <div className="flex items-center justify-between mb-4">
-          <button
-            type="button"
-            onClick={() => setActiveAuthSheet('none')}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-            title="Back"
-          >
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </button>
-          <div className="w-12 h-1 bg-[#27272a] rounded-full" />
-          <div className="w-10" />
-        </div>
-
-        {switchError && (
-          <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4 text-center font-semibold">
-            {switchError}
-          </div>
-        )}
-
-        <form onSubmit={handleSwitchLogin} className="space-y-3">
-          <input
-            type="email"
-            placeholder="Email Address"
-            required
-            value={switchEmail}
-            onChange={(e) => setSwitchEmail(e.target.value)}
-            className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-          />
-
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Password"
-              required
-              value={switchPassword}
-              onChange={(e) => setSwitchPassword(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 pr-12 focus:outline-none transition-colors text-sm"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
-            >
-              {showPassword ? (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 113.682 3.682M21 12a9.96 9.96 0 01-1.557 3.018m-3.437-1.42A3 3 0 0012 10.012c-.29 0-.57.04-.833.115M17.657 16.657L13.414 12.414m0 0L9 7.999M3 3l18 18" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              )}
-            </button>
+            <ChevronRight className="w-4 h-4 text-zinc-400" strokeWidth={2} />
           </div>
 
-          <button
-            type="submit"
-            disabled={switchLoading}
-            className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
+          {/* 2. Notifications & Sounds */}
+          <div 
+            onClick={() => setActiveModal('notifications')}
+            className="flex items-center justify-between p-3.5 hover:bg-zinc-100/70 transition-colors cursor-pointer active:bg-zinc-100"
           >
-            {switchLoading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
-      </div>
-
-      {/* ── SIGN UP BOTTOM SHEET (Copied 1-to-1 from login menu in app/page.tsx) ── */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-[10000] bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
-          activeAuthSheet === 'signUp' 
-            ? 'translate-y-0 opacity-100 pointer-events-auto' 
-            : 'translate-y-full opacity-0 pointer-events-none'
-        }`}
-      >
-        {/* Backdrop overlay */}
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-md -z-10" 
-          onClick={() => setActiveAuthSheet('none')}
-        />
-
-        {/* Top bar back button */}
-        <div className="flex items-center justify-between mb-4">
-          <button
-            type="button"
-            onClick={() => setActiveAuthSheet('none')}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-            title="Back"
-          >
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </button>
-          <div className="w-12 h-1 bg-[#27272a] rounded-full" />
-          <div className="w-10" />
-        </div>
-
-        {switchError && (
-          <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4 text-center font-semibold">
-            {switchError}
-          </div>
-        )}
-
-        <form onSubmit={handleSwitchSignup} className="space-y-3">
-          <input
-            type="text"
-            placeholder="Username"
-            required
-            value={switchUsername}
-            onChange={(e) => setSwitchUsername(e.target.value)}
-            className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-          />
-
-          <input
-            type="email"
-            placeholder="Email Address"
-            required
-            value={switchEmail}
-            onChange={(e) => setSwitchEmail(e.target.value)}
-            className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-          />
-
-          <input
-            type="tel"
-            placeholder="+92 300 0000000"
-            required
-            value={switchPhone}
-            onChange={(e) => setSwitchPhone(e.target.value)}
-            className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-          />
-
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Password"
-              required
-              value={switchPassword}
-              onChange={(e) => setSwitchPassword(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 pr-12 focus:outline-none transition-colors text-sm"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
-            >
-              {showPassword ? (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 113.682 3.682M21 12a9.96 9.96 0 01-1.557 3.018m-3.437-1.42A3 3 0 0012 10.012c-.29 0-.57.04-.833.115M17.657 16.657L13.414 12.414m0 0L9 7.999M3 3l18 18" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              )}
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-zinc-200/60 flex items-center justify-center shrink-0">
+                <BellRing className="w-[18px] h-[18px] text-zinc-700" strokeWidth={2} />
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold text-zinc-900">Notifications & Sounds</p>
+                <p className="text-[12px] text-zinc-500">Mute, Custom Tones</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-zinc-400" strokeWidth={2} />
           </div>
 
-          <button
-            type="submit"
-            disabled={switchLoading}
-            className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
+          {/* 3. Media, Files & Storage */}
+          <div 
+            onClick={() => setActiveModal('storage')}
+            className="flex items-center justify-between p-3.5 hover:bg-zinc-100/70 transition-colors cursor-pointer active:bg-zinc-100"
           >
-            {switchLoading ? 'Creating Account...' : 'Sign Up'}
-          </button>
-        </form>
-      </div>
-
-      {/* 5. OTP verification sheet */}
-      <div
-        style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
-          background: '#ffffff', borderTop: '1px solid #e5e7eb', borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
-          padding: '24px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.15)',
-          transform: activeAccountSheet === 'verify' ? 'translateY(0)' : 'translateY(100%)',
-          opacity: activeAccountSheet === 'verify' ? 1 : 0,
-          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
-          pointerEvents: activeAccountSheet === 'verify' ? 'auto' : 'none',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <button
-            type="button"
-            onClick={() => triggerAccountSheetTransition('signUp')}
-            style={{ background: 'none', border: 'none', color: '#121214', cursor: 'pointer', padding: 0 }}
-          >
-            <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </button>
-          <div style={{ width: 48, height: 4, background: '#e5e7eb', borderRadius: 2 }} />
-          <div style={{ width: 22 }} />
-        </div>
-
-        <form onSubmit={handleSwitchVerify} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#121214' }}>Verify Email</h2>
-          <p style={{ fontSize: 13, color: '#6b7280', margin: '-10px 0 10px 0' }}>We sent a 6-digit code to {switchEmail}</p>
-          {switchError && <div style={{ color: '#ef4444', fontSize: 12, fontWeight: 600 }}>{switchError}</div>}
-
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-            {switchOtp.map((digit, i) => (
-              <input
-                key={i}
-                ref={el => { switchOtpRefs.current[i] = el; }}
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                autoComplete={i === 0 ? 'one-time-code' : 'off'}
-                maxLength={i === 0 ? 6 : 1}
-                value={digit}
-                onFocus={(e) => { if (e.target.value) e.target.select(); }}
-                onChange={e => {
-                  const raw = e.target.value.replace(/\D/g, '');
-                  if (!raw) {
-                    const next = [...switchOtp];
-                    next[i] = '';
-                    setSwitchOtp(next);
-                    return;
-                  }
-                  if (raw.length >= 6) {
-                    const digits = raw.slice(0, 6).split('');
-                    const next = ['', '', '', '', '', ''];
-                    digits.forEach((d, idx) => { if (idx < 6) next[idx] = d; });
-                    setSwitchOtp(next);
-                    requestAnimationFrame(() => switchOtpRefs.current[5]?.focus());
-                    return;
-                  }
-                  const prefix = switchOtp.slice(0, i).join('');
-                  if (i > 0 && prefix && raw.startsWith(prefix)) {
-                    const remaining = raw.slice(prefix.length);
-                    if (remaining.length > 0) {
-                      const next = [...switchOtp];
-                      remaining.split('').forEach((d, idx) => { if (i + idx < 6) next[i + idx] = d; });
-                      setSwitchOtp(next);
-                      const nextFocus = Math.min(i + remaining.length, 5);
-                      requestAnimationFrame(() => switchOtpRefs.current[nextFocus]?.focus());
-                      return;
-                    }
-                  }
-                  if (raw.length > 1) {
-                    const digits = raw.split('');
-                    const next = [...switchOtp];
-                    digits.forEach((d, idx) => { if (i + idx < 6) next[i + idx] = d; });
-                    setSwitchOtp(next);
-                    const nextFocus = Math.min(i + digits.length, 5);
-                    requestAnimationFrame(() => switchOtpRefs.current[nextFocus]?.focus());
-                    return;
-                  }
-                  const digit = raw.slice(-1);
-                  const next = [...switchOtp];
-                  next[i] = digit;
-                  setSwitchOtp(next);
-                  if (i < 5 && digit) requestAnimationFrame(() => switchOtpRefs.current[i + 1]?.focus());
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Backspace') {
-                    if (switchOtp[i]) {
-                      const next = [...switchOtp];
-                      next[i] = '';
-                      setSwitchOtp(next);
-                    } else if (i > 0) {
-                      const next = [...switchOtp];
-                      next[i - 1] = '';
-                      setSwitchOtp(next);
-                      switchOtpRefs.current[i - 1]?.focus();
-                    }
-                    e.preventDefault();
-                  } else if (e.key === 'ArrowLeft' && i > 0) {
-                    switchOtpRefs.current[i - 1]?.focus();
-                    e.preventDefault();
-                  } else if (e.key === 'ArrowRight' && i < 5) {
-                    switchOtpRefs.current[i + 1]?.focus();
-                    e.preventDefault();
-                  }
-                }}
-                style={{
-                  width: 40, height: 40, textAlign: 'center', fontSize: 18, fontWeight: 700,
-                  background: '#f9fafb', color: '#121214', border: '1px solid #e5e7eb', borderRadius: '12px',
-                  outline: 'none'
-                }}
-              />
-            ))}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-zinc-200/60 flex items-center justify-center shrink-0">
+                <FolderDown className="w-[18px] h-[18px] text-zinc-700" strokeWidth={2} />
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold text-zinc-900">Saved Media & Storage</p>
+                <p className="text-[12px] text-zinc-500">Auto-download, Cache</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-zinc-400" strokeWidth={2} />
           </div>
 
-          <button
-            type="submit"
-            disabled={switchLoading || switchOtp.some(d => !d)}
-            style={{
-              width: '100%', padding: '14px 0', background: '#121214', color: '#fff',
-              borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 13,
-              opacity: switchLoading ? 0.6 : 1, transition: 'all 0.2s', marginTop: 10
-            }}
+          {/* 4. Privacy & Blocked */}
+          <div 
+            onClick={() => setActiveModal('privacy')}
+            className="flex items-center justify-between p-3.5 hover:bg-zinc-100/70 transition-colors cursor-pointer active:bg-zinc-100"
           >
-            {switchLoading ? 'Verifying...' : 'Verify Code'}
-          </button>
-        </form>
-      </div>
-
-      {/* 6. Success sheet */}
-      <div
-        style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 100,
-          background: '#ffffff', borderTop: '1px solid #e5e7eb', borderTopLeftRadius: '2.5rem', borderTopRightRadius: '2.5rem',
-          padding: '32px 24px 32px', boxShadow: '0 -15px 40px rgba(0,0,0,0.15)',
-          transform: activeAccountSheet === 'success' ? 'translateY(0)' : 'translateY(100%)',
-          opacity: activeAccountSheet === 'success' ? 1 : 0,
-          transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.45s cubic-bezier(0.25, 1, 0.5, 1)',
-          pointerEvents: activeAccountSheet === 'success' ? 'auto' : 'none',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: '50%', background: '#10b981',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
-          }}>
-            <svg width="26" height="26" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-zinc-200/60 flex items-center justify-center shrink-0">
+                <Lock className="w-[18px] h-[18px] text-zinc-700" strokeWidth={2} />
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold text-zinc-900">Privacy & Blocked Users</p>
+                <p className="text-[12px] text-zinc-500">Last seen, Read receipts</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-zinc-400" strokeWidth={2} />
           </div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#121214' }}>Welcome!</h2>
-          <p style={{ fontSize: 13, color: '#6b7280' }}>Your account is verified and ready to go.</p>
-          <button
+
+          {/* 5. Appearance & Theme */}
+          <div 
             onClick={() => {
-              triggerAccountSheetTransition('none');
-              if (typeof window !== 'undefined') window.location.reload();
+              toggleTheme();
+              triggerHaptic('light');
+              showToast(`Theme switched to ${theme === 'dark' ? 'Light' : 'Dark'}`);
             }}
-            style={{
-              width: '100%', padding: '14px 0', background: '#121214', color: '#fff',
-              borderRadius: '100px', fontWeight: 700, cursor: 'pointer', border: 'none', fontSize: 13,
-              marginTop: 10
-            }}
+            className="flex items-center justify-between p-3.5 hover:bg-zinc-100/70 transition-colors cursor-pointer active:bg-zinc-100"
           >
-            Let's Go
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-zinc-200/60 flex items-center justify-center shrink-0">
+                <Palette className="w-[18px] h-[18px] text-zinc-700" strokeWidth={2} />
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold text-zinc-900">Chat Appearance</p>
+                <p className="text-[12px] text-zinc-500">Theme: {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-zinc-400" strokeWidth={2} />
+          </div>
+        </div>
+
+        {/* Danger / Secondary Actions */}
+        <div className="flex flex-col gap-2 mt-1 mb-2">
+          <button 
+            onClick={handleLogout}
+            className="w-full py-3.5 rounded-2xl bg-zinc-100 hover:bg-red-50 text-red-600 font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors cursor-pointer active:scale-[0.99]"
+          >
+            <LogOut className="w-4 h-4" strokeWidth={2} />
+            <span>Log Out</span>
           </button>
         </div>
       </div>
+
+      {/* ── 4. Floating Navigation Bar (Profile Active) ── */}
+      <nav className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[340px] h-[68px] bg-[#141111] rounded-full flex justify-around items-center px-4 shadow-[0_12px_24px_rgba(0,0,0,0.3)] z-50 border border-zinc-800/50">
+        
+        {/* Item 1 (Calls) */}
+        <button
+          onClick={() => {
+            triggerHaptic('light');
+            onClose();
+          }}
+          className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
+        >
+          <div className="w-5 h-5 flex items-center justify-center text-zinc-400">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
+            </svg>
+          </div>
+          <span className="text-[10px] text-zinc-400 font-medium">
+            Calls
+          </span>
+        </button>
+
+        {/* Item 2 (Messages) */}
+        <button
+          onClick={() => {
+            triggerHaptic('light');
+            onClose();
+          }}
+          className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
+        >
+          <div className="w-5 h-5 flex items-center justify-center text-zinc-400">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path 
+                fillRule="evenodd" 
+                clipRule="evenodd" 
+                d="M3.0132 9.15129C3 9.69022 3 10.3021 3 11V13C3 15.8284 3 17.2426 3.87868 18.1213C4.75736 19 6.17157 19 9 19H15C17.8284 19 19.2426 19 20.1213 18.1213C21 17.2426 21 15.8284 21 13V11C21 10.3021 21 9.69022 20.9868 9.15129L12.9713 13.6044C12.3672 13.9399 11.6328 13.9399 11.0287 13.6044L3.0132 9.15129ZM3.24297 7.02971C3.32584 7.05052 3.4074 7.08237 3.48564 7.12584L12 11.856L20.5144 7.12584C20.5926 7.08237 20.6742 7.05052 20.757 7.02971C20.6271 6.55619 20.4276 6.18491 20.1213 5.87868C19.2426 5 17.8284 5 15 5H9C6.17157 5 4.75736 5 3.87868 5.87868C3.57245 6.18491 3.37294 6.55619 3.24297 7.02971Z" 
+              />
+            </svg>
+          </div>
+          <span className="text-[10px] text-zinc-400 font-medium">
+            Messages
+          </span>
+        </button>
+
+        {/* Item 3 (Profile - Active) */}
+        <button
+          onClick={() => triggerHaptic('light')}
+          className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
+        >
+          <div className="w-5 h-5 flex items-center justify-center text-[#D8B4E2]">
+            <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 9a3.5 3.5 0 100-7 3.5 3.5 0 000 7zm-7 9a7 7 0 1114 0H3z" />
+            </svg>
+          </div>
+          <span className="text-[10px] text-[#D8B4E2] font-semibold">
+            Profile
+          </span>
+        </button>
+      </nav>
+
+      {/* ── Sub-Modals ── */}
+
+      {/* Account & Security Modal */}
+      {activeModal === 'account' && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-3xl p-6 flex flex-col gap-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+              <h3 className="text-lg font-bold text-zinc-900">Account & Security</h3>
+              <button 
+                onClick={() => setActiveModal(null)}
+                className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Display Name</label>
+                <input 
+                  type="text"
+                  value={editNameValue}
+                  onChange={(e) => setEditNameValue(e.target.value)}
+                  className="w-full mt-1.5 px-3.5 py-2.5 rounded-xl border border-zinc-200 text-sm font-medium focus:outline-none focus:border-zinc-900 text-zinc-900"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Bio / Status</label>
+                <textarea 
+                  rows={3}
+                  value={editBioValue}
+                  onChange={(e) => setEditBioValue(e.target.value)}
+                  placeholder="Tell people about yourself..."
+                  className="w-full mt-1.5 px-3.5 py-2.5 rounded-xl border border-zinc-200 text-sm font-medium focus:outline-none focus:border-zinc-900 text-zinc-900 resize-none"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  disabled={isSavingDetails}
+                  onClick={handleSaveProfileDetails}
+                  className="w-full py-3 bg-zinc-900 text-white text-sm font-semibold rounded-xl hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                >
+                  {isSavingDetails ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+
+              {/* Saved Accounts Switcher */}
+              {savedAccounts.length > 1 && (
+                <div className="pt-4 border-t border-zinc-100">
+                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Switch Account</p>
+                  <div className="space-y-2">
+                    {savedAccounts.map((acc) => (
+                      <div 
+                        key={acc.userId}
+                        onClick={() => {
+                          if (acc.userId !== (session?.user as any)?.id) {
+                            showToast(`Switching to ${acc.name}...`);
+                            router.push('/accounts');
+                          }
+                        }}
+                        className={`flex items-center justify-between p-3 rounded-xl border ${acc.userId === (session?.user as any)?.id ? 'border-purple-200 bg-purple-50/50' : 'border-zinc-100 hover:bg-zinc-50'} cursor-pointer`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <img src={acc.image || '/Avatar.png'} alt="" className="w-8 h-8 rounded-full object-cover" />
+                          <div>
+                            <p className="text-sm font-semibold text-zinc-900">{acc.name}</p>
+                            <p className="text-xs text-zinc-500">@{acc.username}</p>
+                          </div>
+                        </div>
+                        {acc.userId === (session?.user as any)?.id && (
+                          <span className="text-xs font-bold text-purple-600">Active</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Modal */}
+      {activeModal === 'notifications' && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-3xl p-6 flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+              <h3 className="text-lg font-bold text-zinc-900">Notifications & Sounds</h3>
+              <button 
+                onClick={() => setActiveModal(null)}
+                className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50">
+                <div>
+                  <p className="text-sm font-semibold text-zinc-900">Push Notifications</p>
+                  <p className="text-xs text-zinc-500">Receive alerts for new messages</p>
+                </div>
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50">
+                <div>
+                  <p className="text-sm font-semibold text-zinc-900">In-App Sound</p>
+                  <p className="text-xs text-zinc-500">Sound effects when receiving messages</p>
+                </div>
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saved Media & Storage Modal */}
+      {activeModal === 'storage' && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-3xl p-6 flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+              <h3 className="text-lg font-bold text-zinc-900">Saved Media & Storage</h3>
+              <button 
+                onClick={() => setActiveModal(null)}
+                className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50">
+                <div>
+                  <p className="text-sm font-semibold text-zinc-900">Local Cache</p>
+                  <p className="text-xs text-zinc-500">Optimistic messages & chats cache</p>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('social_messages_cache');
+                    showToast('Cache cleared!');
+                  }}
+                  className="px-3 py-1 bg-zinc-200 text-zinc-800 text-xs font-semibold rounded-lg hover:bg-zinc-300"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Privacy & Blocked Modal */}
+      {activeModal === 'privacy' && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-3xl p-6 flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+              <h3 className="text-lg font-bold text-zinc-900">Privacy & Security</h3>
+              <button 
+                onClick={() => setActiveModal(null)}
+                className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50">
+                <div>
+                  <p className="text-sm font-semibold text-zinc-900">End-to-End Privacy</p>
+                  <p className="text-xs text-zinc-500">Real-time encrypted WebRTC calls & chat</p>
+                </div>
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Connect Pro Modal */}
+      {activeModal === 'pro' && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-3xl p-6 flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+                <h3 className="text-lg font-bold text-zinc-900">Connect Pro Active</h3>
+              </div>
+              <button 
+                onClick={() => setActiveModal(null)}
+                className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm text-zinc-600">
+              You are currently on Connect Pro with unlimited HD voice & video calls, cloud chat backups, and high-speed attachments.
+            </p>
+            <button
+              onClick={() => setActiveModal(null)}
+              className="w-full py-3 bg-zinc-900 text-white text-sm font-semibold rounded-xl"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
