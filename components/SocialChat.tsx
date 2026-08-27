@@ -29,6 +29,32 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { triggerHaptic } from '@/lib/haptics';
 import './SocialChat.css';
 
+// ── Request Coalescing and In-Flight Caching for getRecentChats ─────────────
+let recentChatsInFlightPromise: Promise<any[]> | null = null;
+let lastRecentChatsFetchTime = 0;
+let cachedRecentChatsData: any[] | null = null;
+
+export async function fetchRecentChatsCoalesced(force = false): Promise<any[]> {
+  const now = Date.now();
+  if (!force && cachedRecentChatsData && now - lastRecentChatsFetchTime < 5000) {
+    return cachedRecentChatsData;
+  }
+  if (recentChatsInFlightPromise) {
+    return recentChatsInFlightPromise;
+  }
+  recentChatsInFlightPromise = (async () => {
+    try {
+      const data = await getRecentChats();
+      cachedRecentChatsData = data;
+      lastRecentChatsFetchTime = Date.now();
+      return data;
+    } finally {
+      recentChatsInFlightPromise = null;
+    }
+  })();
+  return recentChatsInFlightPromise;
+}
+
 interface User {
   id: string;
   username: string;
@@ -2226,6 +2252,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [mutedChats, setMutedChats] = useState<Set<string>>(new Set());
   const [acceptedContactIds, setAcceptedContactIds] = useState<Set<string>>(new Set());
   const acceptedContactIdsRef = useRef<Set<string>>(new Set());
+  const wasSocketDisconnectedRef = useRef<boolean>(false);
   // Close chat details modal first when user hits back button / Escape key
   useEffect(() => {
     if (!showChatDetails) return;
@@ -2560,38 +2587,41 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             userId: userObj.id
           });
         }
-        // ── Refresh lastSeenMap from DB on connect ──────────────────────────
-        // Catches any offline events that occurred while the socket was down
-        getRecentChats().then(results => {
-          const freshLastSeen: Record<string, string> = {};
-          results.forEach((u: any) => {
-            const timeVal = u.lastSeen ? (typeof u.lastSeen === 'string' ? u.lastSeen : new Date(u.lastSeen).toISOString()) : null;
-            if (timeVal) {
-              if (u.email) freshLastSeen[u.email.toLowerCase().trim()] = timeVal;
-              if (u.id) freshLastSeen[u.id] = timeVal;
-            }
-          });
-          if (Object.keys(freshLastSeen).length > 0) {
-            setLastSeenMap(prev => {
-              const merged = { ...prev, ...freshLastSeen };
-              if (typeof window !== 'undefined') {
-                localStorage.setItem('chat_last_seen', JSON.stringify(merged));
+        // ── Refresh lastSeenMap from DB only on true reconnect after being disconnected ──
+        if (wasSocketDisconnectedRef.current) {
+          wasSocketDisconnectedRef.current = false;
+          fetchRecentChatsCoalesced(true).then(results => {
+            const freshLastSeen: Record<string, string> = {};
+            results.forEach((u: any) => {
+              const timeVal = u.lastSeen ? (typeof u.lastSeen === 'string' ? u.lastSeen : new Date(u.lastSeen).toISOString()) : null;
+              if (timeVal) {
+                if (u.email) freshLastSeen[u.email.toLowerCase().trim()] = timeVal;
+                if (u.id) freshLastSeen[u.id] = timeVal;
               }
-              return merged;
             });
-          }
-        }).catch(() => {});
+            if (Object.keys(freshLastSeen).length > 0) {
+              setLastSeenMap(prev => {
+                const merged = { ...prev, ...freshLastSeen };
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('chat_last_seen', JSON.stringify(merged));
+                }
+                return merged;
+              });
+            }
+          }).catch(() => {});
+        }
       });
-
 
       newSocket.on('disconnect', () => {
         console.log('Socket disconnected');
+        wasSocketDisconnectedRef.current = true;
         setIsConnected(false);
         if (onStatusChange) onStatusChange(false);
       });
 
       newSocket.on('connect_error', (err) => {
         console.error('Socket connection error:', err);
+        wasSocketDisconnectedRef.current = true;
         setIsConnected(false);
         if (onStatusChange) onStatusChange(false);
       });
@@ -3222,94 +3252,97 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               });
             }
           }
-          // Sync latest messages for active chat after returning to tab
-          const activeUser = selectedUserRef.current;
-          if (activeUser) {
-            const activeUserId = activeUser.id;
-            getSocialMessages(activeUserId).then((history: any) => {
-              if (selectedUserRef.current?.id !== activeUserId) return;
-              setMessages(prev => {
-                const deletedRef = deletedMessageIds;
-                const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
-                if (dbMsgs.length === 0) return prev;
-                const dbMsgIds = new Set(dbMsgs.map(m => m.id));
-                const earliestDbTime = new Date(dbMsgs[0].createdAt).getTime();
+          // Only perform database refetch if the socket was disconnected during backgrounding
+          if (!s || !s.connected || wasSocketDisconnectedRef.current) {
+            wasSocketDisconnectedRef.current = false;
+            const activeUser = selectedUserRef.current;
+            if (activeUser) {
+              const activeUserId = activeUser.id;
+              getSocialMessages(activeUserId).then((history: any) => {
+                if (selectedUserRef.current?.id !== activeUserId) return;
+                setMessages(prev => {
+                  const deletedRef = deletedMessageIds;
+                  const dbMsgs = (history as any[]).filter(m => !deletedRef.has(m.id)).map(normalizeMsg);
+                  if (dbMsgs.length === 0) return prev;
+                  const dbMsgIds = new Set(dbMsgs.map(m => m.id));
+                  const earliestDbTime = new Date(dbMsgs[0].createdAt).getTime();
 
-                const isMatchInDb = (m: any) => {
-                  if (dbMsgIds.has(m.id)) return true;
-                  const mTime = new Date(m.createdAt).getTime();
-                  return dbMsgs.some((dbM: any) =>
-                    dbM.content === m.content &&
-                    String(dbM.senderId) === String(m.senderId) &&
-                    dbM.type === m.type &&
-                    Math.abs(new Date(dbM.createdAt).getTime() - mTime) < 30000
+                  const isMatchInDb = (m: any) => {
+                    if (dbMsgIds.has(m.id)) return true;
+                    const mTime = new Date(m.createdAt).getTime();
+                    return dbMsgs.some((dbM: any) =>
+                      dbM.content === m.content &&
+                      String(dbM.senderId) === String(m.senderId) &&
+                      dbM.type === m.type &&
+                      Math.abs(new Date(dbM.createdAt).getTime() - mTime) < 30000
+                    );
+                  };
+
+                  const olderInPrev = prev.filter(m => {
+                    const mTime = new Date(m.createdAt).getTime();
+                    return mTime < earliestDbTime && !isMatchInDb(m);
+                  });
+
+                  const now = Date.now();
+                  const inFlight = prev.filter(m => {
+                    const mTime = new Date(m.createdAt).getTime();
+                    const isPending = (m as any).status === 'sending' || getPendingQueue().some(p => p.tempId === m.id);
+                    return !isMatchInDb(m) && (isPending || (now - mTime < 300000)) && (mTime >= earliestDbTime);
+                  });
+
+                  return [...olderInPrev, ...dbMsgs, ...inFlight].sort(
+                    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
                   );
-                };
-
-                const olderInPrev = prev.filter(m => {
-                  const mTime = new Date(m.createdAt).getTime();
-                  return mTime < earliestDbTime && !isMatchInDb(m);
                 });
+                const normalizedHistory = (history as any[]).map(normalizeMsg);
+                setMessagesCache((prev: any) => {
+                  const existing = prev[activeUserId] || [];
+                  if (normalizedHistory.length === 0) return prev;
+                  const dbMsgIds = new Set(normalizedHistory.map(m => m.id));
+                  const earliestDbTime = new Date(normalizedHistory[0].createdAt).getTime();
 
-                const now = Date.now();
-                const inFlight = prev.filter(m => {
-                  const mTime = new Date(m.createdAt).getTime();
-                  const isPending = (m as any).status === 'sending' || getPendingQueue().some(p => p.tempId === m.id);
-                  return !isMatchInDb(m) && (isPending || (now - mTime < 300000)) && (mTime >= earliestDbTime);
+                  const isMatchInDb = (m: any) => {
+                    if (dbMsgIds.has(m.id)) return true;
+                    const mTime = new Date(m.createdAt).getTime();
+                    return normalizedHistory.some((dbM: any) =>
+                      dbM.content === m.content &&
+                      String(dbM.senderId) === String(m.senderId) &&
+                      dbM.type === m.type &&
+                      Math.abs(new Date(dbM.createdAt).getTime() - mTime) < 30000
+                    );
+                  };
+
+                  const olderInExisting = existing.filter((m: any) => {
+                    const mTime = new Date(m.createdAt).getTime();
+                    return mTime < earliestDbTime && !isMatchInDb(m);
+                  });
+
+                  return { ...prev, [activeUserId]: [...olderInExisting, ...normalizedHistory] };
                 });
+              }).catch(() => {});
+            }
 
-                return [...olderInPrev, ...dbMsgs, ...inFlight].sort(
-                  (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-                );
+            // ── Refresh lastSeenMap from DB only if disconnected while in background ──
+            fetchRecentChatsCoalesced(true).then(results => {
+              const freshLastSeen: Record<string, string> = {};
+              results.forEach((u: any) => {
+                const timeVal = u.lastSeen ? (typeof u.lastSeen === 'string' ? u.lastSeen : new Date(u.lastSeen).toISOString()) : null;
+                if (timeVal) {
+                  if (u.email) freshLastSeen[u.email.toLowerCase().trim()] = timeVal;
+                  if (u.id) freshLastSeen[u.id] = timeVal;
+                }
               });
-              const normalizedHistory = (history as any[]).map(normalizeMsg);
-              setMessagesCache((prev: any) => {
-                const existing = prev[activeUserId] || [];
-                if (normalizedHistory.length === 0) return prev;
-                const dbMsgIds = new Set(normalizedHistory.map(m => m.id));
-                const earliestDbTime = new Date(normalizedHistory[0].createdAt).getTime();
-
-                const isMatchInDb = (m: any) => {
-                  if (dbMsgIds.has(m.id)) return true;
-                  const mTime = new Date(m.createdAt).getTime();
-                  return normalizedHistory.some((dbM: any) =>
-                    dbM.content === m.content &&
-                    String(dbM.senderId) === String(m.senderId) &&
-                    dbM.type === m.type &&
-                    Math.abs(new Date(dbM.createdAt).getTime() - mTime) < 30000
-                  );
-                };
-
-                const olderInExisting = existing.filter((m: any) => {
-                  const mTime = new Date(m.createdAt).getTime();
-                  return mTime < earliestDbTime && !isMatchInDb(m);
+              if (Object.keys(freshLastSeen).length > 0) {
+                setLastSeenMap(prev => {
+                  const merged = { ...prev, ...freshLastSeen };
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('chat_last_seen', JSON.stringify(merged));
+                  }
+                  return merged;
                 });
-
-                return { ...prev, [activeUserId]: [...olderInExisting, ...normalizedHistory] };
-              });
+              }
             }).catch(() => {});
           }
-
-          // ── Refresh lastSeenMap from DB so missed offline events are caught ──
-          getRecentChats().then(results => {
-            const freshLastSeen: Record<string, string> = {};
-            results.forEach((u: any) => {
-              const timeVal = u.lastSeen ? (typeof u.lastSeen === 'string' ? u.lastSeen : new Date(u.lastSeen).toISOString()) : null;
-              if (timeVal) {
-                if (u.email) freshLastSeen[u.email.toLowerCase().trim()] = timeVal;
-                if (u.id) freshLastSeen[u.id] = timeVal;
-              }
-            });
-            if (Object.keys(freshLastSeen).length > 0) {
-              setLastSeenMap(prev => {
-                const merged = { ...prev, ...freshLastSeen };
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('chat_last_seen', JSON.stringify(merged));
-                }
-                return merged;
-              });
-            }
-          }).catch(() => {});
         });
       }
     };
@@ -3479,7 +3512,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         } catch (e) {
           console.error("Search users error:", e);
         }
-      }, 200);
+      }, 300);
 
       return () => clearTimeout(delayDebounce);
 
@@ -3489,8 +3522,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         setUsers(allContactsRef.current);
         setRequests(allRequestsRef.current);
       } else {
-        // First load — fetch from server
-        getRecentChats().then(results => {
+        // First load — fetch coalesced from server
+        fetchRecentChatsCoalesced().then(results => {
           const contacts: User[] = [];
           const reqs: User[] = [];
           const initialLastSeen: Record<string, string> = {};
@@ -3565,6 +3598,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       setIsLoadingOlder(false);
 
       const cached = messagesCache[targetUserId];
+      const hasUnseen = !!(selectedUser.unseenCount && selectedUser.unseenCount > 0);
       if (cached && cached.length > 0) {
         const filteredCached = cached
           .filter(m => !deletedMessageIds.has(m.id))
@@ -3589,6 +3623,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         setIsLoadingMessages(false);
         if (messagesContainerRef.current) {
           messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+
+        // If we already have cached history and there are no unread messages,
+        // and socket is connected, avoid downloading the exact same 30 messages again!
+        if (!hasUnseen && socketRef.current?.connected) {
+          return;
         }
       } else {
         setIsLoadingMessages(true);
@@ -3640,11 +3680,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           });
         }
 
-        markMessagesAsSeen(targetUserId).catch(() => {});
-        socket?.emit('mark_as_seen', {
-          senderEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
-          senderId: targetUserId
-        });
+        if (hasUnseen) {
+          markMessagesAsSeen(targetUserId).catch(() => {});
+          socket?.emit('mark_as_seen', {
+            senderEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+            senderId: targetUserId
+          });
+        }
 
         requestAnimationFrame(() => {
           if (messagesContainerRef.current) {

@@ -6,7 +6,6 @@ import { useEffect, useState, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { 
   askAI, 
-  getChatHistory, 
   saveChatMessage, 
   getUserDetails, 
   updateName, 
@@ -156,16 +155,28 @@ export default function DashboardPage() {
     }
   }, [activeView]);
 
-  // Handle Search Input Changes
+  // Handle Search Input Changes with empty-query guard, deduplication, and 300ms debounce
+  const lastSearchQueryRef = useRef<string | null>(null);
   useEffect(() => {
     if (activeView === 'search' || isSearchOverlayOpen) {
+      const trimmed = searchQuery.trim();
+      if (!trimmed) {
+        setSearchResults([]);
+        setIsSearching(false);
+        lastSearchQueryRef.current = '';
+        return;
+      }
+      if (lastSearchQueryRef.current === trimmed) {
+        return;
+      }
       setIsSearching(true);
       const delayDebounce = setTimeout(() => {
-        searchUsers(searchQuery).then((res: any) => {
+        lastSearchQueryRef.current = trimmed;
+        searchUsers(trimmed).then((res: any) => {
           setSearchResults(res || []);
           setIsSearching(false);
         }).catch(() => setIsSearching(false));
-      }, 200);
+      }, 300);
       return () => clearTimeout(delayDebounce);
     }
   }, [searchQuery, isSearchOverlayOpen, activeView]);
@@ -278,28 +289,6 @@ export default function DashboardPage() {
     return () => window.removeEventListener('open_user_profile', handleOpenProfile as any);
   }, []);
 
-  // Load History
-  useEffect(() => {
-    async function loadHistory() {
-      if (status === 'authenticated') {
-        try {
-          const history = await getChatHistory();
-          const formattedHistory: Message[] = history.map((m: any) => ({
-            id: m.id,
-            role: m.role as 'user' | 'ai',
-            content: m.content,
-            timestamp: new Date(m.createdAt)
-          }));
-          setMessages(formattedHistory);
-        } catch (err) {
-          console.error("Failed to load history:", err);
-        } finally {
-          setIsHistoryLoading(false);
-        }
-      }
-    }
-    loadHistory();
-  }, [status]);
 
   // Eager load User Details for Profile Panel
   const hasLoadedUser = useRef(false);
