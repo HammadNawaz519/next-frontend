@@ -64,7 +64,7 @@ export default function DashboardPage() {
   const [selectedProfileUser, setSelectedProfileUser] = useState<any>(null);
   
   const [fullUser, setFullUser] = useState<any>(null);
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'reels' | 'chat'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'reels' | 'chat'>('chat');
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
 
   // Upload Modal State
@@ -242,22 +242,17 @@ export default function DashboardPage() {
         }
         return true;
       }
-      setActiveView('home');
-      return true;
+      return false;
     }
 
-    // Layer 7: Non-home Tab (Search / Reels)
-    if (activeView !== 'home') {
-      setActiveView('home');
-      return true;
-    }
-
-    return false;
+    // Layer 7: Non-chat Tab (Calls / Search / Reels)
+    setActiveView('chat');
+    return true;
   };
 
-  // Push history state whenever any overlay or non-home view opens
+  // Push history state whenever any overlay or non-chat view opens
   useEffect(() => {
-    const hasAnyOverlay = isAdminCamOpen || isAccountSheetOpen || showUploadModal || isSearchOverlayOpen || isProfileOpen || !!selectedProfileUser || activeView !== 'home' || !!selectedChatUser;
+    const hasAnyOverlay = isAdminCamOpen || isAccountSheetOpen || showUploadModal || isSearchOverlayOpen || isProfileOpen || !!selectedProfileUser || activeView !== 'chat' || !!selectedChatUser;
     
     if (hasAnyOverlay && typeof window !== 'undefined') {
       window.history.pushState({ appNav: true }, '', window.location.href);
@@ -542,10 +537,39 @@ export default function DashboardPage() {
           
           <nav className="flex-1 space-y-1">
             {[
-              { id: 'home', name: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-              { id: 'reels', name: 'Reels', icon: '' },
-              { id: 'chat', name: 'Chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-              { id: 'search', name: 'Search', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' }
+              { 
+                id: 'chat', 
+                name: 'Messages', 
+                renderIcon: (active: boolean) => (
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                    <path 
+                      d="M4 6.5C4 4.567 5.567 3 7.5 3h9C18.433 3 20 4.567 20 6.5v7c0 1.933-1.567 3.5-3.5 3.5H9.414a1 1 0 00-.707.293L5.414 20.586A1 1 0 013.707 19.88V6.5A3.5 3.5 0 014 6.5z" 
+                      fill={active ? '#D5C7FF' : 'currentColor'} 
+                    />
+                    <circle cx="8.5" cy="10" r="1.1" fill={active ? '#1A1A1E' : (isDark ? '#000000' : '#FFFFFF')} />
+                    <circle cx="12" cy="10" r="1.1" fill={active ? '#1A1A1E' : (isDark ? '#000000' : '#FFFFFF')} />
+                    <circle cx="15.5" cy="10" r="1.1" fill={active ? '#1A1A1E' : (isDark ? '#000000' : '#FFFFFF')} />
+                  </svg>
+                )
+              },
+              { 
+                id: 'home', 
+                name: 'Calls', 
+                renderIcon: (active: boolean) => (
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={active ? 0 : 2}>
+                    <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
+                  </svg>
+                )
+              },
+              { 
+                id: 'search', 
+                name: 'Search', 
+                renderIcon: (active: boolean) => (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                )
+              }
             ].map((item) => {
               const isItemActive = !isProfileOpen && activeView === item.id;
               return (
@@ -557,20 +581,8 @@ export default function DashboardPage() {
                   onMouseEnter={e => { if (!isItemActive) (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
                   onMouseLeave={e => { if (!isItemActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 >
-                  <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
-                    {item.id === 'reels' ? (
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
-                        <rect x="3" y="3" width="18" height="18" rx="5" />
-                        <line x1="3" y1="9" x2="21" y2="9" />
-                        <path d="m7 3 3 6" />
-                        <path d="m14 3 3 6" />
-                        <polygon points="10,12 16,15 10,18" fill="currentColor" stroke="none" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-                      </svg>
-                    )}
+                  <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
+                    {item.renderIcon(isItemActive)}
                   </div>
                   <span className="text-[12px] font-light opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)' }}>
                     {item.name}
@@ -972,64 +984,58 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Mobile Bottom Navigation — round glass pill bar floats nicely near the bottom */}
-      {((activeView === 'home' || activeView === 'search' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive) && (
+      {/* Mobile Bottom Navigation — matching reference capsule pill */}
+      {((activeView === 'home' || activeView === 'search' || activeView === 'reels' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive) && (
         <nav className={`mobile-nav ${(isAccountSheetOpen || isSearchOverlayOpen || isChatLongPressActive) ? 'mobile-nav-hidden' : ''}`}>
-          {[
-            { 
-              id: 'home', 
-              element: (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-              )
-            },
-            { 
-              id: 'search', 
-              element: (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              )
-            },
-            { 
-              id: 'chat', 
-              element: (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
-                </svg>
-              )
-            },
-          ].map((item) => {
-            const isMobileItemActive = !isProfileOpen && activeView === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={(e) => {
-                  handleNavClick(item.id, e);
-                }}
-                className="flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90"
-                style={{ 
-                  background: isMobileItemActive ? 'var(--dm-bg-active)' : 'transparent',
-                  color: isMobileItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
-                }}
-              >
-                {item.element}
-              </button>
-            );
-          })}
+          {/* 1. Calls */}
+          <button
+            onClick={(e) => handleNavClick('home', e)}
+            className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-3 py-1 outline-none cursor-pointer"
+          >
+            <div className="h-5 flex items-center justify-center">
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill={!isProfileOpen && activeView === 'home' ? '#FFFFFF' : 'rgba(255,255,255,0.45)'}>
+                <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
+              </svg>
+            </div>
+            <span className={`text-[10px] font-medium tracking-tight ${!isProfileOpen && activeView === 'home' ? 'text-white font-semibold' : 'text-white/50'}`}>
+              Calls
+            </span>
+          </button>
 
+          {/* 2. Messages */}
+          <button
+            onClick={(e) => handleNavClick('chat', e)}
+            className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-3 py-1 outline-none cursor-pointer"
+          >
+            <div className="h-5 flex items-center justify-center">
+              <svg className="w-[22px] h-[19px]" viewBox="0 0 24 24" fill="none">
+                <path 
+                  d="M4 6.5C4 4.567 5.567 3 7.5 3h9C18.433 3 20 4.567 20 6.5v7c0 1.933-1.567 3.5-3.5 3.5H9.414a1 1 0 00-.707.293L5.414 20.586A1 1 0 013.707 19.88V6.5A3.5 3.5 0 014 6.5z" 
+                  fill={!isProfileOpen && activeView === 'chat' ? '#D5C7FF' : 'rgba(255,255,255,0.45)'} 
+                />
+                <circle cx="8.5" cy="10" r="1.1" fill={!isProfileOpen && activeView === 'chat' ? '#1A1A1E' : '#0B0B0E'} />
+                <circle cx="12" cy="10" r="1.1" fill={!isProfileOpen && activeView === 'chat' ? '#1A1A1E' : '#0B0B0E'} />
+                <circle cx="15.5" cy="10" r="1.1" fill={!isProfileOpen && activeView === 'chat' ? '#1A1A1E' : '#0B0B0E'} />
+              </svg>
+            </div>
+            <span className={`text-[10px] font-medium tracking-tight ${!isProfileOpen && activeView === 'chat' ? 'text-white font-semibold' : 'text-white/50'}`}>
+              Messages
+            </span>
+          </button>
+
+          {/* 3. Profile */}
           <button
             onClick={(e) => runProfileTransition(() => setIsProfileOpen(true), e.clientX, e.clientY, false)}
-            className="flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90"
-            style={{ 
-              background: isProfileOpen ? 'var(--dm-bg-active)' : 'transparent',
-              color: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
-            }}
+            className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-3 py-1 outline-none cursor-pointer"
           >
-            <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-active)', color: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}>
-              <img src="/Avatar.png" alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            <div className="h-5 flex items-center justify-center">
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill={isProfileOpen ? '#FFFFFF' : 'rgba(255,255,255,0.45)'}>
+                <path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z" />
+              </svg>
             </div>
+            <span className={`text-[10px] font-medium tracking-tight ${isProfileOpen ? 'text-white font-semibold' : 'text-white/50'}`}>
+              Profile
+            </span>
           </button>
         </nav>
       )}

@@ -687,27 +687,25 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   BOTTOM NAVIGATION — glass pill bar
+   BOTTOM NAVIGATION — dark capsule pill bar
    ═══════════════════════════════════════════════════════════════ */
 .mobile-nav {
   display: none;
   position: fixed;
-  bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
-  width: 85%;
-  max-width: 280px;
+  width: 82%;
+  max-width: 270px;
   height: 58px;
   z-index: 90;
   align-items: center;
   justify-content: space-around;
   padding: 0 16px;
-  border-radius: 28px;
-  border: 1px solid rgba(255,255,255,0.15);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
-  background: rgba(255,255,255,0.45);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  background: #0b0b0e;
   /* Smooth slide in/out */
   transition: transform 350ms var(--ease-ig), opacity 350ms var(--ease-ig);
   will-change: transform, opacity;
@@ -730,12 +728,11 @@ body:has([data-comment-drawer="true"]) .mobile-nav {
   pointer-events: none !important;
 }
 
-[data-theme="dark"] .mobile-nav {
-  background: rgba(15,15,20,0.6);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+[data-theme="dark"] .mobile-nav,
+[data-theme="light"] .mobile-nav {
+  background: #0b0b0e !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
 }
 
 .mobile-nav > * { position: relative; z-index: 1; }
