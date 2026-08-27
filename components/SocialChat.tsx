@@ -39,6 +39,7 @@ import {
   Pencil,
   Palette,
   Trash2,
+  Pin,
   Ban,
   Phone,
   Video,
@@ -810,9 +811,10 @@ const PASTEL_PALETTES = [
   { bg: '#D1FAE5', text: '#047857', emoji: '🦄' }, // Soft Emerald
 ];
 
-const getPastelForUser = (userId: string, index = 0) => {
-  const sum = (userId || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return PASTEL_PALETTES[(sum + index) % PASTEL_PALETTES.length];
+const getPastelForUser = (userIdOrName?: string) => {
+  if (!userIdOrName) return PASTEL_PALETTES[0];
+  const sum = String(userIdOrName).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return PASTEL_PALETTES[Math.abs(sum) % PASTEL_PALETTES.length];
 };
 
 const formatChatTime = (timeVal?: any) => {
@@ -898,7 +900,7 @@ const ChatItem = memo(({
     onSelect(user, e);
   };
 
-  const pastel = getPastelForUser(user.id, index);
+  const pastel = getPastelForUser(user.id || user.username || user.name);
   const timeDisplay = formatChatTime((user as any).lastMessageTime || (user as any).updatedAt || lastSeenVal);
   const unseen = (user as any).unseenCount || 0;
 
@@ -2050,6 +2052,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       const pinned = localStorage.getItem('social_pinned_chats');
       if (pinned) setPinnedChats(new Set(JSON.parse(pinned)));
+
+      const archived = localStorage.getItem('social_archived_chats');
+      if (archived) setArchivedChatIds(new Set(JSON.parse(archived)));
 
       const deletedMsgs = localStorage.getItem('social_deleted_msg_ids');
       if (deletedMsgs) setDeletedMessageIds(new Set(JSON.parse(deletedMsgs)));
@@ -5031,6 +5036,123 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
               )}
 
+              {/* Top Long-Press Action Bar (Pin, Archive, Delete) */}
+              {selectedChatForOptions && (
+                <div className="mb-2.5 p-2.5 rounded-2xl bg-[#141111] text-white border border-zinc-800 flex items-center justify-between shadow-lg animate-in fade-in slide-in-from-top-2 duration-200 shrink-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1 pl-1">
+                    <button
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setSelectedChatForOptions(null);
+                      }}
+                      className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                      title="Deselect"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="truncate min-w-0">
+                      <span className="text-[13px] font-bold text-white truncate block">
+                        {nicknames[selectedChatForOptions.id] || selectedChatForOptions.name}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 3 Action Buttons: Pin, Archive, Delete */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* 1. Pin / Unpin */}
+                    <button
+                      onClick={() => {
+                        triggerHaptic('medium');
+                        const targetId = selectedChatForOptions.id;
+                        const isCurrentlyPinned = pinnedChats.has(targetId);
+                        setPinnedChats(prev => {
+                          const next = new Set(prev);
+                          if (isCurrentlyPinned) {
+                            next.delete(targetId);
+                          } else {
+                            next.add(targetId);
+                          }
+                          if (typeof window !== 'undefined') {
+                            localStorage.setItem('social_pinned_chats', JSON.stringify(Array.from(next)));
+                          }
+                          return next;
+                        });
+                        setSelectedChatForOptions(null);
+                      }}
+                      className={`px-2.5 py-1.5 rounded-xl text-[12px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                        pinnedChats.has(selectedChatForOptions.id)
+                          ? 'bg-[#9D4EDD] text-white'
+                          : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
+                      }`}
+                      title={pinnedChats.has(selectedChatForOptions.id) ? 'Unpin Chat' : 'Pin to Top'}
+                    >
+                      <Pin className="w-3.5 h-3.5" strokeWidth={2} />
+                      <span>{pinnedChats.has(selectedChatForOptions.id) ? 'Unpin' : 'Pin'}</span>
+                    </button>
+
+                    {/* 2. Archive / Unarchive */}
+                    <button
+                      onClick={() => {
+                        triggerHaptic('medium');
+                        const targetId = selectedChatForOptions.id;
+                        const isCurrentlyArchived = archivedChatIds.has(targetId);
+                        setArchivedChatIds(prev => {
+                          const next = new Set(prev);
+                          if (isCurrentlyArchived) {
+                            next.delete(targetId);
+                          } else {
+                            next.add(targetId);
+                          }
+                          if (typeof window !== 'undefined') {
+                            localStorage.setItem('social_archived_chats', JSON.stringify(Array.from(next)));
+                          }
+                          return next;
+                        });
+                        setSelectedChatForOptions(null);
+                      }}
+                      className={`px-2.5 py-1.5 rounded-xl text-[12px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                        archivedChatIds.has(selectedChatForOptions.id)
+                          ? 'bg-[#FFF3CD] text-zinc-900'
+                          : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
+                      }`}
+                      title={archivedChatIds.has(selectedChatForOptions.id) ? 'Move to Inbox' : 'Archive Chat'}
+                    >
+                      <Archive className="w-3.5 h-3.5" strokeWidth={2} />
+                      <span>{archivedChatIds.has(selectedChatForOptions.id) ? 'Unarchive' : 'Archive'}</span>
+                    </button>
+
+                    {/* 3. Delete */}
+                    <button
+                      onClick={async () => {
+                        triggerHaptic('heavy');
+                        const targetId = selectedChatForOptions.id;
+                        setDeletedChatIds(prev => {
+                          const next = new Set(prev).add(targetId);
+                          if (typeof window !== 'undefined') {
+                            localStorage.setItem('social_deleted_chats', JSON.stringify(Array.from(next)));
+                          }
+                          return next;
+                        });
+                        setUsers(prev => prev.filter(u => u.id !== targetId));
+                        setRequests(prev => prev.filter(u => u.id !== targetId));
+                        allContactsRef.current = allContactsRef.current.filter(u => u.id !== targetId);
+                        try {
+                          await hideSocialChat(targetId);
+                        } catch (err) {
+                          console.warn('Failed to hide chat on server:', err);
+                        }
+                        setSelectedChatForOptions(null);
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl text-[12px] font-semibold flex items-center gap-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 transition-all cursor-pointer active:scale-95"
+                      title="Delete Chat"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Quick Search - Cute, All-Round, Animated with Back Arrow on focus */}
               <div className="pt-1 pb-3 px-1 flex-shrink-0">
                 <div className="flex items-center gap-2">
@@ -5179,21 +5301,29 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       className="flex items-center gap-3 flex-1 ml-1 cursor-pointer min-w-0"
                       title="View Profile & Chat Details"
                     >
-                      {/* Avatar */}
-                      <div className="w-11 h-11 rounded-full bg-[#FFF3CD] flex items-center justify-center text-xl shrink-0 overflow-hidden relative border border-zinc-800 font-bold shadow-xs">
-                        {selectedUser.image && selectedUser.image.length > 5 ? (
-                          <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
-                        ) : (
-                          <span>👨🏻</span>
-                        )}
-                        {(() => {
-                          const userEmail = (selectedUser.email || '').toLowerCase().trim();
-                          const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
-                          return isOnline ? (
-                            <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#141111] absolute bottom-0 right-0" />
-                          ) : null;
-                        })()}
-                      </div>
+                      {/* Avatar with deterministic matching token */}
+                      {(() => {
+                        const pastel = getPastelForUser(selectedUser.id || selectedUser.username || selectedUser.name);
+                        return (
+                          <div 
+                            className="w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0 overflow-hidden relative border border-zinc-800 font-bold shadow-xs"
+                            style={{ background: pastel.bg, color: pastel.text }}
+                          >
+                            {selectedUser.image && selectedUser.image.length > 5 ? (
+                              <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
+                            ) : (
+                              <span>{pastel.emoji}</span>
+                            )}
+                            {(() => {
+                              const userEmail = (selectedUser.email || '').toLowerCase().trim();
+                              const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
+                              return isOnline ? (
+                                <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#141111] absolute bottom-0 right-0" />
+                              ) : null;
+                            })()}
+                          </div>
+                        );
+                      })()}
 
                       {/* Contact Name & Presence */}
                       <div className="flex flex-col min-w-0">

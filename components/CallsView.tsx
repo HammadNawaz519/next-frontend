@@ -277,21 +277,32 @@ export default function CallsView({
     });
   };
 
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
   const handleClearHistory = () => {
     triggerHaptic('medium');
-    if (confirm('Clear all call history logs?')) {
-      setCalls([]);
+    setShowClearConfirm(true);
+  };
+
+  const confirmClearAll = () => {
+    triggerHaptic('heavy');
+    setCalls([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('connect_call_history');
     }
+    setShowClearConfirm(false);
   };
 
   return (
     <div className="h-full w-full relative flex flex-col bg-[#141111] overflow-hidden font-sans select-none">
       
-      {/* ── 2. Dark Header & History Filters (Top 34% of Screen) ── */}
-      <div className="w-full bg-[#141111] pt-14 px-6 pb-6 flex flex-col justify-between shrink-0 select-none">
+      {/* ── 2. Dark Header & History Filters (Compact & High) ── */}
+      <div className={`w-full bg-[#141111] px-6 transition-all duration-300 ease-out select-none flex-shrink-0 ${
+        isSearchOpen ? 'max-h-0 opacity-0 pt-0 pb-0 overflow-hidden pointer-events-none' : 'pt-14 pb-3 max-h-[240px] opacity-100 flex flex-col gap-3'
+      }`}>
         
         {/* Top Bar */}
-        <div className="flex justify-between items-center w-full mb-3">
+        <div className="flex justify-between items-center w-full">
           <div className="flex flex-col">
             <span className="text-[12px] font-medium text-zinc-400 tracking-wider uppercase">
               Activity & Logs
@@ -301,70 +312,21 @@ export default function CallsView({
             </h1>
           </div>
 
+          {/* Frameless Search Icon */}
           <button
             onClick={() => {
               triggerHaptic('light');
-              setIsSearchOpen((prev) => !prev);
+              setIsSearchOpen(true);
             }}
-            className="w-10 h-10 rounded-full bg-zinc-800/80 border border-zinc-700/60 flex items-center justify-center text-white cursor-pointer active:scale-95 transition-all hover:bg-zinc-700/80"
+            className="p-2 text-zinc-400 hover:text-white cursor-pointer active:scale-95 transition-all outline-none"
+            title="Search Calls"
           >
-            <Search className="w-[18px] h-[18px] text-white" strokeWidth={2} />
+            <Search className="w-5 h-5 text-zinc-300 hover:text-white" strokeWidth={2.2} />
           </button>
         </div>
 
-        {/* Search Input Bar (Collapsible) */}
-        {isSearchOpen && (
-          <div className="mb-3 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="relative flex items-center">
-              <input
-                type="text"
-                autoFocus
-                placeholder="Search by contact name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#9D4EDD]"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 text-zinc-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Summary Metrics Pill Bar (Quick Stats - Clean Calm Styling) */}
-        <div className="grid grid-cols-3 gap-2 my-2">
-          {/* Received */}
-          <div className="bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-2.5 flex flex-col items-center shadow-xs">
-            <span className="text-[10px] text-zinc-400 font-medium">Received</span>
-            <span className="text-[13px] font-bold text-zinc-200 mt-0.5">
-              {metrics.received} {metrics.received === 1 ? 'call' : 'calls'}
-            </span>
-          </div>
-
-          {/* Sent */}
-          <div className="bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-2.5 flex flex-col items-center shadow-xs">
-            <span className="text-[10px] text-zinc-400 font-medium">Sent</span>
-            <span className="text-[13px] font-bold text-zinc-200 mt-0.5">
-              {metrics.sent} {metrics.sent === 1 ? 'call' : 'calls'}
-            </span>
-          </div>
-
-          {/* Missed */}
-          <div className="bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-2.5 flex flex-col items-center shadow-xs">
-            <span className="text-[10px] text-zinc-400 font-medium">Missed</span>
-            <span className="text-[13px] font-bold text-zinc-300 mt-0.5">
-              {metrics.missed} missed
-            </span>
-          </div>
-        </div>
-
-        {/* Segmented Filter Tabs */}
-        <div className="w-full bg-zinc-900/80 p-1 rounded-2xl flex items-center border border-zinc-800/60 mt-1">
+        {/* Segmented Filter Tabs — Clean without numbers */}
+        <div className="w-full bg-zinc-900/80 p-1 rounded-2xl flex items-center border border-zinc-800/60 mt-0.5">
           {(['All', 'Received', 'Sent', 'Missed'] as const).map((tab) => {
             const isActive = activeTab === tab;
             return (
@@ -374,7 +336,7 @@ export default function CallsView({
                   triggerHaptic('light');
                   setActiveTab(tab);
                 }}
-                className={`flex-1 py-1.5 rounded-xl text-[12px] font-semibold transition-all cursor-pointer ${
+                className={`flex-1 py-2 rounded-xl text-[12.5px] font-semibold transition-all cursor-pointer ${
                   isActive
                     ? 'bg-zinc-800 text-white shadow-xs'
                     : 'text-zinc-400 hover:text-zinc-200'
@@ -387,26 +349,65 @@ export default function CallsView({
         </div>
       </div>
 
-      {/* ── 3. Light Bottom Sheet (Call History List) ── */}
-      <div className="w-full flex-1 bg-white rounded-t-[32px] px-6 pt-3 pb-28 flex flex-col relative shadow-[0_-12px_30px_rgba(0,0,0,0.15)] overflow-hidden">
+      {/* ── 3. Light Bottom Sheet (Call History List with Animated Upward Expansion) ── */}
+      <div className={`w-full flex-1 bg-white relative overflow-hidden min-h-0 shadow-[0_-12px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-out flex flex-col ${
+        isSearchOpen ? 'rounded-t-none sm:rounded-t-[32px] px-3.5 sm:px-6 pt-12 sm:pt-4 pb-12' : 'rounded-t-[32px] px-3.5 sm:px-6 pt-3 pb-28'
+      }`}>
         
-        {/* Sheet Drag Handle */}
-        <div className="w-10 h-1.5 bg-zinc-200 rounded-full mx-auto my-1 shrink-0" />
+        {/* Sheet Drag Handle (Hidden when searching) */}
+        {!isSearchOpen && (
+          <div className="w-10 h-1.5 bg-zinc-200 rounded-full mx-auto my-1 shrink-0" />
+        )}
+
+        {/* Animated Search Bar / Top Search Controls */}
+        {isSearchOpen && (
+          <div className="pt-1 pb-3 px-1 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSearchQuery('');
+                  setIsSearchOpen(false);
+                }}
+                className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center cursor-pointer active:scale-95 transition-all shrink-0 shadow-2xs"
+                title="Back to Call History"
+              >
+                <ChevronLeft className="w-5 h-5 text-zinc-800" strokeWidth={2.2} />
+              </button>
+              <div className="flex-1 flex items-center gap-2.5 px-4.5 py-2.5 rounded-full bg-zinc-100/90 border border-zinc-200/50 text-zinc-800 transition-all">
+                <Search className="w-[18px] h-[18px] text-zinc-400 flex-shrink-0" strokeWidth={2} />
+                <input 
+                  type="text" 
+                  autoFocus
+                  placeholder="Search calls, contacts..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-transparent text-[13.5px] text-zinc-900 placeholder:text-zinc-400 outline-none font-medium"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} className="text-xs text-zinc-400 hover:text-zinc-600 cursor-pointer p-1">✕</button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Section Header */}
-        <div className="flex justify-between items-center mt-3 mb-2 shrink-0">
-          <h2 className="text-[18px] font-bold text-zinc-900 tracking-tight">
-            {activeTab === 'All' ? 'All Records' : `${activeTab} Calls`}
-          </h2>
-          {calls.length > 0 && (
-            <button
-              onClick={handleClearHistory}
-              className="text-[12px] font-semibold text-zinc-400 hover:text-zinc-700 cursor-pointer transition-colors"
-            >
-              Clear History
-            </button>
-          )}
-        </div>
+        {!isSearchOpen && (
+          <div className="flex justify-between items-center mt-2.5 mb-2 px-1 shrink-0">
+            <h2 className="text-[18px] font-bold text-zinc-900 tracking-tight">
+              {activeTab === 'All' ? 'All Records' : `${activeTab} Calls`}
+            </h2>
+            {calls.length > 0 && (
+              <button
+                onClick={handleClearHistory}
+                className="text-[12px] font-semibold text-zinc-400 hover:text-red-500 cursor-pointer transition-colors"
+              >
+                Clear History
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Call Log Feed List */}
         <div className="flex flex-col gap-1 overflow-y-auto flex-1 no-scrollbar divide-y divide-zinc-100 pr-0.5">
@@ -629,6 +630,41 @@ export default function CallsView({
               >
                 <MessageCircle className="w-4 h-4" strokeWidth={2} />
                 <span>Send Message</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Clear History Confirmation Modal ── */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[320px] bg-white rounded-3xl p-5 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-150"
+          >
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-3">
+              <Trash2 className="w-6 h-6" strokeWidth={2} />
+            </div>
+            <h3 className="text-[17px] font-bold text-zinc-900 leading-tight">Clear Call History?</h3>
+            <p className="text-[13px] text-zinc-500 mt-1.5 leading-relaxed">
+              All incoming, outgoing, and missed call logs will be removed from your activity.
+            </p>
+            <div className="grid grid-cols-2 gap-2.5 w-full mt-5">
+              <button
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowClearConfirm(false);
+                }}
+                className="py-2.5 px-4 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-semibold text-[13.5px] transition-colors cursor-pointer active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmClearAll}
+                className="py-2.5 px-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-semibold text-[13.5px] transition-colors cursor-pointer active:scale-95 shadow-xs"
+              >
+                Clear All
               </button>
             </div>
           </div>
