@@ -935,8 +935,9 @@ const ChatItem = memo(({
         {unseen > 0 ? (
           <span className="w-2.5 h-2.5 rounded-full bg-[#9D4EDD] shadow-xs" />
         ) : (
-          <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          <svg className="w-4 h-4 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 7 17l-5-5" />
+            <path d="m22 10-7.5 7.5L13 16" />
           </svg>
         )}
       </div>
@@ -4719,27 +4720,31 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         <div className="main-wrap">
           <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'} !bg-[#141111] flex flex-col h-full overflow-hidden border-r border-zinc-800/80`}>
             
-            {/* 1. Top Section (Dark Mode Header) ~35% */}
-            <div className="bg-[#141111] px-5 pt-6 pb-5 flex flex-col flex-shrink-0 select-none">
+            {/* 1. Top Section (Dark Mode Header) with pt-14 safe area padding */}
+            <div className="bg-[#141111] px-5 pt-14 pb-5 flex flex-col flex-shrink-0 select-none">
               {/* Header Row */}
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[12px] sm:text-[13px] text-zinc-400 font-medium tracking-tight">
                     Welcome {((session?.user?.name || session?.user?.email || 'Oji').split(' ')[0])} 👋
                   </p>
-                  <h1 className="text-2xl sm:text-[28px] font-black text-white tracking-tight leading-none mt-1">
-                    Chatdong
+                  <h1 className="text-[26px] font-bold text-white tracking-tight leading-none mt-1">
+                    Connect
                   </h1>
                 </div>
 
-                {/* Circular Notification Bell Icon */}
-                <div 
-                  className="w-10 h-10 rounded-full bg-[#242020] border border-white/10 flex items-center justify-center text-white cursor-pointer hover:bg-[#2e2929] active:scale-95 transition-all shadow-sm"
-                  title="Notifications"
-                >
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
+                {/* Notification Bell with bg-white/10 and Lucide Bell + unread dot */}
+                <div className="relative">
+                  <div 
+                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white cursor-pointer hover:bg-white/15 active:scale-95 transition-all shadow-sm"
+                    title="Notifications"
+                  >
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                    </svg>
+                  </div>
+                  <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full border-2 border-[#141111] absolute -top-0.5 -right-0.5" />
                 </div>
               </div>
 
@@ -4750,7 +4755,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </div>
 
               {/* Story List (Horizontally Scrolling) */}
-              <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar pb-1 pt-0.5">
+              <div className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-1 pt-1">
                 {/* 1. Add Story Button */}
                 <div className="flex flex-col items-center flex-shrink-0 cursor-pointer group">
                   <div className="w-[56px] h-[56px] rounded-full bg-[#221E1E] border border-white/15 flex items-center justify-center text-white group-hover:bg-[#2c2727] active:scale-95 transition-all">
@@ -4761,7 +4766,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   <span className="text-[11px] text-zinc-400 font-medium mt-1.5 text-center truncate w-[56px]">Add Story</span>
                 </div>
 
-                {/* 2. Story Avatars */}
+                {/* 2. Story Avatars with ring polish */}
                 {(() => {
                   const sampleStories = [
                     { id: 'story-1', name: 'Yoga', emoji: '🗿', bg: '#E0F2FE', text: '#0369A1' },
@@ -4782,7 +4787,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       onClick={() => storyItem.userObj && handleSelectUser(storyItem.userObj)}
                       className="flex flex-col items-center flex-shrink-0 cursor-pointer group"
                     >
-                      <div className="p-[2px] rounded-full border-2 border-white/90 group-hover:scale-105 transition-transform">
+                      <div className="p-0.5 rounded-full ring-2 ring-white ring-offset-2 ring-offset-[#141111] group-hover:scale-105 transition-transform">
                         <div 
                           className="w-[50px] h-[50px] rounded-full overflow-hidden flex items-center justify-center font-bold text-base shadow-xs"
                           style={{ background: storyItem.bg, color: storyItem.text }}
@@ -4790,7 +4795,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           {storyItem.image && storyItem.image.length > 5 ? (
                             <img src={storyItem.image} alt={storyItem.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                           ) : (
-                            <span>{storyItem.emoji}</span>
+                            <span className="select-none">{storyItem.emoji}</span>
                           )}
                         </div>
                       </div>
@@ -4803,20 +4808,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </div>
             </div>
 
-            {/* 2. Bottom Section (Light Mode Bottom Sheet) ~65% */}
+            {/* 2. Bottom Section (Light Mode Bottom Sheet) */}
             <div className="flex-1 bg-white rounded-t-[32px] flex flex-col min-h-0 overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.15)] text-zinc-900">
               {/* Drag Handle */}
               <div className="w-10 h-1 bg-zinc-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
 
               {/* Chat Header Row */}
               <div className="flex items-center justify-between px-5 pt-3 pb-2 flex-shrink-0">
-                <h2 className="text-[18px] font-extrabold text-[#111111] tracking-tight">Recent Chat</h2>
+                <h2 className="text-[18px] font-bold text-[#111111] tracking-tight">Recent Chat</h2>
                 <button 
                   onClick={() => {}}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFF3CD] text-[#854D0E] hover:bg-[#FEEBC8] text-[11px] font-bold transition-colors cursor-pointer border border-[#FEF08A]/70 shadow-xs"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="20" height="5" x="2" y="3" rx="1" />
+                    <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+                    <path d="M10 12h4" />
                   </svg>
                   Archive Chat
                 </button>
@@ -4841,8 +4848,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
               </div>
 
-              {/* Chat List */}
-              <div className="flex-1 overflow-y-auto px-3.5 pt-1 pb-28 flex flex-col gap-1 no-scrollbar">
+              {/* Chat List with gap-4 / gap-5 for breathing room and clear touch targets */}
+              <div className="flex-1 overflow-y-auto px-4 pt-2 pb-28 flex flex-col gap-3.5 no-scrollbar">
                 {(view === 'recent'
                   ? [...users].filter(u => !deletedChatIds.has(u.id)).sort((a, b) => {
                       const ap = pinnedChats.has(a.id) ? 0 : 1;

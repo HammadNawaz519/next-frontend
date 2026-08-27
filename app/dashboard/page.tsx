@@ -987,7 +987,7 @@ export default function DashboardPage() {
       {/* Mobile Bottom Navigation — deep black pill bar: Messages (left), Calls (center), Profile (right) */}
       {((activeView === 'home' || activeView === 'search' || activeView === 'reels' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive) && (
         <nav className={`mobile-nav ${(isAccountSheetOpen || isSearchOverlayOpen || isChatLongPressActive) ? 'mobile-nav-hidden' : ''}`}>
-          {/* 1. Messages (Leftmost) */}
+          {/* 1. Messages (Leftmost - using message-alt-svgrepo-com.svg) */}
           <button
             onClick={(e) => handleNavClick('chat', e)}
             className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
@@ -995,45 +995,44 @@ export default function DashboardPage() {
             <div className="w-6 h-6 flex items-center justify-center">
               <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
                 <path 
-                  d="M4 6.5C4 4.567 5.567 3 7.5 3h9C18.433 3 20 4.567 20 6.5v7c0 1.933-1.567 3.5-3.5 3.5H9.414a1 1 0 00-.707.293L5.414 20.586A1 1 0 013.707 19.88V6.5A3.5 3.5 0 014 6.5z" 
-                  fill={!isProfileOpen && activeView === 'chat' ? '#D8B4E2' : 'rgba(255,255,255,0.45)'} 
+                  fillRule="evenodd" 
+                  clipRule="evenodd" 
+                  d="M3.0132 9.15129C3 9.69022 3 10.3021 3 11V13C3 15.8284 3 17.2426 3.87868 18.1213C4.75736 19 6.17157 19 9 19H15C17.8284 19 19.2426 19 20.1213 18.1213C21 17.2426 21 15.8284 21 13V11C21 10.3021 21 9.69022 20.9868 9.15129L12.9713 13.6044C12.3672 13.9399 11.6328 13.9399 11.0287 13.6044L3.0132 9.15129ZM3.24297 7.02971C3.32584 7.05052 3.4074 7.08237 3.48564 7.12584L12 11.856L20.5144 7.12584C20.5926 7.08237 20.6742 7.05052 20.757 7.02971C20.6271 6.55619 20.4276 6.18491 20.1213 5.87868C19.2426 5 17.8284 5 15 5H9C6.17157 5 4.75736 5 3.87868 5.87868C3.57245 6.18491 3.37294 6.55619 3.24297 7.02971Z" 
+                  fill={!isProfileOpen && activeView === 'chat' ? '#D8B4E2' : 'rgba(255,255,255,0.45)'}
                 />
-                <circle cx="8.5" cy="10" r="1.2" fill={!isProfileOpen && activeView === 'chat' ? '#141111' : '#0D0B0B'} />
-                <circle cx="12" cy="10" r="1.2" fill={!isProfileOpen && activeView === 'chat' ? '#141111' : '#0D0B0B'} />
-                <circle cx="15.5" cy="10" r="1.2" fill={!isProfileOpen && activeView === 'chat' ? '#141111' : '#0D0B0B'} />
               </svg>
             </div>
-            <span className={`text-[11px] font-medium tracking-tight ${!isProfileOpen && activeView === 'chat' ? 'text-white font-semibold' : 'text-white/45'}`}>
+            <span className={`text-[11px] font-medium tracking-wide ${!isProfileOpen && activeView === 'chat' ? 'text-white font-semibold' : 'text-white/45'}`}>
               Messages
             </span>
           </button>
 
-          {/* 2. Calls (Center) */}
+          {/* 2. Calls (Center - Phosphor Phone Fill) */}
           <button
             onClick={(e) => handleNavClick('home', e)}
             className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
           >
             <div className="w-6 h-6 flex items-center justify-center">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill={!isProfileOpen && activeView === 'home' ? '#FFFFFF' : 'rgba(255,255,255,0.45)'}>
-                <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
+              <svg className="w-6 h-6" viewBox="0 0 256 256" fill={!isProfileOpen && activeView === 'home' ? '#FFFFFF' : 'rgba(255,255,255,0.45)'}>
+                <path d="M222.37,158.46l-47.11-21.11a16,16,0,0,0-17.75,3.61l-18.7,18.7A127.81,127.81,0,0,1,80.34,101.2l18.7-18.7a16,16,0,0,0,3.61-17.75L81.54,33.63A16,16,0,0,0,63.6,24.11L31.6,32.11A16,16,0,0,0,16,48C16,154,102,240,208,240a16,16,0,0,0,15.89-15.6l8-32A16,16,0,0,0,222.37,158.46Z" />
               </svg>
             </div>
-            <span className={`text-[11px] font-medium tracking-tight ${!isProfileOpen && activeView === 'home' ? 'text-white font-semibold' : 'text-white/45'}`}>
+            <span className={`text-[11px] font-medium tracking-wide ${!isProfileOpen && activeView === 'home' ? 'text-white font-semibold' : 'text-white/45'}`}>
               Calls
             </span>
           </button>
 
-          {/* 3. Profile (Right) */}
+          {/* 3. Profile (Right - Phosphor User Fill) */}
           <button
             onClick={(e) => runProfileTransition(() => setIsProfileOpen(true), e.clientX, e.clientY, false)}
             className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
           >
             <div className="w-6 h-6 flex items-center justify-center">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill={isProfileOpen ? '#FFFFFF' : 'rgba(255,255,255,0.45)'}>
-                <path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z" />
+              <svg className="w-6 h-6" viewBox="0 0 256 256" fill={isProfileOpen ? '#FFFFFF' : 'rgba(255,255,255,0.45)'}>
+                <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z" />
               </svg>
             </div>
-            <span className={`text-[11px] font-medium tracking-tight ${isProfileOpen ? 'text-white font-semibold' : 'text-white/45'}`}>
+            <span className={`text-[11px] font-medium tracking-wide ${isProfileOpen ? 'text-white font-semibold' : 'text-white/45'}`}>
               Profile
             </span>
           </button>
