@@ -4765,24 +4765,50 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               onChange={handleStoryUpload} 
             />
 
-            {/* 1. Header & Safe Area (Top 35% of Screen) */}
-            <div className="w-full bg-[#141111] pt-14 px-5 pb-6 flex flex-col justify-between select-none relative flex-shrink-0">
-              {/* Top Row */}
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="text-[13px] text-zinc-400 font-medium">
-                    Welcome back 👋
-                  </span>
-                  <h1 className="text-[26px] font-bold text-white tracking-tight leading-none mt-1">
-                    Connect
-                  </h1>
-                </div>
+            {/* 1. Header & Safe Area (Top) */}
+            <div className="w-full bg-[#141111] pt-14 px-6 pb-6 flex items-center justify-between select-none relative flex-shrink-0">
+              {/* Left: Greeting & Brand */}
+              <div className="flex flex-col">
+                <span className="text-[13px] text-zinc-400 font-medium">
+                  Welcome back 👋
+                </span>
+                <h1 className="text-[26px] font-bold text-white tracking-tight leading-none mt-1">
+                  Connect
+                </h1>
+              </div>
+
+              {/* Right: Story Button (+ or Avatar) & Notification Bell */}
+              <div className="flex items-center gap-3">
+                {/* Dynamic Story Indicator / Add Story */}
+                {userStory ? (
+                  <div 
+                    onClick={() => setViewStory({ name: 'Your Story', media: userStory.media, time: userStory.time, isMe: true })}
+                    className="w-11 h-11 rounded-full ring-2 ring-[#9D4EDD] ring-offset-2 ring-offset-[#141111] overflow-hidden flex items-center justify-center cursor-pointer active:scale-95 transition-all bg-[#FFF3CD] shadow-sm"
+                    title="View Your Active Story"
+                  >
+                    {session?.user?.image ? (
+                      <img src={session.user.image} alt="You" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="text-lg">👨🏻</span>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => storyInputRef.current?.click()}
+                    className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white hover:border-zinc-700 active:scale-95 transition-all cursor-pointer shadow-xs"
+                    title="Add Story"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                )}
 
                 {/* Notification Bell Button */}
                 <div className="relative">
                   <button
                     onClick={() => setShowNotificationsDrawer(prev => !prev)}
-                    className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center relative cursor-pointer active:scale-95 transition-transform"
+                    className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-white cursor-pointer hover:bg-zinc-800 active:scale-95 transition-all shadow-xs"
                     title="Notifications"
                   >
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -4790,7 +4816,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
                     </svg>
                     {unreadNotifications > 0 && (
-                      <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#9D4EDD] rounded-full ring-2 ring-[#141111]" />
+                      <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-[#9D4EDD] rounded-full ring-2 ring-[#141111]" />
                     )}
                   </button>
                 </div>
@@ -4798,151 +4824,84 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
               {/* Notification Modal Drawer */}
               {showNotificationsDrawer && (
-                <div className="absolute top-28 right-4 left-4 z-50 bg-[#1c1919] border border-zinc-800 rounded-3xl p-5 shadow-[0_20px_50px_rgba(0,0,0,0.7)] animate-in slide-in-from-top-3 duration-200 text-white">
-                  <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-bold text-white">Notifications</h3>
-                      {unreadNotifications > 0 && (
-                        <span className="px-2 py-0.5 rounded-full bg-[#9D4EDD] text-white text-[10px] font-bold">
-                          {unreadNotifications} new
+                <div className="absolute top-28 right-4 left-4 z-50 bg-[#181515] border border-zinc-800/90 rounded-3xl p-5 shadow-[0_20px_60px_rgba(0,0,0,0.8)] animate-in fade-in slide-in-from-top-3 duration-200 text-white backdrop-blur-xl">
+                  {/* Drawer Header */}
+                  <div className="flex items-center justify-between pb-3.5 border-b border-zinc-800/80">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-[#9D4EDD]/15 text-[#9D4EDD] flex items-center justify-center text-sm font-bold">
+                        🔔
+                      </div>
+                      <div>
+                        <h3 className="text-[15px] font-bold text-white leading-tight">Notifications</h3>
+                        <span className="text-[11px] text-zinc-400 font-medium">
+                          {unreadNotifications > 0 ? `${unreadNotifications} unread alerts` : 'All caught up'}
                         </span>
-                      )}
+                      </div>
                     </div>
-                    <button 
-                      onClick={() => {
-                        setNotificationsList([]);
-                        setUnreadNotifications(0);
-                      }}
-                      className="text-[12px] text-zinc-400 hover:text-white font-medium cursor-pointer transition-colors"
-                    >
-                      Clear All
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {notificationsList.length > 0 && (
+                        <button 
+                          onClick={() => {
+                            setNotificationsList([]);
+                            setUnreadNotifications(0);
+                          }}
+                          className="text-[11px] text-[#D8B4E2] hover:text-white font-semibold cursor-pointer transition-colors px-2 py-1 rounded-lg hover:bg-white/5"
+                        >
+                          Clear All
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowNotificationsDrawer(false)}
+                        className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="py-2 space-y-2 max-h-56 overflow-y-auto no-scrollbar">
+                  {/* Notifications List */}
+                  <div className="py-2.5 space-y-2 max-h-64 overflow-y-auto no-scrollbar">
                     {notificationsList.length === 0 ? (
-                      <div className="py-6 text-center text-xs text-zinc-500 font-medium">No new notifications</div>
+                      <div className="py-8 flex flex-col items-center justify-center text-center">
+                        <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-600 mb-2">
+                          ✓
+                        </div>
+                        <p className="text-xs text-zinc-400 font-medium">No new notifications</p>
+                      </div>
                     ) : (
                       notificationsList.map(item => (
-                        <div key={item.id} className="p-3 rounded-2xl bg-zinc-900/80 hover:bg-zinc-800/60 transition-colors flex items-center justify-between gap-3">
+                        <div
+                          key={item.id}
+                          onClick={() => {
+                            setNotificationsList(prev => prev.map(n => n.id === item.id ? { ...n, unread: false } : n));
+                            setUnreadNotifications(prev => Math.max(0, prev - 1));
+                          }}
+                          className={`p-3 rounded-2xl transition-all flex items-start gap-3 cursor-pointer ${
+                            item.unread ? 'bg-zinc-900 border border-zinc-800/80 hover:bg-zinc-800/70' : 'bg-zinc-900/40 hover:bg-zinc-900/70 opacity-75'
+                          }`}
+                        >
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm shrink-0 mt-0.5 ${
+                            item.title.toLowerCase().includes('call') ? 'bg-rose-500/15 text-rose-400' :
+                            item.title.toLowerCase().includes('message') ? 'bg-[#9D4EDD]/15 text-[#D8B4E2]' : 'bg-amber-500/15 text-amber-400'
+                          }`}>
+                            {item.title.toLowerCase().includes('call') ? '📞' : item.title.toLowerCase().includes('message') ? '💬' : '✨'}
+                          </div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[13px] font-bold text-white truncate">{item.title}</span>
-                              {item.unread && <span className="w-1.5 h-1.5 rounded-full bg-[#9D4EDD]" />}
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-[13px] font-semibold text-white truncate">{item.title}</span>
+                              <span className="text-[10px] text-zinc-500 font-medium shrink-0">{item.time}</span>
                             </div>
                             <p className="text-[12px] text-zinc-400 truncate mt-0.5">{item.desc}</p>
                           </div>
-                          <span className="text-[10px] text-zinc-500 font-medium flex-shrink-0">{item.time}</span>
+                          {item.unread && (
+                            <span className="w-2 h-2 rounded-full bg-[#9D4EDD] shrink-0 mt-2" />
+                          )}
                         </div>
                       ))
                     )}
                   </div>
-
-                  <button 
-                    onClick={() => setShowNotificationsDrawer(false)}
-                    className="w-full mt-2 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition-colors cursor-pointer"
-                  >
-                    Close
-                  </button>
                 </div>
               )}
-
-              {/* Story Tray */}
-              <div className="mt-5">
-                <div className="flex justify-between items-center">
-                  <span className="text-[17px] font-semibold text-white">Stories</span>
-                  <span 
-                    onClick={() => {}}
-                    className="text-[12px] text-zinc-400 cursor-pointer hover:text-white transition-colors"
-                  >
-                    See All
-                  </span>
-                </div>
-
-                <div className="flex flex-row overflow-x-auto gap-4 mt-3 pb-1 no-scrollbar items-start">
-                  {/* Item 0: Add Story */}
-                  <div 
-                    onClick={() => storyInputRef.current?.click()}
-                    className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 group"
-                  >
-                    <div className="w-[60px] h-[60px] rounded-full border border-dashed border-zinc-700 bg-zinc-900/50 flex items-center justify-center text-zinc-400 hover:border-zinc-500 active:scale-95 transition-all">
-                      <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                      </svg>
-                    </div>
-                    <span className="text-[11px] text-zinc-400">Add Story</span>
-                  </div>
-
-                  {/* Item 1: User's Own Story */}
-                  <div 
-                    onClick={() => {
-                      if (userStory) {
-                        setViewStory({ name: 'Your Story', media: userStory.media, time: userStory.time, isMe: true });
-                      } else {
-                        storyInputRef.current?.click();
-                      }
-                    }}
-                    className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 group"
-                  >
-                    <div className={`w-[60px] h-[60px] rounded-full flex items-center justify-center overflow-hidden active:scale-95 transition-all bg-[#FFF3CD] text-xl ${
-                      userStory 
-                        ? 'ring-2 ring-white ring-offset-2 ring-offset-[#141111]' 
-                        : 'ring-1 ring-zinc-700 opacity-80'
-                    }`}>
-                      {session?.user?.image ? (
-                        <img src={session.user.image} alt="You" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        <span>👨🏻</span>
-                      )}
-                    </div>
-                    <span className="text-[11px] text-zinc-400">Your Story</span>
-                  </div>
-
-                  {/* Dynamic Contacts */}
-                  {(() => {
-                    const sampleStories = [
-                      { id: 'story-1', name: 'Yoga', emoji: '🗿', bg: '#E0F2FE', text: '#0369A1' },
-                      { id: 'story-2', name: 'Dono', emoji: '🏀', bg: '#FCE7F3', text: '#BE185D' },
-                      { id: 'story-3', name: 'Doni', emoji: '💪', bg: '#FEF9C3', text: '#A16207' },
-                      { id: 'story-4', name: 'Rehan', emoji: '✨', bg: '#EDE9FE', text: '#6D28D9' },
-                    ];
-                    const displayStories = users.length > 0 
-                      ? users.slice(0, 10).map((u, i) => {
-                          const p = getPastelForUser(u.id, i);
-                          return { id: u.id, name: (u.name || u.username || 'User').split(' ')[0], emoji: p.emoji, bg: p.bg, text: p.text, image: u.image, userObj: u };
-                        })
-                      : sampleStories;
-
-                    return displayStories.map((storyItem: any, idx: number) => (
-                      <div 
-                        key={storyItem.id || idx}
-                        onClick={() => {
-                          if (storyItem.userObj) {
-                            handleSelectUser(storyItem.userObj);
-                          } else {
-                            setViewStory({ name: storyItem.name, media: '', time: '2h ago' });
-                          }
-                        }}
-                        className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 group"
-                      >
-                        <div 
-                          className="w-[60px] h-[60px] rounded-full ring-2 ring-white ring-offset-2 ring-offset-[#141111] overflow-hidden flex items-center justify-center active:scale-95 transition-all shadow-xs"
-                          style={{ background: storyItem.bg, color: storyItem.text }}
-                        >
-                          {storyItem.image && storyItem.image.length > 5 ? (
-                            <img src={storyItem.image} alt={storyItem.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          ) : (
-                            <span className="text-xl select-none">{storyItem.emoji}</span>
-                          )}
-                        </div>
-                        <span className="text-[11px] text-zinc-300 font-medium truncate w-[60px] text-center">
-                          {storyItem.name}
-                        </span>
-                      </div>
-                    ));
-                  })()}
-                </div>
-              </div>
             </div>
 
             {/* 2. Bottom Sheet (Bottom 65% of Screen) */}
@@ -5075,54 +5034,87 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               <div className="flex flex-col h-full w-full overflow-hidden bg-[#141111] relative">
                 
                 {/* ── SCREEN 1: DARK HEADER (Top 20%) ── */}
-                <div className="bg-[#141111] pt-14 pb-8 px-4 flex items-center gap-4 flex-shrink-0 z-20 select-none">
-                  {/* Back Button */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleChatBack(e); }}
-                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center cursor-pointer hover:bg-white/15 active:scale-95 transition-all text-white flex-shrink-0"
-                    title="Back to conversation list"
-                  >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="m15 18-6-6 6-6"/>
-                    </svg>
-                  </button>
+                <div className="bg-[#141111] pt-14 pb-8 px-4 flex items-center justify-between gap-3 flex-shrink-0 z-20 select-none">
+                  {/* Left: Back Button + Profile Touch Target */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {/* Back Button */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleChatBack(e); }}
+                      className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center cursor-pointer hover:bg-white/15 active:scale-95 transition-all text-white flex-shrink-0"
+                      title="Back to conversation list"
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m15 18-6-6 6-6"/>
+                      </svg>
+                    </button>
 
-                  {/* Profile Touch Target (Navigates to Screen 2) */}
-                  <div
-                    onClick={() => {
-                      if (selectedUser) {
-                        setNicknameInput(nicknames[selectedUser.id] || '');
-                        setShowChatDetails(true);
-                      }
-                    }}
-                    className="flex items-center gap-3 flex-1 cursor-pointer min-w-0"
-                    title="View Profile & Chat Details"
-                  >
-                    {/* Avatar */}
-                    <div className="w-12 h-12 rounded-full bg-[#FFF3CD] flex items-center justify-center text-xl flex-shrink-0 overflow-hidden text-zinc-900 font-bold shadow-xs">
-                      {selectedUser.image && selectedUser.image.length > 5 ? (
-                        <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
-                      ) : (
-                        <span>👨🏻</span>
-                      )}
-                    </div>
-
-                    {/* Contact Name & Subtitle */}
-                    <div className="flex flex-col min-w-0">
-                      <h3 className="text-[16px] font-bold text-white truncate leading-tight">
-                        {nicknames[selectedUser.id] || selectedUser.name}
-                      </h3>
-                      <span className="text-[12px] text-gray-400 mt-0.5 truncate">
+                    {/* Profile Touch Target (Navigates to Screen 2) */}
+                    <div
+                      onClick={() => {
+                        if (selectedUser) {
+                          setNicknameInput(nicknames[selectedUser.id] || '');
+                          setShowChatDetails(true);
+                        }
+                      }}
+                      className="flex items-center gap-3 flex-1 cursor-pointer min-w-0"
+                      title="View Profile & Chat Details"
+                    >
+                      {/* Avatar */}
+                      <div className="w-11 h-11 rounded-full bg-[#FFF3CD] flex items-center justify-center text-xl flex-shrink-0 overflow-hidden text-zinc-900 font-bold shadow-xs relative">
+                        {selectedUser.image && selectedUser.image.length > 5 ? (
+                          <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
+                        ) : (
+                          <span>👨🏻</span>
+                        )}
                         {(() => {
                           const userEmail = (selectedUser.email || '').toLowerCase().trim();
                           const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
-                          if (isOnline) return 'Online';
-                          const lastSeenVal = (userEmail && lastSeenMap[userEmail]) || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen || (selectedUser as any).lastHeartbeat;
-                          const ago = formatLastSeenAgo(lastSeenVal);
-                          return ago ? `Active ${ago}` : 'Offline';
+                          return isOnline ? (
+                            <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#141111] absolute bottom-0 right-0" />
+                          ) : null;
                         })()}
-                      </span>
+                      </div>
+
+                      {/* Contact Name & Subtitle */}
+                      <div className="flex flex-col min-w-0">
+                        <h3 className="text-[15px] font-bold text-white truncate leading-tight">
+                          {nicknames[selectedUser.id] || selectedUser.name}
+                        </h3>
+                        <span className="text-[11px] text-gray-400 mt-0.5 truncate font-medium">
+                          {(() => {
+                            const userEmail = (selectedUser.email || '').toLowerCase().trim();
+                            const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
+                            if (isOnline) return 'Online';
+                            const lastSeenVal = (userEmail && lastSeenMap[userEmail]) || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen || (selectedUser as any).lastHeartbeat;
+                            const ago = formatLastSeenAgo(lastSeenVal);
+                            return ago ? `Active ${ago}` : 'Offline';
+                          })()}
+                        </span>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Right: Call Action Controls (Voice & Video Call) */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleCall('audio'); }}
+                      className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                      title="Voice Call"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                      </svg>
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleCall('video'); }}
+                      className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                      title="Video Call"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.934a.5.5 0 0 0-.777-.416L16 11"/>
+                        <rect width="14" height="12" x="2" y="6" rx="2"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
@@ -5232,36 +5224,46 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                   {/* Reply bar if replying */}
                   {replyToMessage && (
-                    <div className="mx-2 mb-2 p-2 rounded-xl bg-gray-100 flex items-center justify-between">
+                    <div className="mx-2 mb-2 p-2.5 rounded-2xl bg-zinc-100 border border-zinc-200/70 flex items-center justify-between shadow-2xs">
                       <div className="flex flex-col min-w-0 pr-2">
-                        <span className="text-[11px] font-bold text-black">
+                        <span className="text-[11px] font-bold text-[#9D4EDD]">
                           Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : selectedUser?.name}
                         </span>
-                        <span className="text-xs text-gray-500 truncate">{replyToMessage.content}</span>
+                        <span className="text-xs text-zinc-600 truncate">{replyToMessage.content}</span>
                       </div>
-                      <button onClick={() => setReplyToMessage(null)} className="text-xs text-gray-400 hover:text-black">✕</button>
+                      <button onClick={() => setReplyToMessage(null)} className="text-xs text-zinc-400 hover:text-black p-1 cursor-pointer">✕</button>
                     </div>
                   )}
 
-                  {/* ── SCREEN 1: FLOATING INPUT AREA ── */}
-                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[500px] bg-white rounded-full flex items-center p-1.5 pr-4 shadow-[0_8px_30px_rgba(0,0,0,0.08)] border border-gray-100 z-30">
-                    {/* Mic Button (Left) */}
+                  {/* Hidden File Picker for Gallery Button */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.zip,.txt"
+                    className="hidden"
+                    multiple
+                  />
+
+                  {/* ── SCREEN 1: REDESIGNED MESSAGE COMPOSER ── */}
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[500px] bg-white rounded-full flex items-center p-1.5 pr-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)] border border-gray-100 z-30">
+                    {/* LEFT: Gallery/Image Button */}
                     <button
-                      onClick={isRecording ? stopRecording : startRecording}
-                      className={`w-10 h-10 rounded-full bg-[#F3E8FF] flex items-center justify-center text-[#9D4EDD] flex-shrink-0 cursor-pointer hover:bg-[#ebd5ff] active:scale-95 transition-all ${isRecording ? 'animate-pulse' : ''}`}
-                      title={isRecording ? "Stop Recording" : "Voice Message"}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:text-zinc-800 active:scale-95 transition-all flex-shrink-0 cursor-pointer hover:bg-zinc-100"
+                      title="Send photo or video"
                     >
-                      <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                        <line x1="12" x2="12" y1="19" y2="22"/>
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                        <circle cx="9" cy="9" r="2"/>
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
                       </svg>
                     </button>
 
-                    {/* Input Field */}
+                    {/* CENTER: Soft Grey Rounded Input */}
                     <input
                       type="text"
-                      placeholder="Message..."
+                      placeholder="Type a message..."
                       value={inputValue}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -5281,270 +5283,405 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           handleSendMessage();
                         }
                       }}
-                      className="flex-1 bg-transparent border-none outline-none px-3 text-[14px] text-gray-700 placeholder:text-gray-400"
+                      className="flex-1 bg-zinc-100/90 hover:bg-zinc-100 focus:bg-zinc-100 border border-zinc-200/70 rounded-full px-4 py-2 text-[14px] text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors mx-1.5"
                     />
 
-                    {/* Send Button (Right) */}
-                    <button
-                      onClick={handleSendMessage}
-                      className="cursor-pointer text-[#3B82F6] hover:text-[#2563EB] active:scale-95 transition-all flex items-center justify-center p-1"
-                      title="Send Message"
-                    >
-                      <svg className="w-5 h-5 text-[#3B82F6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="m3 3 3 9-3 9 19-9Z"/>
-                        <path d="M6 12h16"/>
-                      </svg>
-                    </button>
+                    {/* RIGHT: Dynamic Mic / Send Button */}
+                    {inputValue.trim().length === 0 ? (
+                      /* Mic Button by default */
+                      <button
+                        onClick={isRecording ? stopRecording : startRecording}
+                        className={`w-10 h-10 rounded-full bg-[#F3E8FF] text-[#9D4EDD] flex items-center justify-center flex-shrink-0 cursor-pointer hover:bg-[#ebd5ff] active:scale-95 transition-all shadow-xs ${isRecording ? 'animate-pulse' : ''}`}
+                        title={isRecording ? "Stop Recording" : "Voice Message"}
+                      >
+                        <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                          <line x1="12" x2="12" y1="19" y2="22"/>
+                        </svg>
+                      </button>
+                    ) : (
+                      /* Send Button with Custom send-1-svgrepo-com SVG when text exists */
+                      <button
+                        onClick={handleSendMessage}
+                        className="w-10 h-10 rounded-full bg-[#9D4EDD] hover:bg-[#8b3ec9] text-white flex items-center justify-center flex-shrink-0 cursor-pointer active:scale-95 transition-all shadow-md"
+                        title="Send Message"
+                      >
+                        <svg className="w-5 h-5 text-white" viewBox="-0.5 0 25 25" fill="none" stroke="currentColor">
+                          <path d="M2.33045 8.38999C0.250452 11.82 9.42048 14.9 9.42048 14.9C9.42048 14.9 12.5005 24.07 15.9305 21.99C19.5705 19.77 23.9305 6.13 21.0505 3.27C18.1705 0.409998 4.55045 4.74999 2.33045 8.38999Z" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M15.1999 9.12L9.41992 14.9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* ── SCREEN 2: CHAT DETAIL / PROFILE SCREEN (Redesigned for Cohesion) ── */}
+                {/* ── SCREEN 2: REDESIGNED PREMIUM CHAT DETAILS SCREEN ── */}
                 {showChatDetails && selectedUser && (
-                  <div className="absolute inset-0 z-50 flex flex-col bg-[#141111] animate-in slide-in-from-right-full duration-300 overflow-y-auto no-scrollbar">
-                    
-                    {/* Dark Header Profile Area (Top 35%) */}
-                    <div className="bg-[#141111] pt-14 pb-12 px-6 flex flex-col items-center relative select-none flex-shrink-0">
-                      {/* Top Nav Row */}
-                      <div className="absolute top-14 w-full px-6 flex justify-between items-center left-0">
+                  <div className="absolute inset-0 z-50 flex flex-col bg-[#141111] animate-in slide-in-from-right-full duration-300 overflow-y-auto no-scrollbar font-sans">
+                    {/* Top Header Bar */}
+                    <div className="pt-14 pb-4 px-5 flex items-center justify-between select-none flex-shrink-0 bg-[#141111] sticky top-0 z-20">
+                      <button
+                        onClick={() => {
+                          setEditingNickname(false);
+                          setShowChatDetails(false);
+                        }}
+                        className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center cursor-pointer hover:bg-white/15 active:scale-95 transition-all text-white"
+                        title="Back to conversation"
+                      >
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="m15 18-6-6 6-6"/>
+                        </svg>
+                      </button>
+                      <span className="text-[15px] font-bold text-white tracking-tight">Conversation Info</span>
+                      <div className="w-10" />
+                    </div>
+
+                    {/* Hero Profile Card */}
+                    <div className="flex flex-col items-center px-6 pt-4 pb-8 select-none">
+                      <div className="relative">
+                        <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-[#FFF3CD] text-4xl shadow-xl ring-4 ring-white/10">
+                          {selectedUser.image && selectedUser.image.length > 5 ? (
+                            <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <span>👨🏻</span>
+                          )}
+                        </div>
+                        {(() => {
+                          const userEmail = (selectedUser.email || '').toLowerCase().trim();
+                          const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
+                          return isOnline ? (
+                            <span className="w-4 h-4 bg-emerald-500 rounded-full ring-4 ring-[#141111] absolute bottom-1 right-1" />
+                          ) : null;
+                        })()}
+                      </div>
+
+                      <h2 className="text-[22px] font-bold text-white mt-4 tracking-tight text-center">
+                        {nicknames[selectedUser.id] || selectedUser.name}
+                      </h2>
+                      <span className="text-[13px] text-[#9D4EDD] font-medium mt-0.5">
+                        @{selectedUser.username || (selectedUser.name || 'user').toLowerCase().replace(/\s+/g, '')}
+                      </span>
+                      <span className="text-[12px] text-zinc-400 mt-1">
+                        {(() => {
+                          const userEmail = (selectedUser.email || '').toLowerCase().trim();
+                          const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
+                          if (isOnline) return 'Online now';
+                          const lastSeenVal = (userEmail && lastSeenMap[userEmail]) || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen || (selectedUser as any).lastHeartbeat;
+                          const ago = formatLastSeenAgo(lastSeenVal);
+                          return ago ? `Last seen ${ago}` : 'Offline';
+                        })()}
+                      </span>
+
+                      {/* Quick Action Buttons Row */}
+                      <div className="grid grid-cols-4 gap-4 w-full max-w-sm mt-6">
+                        {/* 1. Message */}
                         <button
-                          onClick={() => {
-                            setEditingNickname(false);
-                            setShowChatDetails(false);
-                          }}
-                          className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center cursor-pointer hover:bg-white/15 active:scale-95 transition-all text-white"
-                          title="Back to chat"
+                          onClick={() => setShowChatDetails(false)}
+                          className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group"
                         >
-                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m15 18-6-6 6-6"/>
-                          </svg>
+                          <div className="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/15 flex items-center justify-center text-white transition-colors shadow-xs">
+                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            </svg>
+                          </div>
+                          <span className="text-[11px] font-medium text-zinc-300">Message</span>
                         </button>
 
-                        {/* Call Action Buttons */}
-                        <div className="flex items-center gap-6 text-white text-base">
-                          <button 
-                            onClick={() => { setShowChatDetails(false); handleCall('audio'); }} 
-                            className="cursor-pointer hover:opacity-80 active:scale-95 text-white"
-                            title="Audio Call"
-                          >
+                        {/* 2. Voice Call */}
+                        <button
+                          onClick={() => { setShowChatDetails(false); handleCall('audio'); }}
+                          className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group"
+                        >
+                          <div className="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/15 flex items-center justify-center text-white transition-colors shadow-xs">
                             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                             </svg>
-                          </button>
-                          <button 
-                            onClick={() => { setShowChatDetails(false); handleCall('video'); }} 
-                            className="cursor-pointer hover:opacity-80 active:scale-95 text-white"
-                            title="Video Call"
-                          >
+                          </div>
+                          <span className="text-[11px] font-medium text-zinc-300">Audio</span>
+                        </button>
+
+                        {/* 3. Video Call */}
+                        <button
+                          onClick={() => { setShowChatDetails(false); handleCall('video'); }}
+                          className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group"
+                        >
+                          <div className="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/15 flex items-center justify-center text-white transition-colors shadow-xs">
                             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                               <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.934a.5.5 0 0 0-.777-.416L16 11"/>
                               <rect width="14" height="12" x="2" y="6" rx="2"/>
                             </svg>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Profile Info (Centered) */}
-                      <div className="w-[100px] h-[100px] rounded-full ring-4 ring-[#141111] ring-offset-4 ring-offset-white/10 mt-6 overflow-hidden flex items-center justify-center bg-[#FFF3CD] text-3xl shadow-lg">
-                        {selectedUser.image && selectedUser.image.length > 5 ? (
-                          <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span>👨🏻</span>
-                        )}
-                      </div>
-                      <h2 className="text-[24px] font-bold text-white mt-4 tracking-tight text-center">
-                        {nicknames[selectedUser.id] || selectedUser.name}
-                      </h2>
-                      <p className="text-[14px] text-[#9D4EDD] font-medium mt-1">
-                        @{selectedUser.username || selectedUser.name.toLowerCase().replace(/\s+/g, '')}
-                      </p>
-                    </div>
-
-                    {/* Light Settings Sheet (Bottom 65%) */}
-                    <div className="bg-white rounded-t-[32px] flex-1 flex flex-col w-full -mt-6 pt-8 px-6 overflow-y-auto no-scrollbar shadow-[0_-10px_40px_rgba(0,0,0,0.1)] text-black">
-                      {/* Action Row */}
-                      <div className="flex justify-center gap-12 mb-8">
-                        {/* Profile */}
-                        <div 
-                          onClick={() => {
-                            setShowChatDetails(false);
-                            if (onOpenProfile) onOpenProfile(selectedUser);
-                            if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('open_user_profile', { detail: selectedUser }));
-                          }}
-                          className="flex flex-col items-center cursor-pointer group"
-                        >
-                          <div className="w-12 h-12 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-100 active:scale-95 transition-all shadow-xs">
-                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-                              <circle cx="12" cy="7" r="4"/>
-                            </svg>
                           </div>
-                          <span className="text-[12px] font-medium text-gray-600 mt-2">Profile</span>
-                        </div>
+                          <span className="text-[11px] font-medium text-zinc-300">Video</span>
+                        </button>
 
-                        {/* Search */}
-                        <div 
+                        {/* 4. Search in Chat */}
+                        <button
                           onClick={() => {
                             setShowChatDetails(false);
                             setShowSearchWindow(true);
                             setChatSearchQuery('');
                           }}
-                          className="flex flex-col items-center cursor-pointer group"
+                          className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group"
                         >
-                          <div className="w-12 h-12 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-100 active:scale-95 transition-all shadow-xs">
+                          <div className="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/15 flex items-center justify-center text-white transition-colors shadow-xs">
                             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                               <circle cx="11" cy="11" r="8"/>
-                              <path d="m21 21-4.3-4.3"/>
+                              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                             </svg>
                           </div>
-                          <span className="text-[12px] font-medium text-gray-600 mt-2">Search</span>
-                        </div>
+                          <span className="text-[11px] font-medium text-zinc-300">Search</span>
+                        </button>
+                      </div>
+                    </div>
 
-                        {/* Block */}
-                        <div 
-                          onClick={() => setIsUserBlocked(!isUserBlocked)}
-                          className="flex flex-col items-center cursor-pointer group"
-                        >
-                          <div className="w-12 h-12 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-100 active:scale-95 transition-all shadow-xs">
-                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                              <circle cx="12" cy="12" r="10"/>
-                              <path d="m4.9 4.9 14.2 14.2"/>
-                            </svg>
+                    {/* Light Mode Information & Settings Bottom Sheet */}
+                    <div className="flex-1 bg-white rounded-t-[32px] px-6 pt-7 pb-24 flex flex-col gap-6 text-zinc-900 shadow-[0_-10px_40px_rgba(0,0,0,0.15)]">
+                      
+                      {/* Section 1: Chat Customization */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">
+                          Preferences
+                        </span>
+                        <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-2 divide-y divide-zinc-100">
+                          {/* Notifications Mute Row */}
+                          <div 
+                            onClick={() => {
+                              setIsChatMuted(prev => !prev);
+                              setMutedChats(prev => {
+                                const next = new Set(prev);
+                                if (next.has(selectedUser.id)) next.delete(selectedUser.id);
+                                else next.add(selectedUser.id);
+                                return next;
+                              });
+                            }}
+                            className="flex items-center justify-between p-3 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-xl bg-purple-50 text-[#9D4EDD] flex items-center justify-center text-sm font-bold">
+                                🔔
+                              </div>
+                              <span className="text-[14px] font-semibold text-zinc-800">Notifications</span>
+                            </div>
+                            <span className="text-[13px] font-medium text-zinc-500">
+                              {isChatMuted ? 'Muted' : 'Sound & Banners'}
+                            </span>
                           </div>
-                          <span className={`text-[12px] font-medium mt-2 ${isUserBlocked ? 'text-red-500 font-bold' : 'text-gray-600'}`}>
-                            {isUserBlocked ? 'Blocked' : 'Block'}
+
+                          {/* Nickname Row */}
+                          <div className="p-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm font-bold">
+                                  ✏️
+                                </div>
+                                <span className="text-[14px] font-semibold text-zinc-800">Nickname</span>
+                              </div>
+                              {!editingNickname ? (
+                                <button
+                                  onClick={() => setEditingNickname(true)}
+                                  className="text-[13px] font-medium text-[#9D4EDD] hover:underline cursor-pointer"
+                                >
+                                  {nicknames[selectedUser.id] || 'Set Nickname'}
+                                </button>
+                              ) : null}
+                            </div>
+                            {editingNickname && (
+                              <div className="flex items-center gap-2 mt-3 pt-2">
+                                <input
+                                  type="text"
+                                  placeholder="Enter nickname..."
+                                  value={nicknameInput}
+                                  onChange={(e) => setNicknameInput(e.target.value)}
+                                  className="flex-1 px-3 py-2 text-xs bg-white border border-zinc-200 rounded-xl outline-none"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => {
+                                    const val = nicknameInput.trim();
+                                    const updated = { ...nicknames, [selectedUser.id]: val };
+                                    if (!val) delete updated[selectedUser.id];
+                                    setNicknames(updated);
+                                    if (typeof window !== 'undefined') localStorage.setItem('chat_nicknames', JSON.stringify(updated));
+                                    setEditingNickname(false);
+                                  }}
+                                  className="px-3 py-2 bg-[#9D4EDD] text-white rounded-xl text-xs font-bold cursor-pointer"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingNickname(false)}
+                                  className="px-3 py-2 bg-zinc-200 text-zinc-700 rounded-xl text-xs font-medium cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Theme Row */}
+                          <div
+                            onClick={() => setShowThemePicker(true)}
+                            className="flex items-center justify-between p-3 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-bold">
+                                🎨
+                              </div>
+                              <span className="text-[14px] font-semibold text-zinc-800">Chat Theme</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[13px] font-medium text-zinc-500">{activeTheme.name}</span>
+                              <span className="text-zinc-400">›</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 2: Shared Content Tabs (Media, Files, Voice) */}
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between px-1">
+                          <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider">
+                            Shared Content
+                          </span>
+                          <span className="text-[11px] text-zinc-400 font-medium">
+                            {sharedMedia.picsAndVideos.length + sharedMedia.files.length} items
                           </span>
                         </div>
+
+                        {/* Tab switcher */}
+                        <div className="flex border-b border-zinc-100 gap-6 px-1">
+                          <button
+                            onClick={() => setDetailsTab('media')}
+                            className={`pb-2.5 cursor-pointer text-[13px] font-semibold transition-all ${
+                              detailsTab === 'media'
+                                ? 'text-zinc-950 font-bold border-b-2 border-zinc-950'
+                                : 'text-zinc-400 hover:text-zinc-600 font-medium'
+                            }`}
+                          >
+                            Media ({sharedMedia.picsAndVideos.length})
+                          </button>
+                          <button
+                            onClick={() => setDetailsTab('files')}
+                            className={`pb-2.5 cursor-pointer text-[13px] font-semibold transition-all ${
+                              detailsTab === 'files'
+                                ? 'text-zinc-950 font-bold border-b-2 border-zinc-950'
+                                : 'text-zinc-400 hover:text-zinc-600 font-medium'
+                            }`}
+                          >
+                            Files & Voice ({sharedMedia.files.length})
+                          </button>
+                        </div>
+
+                        {/* Content list */}
+                        <div className="pt-2">
+                          {detailsTab === 'media' && (
+                            sharedMedia.picsAndVideos.length === 0 ? (
+                              <div className="bg-zinc-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center text-zinc-400">
+                                <span className="text-2xl mb-1">🖼️</span>
+                                <span className="text-[13px] font-medium">No photos or videos shared yet</span>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-3 gap-2">
+                                {sharedMedia.picsAndVideos.slice(0, mediaDisplayLimit).map(m => (
+                                  <div
+                                    key={m.id}
+                                    className="aspect-square rounded-2xl overflow-hidden bg-black/10 cursor-pointer group relative shadow-xs"
+                                    onClick={() => openMediaLightbox(m.content, m.type === 'video' ? 'video' : 'image')}
+                                  >
+                                    {m.type === 'video' ? (
+                                      <video src={m.content} className="w-full h-full object-cover pointer-events-none" />
+                                    ) : (
+                                      <img src={m.content} alt="media" className="w-full h-full object-cover" loading="lazy" />
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                          )}
+
+                          {detailsTab === 'files' && (
+                            sharedMedia.files.length === 0 ? (
+                              <div className="bg-zinc-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center text-zinc-400">
+                                <span className="text-2xl mb-1">📄</span>
+                                <span className="text-[13px] font-medium">No files or voice notes shared yet</span>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                {sharedMedia.files.map(m => (
+                                  <div key={m.id} className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className="w-8 h-8 rounded-xl bg-purple-100 text-[#9D4EDD] flex items-center justify-center text-sm font-bold shrink-0">
+                                        {m.type === 'voice' ? '🎙️' : '📄'}
+                                      </div>
+                                      <span className="text-xs font-semibold text-zinc-800 truncate">
+                                        {m.type === 'voice' ? 'Voice Message' : m.content}
+                                      </span>
+                                    </div>
+                                    {m.type === 'voice' ? (
+                                      <audio src={m.content} controls className="h-8 max-w-[140px]" />
+                                    ) : (
+                                      <a href={m.content} target="_blank" rel="noreferrer" className="text-xs font-bold text-[#9D4EDD] hover:underline shrink-0">
+                                        Open
+                                      </a>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                          )}
+                        </div>
                       </div>
 
-                      {/* Settings List */}
-                      <div className="flex flex-col gap-6 w-full">
-                        {/* Row 1: Notifications */}
-                        <div 
-                          onClick={() => setIsChatMuted(!isChatMuted)}
-                          className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
-                        >
-                          <span className="text-[15px] font-bold text-black">Notifications</span>
-                          <span className="text-[14px] text-gray-400">{isChatMuted ? 'Muted' : 'On'}</span>
-                        </div>
-
-                        {/* Row 2: Nickname */}
-                        <div 
-                          onClick={() => {
-                            setNicknameInput(nicknames[selectedUser.id] || '');
-                            setEditingNickname(!editingNickname);
-                          }}
-                          className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
-                        >
-                          <span className="text-[15px] font-bold text-black">Nickname</span>
-                          <span className="text-[14px] text-gray-400">{nicknames[selectedUser.id] || 'None'}</span>
-                        </div>
-
-                        {editingNickname && (
-                          <div className="flex items-center gap-2 -mt-2 w-full animate-in zoom-in-95 duration-150">
-                            <input
-                              type="text"
-                              placeholder="Enter nickname..."
-                              value={nicknameInput}
-                              onChange={(e) => setNicknameInput(e.target.value)}
-                              className="flex-1 px-4 py-2 text-xs rounded-full bg-gray-100 text-black focus:outline-none"
-                              autoFocus
-                            />
-                            <button
-                              onClick={handleSaveNickname}
-                              className="px-4 py-2 text-xs font-bold rounded-full bg-[#9D4EDD] text-white cursor-pointer hover:bg-[#8538c2] transition-colors"
-                            >
-                              Save
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Row 3: Theme */}
-                        <div 
-                          onClick={() => {
-                            setLiveThemeId(chatThemes[selectedUser.id] || 'default');
-                            setShowThemePicker(true);
-                          }}
-                          className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
-                        >
-                          <span className="text-[15px] font-bold text-black">Theme</span>
-                          <span className="text-[14px] text-gray-400">{activeTheme.name}</span>
-                        </div>
-
-                        {/* Row 4: Report Conversation */}
-                        <div 
-                          onClick={() => {
-                            setReportSubmitted(false);
-                            setShowReportModal(true);
-                          }}
-                          className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
-                        >
-                          <span className="text-[15px] font-bold text-orange-500">Report Conversation</span>
-                        </div>
-
-                        {/* Row 5: Clear Chat History */}
-                        <div 
-                          onClick={() => setShowClearConfirmModal(true)}
-                          className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
-                        >
-                          <span className="text-[15px] font-bold text-red-500">Clear Chat History</span>
-                        </div>
-                      </div>
-
-                      {/* Media Tabs */}
-                      <div className="flex w-full mt-8 mb-4 border-b border-gray-100 gap-6">
-                        <button
-                          onClick={() => setDetailsTab('media')}
-                          className={`pb-2 cursor-pointer text-sm font-semibold transition-all ${
-                            detailsTab === 'media'
-                              ? 'text-black font-bold border-b-2 border-black'
-                              : 'text-gray-400 font-medium'
-                          }`}
-                        >
-                          Pics & Videos
-                        </button>
-                        <button
-                          onClick={() => setDetailsTab('files')}
-                          className={`pb-2 cursor-pointer text-sm font-semibold transition-all ${
-                            detailsTab === 'files'
-                              ? 'text-black font-bold border-b-2 border-black'
-                              : 'text-gray-400 font-medium'
-                          }`}
-                        >
-                          Voice & Files
-                        </button>
-                      </div>
-
-                      {/* Empty State / Shared Content */}
-                      <div className="pb-12">
-                        {detailsTab === 'media' && (
-                          sharedMedia.picsAndVideos.length === 0 ? (
-                            <div className="bg-gray-50 rounded-2xl p-8 flex items-center justify-center w-full text-center">
-                              <span className="text-[13px] text-gray-400 font-medium">No photos or videos shared in this chat yet</span>
+                      {/* Section 3: Privacy & Actions (Visually separated at bottom) */}
+                      <div className="flex flex-col gap-1 pt-2">
+                        <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">
+                          Privacy & Danger Zone
+                        </span>
+                        <div className="bg-rose-50/50 border border-rose-100/70 rounded-2xl p-2 divide-y divide-rose-100/60">
+                          <div
+                            onClick={() => setShowClearConfirmModal(true)}
+                            className="flex items-center justify-between p-3 cursor-pointer hover:bg-rose-100/50 rounded-xl transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-sm font-bold">
+                                🗑️
+                              </div>
+                              <span className="text-[14px] font-bold text-red-600">Clear Chat History</span>
                             </div>
-                          ) : (
-                            <div className="grid grid-cols-3 gap-2">
-                              {sharedMedia.picsAndVideos.slice(0, mediaDisplayLimit).map(m => (
-                                <div
-                                  key={m.id}
-                                  className="aspect-square rounded-2xl overflow-hidden bg-black/10 cursor-pointer group relative shadow-sm"
-                                  onClick={() => openMediaLightbox(m.content, m.type === 'video' ? 'video' : 'image')}
-                                >
-                                  {m.type === 'video' ? (
-                                    <video src={m.content} className="w-full h-full object-cover pointer-events-none" />
-                                  ) : (
-                                    <img src={m.content} alt="media" className="w-full h-full object-cover" loading="lazy" />
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )
-                        )}
-                        {detailsTab === 'files' && (
-                          <div className="bg-gray-50 rounded-2xl p-8 flex items-center justify-center w-full text-center">
-                            <span className="text-[13px] text-gray-400 font-medium">No voice notes or files shared in this chat yet</span>
+                            <span className="text-xs text-red-400 font-medium">Delete messages</span>
                           </div>
-                        )}
+
+                          <div
+                            onClick={() => setIsUserBlocked(prev => !prev)}
+                            className="flex items-center justify-between p-3 cursor-pointer hover:bg-rose-100/50 rounded-xl transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-sm font-bold">
+                                🚫
+                              </div>
+                              <span className="text-[14px] font-bold text-rose-600">
+                                {isUserBlocked ? 'Unblock Contact' : 'Block Contact'}
+                              </span>
+                            </div>
+                            <span className="text-xs text-rose-400 font-medium">Restricted</span>
+                          </div>
+
+                          <div
+                            onClick={() => setShowReportModal(true)}
+                            className="flex items-center justify-between p-3 cursor-pointer hover:bg-orange-100/50 rounded-xl transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold">
+                                ⚠️
+                              </div>
+                              <span className="text-[14px] font-bold text-orange-600">Report Conversation</span>
+                            </div>
+                            <span className="text-xs text-orange-400 font-medium">Safety review</span>
+                          </div>
+                        </div>
                       </div>
+
                     </div>
                   </div>
                 )}
