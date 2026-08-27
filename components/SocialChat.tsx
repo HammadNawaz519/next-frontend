@@ -876,8 +876,8 @@ const ChatItem = memo(({
 
   return (
     <div
-      className={`flex items-center gap-3.5 px-3 py-2.5 rounded-2xl cursor-pointer transition-all duration-150 ${
-        isSelected ? 'bg-gray-100' : 'hover:bg-gray-50 active:bg-gray-100/70'
+      className={`flex items-center gap-3.5 p-2 rounded-2xl hover:bg-zinc-50 transition-colors cursor-pointer active:scale-[0.99] select-none ${
+        isSelected ? 'bg-zinc-100/80' : ''
       }`}
       onClick={handleClick}
       onMouseDown={startPress}
@@ -893,10 +893,10 @@ const ChatItem = memo(({
         onLongPress(user);
       }}
     >
-      {/* a) 48px perfectly circular pastel avatar with a 3D emoji or photo */}
-      <div className="relative flex-shrink-0">
+      {/* Avatar (w-12 h-12 rounded-full with pastel tokens) */}
+      <div className="relative shrink-0">
         <div 
-          className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center font-bold text-lg shadow-xs"
+          className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center text-xl shrink-0 relative shadow-xs"
           style={{ background: pastel.bg, color: pastel.text }}
         >
           {user.image && user.image.length > 5 ? (
@@ -906,36 +906,34 @@ const ChatItem = memo(({
           )}
         </div>
         {showActivity && isOnline && (
-          <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#22c55e] border-2 border-white" />
+          <span className="w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white absolute bottom-0 right-0" />
         )}
       </div>
 
-      {/* b) Center column with a bold, dark contact name and a medium-gray subtitle message preview */}
-      <div className="flex-1 min-w-0">
+      {/* Middle Details */}
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
         <div className="flex items-center gap-1.5">
-          {isPinned && <span className="text-xs">📌</span>}
-          <h4 className="text-[14px] font-bold text-[#111111] truncate tracking-tight">
+          <h4 className="text-[15px] font-semibold text-zinc-900 truncate">
             {nickname || user.name}
           </h4>
+          {isPinned && <span className="text-[10px] text-[#9D4EDD]">📌</span>}
         </div>
-        <p className={`text-[12px] truncate mt-0.5 ${unseen > 0 ? 'text-[#111111] font-semibold' : 'text-[#6B7280] font-normal'}`}>
+        <p className="text-[13px] text-zinc-400 truncate">
           {(user as any).lastMessage || (
-            showActivity && isOnline ? 'Active now' : 'Start chatting'
+            showActivity && isOnline ? 'Active now' : 'Tap to start chatting'
           )}
         </p>
       </div>
 
-      {/* c) Right-aligned column with a small, gray timestamp and purple indicator dot or checkmark */}
-      <div className="flex flex-col items-end justify-center gap-1.5 flex-shrink-0 pl-1">
-        {timeDisplay && (
-          <span className="text-[11px] text-[#9CA3AF] font-medium tracking-tight">
-            {timeDisplay}
-          </span>
-        )}
+      {/* Meta Column */}
+      <div className="flex flex-col items-end gap-1.5 shrink-0">
+        <span className="text-[11px] font-medium text-zinc-400">
+          {timeDisplay || '12:45 PM'}
+        </span>
         {unseen > 0 ? (
-          <span className="w-2.5 h-2.5 rounded-full bg-[#9D4EDD] shadow-xs" />
+          <span className="w-2 h-2 rounded-full bg-[#9D4EDD]" />
         ) : (
-          <svg className="w-4 h-4 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <svg className="w-[15px] h-[15px] text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 6 7 17l-5-5" />
             <path d="m22 10-7.5 7.5L13 16" />
           </svg>
@@ -1677,6 +1675,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 });
 
 
+
 const SidebarItem = memo(({ user, isActive, onClick }: { user: User, isActive: boolean, onClick: any }) => {
   return (
     <div className={`item ${isActive ? 'active' : ''}`} onClick={onClick}>
@@ -1978,6 +1977,34 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [deletedMessageIds, setDeletedMessageIds] = useState<Set<string>>(new Set());
   const [deletedChatIds, setDeletedChatIds] = useState<Set<string>>(new Set());
   const [selectedChatForOptions, setSelectedChatForOptions] = useState<User | null>(null);
+
+  // Connect Redesign Notifications & Stories state
+  const [unreadNotifications, setUnreadNotifications] = useState<number>(2);
+  const [showNotificationsDrawer, setShowNotificationsDrawer] = useState<boolean>(false);
+  const [notificationsList, setNotificationsList] = useState([
+    { id: '1', title: 'Missed Voice Call', desc: 'Yoga tried to call you 10m ago', time: '10m', unread: true },
+    { id: '2', title: 'New Message', desc: 'Rehan Wangsaff: Hey, are you free today?', time: '1h', unread: true },
+    { id: '3', title: 'Story Alert', desc: 'Dono added a new story', time: '3h', unread: false }
+  ]);
+
+  const [isArchivedView, setIsArchivedView] = useState<boolean>(false);
+  const [archivedChatIds, setArchivedChatIds] = useState<Set<string>>(new Set());
+
+  const [userStory, setUserStory] = useState<{ id: string; media: string; time: string } | null>(null);
+  const storyInputRef = useRef<HTMLInputElement>(null);
+  const [viewStory, setViewStory] = useState<{ name: string; avatar?: string; media: string; time: string; isMe?: boolean } | null>(null);
+
+  const handleStoryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setUserStory({
+      id: `story-${Date.now()}`,
+      media: url,
+      time: 'Just now'
+    });
+    e.target.value = '';
+  };
 
   // Notify parent component when long press options sheet is open/closed
   useEffect(() => {
@@ -4727,119 +4754,240 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     <>
       <div className="social-chat-container" style={{ display: isActive ? 'flex' : 'none', width: '100%', height: '100%', fontFamily: currentFontFamily }}>
         <div className="main-wrap">
-          <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'} !bg-[#141111] flex flex-col h-full overflow-hidden border-r border-zinc-800/80`}>
+          <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'} !bg-[#141111] flex flex-col h-full overflow-hidden border-r border-zinc-800/80 select-none`}>
             
-            {/* 1. Top Section (Dark Mode Header) with pt-14 safe area padding */}
-            <div className="bg-[#141111] px-5 pt-14 pb-5 flex flex-col flex-shrink-0 select-none">
-              {/* Header Row */}
+            {/* Hidden Story Upload Input */}
+            <input 
+              type="file" 
+              ref={storyInputRef} 
+              accept="image/*,video/*" 
+              className="hidden" 
+              onChange={handleStoryUpload} 
+            />
+
+            {/* 1. Header & Safe Area (Top 35% of Screen) */}
+            <div className="w-full bg-[#141111] pt-14 px-5 pb-6 flex flex-col justify-between select-none relative flex-shrink-0">
+              {/* Top Row */}
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[12px] sm:text-[13px] text-zinc-400 font-medium tracking-tight">
-                    Welcome {((session?.user?.name || session?.user?.email || 'Oji').split(' ')[0])} 👋
-                  </p>
+                <div className="flex flex-col">
+                  <span className="text-[13px] text-zinc-400 font-medium">
+                    Welcome back 👋
+                  </span>
                   <h1 className="text-[26px] font-bold text-white tracking-tight leading-none mt-1">
                     Connect
                   </h1>
                 </div>
 
-                {/* Notification Bell with bg-white/10 and Lucide Bell + unread dot */}
+                {/* Notification Bell Button */}
                 <div className="relative">
-                  <div 
-                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white cursor-pointer hover:bg-white/15 active:scale-95 transition-all shadow-sm"
+                  <button
+                    onClick={() => setShowNotificationsDrawer(prev => !prev)}
+                    className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center relative cursor-pointer active:scale-95 transition-transform"
                     title="Notifications"
                   >
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
                       <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
                     </svg>
-                  </div>
-                  <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full border-2 border-[#141111] absolute -top-0.5 -right-0.5" />
+                    {unreadNotifications > 0 && (
+                      <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#9D4EDD] rounded-full ring-2 ring-[#141111]" />
+                    )}
+                  </button>
                 </div>
               </div>
 
-              {/* Story Section Header */}
-              <div className="flex items-center justify-between mt-5 mb-3">
-                <span className="text-[14px] font-bold text-white tracking-tight">Story</span>
-                <span className="text-[12px] text-zinc-400 font-medium hover:text-white transition-colors cursor-pointer">See All</span>
-              </div>
-
-              {/* Story List (Horizontally Scrolling) */}
-              <div className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-1 pt-1">
-                {/* 1. Add Story Button */}
-                <div className="flex flex-col items-center flex-shrink-0 cursor-pointer group">
-                  <div className="w-[56px] h-[56px] rounded-full bg-[#221E1E] border border-white/15 flex items-center justify-center text-white group-hover:bg-[#2c2727] active:scale-95 transition-all">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                    </svg>
-                  </div>
-                  <span className="text-[11px] text-zinc-400 font-medium mt-1.5 text-center truncate w-[56px]">Add Story</span>
-                </div>
-
-                {/* 2. Story Avatars with ring polish */}
-                {(() => {
-                  const sampleStories = [
-                    { id: 'story-1', name: 'Yoga', emoji: '🗿', bg: '#E0F2FE', text: '#0369A1' },
-                    { id: 'story-2', name: 'Dono', emoji: '🏀', bg: '#FCE7F3', text: '#BE185D' },
-                    { id: 'story-3', name: 'Doni', emoji: '💪', bg: '#FEF9C3', text: '#A16207' },
-                    { id: 'story-4', name: 'Rehan', emoji: '✨', bg: '#EDE9FE', text: '#6D28D9' },
-                  ];
-                  const displayStories = users.length > 0 
-                    ? users.slice(0, 10).map((u, i) => {
-                        const p = getPastelForUser(u.id, i);
-                        return { id: u.id, name: u.name.split(' ')[0], emoji: p.emoji, bg: p.bg, text: p.text, image: u.image, userObj: u };
-                      })
-                    : sampleStories;
-
-                  return displayStories.map((storyItem: any, idx: number) => (
-                    <div 
-                      key={storyItem.id || idx}
-                      onClick={() => storyItem.userObj && handleSelectUser(storyItem.userObj)}
-                      className="flex flex-col items-center flex-shrink-0 cursor-pointer group"
+              {/* Notification Modal Drawer */}
+              {showNotificationsDrawer && (
+                <div className="absolute top-28 right-4 left-4 z-50 bg-[#1c1919] border border-zinc-800 rounded-3xl p-5 shadow-[0_20px_50px_rgba(0,0,0,0.7)] animate-in slide-in-from-top-3 duration-200 text-white">
+                  <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-white">Notifications</h3>
+                      {unreadNotifications > 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-[#9D4EDD] text-white text-[10px] font-bold">
+                          {unreadNotifications} new
+                        </span>
+                      )}
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setNotificationsList([]);
+                        setUnreadNotifications(0);
+                      }}
+                      className="text-[12px] text-zinc-400 hover:text-white font-medium cursor-pointer transition-colors"
                     >
-                      <div className="p-0.5 rounded-full ring-2 ring-white ring-offset-2 ring-offset-[#141111] group-hover:scale-105 transition-transform">
+                      Clear All
+                    </button>
+                  </div>
+
+                  <div className="py-2 space-y-2 max-h-56 overflow-y-auto no-scrollbar">
+                    {notificationsList.length === 0 ? (
+                      <div className="py-6 text-center text-xs text-zinc-500 font-medium">No new notifications</div>
+                    ) : (
+                      notificationsList.map(item => (
+                        <div key={item.id} className="p-3 rounded-2xl bg-zinc-900/80 hover:bg-zinc-800/60 transition-colors flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[13px] font-bold text-white truncate">{item.title}</span>
+                              {item.unread && <span className="w-1.5 h-1.5 rounded-full bg-[#9D4EDD]" />}
+                            </div>
+                            <p className="text-[12px] text-zinc-400 truncate mt-0.5">{item.desc}</p>
+                          </div>
+                          <span className="text-[10px] text-zinc-500 font-medium flex-shrink-0">{item.time}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <button 
+                    onClick={() => setShowNotificationsDrawer(false)}
+                    className="w-full mt-2 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+
+              {/* Story Tray */}
+              <div className="mt-5">
+                <div className="flex justify-between items-center">
+                  <span className="text-[17px] font-semibold text-white">Stories</span>
+                  <span 
+                    onClick={() => {}}
+                    className="text-[12px] text-zinc-400 cursor-pointer hover:text-white transition-colors"
+                  >
+                    See All
+                  </span>
+                </div>
+
+                <div className="flex flex-row overflow-x-auto gap-4 mt-3 pb-1 no-scrollbar items-start">
+                  {/* Item 0: Add Story */}
+                  <div 
+                    onClick={() => storyInputRef.current?.click()}
+                    className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 group"
+                  >
+                    <div className="w-[60px] h-[60px] rounded-full border border-dashed border-zinc-700 bg-zinc-900/50 flex items-center justify-center text-zinc-400 hover:border-zinc-500 active:scale-95 transition-all">
+                      <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                    </div>
+                    <span className="text-[11px] text-zinc-400">Add Story</span>
+                  </div>
+
+                  {/* Item 1: User's Own Story */}
+                  <div 
+                    onClick={() => {
+                      if (userStory) {
+                        setViewStory({ name: 'Your Story', media: userStory.media, time: userStory.time, isMe: true });
+                      } else {
+                        storyInputRef.current?.click();
+                      }
+                    }}
+                    className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 group"
+                  >
+                    <div className={`w-[60px] h-[60px] rounded-full flex items-center justify-center overflow-hidden active:scale-95 transition-all bg-[#FFF3CD] text-xl ${
+                      userStory 
+                        ? 'ring-2 ring-white ring-offset-2 ring-offset-[#141111]' 
+                        : 'ring-1 ring-zinc-700 opacity-80'
+                    }`}>
+                      {session?.user?.image ? (
+                        <img src={session.user.image} alt="You" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span>👨🏻</span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-zinc-400">Your Story</span>
+                  </div>
+
+                  {/* Dynamic Contacts */}
+                  {(() => {
+                    const sampleStories = [
+                      { id: 'story-1', name: 'Yoga', emoji: '🗿', bg: '#E0F2FE', text: '#0369A1' },
+                      { id: 'story-2', name: 'Dono', emoji: '🏀', bg: '#FCE7F3', text: '#BE185D' },
+                      { id: 'story-3', name: 'Doni', emoji: '💪', bg: '#FEF9C3', text: '#A16207' },
+                      { id: 'story-4', name: 'Rehan', emoji: '✨', bg: '#EDE9FE', text: '#6D28D9' },
+                    ];
+                    const displayStories = users.length > 0 
+                      ? users.slice(0, 10).map((u, i) => {
+                          const p = getPastelForUser(u.id, i);
+                          return { id: u.id, name: (u.name || u.username || 'User').split(' ')[0], emoji: p.emoji, bg: p.bg, text: p.text, image: u.image, userObj: u };
+                        })
+                      : sampleStories;
+
+                    return displayStories.map((storyItem: any, idx: number) => (
+                      <div 
+                        key={storyItem.id || idx}
+                        onClick={() => {
+                          if (storyItem.userObj) {
+                            handleSelectUser(storyItem.userObj);
+                          } else {
+                            setViewStory({ name: storyItem.name, media: '', time: '2h ago' });
+                          }
+                        }}
+                        className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 group"
+                      >
                         <div 
-                          className="w-[50px] h-[50px] rounded-full overflow-hidden flex items-center justify-center font-bold text-base shadow-xs"
+                          className="w-[60px] h-[60px] rounded-full ring-2 ring-white ring-offset-2 ring-offset-[#141111] overflow-hidden flex items-center justify-center active:scale-95 transition-all shadow-xs"
                           style={{ background: storyItem.bg, color: storyItem.text }}
                         >
                           {storyItem.image && storyItem.image.length > 5 ? (
                             <img src={storyItem.image} alt={storyItem.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                           ) : (
-                            <span className="select-none">{storyItem.emoji}</span>
+                            <span className="text-xl select-none">{storyItem.emoji}</span>
                           )}
                         </div>
+                        <span className="text-[11px] text-zinc-300 font-medium truncate w-[60px] text-center">
+                          {storyItem.name}
+                        </span>
                       </div>
-                      <span className="text-[11px] text-zinc-300 font-medium mt-1.5 text-center truncate w-[56px]">
-                        {storyItem.name}
-                      </span>
-                    </div>
-                  ));
-                })()}
+                    ));
+                  })()}
+                </div>
               </div>
             </div>
 
-            {/* 2. Bottom Section (Light Mode Bottom Sheet) */}
-            <div className="flex-1 bg-white rounded-t-[32px] flex flex-col min-h-0 overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.15)] text-zinc-900">
-              {/* Drag Handle */}
-              <div className="w-10 h-1 bg-zinc-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
+            {/* 2. Bottom Sheet (Bottom 65% of Screen) */}
+            <div className="w-full flex-1 bg-white rounded-t-[32px] px-6 pt-3 pb-28 flex flex-col relative shadow-[0_-12px_30px_rgba(0,0,0,0.15)] overflow-hidden min-h-0">
+              {/* Sheet Drag Handle */}
+              <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto my-1 flex-shrink-0" />
 
-              {/* Chat Header Row */}
-              <div className="flex items-center justify-between px-5 pt-3 pb-2 flex-shrink-0">
-                <h2 className="text-[18px] font-bold text-[#111111] tracking-tight">Recent Chat</h2>
+              {/* Sub-Header Row */}
+              <div className="flex justify-between items-center mt-4 mb-3 flex-shrink-0">
+                <h2 className="text-[22px] font-bold text-zinc-950 tracking-tight">
+                  {isArchivedView ? 'Archived Chats' : 'Recent Chats'}
+                </h2>
+
+                {/* Archive Toggle Button */}
                 <button 
-                  onClick={() => {}}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFF3CD] text-[#854D0E] hover:bg-[#FEEBC8] text-[11px] font-bold transition-colors cursor-pointer border border-[#FEF08A]/70 shadow-xs"
+                  onClick={() => setIsArchivedView(prev => !prev)}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-all cursor-pointer ${
+                    isArchivedView
+                      ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                      : 'bg-[#FFF3CD] text-zinc-900 hover:bg-[#ffeaa7]'
+                  }`}
                 >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                    <rect width="20" height="5" x="2" y="3" rx="1" />
-                    <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
-                    <path d="M10 12h4" />
-                  </svg>
-                  Archive Chat
+                  {isArchivedView ? (
+                    <>
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+                        <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+                      </svg>
+                      <span>Inbox</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <rect width="20" height="5" x="2" y="3" rx="1" />
+                        <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+                        <path d="M10 12h4" />
+                      </svg>
+                      <span>Archive Chat</span>
+                    </>
+                  )}
                 </button>
               </div>
 
               {/* Quick Search */}
-              <div className="px-5 pt-1 pb-2 flex-shrink-0">
+              <div className="pt-1 pb-3 flex-shrink-0">
                 <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-zinc-100/90 border border-zinc-200/70 text-zinc-800">
                   <svg className="w-4 h-4 text-zinc-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -4857,48 +5005,65 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
               </div>
 
-              {/* Chat List with gap-4 / gap-5 for breathing room and clear touch targets */}
-              <div className="flex-1 overflow-y-auto px-4 pt-2 pb-28 flex flex-col gap-3.5 no-scrollbar">
-                {(view === 'recent'
-                  ? [...users].filter(u => !deletedChatIds.has(u.id)).sort((a, b) => {
+              {/* Chat List Feed */}
+              <div className="flex flex-col gap-4 overflow-y-auto flex-1 pr-0.5 no-scrollbar">
+                {(() => {
+                  const baseList = view === 'recent' ? users : requests;
+                  const filtered = baseList
+                    .filter(u => isArchivedView ? archivedChatIds.has(u.id) : (!archivedChatIds.has(u.id) && !deletedChatIds.has(u.id)))
+                    .filter(u => {
+                      if (!searchQuery.trim()) return true;
+                      const q = searchQuery.toLowerCase();
+                      return (u.name || '').toLowerCase().includes(q) || (u.username || '').toLowerCase().includes(q);
+                    })
+                    .sort((a, b) => {
                       const ap = pinnedChats.has(a.id) ? 0 : 1;
                       const bp = pinnedChats.has(b.id) ? 0 : 1;
                       return ap - bp;
-                    })
-                  : requests.filter(u => !deletedChatIds.has(u.id))
-                ).map((user, idx) => {
-                  const userEmail = (user.email || '').toLowerCase().trim();
-                  const showActivity = (user as any).showActivityStatus !== false;
-                  const isOnline = showActivity && ((userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(user.id));
-                  const isPinned = pinnedChats.has(user.id);
-                  const lastSeenVal = (userEmail && lastSeenMap[userEmail]) || lastSeenMap[user.id] || (user as any).lastSeen || (user as any).lastHeartbeat;
-                  return (
-                    <ChatItem
-                      key={user.id}
-                      user={user}
-                      index={idx}
-                      isSelected={selectedUser?.id === user.id}
-                      isOnline={isOnline}
-                      showActivity={showActivity}
-                      isPinned={isPinned}
-                      lastSeenVal={lastSeenVal}
-                      nickname={nicknames[user.id]}
-                      onSelect={handleSelectUser}
-                      onLongPress={setSelectedChatForOptions}
-                    />
-                  );
-                })}
-                {(view === 'recent' ? users : requests).length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                    <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-2 text-zinc-400">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                    </div>
-                    <p className="text-sm font-bold text-zinc-800">No conversations yet</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">Start searching to connect with people</p>
-                  </div>
-                )}
+                    });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                        <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-2 text-zinc-400">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        </div>
+                        <p className="text-sm font-bold text-zinc-800">
+                          {isArchivedView ? 'No archived chats' : 'No conversations yet'}
+                        </p>
+                        <p className="text-xs text-zinc-500 mt-0.5">
+                          {isArchivedView ? 'Archived conversations will appear here' : 'Start searching to connect with people'}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((user, idx) => {
+                    const userEmail = (user.email || '').toLowerCase().trim();
+                    const showActivity = (user as any).showActivityStatus !== false;
+                    const isOnline = showActivity && ((userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(user.id));
+                    const isPinned = pinnedChats.has(user.id);
+                    const lastSeenVal = (userEmail && lastSeenMap[userEmail]) || lastSeenMap[user.id] || (user as any).lastSeen || (user as any).lastHeartbeat;
+
+                    return (
+                      <ChatItem
+                        key={user.id}
+                        user={user}
+                        index={idx}
+                        isSelected={selectedUser?.id === user.id}
+                        isOnline={isOnline}
+                        showActivity={showActivity}
+                        isPinned={isPinned}
+                        lastSeenVal={lastSeenVal}
+                        nickname={nicknames[user.id]}
+                        onSelect={handleSelectUser}
+                        onLongPress={setSelectedChatForOptions}
+                      />
+                    );
+                  });
+                })()}
               </div>
             </div>
           </aside>
@@ -5752,6 +5917,66 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         </div>
       )}
 
+
+      {/* --- STORY VIEWER MODAL OVERLAY --- */}
+      {viewStory && (
+        <div className="fixed inset-0 z-[2000] bg-black flex flex-col justify-between p-4 animate-in fade-in duration-200 select-none">
+          {/* Story Progress Bar */}
+          <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-3">
+            <div className="h-full bg-white rounded-full animate-[pulse_2s_ease-in-out_infinite]" style={{ width: '100%' }} />
+          </div>
+
+          {/* Top Header */}
+          <div className="flex items-center justify-between px-2 pt-2 z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#FFF3CD] flex items-center justify-center font-bold text-black overflow-hidden ring-2 ring-white">
+                {viewStory.avatar ? (
+                  <img src={viewStory.avatar} className="w-full h-full object-cover" />
+                ) : (
+                  <span>👤</span>
+                )}
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white leading-tight">{viewStory.name}</h4>
+                <span className="text-[11px] text-zinc-400">{viewStory.time}</span>
+              </div>
+            </div>
+            <button 
+              onClick={() => setViewStory(null)} 
+              className="w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center cursor-pointer hover:bg-black/80 active:scale-90 transition-transform"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Media in Center */}
+          <div className="flex-1 flex items-center justify-center my-4 overflow-hidden rounded-3xl bg-zinc-950/80">
+            {viewStory.media ? (
+              <img src={viewStory.media} alt="Story" className="max-w-full max-h-full object-contain rounded-2xl" />
+            ) : (
+              <div className="text-center text-zinc-400 text-sm font-medium p-8">
+                <div className="text-4xl mb-3">📸</div>
+                <span>No media attached to this story preview</span>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Quick Reply */}
+          <div className="flex items-center gap-2 pb-6 px-2">
+            <input 
+              type="text" 
+              placeholder={`Reply to ${viewStory.name}...`} 
+              className="flex-1 bg-white/10 border border-white/20 rounded-full px-4 py-3 text-sm text-white placeholder:text-zinc-400 outline-none"
+            />
+            <button 
+              onClick={() => setViewStory(null)} 
+              className="px-5 py-3 bg-[#9D4EDD] hover:bg-[#883ec5] rounded-full text-sm font-bold text-white cursor-pointer transition-colors"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      )}
 
       {activeCall && socket && (
         <CallInterface

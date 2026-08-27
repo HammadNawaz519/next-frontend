@@ -992,8 +992,8 @@ export default function DashboardPage() {
             onClick={(e) => handleNavClick('chat', e)}
             className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
           >
-            <div className="w-6 h-6 flex items-center justify-center">
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+            <div className="w-5 h-5 flex items-center justify-center">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
                 <path 
                   fillRule="evenodd" 
                   clipRule="evenodd" 
@@ -1002,37 +1002,46 @@ export default function DashboardPage() {
                 />
               </svg>
             </div>
-            <span className={`text-[11px] font-medium tracking-wide ${!isProfileOpen && activeView === 'chat' ? 'text-white font-semibold' : 'text-white/45'}`}>
+            <span className={`text-[10px] tracking-tight ${!isProfileOpen && activeView === 'chat' ? 'text-[#D8B4E2] font-semibold' : 'text-zinc-400 font-medium'}`}>
               Messages
             </span>
           </button>
 
-          {/* 2. Calls (Center - Phosphor Phone Fill) */}
+          {/* 2. Calls (Center - using phone-rounded-svgrepo-com.svg) */}
           <button
             onClick={(e) => handleNavClick('home', e)}
             className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
           >
-            <div className="w-6 h-6 flex items-center justify-center">
-              <svg className="w-6 h-6" viewBox="0 0 256 256" fill={!isProfileOpen && activeView === 'home' ? '#FFFFFF' : 'rgba(255,255,255,0.45)'}>
-                <path d="M222.37,158.46l-47.11-21.11a16,16,0,0,0-17.75,3.61l-18.7,18.7A127.81,127.81,0,0,1,80.34,101.2l18.7-18.7a16,16,0,0,0,3.61-17.75L81.54,33.63A16,16,0,0,0,63.6,24.11L31.6,32.11A16,16,0,0,0,16,48C16,154,102,240,208,240a16,16,0,0,0,15.89-15.6l8-32A16,16,0,0,0,222.37,158.46Z" />
+            <div className="w-5 h-5 flex items-center justify-center">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                <path 
+                  d="M10.0376 5.31617L10.6866 6.4791C11.2723 7.52858 11.0372 8.90532 10.1147 9.8278C10.1147 9.8278 10.1147 9.8278 10.1147 9.8278C10.1146 9.82792 8.99588 10.9468 11.0245 12.9755C13.0525 15.0035 14.1714 13.8861 14.1722 13.8853C14.1722 13.8853 14.1722 13.8853 14.1722 13.8853C15.0947 12.9628 16.4714 12.7277 17.5209 13.3134L18.6838 13.9624C20.2686 14.8468 20.4557 17.0692 19.0628 18.4622C18.2258 19.2992 17.2004 19.9505 16.0669 19.9934C14.1588 20.0658 10.9183 19.5829 7.6677 16.3323C4.41713 13.0817 3.93421 9.84122 4.00655 7.93309C4.04952 6.7996 4.7008 5.77423 5.53781 4.93723C6.93076 3.54428 9.15317 3.73144 10.0376 5.31617Z" 
+                  stroke={!isProfileOpen && activeView === 'home' ? '#FFFFFF' : 'rgba(255,255,255,0.45)'} 
+                  strokeWidth="1.8" 
+                  strokeLinecap="round"
+                />
               </svg>
             </div>
-            <span className={`text-[11px] font-medium tracking-wide ${!isProfileOpen && activeView === 'home' ? 'text-white font-semibold' : 'text-white/45'}`}>
+            <span className={`text-[10px] tracking-tight ${!isProfileOpen && activeView === 'home' ? 'text-white font-semibold' : 'text-zinc-400 font-medium'}`}>
               Calls
             </span>
           </button>
 
-          {/* 3. Profile (Right - Phosphor User Fill) */}
+          {/* 3. Profile (Right - using profile-round-1342-svgrepo-com.svg) */}
           <button
             onClick={(e) => runProfileTransition(() => setIsProfileOpen(true), e.clientX, e.clientY, false)}
             className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
           >
-            <div className="w-6 h-6 flex items-center justify-center">
-              <svg className="w-6 h-6" viewBox="0 0 256 256" fill={isProfileOpen ? '#FFFFFF' : 'rgba(255,255,255,0.45)'}>
-                <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z" />
+            <div className="w-5 h-5 flex items-center justify-center">
+              <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none">
+                <g transform="translate(-140.000000, -2159.000000)" fill={isProfileOpen ? '#FFFFFF' : 'rgba(255,255,255,0.45)'}>
+                  <g transform="translate(56.000000, 160.000000)">
+                    <path d="M100.562548,2016.99998 L87.4381713,2016.99998 C86.7317804,2016.99998 86.2101535,2016.30298 86.4765813,2015.66198 C87.7127655,2012.69798 90.6169306,2010.99998 93.9998492,2010.99998 C97.3837885,2010.99998 100.287954,2012.69798 101.524138,2015.66198 C101.790566,2016.30298 101.268939,2016.99998 100.562548,2016.99998 M89.9166645,2004.99998 C89.9166645,2002.79398 91.7489936,2000.99998 93.9998492,2000.99998 C96.2517256,2000.99998 98.0830339,2002.79398 98.0830339,2004.99998 C98.0830339,2007.20598 96.2517256,2008.99998 93.9998492,2008.99998 C91.7489936,2008.99998 89.9166645,2007.20598 89.9166645,2004.99998 M103.955674,2016.63598 C103.213556,2013.27698 100.892265,2010.79798 97.837022,2009.67298 C99.4560048,2008.39598 100.400241,2006.33098 100.053171,2004.06998 C99.6509769,2001.44698 97.4235996,1999.34798 94.7348224,1999.04198 C91.0232075,1998.61898 87.8750721,2001.44898 87.8750721,2004.99998 C87.8750721,2006.88998 88.7692896,2008.57398 90.1636971,2009.67298 C87.1074334,2010.79798 84.7871636,2013.27698 84.044024,2016.63598 C83.7745338,2017.85698 84.7789973,2018.99998 86.0539717,2018.99998 L101.945727,2018.99998 C103.221722,2018.99998 104.226185,2017.85698 103.955674,2016.63598" />
+                  </g>
+                </g>
               </svg>
             </div>
-            <span className={`text-[11px] font-medium tracking-wide ${isProfileOpen ? 'text-white font-semibold' : 'text-white/45'}`}>
+            <span className={`text-[10px] tracking-tight ${isProfileOpen ? 'text-white font-semibold' : 'text-zinc-400 font-medium'}`}>
               Profile
             </span>
           </button>
