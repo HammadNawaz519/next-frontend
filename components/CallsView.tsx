@@ -634,65 +634,6 @@ export default function CallsView({
           </div>
         </div>
       )}
-
-      {/* ── 5. Floating Bottom Navigation Bar (Calls Active) ── */}
-      <nav className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[340px] h-[68px] bg-[#141111] rounded-full flex justify-around items-center px-4 shadow-[0_12px_24px_rgba(0,0,0,0.3)] z-40 border border-zinc-800/50">
-        
-        {/* Item 1 (Calls - Active) */}
-        <button
-          onClick={() => triggerHaptic('light')}
-          className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
-        >
-          <div className="w-5 h-5 flex items-center justify-center text-[#D8B4E2]">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
-            </svg>
-          </div>
-          <span className="text-[10px] text-[#D8B4E2] font-semibold mt-1">
-            Calls
-          </span>
-        </button>
-
-        {/* Item 2 (Messages) */}
-        <button
-          onClick={() => {
-            triggerHaptic('light');
-            onNavigate?.('chat');
-          }}
-          className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
-        >
-          <div className="w-5 h-5 flex items-center justify-center text-zinc-400">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-              <path 
-                fillRule="evenodd" 
-                clipRule="evenodd" 
-                d="M3.0132 9.15129C3 9.69022 3 10.3021 3 11V13C3 15.8284 3 17.2426 3.87868 18.1213C4.75736 19 6.17157 19 9 19H15C17.8284 19 19.2426 19 20.1213 18.1213C21 17.2426 21 15.8284 21 13V11C21 10.3021 21 9.69022 20.9868 9.15129L12.9713 13.6044C12.3672 13.9399 11.6328 13.9399 11.0287 13.6044L3.0132 9.15129ZM3.24297 7.02971C3.32584 7.05052 3.4074 7.08237 3.48564 7.12584L12 11.856L20.5144 7.12584C20.5926 7.08237 20.6742 7.05052 20.757 7.02971C20.6271 6.55619 20.4276 6.18491 20.1213 5.87868C19.2426 5 17.8284 5 15 5H9C6.17157 5 4.75736 5 3.87868 5.87868C3.57245 6.18491 3.37294 6.55619 3.24297 7.02971Z" 
-              />
-            </svg>
-          </div>
-          <span className="text-[10px] text-zinc-400 font-medium mt-1">
-            Messages
-          </span>
-        </button>
-
-        {/* Item 3 (Profile) */}
-        <button
-          onClick={() => {
-            triggerHaptic('light');
-            onOpenProfile?.();
-          }}
-          className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
-        >
-          <div className="w-5 h-5 flex items-center justify-center text-zinc-400">
-            <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10 9a3.5 3.5 0 100-7 3.5 3.5 0 000 7zm-7 9a7 7 0 1114 0H3z" />
-            </svg>
-          </div>
-          <span className="text-[10px] text-zinc-400 font-medium mt-1">
-            Profile
-          </span>
-        </button>
-      </nav>
     </div>
   );
 }

@@ -1713,6 +1713,7 @@ interface SocialChatProps {
   initialUser?: any; // Pre-select a user when opened from another profile
   onOpenProfile?: (user: any) => void;
   onLongPressChatChange?: (active: boolean) => void;
+  onSearchActiveChange?: (isSearching: boolean) => void;
 }
 
 // ── Custom PWA & Capacitor Mobile Notification Dispatcher ──
@@ -1824,7 +1825,7 @@ const normalizeMsg = (m: any): any => {
   return m;
 };
 
-const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange, initialUser, onOpenProfile, onLongPressChatChange }: SocialChatProps, ref) => {
+const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange, initialUser, onOpenProfile, onLongPressChatChange, onSearchActiveChange }: SocialChatProps, ref) => {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -2421,8 +2422,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [showSearchWindow, setShowSearchWindow] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [globalSearchResults, setGlobalSearchResults] = useState<User[]>([]);
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
+
+  // Sync search state with parent to hide bottom bar smoothly
+  useEffect(() => {
+    onSearchActiveChange?.(isSearchFocused || searchQuery.trim().length > 0);
+  }, [isSearchFocused, searchQuery, onSearchActiveChange]);
 
   // Global live user search across entire platform
   useEffect(() => {
@@ -4824,8 +4831,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               onChange={handleStoryUpload} 
             />
 
-            {/* 1. Header Layout (Strict 2-Row Dark Section) */}
-            <div className="w-full bg-[#141111] pt-14 px-6 pb-4 flex flex-col gap-6 select-none flex-shrink-0">
+            {/* 1. Header Layout (Strict 2-Row Dark Section with smooth search collapse) */}
+            <div className={`w-full bg-[#141111] px-6 transition-all duration-300 ease-out select-none flex-shrink-0 ${
+              isSearchFocused ? 'max-h-0 opacity-0 pt-0 pb-0 overflow-hidden pointer-events-none' : 'pt-14 pb-4 max-h-[300px] opacity-100 flex flex-col gap-6'
+            }`}>
               
               {/* Row 1 (App Header) */}
               <div className="flex justify-between items-center w-full">
@@ -4988,48 +4997,70 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               )}
             </div>
 
-            {/* 3. Light Bottom Sheet (Chat List & People Search) */}
-            <div className="w-full flex-1 bg-white rounded-t-[32px] px-3.5 sm:px-4 pt-3 pb-28 flex flex-col relative shadow-[0_-10px_30px_rgba(0,0,0,0.15)] overflow-hidden min-h-0">
-              {/* Drag Handle */}
-              <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto my-1.5 shrink-0" />
+            {/* 3. Light Bottom Sheet (Chat List & People Search with smooth upward expansion) */}
+            <div className={`w-full flex-1 bg-white relative overflow-hidden min-h-0 shadow-[0_-10px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-out flex flex-col ${
+              isSearchFocused ? 'rounded-t-none sm:rounded-t-[32px] px-3.5 sm:px-4 pt-12 sm:pt-4 pb-12' : 'rounded-t-[32px] px-3.5 sm:px-4 pt-3 pb-28'
+            }`}>
+              {/* Drag Handle (Hidden in search mode) */}
+              {!isSearchFocused && (
+                <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto my-1.5 shrink-0" />
+              )}
 
               {/* Header Row */}
-              <div className="flex justify-between items-center mt-3 mb-3 px-1 shrink-0">
-                <h2 className="text-[22px] font-bold text-black tracking-tight">
-                  {isArchivedView ? 'Archived Chats' : (searchQuery.trim() ? 'Search Results' : 'Recent Chat')}
-                </h2>
+              {!isSearchFocused && (
+                <div className="flex justify-between items-center mt-3 mb-3 px-1 shrink-0">
+                  <h2 className="text-[22px] font-bold text-black tracking-tight">
+                    {isArchivedView ? 'Archived Chats' : (searchQuery.trim() ? 'Search Results' : 'Recent Chat')}
+                  </h2>
 
-                {/* Archive Button */}
-                <button 
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setIsArchivedView(prev => !prev);
-                  }}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-semibold transition-all cursor-pointer ${
-                    isArchivedView
-                      ? 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
-                      : 'bg-[#FFF3CD] text-black hover:bg-[#ffeaa7]'
-                  }`}
-                >
-                  <Archive className="w-3.5 h-3.5" strokeWidth={2} />
-                  <span>{isArchivedView ? 'Inbox' : 'Archive'}</span>
-                </button>
-              </div>
+                  {/* Archive Button */}
+                  <button 
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setIsArchivedView(prev => !prev);
+                    }}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-semibold transition-all cursor-pointer ${
+                      isArchivedView
+                        ? 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                        : 'bg-[#FFF3CD] text-black hover:bg-[#ffeaa7]'
+                    }`}
+                  >
+                    <Archive className="w-3.5 h-3.5" strokeWidth={2} />
+                    <span>{isArchivedView ? 'Inbox' : 'Archive'}</span>
+                  </button>
+                </div>
+              )}
 
-              {/* Quick Search - Cute, All-Round, No Shadow */}
+              {/* Quick Search - Cute, All-Round, Animated with Back Arrow on focus */}
               <div className="pt-1 pb-3 px-1 flex-shrink-0">
-                <div className="flex items-center gap-2.5 px-4.5 py-2.5 rounded-full bg-zinc-100/90 border border-zinc-200/50 text-zinc-800">
-                  <Search className="w-[18px] h-[18px] text-zinc-400 flex-shrink-0" strokeWidth={2} />
-                  <input 
-                    type="text" 
-                    placeholder="Search people, conversations..." 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-transparent text-[13.5px] text-zinc-900 placeholder:text-zinc-400 outline-none font-medium"
-                  />
-                  {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} className="text-xs text-zinc-400 hover:text-zinc-600 cursor-pointer p-1">✕</button>
+                <div className="flex items-center gap-2">
+                  {isSearchFocused && (
+                    <button
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setSearchQuery('');
+                        setIsSearchFocused(false);
+                      }}
+                      className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center cursor-pointer active:scale-95 transition-all shrink-0 shadow-2xs"
+                      title="Back to conversation list"
+                    >
+                      <ChevronLeft className="w-5 h-5 text-zinc-800" strokeWidth={2.2} />
+                    </button>
                   )}
+                  <div className="flex-1 flex items-center gap-2.5 px-4.5 py-2.5 rounded-full bg-zinc-100/90 border border-zinc-200/50 text-zinc-800 transition-all">
+                    <Search className="w-[18px] h-[18px] text-zinc-400 flex-shrink-0" strokeWidth={2} />
+                    <input 
+                      type="text" 
+                      placeholder="Search people, conversations..." 
+                      value={searchQuery}
+                      onFocus={() => setIsSearchFocused(true)}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-transparent text-[13.5px] text-zinc-900 placeholder:text-zinc-400 outline-none font-medium"
+                    />
+                    {searchQuery && (
+                      <button onClick={() => setSearchQuery('')} className="text-xs text-zinc-400 hover:text-zinc-600 cursor-pointer p-1">✕</button>
+                    )}
+                  </div>
                 </div>
               </div>
 
