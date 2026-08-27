@@ -1343,22 +1343,26 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
             style={{
               width: 'fit-content',
               maxWidth: '100%',
-              borderRadius: isMedia ? '1.25rem' : bubbleBorderRadius,
+              borderRadius: isMedia ? '1.25rem' : (isSent ? '1rem 1rem 0.25rem 1rem' : '1rem 1rem 1rem 0.25rem'),
               marginTop: isPrevSameSender ? '1px' : '4px',
               transition: isSelected ? 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28)' : 'none',
               transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
               background: isMedia ? 'transparent' : (isSent
-                ? (activeTheme?.id !== 'default' ? activeTheme?.outgoingGradient : 'linear-gradient(135deg, #3797F0 0%, #833AB4 50%, #C13584 100%)')
-                : (activeTheme?.id !== 'default' ? activeTheme?.incomingBubbleColor : undefined)),
-              color: isSent ? '#ffffff' : (activeTheme?.id !== 'default' ? activeTheme?.incomingTextColor : undefined),
-              border: isMedia ? 'none' : undefined,
-              boxShadow: isMedia ? 'none' : undefined,
-              padding: isMedia ? '0px' : undefined,
+                ? (activeTheme?.id !== 'default' ? activeTheme?.outgoingGradient : '#f3f4f6')
+                : (activeTheme?.id !== 'default' ? activeTheme?.incomingBubbleColor : '#FFF3CD')),
+              color: isMedia ? undefined : (isSent 
+                ? (activeTheme?.id !== 'default' ? '#ffffff' : '#111111') 
+                : (activeTheme?.id !== 'default' ? activeTheme?.incomingTextColor : '#111111')),
+              border: isMedia ? 'none' : '1px solid rgba(0,0,0,0.03)',
+              boxShadow: isMedia ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
+              padding: isMedia ? '0px' : '10px 14px',
+              fontSize: '14px',
+              lineHeight: '1.5',
               position: 'relative',
             }}
           >
             {msg.replyTo && (
-              <div className={`mb-2 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden ${isSent ? 'border-white/50 bg-black/25 text-white' : 'border-white/50 bg-black/10 dark:bg-white/10'}`}>
+              <div className={`mb-2 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden ${isSent ? 'border-zinc-400 bg-black/5 text-black' : 'border-zinc-400 bg-black/5'}`}>
                 <span className="font-bold text-[11px] opacity-90">{msg.replyTo.senderName || 'Quoted Message'}</span>
                 <span className="truncate text-[11px] opacity-85">{msg.replyTo.content}</span>
               </div>
@@ -1657,6 +1661,11 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
           </div>
         );
       })()}
+
+      {/* Time text below message bubble */}
+      <span className={`text-[10px] text-gray-400 mt-1 px-1 select-none ${isSent ? 'text-right' : 'text-left'}`}>
+        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+      </span>
 
       {/* Status indicator row under the last sent message */}
       {isSent && (
@@ -4895,144 +4904,71 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           </aside>
 
           <section
-            className={`chat-area ${selectedUser ? 'active ig-chat-enter' : ''} ${selectedUser ? 'show-on-mobile' : 'hide-on-mobile'} theme-${activeTheme.id}`}
-            style={{
-              background: activeTheme.chatBg,
-              backgroundImage: activeTheme?.wallpaperUrl ? `url("${activeTheme.wallpaperUrl}")` : undefined,
-              backgroundSize: activeTheme?.wallpaperUrl ? 'cover' : undefined,
-              backgroundPosition: activeTheme?.wallpaperUrl ? 'center' : undefined,
-              backgroundAttachment: activeTheme?.wallpaperUrl ? 'fixed' : undefined,
-              transition: 'background 300ms ease',
-              // Inject per-theme CSS variables so ALL child CSS rules respond to the active theme
-              ['--theme-accent' as any]: activeTheme.accentColor,
-              ['--theme-input-border' as any]: activeTheme.inputBorderColor,
-              ['--theme-input-bg' as any]: activeTheme.id !== 'default'
-                ? `${activeTheme.accentColor}18`   // very subtle tint of accent
-                : 'var(--dm-bg-hover)',
-              ['--theme-icon-color' as any]: activeTheme.id !== 'default' ? '#E2E8F0' : 'var(--dm-text-primary)',
-              ['--theme-outgoing-gradient' as any]: activeTheme.outgoingGradient,
-              ['--theme-incoming-bg' as any]: activeTheme.incomingBubbleColor,
-              ['--theme-incoming-text' as any]: activeTheme.incomingTextColor,
-              ['--theme-reaction-accent' as any]: activeTheme.reactionAccent,
-              ['--theme-cam-container-bg' as any]: activeTheme.id !== 'default'
-                ? `${activeTheme.accentColor}30`
-                : 'var(--dm-bg-hover)',
-            }}
+            className={`chat-area ${selectedUser ? 'active ig-chat-enter' : ''} ${selectedUser ? 'show-on-mobile' : 'hide-on-mobile'} !bg-[#141111] flex flex-col h-full overflow-hidden relative`}
           >
             {selectedUser ? (
-              <>
-                <div
-                  className="chat-header"
-                  style={{
-                    background: 'transparent',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    borderBottom: 'none',
-                    transition: 'all 300ms ease'
-                  }}
-                >
+              <div className="flex flex-col h-full w-full overflow-hidden bg-[#141111] relative">
+                
+                {/* ── SCREEN 1: DARK HEADER (Top 20%) ── */}
+                <div className="bg-[#141111] pt-14 pb-8 px-4 flex items-center gap-4 flex-shrink-0 z-20 select-none">
+                  {/* Back Button */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleChatBack(e); }}
+                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center cursor-pointer hover:bg-white/15 active:scale-95 transition-all text-white flex-shrink-0"
+                    title="Back to conversation list"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m15 18-6-6 6-6"/>
+                    </svg>
+                  </button>
+
+                  {/* Profile Touch Target (Navigates to Screen 2) */}
                   <div
-                    className="to cursor-pointer hover:opacity-85 transition-opacity"
                     onClick={() => {
                       if (selectedUser) {
                         setNicknameInput(nicknames[selectedUser.id] || '');
                         setShowChatDetails(true);
                       }
                     }}
-                    title="View Chat Info & Details"
+                    className="flex items-center gap-3 flex-1 cursor-pointer min-w-0"
+                    title="View Profile & Chat Details"
                   >
-                    <button
-                      className="header-action-btn"
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', marginRight: '10px', flexShrink: 0 }}
-                      onClick={(e) => { e.stopPropagation(); handleChatBack(e); }}
-                    >
-                      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                    </button>
-                    <div className="avatar">
+                    {/* Avatar */}
+                    <div className="w-12 h-12 rounded-full bg-[#FFF3CD] flex items-center justify-center text-xl flex-shrink-0 overflow-hidden text-zinc-900 font-bold shadow-xs">
                       {selectedUser.image && selectedUser.image.length > 5 ? (
-                        <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
+                        <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
                       ) : (
-                        <img src="/Avatar.png" alt="avatar" />
+                        <span>👨🏻</span>
                       )}
                     </div>
-                    <div className="info">
-                      <div className="name font-bold text-sm">
+
+                    {/* Contact Name & Subtitle */}
+                    <div className="flex flex-col min-w-0">
+                      <h3 className="text-[16px] font-bold text-white truncate leading-tight">
                         {nicknames[selectedUser.id] || selectedUser.name}
-                      </div>
-                      <div className="status-text">
+                      </h3>
+                      <span className="text-[12px] text-gray-400 mt-0.5 truncate">
                         {(() => {
-                          const showActivity = (selectedUser as any).showActivityStatus !== false;
-                          if (!showActivity) {
-                            // User has disabled activity status — show nothing
-                            return null;
-                          }
                           const userEmail = (selectedUser.email || '').toLowerCase().trim();
                           const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
-                          if (isOnline) {
-                            return (
-                              <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', boxShadow: '0 0 6px #22c55e' }} />
-                                Active now
-                              </span>
-                            );
-                          }
+                          if (isOnline) return 'Online';
                           const lastSeenVal = (userEmail && lastSeenMap[userEmail]) || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen || (selectedUser as any).lastHeartbeat;
                           const ago = formatLastSeenAgo(lastSeenVal);
-                          if (!ago) return null;
-                          return (
-                            <span style={{ fontSize: '11px', opacity: 0.85 }}>
-                              Active {ago}
-                            </span>
-                          );
+                          return ago ? `Active ${ago}` : 'Offline';
                         })()}
-                      </div>
+                      </span>
                     </div>
-                  </div>
-                  <div className="chat-header-right">
-                    {requests.some(r => r.id === selectedUser.id) && (
-                      <button
-                        title="Accept Request"
-                        onClick={handleAcceptRequest}
-                        className="header-action-btn"
-                        style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: 'var(--dm-bg-hover)',
-                          border: '1px solid var(--dm-border)',
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-active)'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
-                      >
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                          <polyline points="22 4 12 14.01 9 11.01" />
-                        </svg>
-                      </button>
-                    )}
-                    {/* Monochrome Audio Call Button */}
-                    <button onClick={() => handleCall('audio')} title="Audio Call" className="header-action-btn" style={{ background: 'transparent', border: 'none', cursor: 'pointer', marginLeft: '12px' }}>
-                      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                      </svg>
-                    </button>
-                    {/* Monochrome Video Call Button */}
-                    <button onClick={() => handleCall('video')} title="Video Call" className="header-action-btn" style={{ background: 'transparent', border: 'none', cursor: 'pointer', marginLeft: '12px' }}>
-                      <svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M23 7l-7 5 7 5V7z" />
-                        <rect x="1" y="5" width="15" height="14" rx="3" ry="3" />
-                      </svg>
-                    </button>
                   </div>
                 </div>
 
-                <div className="chat-inner-box">
+                {/* ── SCREEN 1: LIGHT MESSAGES SHEET (Bottom 80%) ── */}
+                <div className="bg-white rounded-t-[32px] flex-1 flex flex-col pt-6 px-4 relative shadow-[0_-10px_40px_rgba(0,0,0,0.1)] overflow-hidden -mt-4 text-black min-h-0">
+                  {/* Centered Time Pill */}
+                  <div className="bg-[#F3E8FF] text-[#9D4EDD] px-4 py-1 rounded-full text-[11px] font-medium mx-auto mb-4 tracking-wide shadow-2xs">
+                    {formatDateSeparator(new Date())}
+                  </div>
+
+                  {/* Messages Scroll Area */}
                   <div
                     ref={messagesContainerRef}
                     onScroll={handleMessagesScroll}
@@ -5040,14 +4976,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     onTouchMove={handleContainerTouchMove}
                     onTouchEnd={handleContainerTouchEnd}
                     onMouseDown={handleContainerMouseDown}
-                    className="messages overflow-x-hidden"
+                    className="flex-1 overflow-y-auto pb-28 flex flex-col gap-3.5 no-scrollbar"
                   >
                     {isLoadingMessages && messages.length === 0 && (
                       <div className="chat-skeleton-container">
                         <div className="chat-skeleton-bubble recv" />
                         <div className="chat-skeleton-bubble sent" />
-                        <div className="chat-skeleton-bubble recv" style={{ width: '40%' }} />
-                        <div className="chat-skeleton-bubble sent" style={{ width: '50%' }} />
                       </div>
                     )}
                     {isLoadingOlder && (
@@ -5062,8 +4996,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       const lastSentMsg = [...filteredMessages].reverse().find(m => String(m.senderId) === currentUserIdStr && m.type !== 'system' && m.type !== 'call' && m.type !== 'deleted');
                       const lastSentMsgId = lastSentMsg ? lastSentMsg.id : null;
 
-                      // Check if the partner has replied after our last message
-                      // If they have, suppress Seen status — it's no longer meaningful
                       const partnerHasRepliedAfterLastSent = lastSentMsg
                         ? filteredMessages.some(m =>
                             String(m.senderId) !== currentUserIdStr &&
@@ -5078,7 +5010,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         const isPrevSameSender = prevMsg && String(prevMsg.senderId) === String(msg.senderId);
                         const isNextSameSender = nextMsg && String(nextMsg.senderId) === String(msg.senderId);
                         const hasPrevReactions = prevMsg && Array.isArray(prevMsg.reactions) && prevMsg.reactions.length > 0;
-                        // isLatestSentInThread: only true for the last sent msg AND only if partner hasn't replied after it
                         const isLatestSentInThread = msg.id === lastSentMsgId && !partnerHasRepliedAfterLastSent;
                         const showSep = !prevMsg || new Date(prevMsg.createdAt).toDateString() !== new Date(msg.createdAt).toDateString();
                         return (
@@ -5123,547 +5054,332 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       });
                     })()}
                     {!isLoadingMessages && messages.filter(msg => msg.type !== 'accepted').length === 0 && (
-                      <div className="empty-chat-state">
-                        <div className="empty-chat-pfp">
-                          {selectedUser.image && selectedUser.image.length > 5 ? (
-                            <img src={selectedUser.image} alt={selectedUser.name} referrerPolicy="no-referrer" />
-                          ) : (
-                            <img src="/Avatar.png" alt="avatar" />
-                          )}
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <div className="w-14 h-14 rounded-full bg-[#FFF3CD] flex items-center justify-center text-2xl mb-2">
+                          👨🏻
                         </div>
-                        <h3>Start a conversation</h3>
-                        <p>Send a message to start chatting with <b>{selectedUser.name}</b></p>
+                        <h3 className="text-base font-bold text-black">Start a conversation</h3>
+                        <p className="text-xs text-gray-400 mt-0.5">Send a message to start chatting with {selectedUser.name}</p>
                       </div>
                     )}
-                    {typingUsers.has(selectedUser.email) && (
-                      <div
-                        className="msg-wrapper received animate-in fade-in slide-in-from-bottom-2 duration-200 my-1"
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'row',
-                          alignItems: 'flex-end',
-                          justifyContent: 'flex-start',
-                          gap: '6px',
-                          width: '100%',
-                          padding: '0',
-                          userSelect: 'none',
-                          position: 'relative'
-                        }}
-                      >
-                        <img
-                          src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.png'}
-                          alt=""
-                          className="msg-small-avatar"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div
-                          className="msg received"
-                          style={{
-                            background: activeTheme?.incomingBubbleColor || 'var(--dm-bg-hover)',
-                            color: activeTheme?.incomingTextColor || 'var(--dm-text-primary)',
-                            borderRadius: '1.25rem',
-                            padding: '12px 18px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px'
-                          }}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-300 animate-bounce [animation-delay:-0.3s]" />
-                          <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-300 animate-bounce [animation-delay:-0.15s]" />
-                          <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-300 animate-bounce" />
-                        </div>
-                      </div>
-                    )}
-                    {/* Invisible fixed spacer at bottom so newest messages rest safely above the typebox */}
-                    <div style={{ height: '55px', flexShrink: 0, pointerEvents: 'none', visibility: 'hidden' }} aria-hidden="true" />
                     <div ref={messagesEndRef} />
                   </div>
 
-                  <div className="chat-bottom-dock">
-                    {replyToMessage && (
-                      <div
-                        className="mx-1 mb-1.5 p-2.5 rounded-2xl border border-[var(--dm-border)] flex items-center justify-between animate-in slide-in-from-bottom-2 duration-200"
-                        style={{
-                          background: 'var(--dm-bg-hover)',
-                          backdropFilter: 'blur(24px) saturate(180%)',
-                          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-                          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)'
-                        }}
-                      >
-                        <div className="flex flex-col min-w-0 pr-2">
-                          <span className="text-[11px] font-bold text-[var(--dm-text-primary)] flex items-center gap-1">
-                            <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
-                            Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : selectedUser?.name}
-                          </span>
-                          <span className="text-xs text-[var(--dm-text-secondary)] truncate mt-0.5">
-                            {replyToMessage.type === 'voice' ? '🎙️ Voice Clip' : replyToMessage.type === 'image' ? '📷 Photo' : replyToMessage.content}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => setReplyToMessage(null)}
-                          className="w-6 h-6 rounded-full flex items-center justify-center bg-[var(--dm-bg-active)] text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] transition-colors cursor-pointer"
-                        >
-                          ✕
-                        </button>
+                  {/* Reply bar if replying */}
+                  {replyToMessage && (
+                    <div className="mx-2 mb-2 p-2 rounded-xl bg-gray-100 flex items-center justify-between">
+                      <div className="flex flex-col min-w-0 pr-2">
+                        <span className="text-[11px] font-bold text-black">
+                          Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : selectedUser?.name}
+                        </span>
+                        <span className="text-xs text-gray-500 truncate">{replyToMessage.content}</span>
                       </div>
-                    )}
+                      <button onClick={() => setReplyToMessage(null)} className="text-xs text-gray-400 hover:text-black">✕</button>
+                    </div>
+                  )}
 
-                    {selectedMessageIds.size === 0 ? (
-                      <div className={`type-box ig-type-box ${activeTheme.id !== 'default' ? 'custom-theme-ig' : 'default-theme-ig'}`}>
-                        {isVoiceToText ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, padding: '4px', borderRadius: '24px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', animation: 'pulse 2s infinite' }}>
-                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dm-text-primary)', flex: 1 }}>
-                              {inputValue || 'Listening... speak now'}
-                            </span>
-                          </div>
-                        ) : isRecording ? (
-                          <>
-                            <button
-                              className="cancel-record-btn transition-all active:scale-90 animate-in fade-in zoom-in duration-200"
-                              onClick={(e) => { e.preventDefault(); cancelRecording(); }}
-                              title="Cancel recording"
-                              aria-label="Cancel recording"
-                              style={{
-                                width: '40px',
-                                height: '40px',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                background: '#262626',
-                                color: '#ffffff',
-                                border: '1px solid #363636',
-                                cursor: 'pointer',
-                                marginRight: '8px',
-                                flexShrink: 0
-                              }}
-                            >
-                              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                            <div className="visualizer" style={{ flex: 1 }}>
-                              {[...Array(13)].map((_, i) => <div key={i} className="bar" style={{ animationDelay: `${-0.1 * (i % 7)}s` }} />)}
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="ig-cam-container">
-                              <button className="ig-cam-btn" onClick={() => fileInputRef.current?.click()} title="Camera / Photo">
-                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                                  <circle cx="12" cy="13" r="4"/>
-                                </svg>
-                              </button>
-                            </div>
-                            
-                            <textarea
-                              placeholder="Message..."
-                              className="ig-textarea"
-                              value={inputValue}
-                              rows={1}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setInputValue(val);
-                                const t = e.target as HTMLTextAreaElement;
-                                const prevHeight = t.style.height;
-                                t.style.height = 'auto';
-                                const newHeight = Math.min(t.scrollHeight, 84);
-                                t.style.height = newHeight + 'px';
-                                if (messagesContainerRef.current && prevHeight !== newHeight + 'px') {
-                                  const container = messagesContainerRef.current;
-                                  const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 140;
-                                  if (isNearBottom) {
-                                    container.scrollTop = container.scrollHeight;
-                                  }
-                                }
-                                if (socket && selectedUser) {
-                                  if (!typingTimeoutRef.current) { socket.emit('typing', { receiverEmail: selectedUser.email }); }
-                                  else { clearTimeout(typingTimeoutRef.current); }
-                                  typingTimeoutRef.current = setTimeout(() => {
-                                    socket.emit('stop_typing', { receiverEmail: selectedUser.email });
-                                    typingTimeoutRef.current = null;
-                                  }, 2000);
-                                }
-                                const lastWord = val.split(' ').pop() || '';
-                                setShowAIMention(lastWord.startsWith('@'));
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault();
-                                  handleSendMessage();
-                                }
-                              }}
-                            />
-                            {showAIMention && (
-                              <div className="mention-popup animate-in slide-in-from-bottom-2 duration-200">
-                                <div className="mention-item" onClick={() => { setInputValue(prev => prev + 'ai '); setShowAIMention(false); }}>
-                                  <div className="mention-avatar">AI</div>
-                                  <div className="mention-info">
-                                    <b>AI Assistant</b>
-                                    <span>Ask me anything</span>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </>
-                        )}
+                  {/* ── SCREEN 1: FLOATING INPUT AREA ── */}
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[500px] bg-white rounded-full flex items-center p-1.5 pr-4 shadow-[0_8px_30px_rgba(0,0,0,0.08)] border border-gray-100 z-30">
+                    {/* Mic Button (Left) */}
+                    <button
+                      onClick={isRecording ? stopRecording : startRecording}
+                      className={`w-10 h-10 rounded-full bg-[#F3E8FF] flex items-center justify-center text-[#9D4EDD] flex-shrink-0 cursor-pointer hover:bg-[#ebd5ff] active:scale-95 transition-all ${isRecording ? 'animate-pulse' : ''}`}
+                      title={isRecording ? "Stop Recording" : "Voice Message"}
+                    >
+                      <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" x2="12" y1="19" y2="22"/>
+                      </svg>
+                    </button>
 
-                        {!isRecording && !isVoiceToText && !inputValue.trim() ? (
-                          <div className="ig-cam-container ig-mic-container">
-                            <button
-                              className="ig-cam-btn ig-mic-btn"
-                              onClick={startRecording}
-                              title="Voice message"
-                            >
-                              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                                <line x1="12" y1="19" x2="12" y2="23"/>
-                                <line x1="8" y1="23" x2="16" y2="23"/>
-                              </svg>
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="ig-send-container">
-                            <button
-                              className={`ig-send-btn ${isRecording ? 'recording-pulse' : ''}`}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                if ((e.currentTarget as any)._touchHandled) { (e.currentTarget as any)._touchHandled = false; return; }
-                                if (isVoiceToText) stopVoiceToText();
-                                if (inputValue.trim()) { handleSendMessage(); } else if (isRecording) { stopRecording(); } else { startRecording(); }
-                              }}
-                              onTouchEnd={(e) => {
-                                e.preventDefault();
-                                (e.currentTarget as any)._touchHandled = true;
-                                if (isVoiceToText) stopVoiceToText();
-                                if (inputValue.trim()) { handleSendMessage(); } else if (isRecording) { stopRecording(); } else { startRecording(); }
-                              }}
-                              title={isRecording ? 'Send voice note' : 'Send'}
-                            >
-                              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                                <line x1="22" y1="2" x2="11" y2="13" />
-                                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                              </svg>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="sel-bar">
-                        {/* Left — cancel + count */}
-                        <div className="sel-bar__left">
-                          <button className="sel-bar__cancel" onClick={() => setSelectedMessageIds(new Set())} aria-label="Cancel selection">
-                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                          </button>
-                          <span className="sel-bar__count">
-                            {selectedMessageIds.size} {selectedMessageIds.size === 1 ? 'message' : 'messages'}
-                          </span>
-                        </div>
+                    {/* Input Field */}
+                    <input
+                      type="text"
+                      placeholder="Message..."
+                      value={inputValue}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setInputValue(val);
+                        if (socket && selectedUser) {
+                          if (!typingTimeoutRef.current) { socket.emit('typing', { receiverEmail: selectedUser.email }); }
+                          else { clearTimeout(typingTimeoutRef.current); }
+                          typingTimeoutRef.current = setTimeout(() => {
+                            socket.emit('stop_typing', { receiverEmail: selectedUser.email });
+                            typingTimeoutRef.current = null;
+                          }, 2000);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                      className="flex-1 bg-transparent border-none outline-none px-3 text-[14px] text-gray-700 placeholder:text-gray-400"
+                    />
 
-                        {/* Right — icon-only delete buttons matching msg-action-btn style */}
-                        <div className="sel-bar__actions">
-                          <button
-                            className="sel-bar__icon-btn sel-bar__icon-btn--ghost"
-                            onClick={() => handleBulkDelete('me')}
-                            title="Delete for me"
-                            aria-label="Delete for me"
-                          >
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>
-                            <span className="sel-bar__icon-label">Me</span>
-                          </button>
-                          <button
-                            className="sel-bar__icon-btn sel-bar__icon-btn--danger"
-                            onClick={() => handleBulkDelete('everyone')}
-                            title="Delete for everyone"
-                            aria-label="Delete for everyone"
-                          >
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>
-                            <span className="sel-bar__icon-label">All</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    {/* Send Button (Right) */}
+                    <button
+                      onClick={handleSendMessage}
+                      className="cursor-pointer text-[#3B82F6] hover:text-[#2563EB] active:scale-95 transition-all flex items-center justify-center p-1"
+                      title="Send Message"
+                    >
+                      <svg className="w-5 h-5 text-[#3B82F6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m3 3 3 9-3 9 19-9Z"/>
+                        <path d="M6 12h16"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
-
-
-                <input type="file" ref={fileInputRef} multiple style={{ display: 'none' }} onChange={handleFileUpload} accept="image/*,video/*,audio/*" />
-
-                {/* ── PREMIUM REDESIGNED CHAT DETAILS VIEW OVERLAY ── */}
+                {/* ── SCREEN 2: CHAT DETAIL / PROFILE SCREEN (Redesigned for Cohesion) ── */}
                 {showChatDetails && selectedUser && (
-                  <div className="absolute inset-0 z-40 flex flex-col bg-[var(--dm-bg-main)] text-[var(--dm-text-primary)] animate-in slide-in-from-right-full duration-300 overflow-y-auto no-scrollbar">
-                    {/* Sticky Top Nav Bar */}
-                    <div className="sticky top-0 z-20 flex items-center justify-between px-4 pt-[calc(16px+env(safe-area-inset-top,0px))] pb-3 bg-[var(--dm-bg-sidebar)]/95 backdrop-blur-md">
-                      <button
-                        onClick={() => {
-                          setEditingNickname(false);
-                          setShowChatDetails(false);
-                        }}
-                        className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] active:scale-90 transition-all cursor-pointer"
-                        title="Back to chat"
-                      >
-                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-                      <h3 className="font-extrabold text-base tracking-tight">Chat Info</h3>
-                      <div className="w-10" />
-                    </div>
+                  <div className="absolute inset-0 z-50 flex flex-col bg-[#141111] animate-in slide-in-from-right-full duration-300 overflow-y-auto no-scrollbar">
+                    
+                    {/* Dark Header Profile Area (Top 35%) */}
+                    <div className="bg-[#141111] pt-14 pb-12 px-6 flex flex-col items-center relative select-none flex-shrink-0">
+                      {/* Top Nav Row */}
+                      <div className="absolute top-14 w-full px-6 flex justify-between items-center left-0">
+                        <button
+                          onClick={() => {
+                            setEditingNickname(false);
+                            setShowChatDetails(false);
+                          }}
+                          className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center cursor-pointer hover:bg-white/15 active:scale-95 transition-all text-white"
+                          title="Back to chat"
+                        >
+                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <path d="m15 18-6-6 6-6"/>
+                          </svg>
+                        </button>
 
-                    {/* Centered Profile Avatar & Name */}
-                    <div className="flex flex-col items-center pt-4 pb-2 px-4 text-center">
-                      <div className="w-24 h-24 rounded-full overflow-hidden mb-3 relative">
+                        {/* Call Action Buttons */}
+                        <div className="flex items-center gap-6 text-white text-base">
+                          <button 
+                            onClick={() => { setShowChatDetails(false); handleCall('audio'); }} 
+                            className="cursor-pointer hover:opacity-80 active:scale-95 text-white"
+                            title="Audio Call"
+                          >
+                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                            </svg>
+                          </button>
+                          <button 
+                            onClick={() => { setShowChatDetails(false); handleCall('video'); }} 
+                            className="cursor-pointer hover:opacity-80 active:scale-95 text-white"
+                            title="Video Call"
+                          >
+                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.934a.5.5 0 0 0-.777-.416L16 11"/>
+                              <rect width="14" height="12" x="2" y="6" rx="2"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Profile Info (Centered) */}
+                      <div className="w-[100px] h-[100px] rounded-full ring-4 ring-[#141111] ring-offset-4 ring-offset-white/10 mt-6 overflow-hidden flex items-center justify-center bg-[#FFF3CD] text-3xl shadow-lg">
                         {selectedUser.image && selectedUser.image.length > 5 ? (
                           <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover" />
                         ) : (
-                          <img src="/Avatar.png" alt="avatar" className="w-full h-full object-cover" />
+                          <span>👨🏻</span>
                         )}
                       </div>
-                      <h2 className="text-xl font-extrabold text-[var(--dm-text-primary)]">
+                      <h2 className="text-[24px] font-bold text-white mt-4 tracking-tight text-center">
                         {nicknames[selectedUser.id] || selectedUser.name}
                       </h2>
-                      <p className="text-xs text-[var(--dm-text-muted)] mt-0.5 font-medium">
-                        @{selectedUser.username || selectedUser.email?.split('@')[0]}
+                      <p className="text-[14px] text-[#9D4EDD] font-medium mt-1">
+                        @{selectedUser.username || selectedUser.name.toLowerCase().replace(/\s+/g, '')}
                       </p>
+                    </div>
 
-                      {/* 3 Simple Action Buttons under Profile Pic (No background, no boundaries) */}
-                      <div className="flex items-center justify-center gap-6 mt-4 text-xs font-semibold">
-                        <button
+                    {/* Light Settings Sheet (Bottom 65%) */}
+                    <div className="bg-white rounded-t-[32px] flex-1 flex flex-col w-full -mt-6 pt-8 px-6 overflow-y-auto no-scrollbar shadow-[0_-10px_40px_rgba(0,0,0,0.1)] text-black">
+                      {/* Action Row */}
+                      <div className="flex justify-center gap-12 mb-8">
+                        {/* Profile */}
+                        <div 
                           onClick={() => {
                             setShowChatDetails(false);
-                            if (onOpenProfile) {
-                              onOpenProfile(selectedUser);
-                            }
-                            if (typeof window !== 'undefined') {
-                              window.dispatchEvent(new CustomEvent('open_user_profile', { detail: selectedUser }));
-                            }
+                            if (onOpenProfile) onOpenProfile(selectedUser);
+                            if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('open_user_profile', { detail: selectedUser }));
                           }}
-                          className="text-[var(--dm-text-primary)] hover:text-indigo-500 transition-colors cursor-pointer"
+                          className="flex flex-col items-center cursor-pointer group"
                         >
-                          Profile
-                        </button>
-                        <span className="text-[var(--dm-text-muted)] opacity-30">•</span>
-                        <button
+                          <div className="w-12 h-12 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-100 active:scale-95 transition-all shadow-xs">
+                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                              <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                          </div>
+                          <span className="text-[12px] font-medium text-gray-600 mt-2">Profile</span>
+                        </div>
+
+                        {/* Search */}
+                        <div 
                           onClick={() => {
                             setShowChatDetails(false);
                             setShowSearchWindow(true);
                             setChatSearchQuery('');
                           }}
-                          className="text-[var(--dm-text-primary)] hover:text-indigo-500 transition-colors cursor-pointer"
+                          className="flex flex-col items-center cursor-pointer group"
                         >
-                          Search
-                        </button>
-                        <span className="text-[var(--dm-text-muted)] opacity-30">•</span>
-                        <button
+                          <div className="w-12 h-12 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-100 active:scale-95 transition-all shadow-xs">
+                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="11" cy="11" r="8"/>
+                              <path d="m21 21-4.3-4.3"/>
+                            </svg>
+                          </div>
+                          <span className="text-[12px] font-medium text-gray-600 mt-2">Search</span>
+                        </div>
+
+                        {/* Block */}
+                        <div 
                           onClick={() => setIsUserBlocked(!isUserBlocked)}
-                          className={`transition-colors cursor-pointer ${isUserBlocked ? 'text-rose-500 font-bold' : 'text-[var(--dm-text-primary)] hover:text-rose-500'}`}
+                          className="flex flex-col items-center cursor-pointer group"
                         >
-                          {isUserBlocked ? 'Blocked' : 'Block'}
-                        </button>
+                          <div className="w-12 h-12 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-gray-100 active:scale-95 transition-all shadow-xs">
+                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10"/>
+                              <path d="m4.9 4.9 14.2 14.2"/>
+                            </svg>
+                          </div>
+                          <span className={`text-[12px] font-medium mt-2 ${isUserBlocked ? 'text-red-500 font-bold' : 'text-gray-600'}`}>
+                            {isUserBlocked ? 'Blocked' : 'Block'}
+                          </span>
+                        </div>
                       </div>
 
-                      {/* Nickname Input Popup when editing */}
-                      {editingNickname && (
-                        <div className="flex items-center gap-2 mt-4 w-full max-w-xs animate-in zoom-in-95 duration-150">
-                          <input
-                            type="text"
-                            placeholder="Enter nickname..."
-                            value={nicknameInput}
-                            onChange={(e) => setNicknameInput(e.target.value)}
-                            className="flex-1 px-4 py-2 text-xs rounded-full bg-[var(--dm-bg-input)] text-[var(--dm-text-primary)] focus:outline-none"
-                            autoFocus
-                          />
-                          <button
-                            onClick={handleSaveNickname}
-                            className="px-3.5 py-2 text-xs font-bold rounded-full bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700 transition-colors"
-                          >
-                            Save
-                          </button>
-                        </div>
-                      )}
-
-                      {/* All Options Above Media Section — Unboxed, No borders, No outlines */}
-                      <div className="w-full max-w-sm mt-6 text-left space-y-1">
-                        {/* Theme Selection Row */}
-                        <button
-                          onClick={() => {
-                            setLiveThemeId(chatThemes[selectedUser.id] || 'default');
-                            setShowThemePicker(true);
-                          }}
-                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
-                        >
-                          <span className="font-semibold text-[var(--dm-text-primary)]">Chat Theme</span>
-                          <span className="text-xs text-[var(--dm-text-secondary)]">
-                            {(INSTAGRAM_THEMES.find(t => t.id === (chatThemes[selectedUser.id] || 'default')) || INSTAGRAM_THEMES[0]).name}
-                          </span>
-                        </button>
-
-                        {/* Mute Notifications Row */}
-                        <button
+                      {/* Settings List */}
+                      <div className="flex flex-col gap-6 w-full">
+                        {/* Row 1: Notifications */}
+                        <div 
                           onClick={() => setIsChatMuted(!isChatMuted)}
-                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
+                          className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
                         >
-                          <span className="font-semibold text-[var(--dm-text-primary)]">Mute Notifications</span>
-                          <span className={`text-xs font-semibold ${isChatMuted ? 'text-rose-500' : 'text-[var(--dm-text-muted)]'}`}>
-                            {isChatMuted ? 'Muted' : 'Off'}
-                          </span>
-                        </button>
+                          <span className="text-[15px] font-bold text-black">Notifications</span>
+                          <span className="text-[14px] text-gray-400">{isChatMuted ? 'Muted' : 'On'}</span>
+                        </div>
 
-                        {/* Nickname Row */}
-                        <button
+                        {/* Row 2: Nickname */}
+                        <div 
                           onClick={() => {
                             setNicknameInput(nicknames[selectedUser.id] || '');
                             setEditingNickname(!editingNickname);
                           }}
-                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
+                          className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
                         >
-                          <span className="font-semibold text-[var(--dm-text-primary)]">Set Nickname</span>
-                          <span className="text-xs text-[var(--dm-text-secondary)]">
-                            {nicknames[selectedUser.id] || 'None'}
-                          </span>
-                        </button>
+                          <span className="text-[15px] font-bold text-black">Nickname</span>
+                          <span className="text-[14px] text-gray-400">{nicknames[selectedUser.id] || 'None'}</span>
+                        </div>
 
-                        {/* Report Conversation Row */}
-                        <button
+                        {editingNickname && (
+                          <div className="flex items-center gap-2 -mt-2 w-full animate-in zoom-in-95 duration-150">
+                            <input
+                              type="text"
+                              placeholder="Enter nickname..."
+                              value={nicknameInput}
+                              onChange={(e) => setNicknameInput(e.target.value)}
+                              className="flex-1 px-4 py-2 text-xs rounded-full bg-gray-100 text-black focus:outline-none"
+                              autoFocus
+                            />
+                            <button
+                              onClick={handleSaveNickname}
+                              className="px-4 py-2 text-xs font-bold rounded-full bg-[#9D4EDD] text-white cursor-pointer hover:bg-[#8538c2] transition-colors"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Row 3: Theme */}
+                        <div 
+                          onClick={() => {
+                            setLiveThemeId(chatThemes[selectedUser.id] || 'default');
+                            setShowThemePicker(true);
+                          }}
+                          className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
+                        >
+                          <span className="text-[15px] font-bold text-black">Theme</span>
+                          <span className="text-[14px] text-gray-400">{activeTheme.name}</span>
+                        </div>
+
+                        {/* Row 4: Report Conversation */}
+                        <div 
                           onClick={() => {
                             setReportSubmitted(false);
                             setShowReportModal(true);
                           }}
-                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
+                          className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
                         >
-                          <span className="font-semibold text-amber-500">Report Conversation</span>
-                        </button>
+                          <span className="text-[15px] font-bold text-orange-500">Report Conversation</span>
+                        </div>
 
-                        {/* Clear History Row */}
-                        <button
+                        {/* Row 5: Clear Chat History */}
+                        <div 
                           onClick={() => setShowClearConfirmModal(true)}
-                          className="w-full py-2.5 px-2 flex items-center justify-between text-xs transition-colors hover:bg-[var(--dm-bg-hover)] rounded-xl cursor-pointer"
+                          className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-opacity"
                         >
-                          <span className="font-semibold text-rose-500">Clear Chat History</span>
-                        </button>
+                          <span className="text-[15px] font-bold text-red-500">Clear Chat History</span>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Shared Content Tab Navigation (Simple Text Tabs, No outlines) */}
-                    <div className="px-4 pt-4 max-w-lg mx-auto w-full">
-                      <div className="flex items-center justify-around pb-2 text-center">
+                      {/* Media Tabs */}
+                      <div className="flex w-full mt-8 mb-4 border-b border-gray-100 gap-6">
                         <button
                           onClick={() => setDetailsTab('media')}
-                          className={`text-xs font-bold transition-all cursor-pointer ${
+                          className={`pb-2 cursor-pointer text-sm font-semibold transition-all ${
                             detailsTab === 'media'
-                              ? 'text-[var(--dm-text-primary)] font-extrabold'
-                              : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
+                              ? 'text-black font-bold border-b-2 border-black'
+                              : 'text-gray-400 font-medium'
                           }`}
                         >
                           Pics & Videos
                         </button>
                         <button
                           onClick={() => setDetailsTab('files')}
-                          className={`text-xs font-bold transition-all cursor-pointer ${
+                          className={`pb-2 cursor-pointer text-sm font-semibold transition-all ${
                             detailsTab === 'files'
-                              ? 'text-[var(--dm-text-primary)] font-extrabold'
-                              : 'text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)]'
+                              ? 'text-black font-bold border-b-2 border-black'
+                              : 'text-gray-400 font-medium'
                           }`}
                         >
                           Voice & Files
                         </button>
                       </div>
-                    </div>
 
-                    {/* Shared Content Display Panel (No outlines on items) */}
-                    <div className="px-4 py-4 space-y-6 max-w-lg mx-auto w-full flex-1">
-                      {/* Tab 1: Pics & Videos (Unified grid with 15 by 15 pagination) */}
-                      {detailsTab === 'media' && (
-                        <div>
-                          {sharedMedia.picsAndVideos.length === 0 ? (
-                            <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
-                              No photos or videos shared in this chat yet
+                      {/* Empty State / Shared Content */}
+                      <div className="pb-12">
+                        {detailsTab === 'media' && (
+                          sharedMedia.picsAndVideos.length === 0 ? (
+                            <div className="bg-gray-50 rounded-2xl p-8 flex items-center justify-center w-full text-center">
+                              <span className="text-[13px] text-gray-400 font-medium">No photos or videos shared in this chat yet</span>
                             </div>
                           ) : (
-                            <>
-                              <div className="grid grid-cols-3 gap-2">
-                                {sharedMedia.picsAndVideos.slice(0, mediaDisplayLimit).map(m => (
-                                  <div
-                                    key={m.id}
-                                    className="aspect-square rounded-2xl overflow-hidden bg-black/10 cursor-pointer group relative shadow-sm"
-                                    onClick={() => openMediaLightbox(m.content, m.type === 'video' ? 'video' : 'image')}
-                                  >
-                                    {m.type === 'video' ? (
-                                      <>
-                                        <video src={m.content} className="w-full h-full object-cover pointer-events-none" />
-                                        <div className="absolute inset-0 bg-black/25 flex items-center justify-center group-hover:bg-black/15 transition-colors">
-                                          <div className="w-8 h-8 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white">
-                                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                                          </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-bold text-white uppercase tracking-wider">
-                                          Video
-                                        </div>
-                                      </>
-                                    ) : (
-                                      <img
-                                        src={m.content}
-                                        alt="media"
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                        loading="lazy"
-                                      />
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-
-                              {sharedMedia.picsAndVideos.length > mediaDisplayLimit && (
-                                <div className="pt-4 text-center">
-                                  <button
-                                    onClick={() => setMediaDisplayLimit(prev => prev + 15)}
-                                    className="px-5 py-2.5 rounded-full text-xs font-bold bg-[var(--dm-bg-hover)] hover:bg-[var(--dm-bg-active)] text-[var(--dm-text-primary)] transition-all active:scale-95 cursor-pointer shadow-sm"
-                                  >
-                                    Load More ({Math.min(mediaDisplayLimit, sharedMedia.picsAndVideos.length)} of {sharedMedia.picsAndVideos.length})
-                                  </button>
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Tab 2: Voice Clips & Files */}
-                      {detailsTab === 'files' && (
-                        <div>
-                          {sharedMedia.files.length === 0 ? (
-                            <div className="p-8 rounded-2xl bg-[var(--dm-bg-hover)] text-center text-xs text-[var(--dm-text-muted)] font-medium">
-                              No audio clips or documents shared yet
-                            </div>
-                          ) : (
-                            <div className="space-y-3">
-                              {sharedMedia.files.map(m => (
-                                <div key={m.id} className="p-3.5 rounded-2xl bg-[var(--dm-bg-hover)] flex flex-col gap-2">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2.5 min-w-0">
-                                      <div className="w-8 h-8 rounded-full bg-[var(--dm-bg-active)] flex items-center justify-center text-xs font-bold">
-                                        {m.type === 'voice' ? '🎙️' : '📄'}
-                                      </div>
-                                      <span className="text-xs font-semibold truncate text-[var(--dm-text-primary)]">
-                                        {m.type === 'voice' ? 'Voice Clip' : m.content}
-                                      </span>
-                                    </div>
-                                    <span className="text-[10px] text-[var(--dm-text-muted)]">
-                                      {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                  </div>
-                                  {m.type === 'voice' && (
-                                    <audio src={m.content} controls className="w-full h-8 mt-1" />
+                            <div className="grid grid-cols-3 gap-2">
+                              {sharedMedia.picsAndVideos.slice(0, mediaDisplayLimit).map(m => (
+                                <div
+                                  key={m.id}
+                                  className="aspect-square rounded-2xl overflow-hidden bg-black/10 cursor-pointer group relative shadow-sm"
+                                  onClick={() => openMediaLightbox(m.content, m.type === 'video' ? 'video' : 'image')}
+                                >
+                                  {m.type === 'video' ? (
+                                    <video src={m.content} className="w-full h-full object-cover pointer-events-none" />
+                                  ) : (
+                                    <img src={m.content} alt="media" className="w-full h-full object-cover" loading="lazy" />
                                   )}
                                 </div>
                               ))}
                             </div>
-                          )}
-                        </div>
-                      )}
+                          )
+                        )}
+                        {detailsTab === 'files' && (
+                          <div className="bg-gray-50 rounded-2xl p-8 flex items-center justify-center w-full text-center">
+                            <span className="text-[13px] text-gray-400 font-medium">No voice notes or files shared in this chat yet</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -5972,7 +5688,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </div>
                   </div>
                 )}
-              </>
+              </div>
             ) : (
               <div className="empty-state">
                 <h3>Select a Chat</h3>
