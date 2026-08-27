@@ -774,6 +774,37 @@ const IGMessageOverlay = ({
   );
 };
 
+const PASTEL_PALETTES = [
+  { bg: '#E0F2FE', text: '#0369A1', emoji: '👨' }, // Soft Blue
+  { bg: '#FCE7F3', text: '#BE185D', emoji: '🏀' }, // Soft Pink
+  { bg: '#FEF9C3', text: '#A16207', emoji: '💪' }, // Soft Yellow
+  { bg: '#EDE9FE', text: '#6D28D9', emoji: '✨' }, // Soft Purple
+  { bg: '#D1FAE5', text: '#047857', emoji: '🦄' }, // Soft Emerald
+];
+
+const getPastelForUser = (userId: string, index = 0) => {
+  const sum = (userId || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return PASTEL_PALETTES[(sum + index) % PASTEL_PALETTES.length];
+};
+
+const formatChatTime = (timeVal?: any) => {
+  if (!timeVal) return '';
+  const d = typeof timeVal === 'string' ? new Date(timeVal) : (timeVal instanceof Date ? timeVal : new Date(timeVal));
+  if (isNaN(d.getTime())) return '';
+  
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  if (isToday) {
+    const hrs = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    return `${hrs}.${mins}`;
+  }
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return d.toLocaleDateString([], { weekday: 'short' });
+  return `${d.getDate()}/${d.getMonth() + 1}`;
+};
+
 const ChatItem = memo(({
   user,
   isSelected,
@@ -783,7 +814,8 @@ const ChatItem = memo(({
   lastSeenVal,
   nickname,
   onSelect,
-  onLongPress
+  onLongPress,
+  index = 0
 }: any) => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPressRef = useRef<boolean>(false);
@@ -838,9 +870,15 @@ const ChatItem = memo(({
     onSelect(user, e);
   };
 
+  const pastel = getPastelForUser(user.id, index);
+  const timeDisplay = formatChatTime((user as any).lastMessageTime || (user as any).updatedAt || lastSeenVal);
+  const unseen = (user as any).unseenCount || 0;
+
   return (
     <div
-      className={`item ${isSelected ? 'active' : ''}`}
+      className={`flex items-center gap-3.5 px-3 py-2.5 rounded-2xl cursor-pointer transition-all duration-150 ${
+        isSelected ? 'bg-gray-100' : 'hover:bg-gray-50 active:bg-gray-100/70'
+      }`}
       onClick={handleClick}
       onMouseDown={startPress}
       onMouseUp={cancelPress}
@@ -855,44 +893,52 @@ const ChatItem = memo(({
         onLongPress(user);
       }}
     >
-      {/* Avatar with online dot */}
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <div className="user-pfp">
-          {user.image && user.image.length > 5
-            ? <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
-            : <img src="/Avatar.png" alt="avatar" />
-          }
+      {/* a) 48px perfectly circular pastel avatar with a 3D emoji or photo */}
+      <div className="relative flex-shrink-0">
+        <div 
+          className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center font-bold text-lg shadow-xs"
+          style={{ background: pastel.bg, color: pastel.text }}
+        >
+          {user.image && user.image.length > 5 ? (
+            <img src={user.image} alt={user.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
+          ) : (
+            <span>{pastel.emoji}</span>
+          )}
         </div>
-        {showActivity && (
-          <span style={{
-            position: 'absolute', bottom: 2, right: 2,
-            width: '12px', height: '12px', borderRadius: '50%',
-            background: isOnline ? '#22c55e' : 'transparent',
-            border: isOnline ? '2px solid var(--dm-bg-sidebar)' : 'none',
-            display: 'block',
-            transition: 'background 0.3s'
-          }} />
+        {showActivity && isOnline && (
+          <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#22c55e] border-2 border-white" />
         )}
       </div>
 
-      {/* Meta */}
-      <div className="meta">
-        <b>
-          {isPinned && <span style={{ marginRight: '4px', fontSize: '11px' }}>📌</span>}
-          {nickname || user.name}
-          {(user as any).unseenCount > 0 && (
-            <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 700, background: '#6366f1', color: '#fff', borderRadius: '20px', padding: '1px 6px' }}>
-              {(user as any).unseenCount}
-            </span>
-          )}
-        </b>
-        <small style={{ color: (user as any).unseenCount > 0 ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)', fontWeight: (user as any).unseenCount > 0 ? 600 : 400 }}>
+      {/* b) Center column with a bold, dark contact name and a medium-gray subtitle message preview */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          {isPinned && <span className="text-xs">📌</span>}
+          <h4 className="text-[14px] font-bold text-[#111111] truncate tracking-tight">
+            {nickname || user.name}
+          </h4>
+        </div>
+        <p className={`text-[12px] truncate mt-0.5 ${unseen > 0 ? 'text-[#111111] font-semibold' : 'text-[#6B7280] font-normal'}`}>
           {(user as any).lastMessage || (
-            showActivity
-              ? (isOnline ? '● Active now' : (formatLastSeenAgo(lastSeenVal) ? `Active ${formatLastSeenAgo(lastSeenVal)}` : ''))
-              : ''
+            showActivity && isOnline ? 'Active now' : 'Start chatting'
           )}
-        </small>
+        </p>
+      </div>
+
+      {/* c) Right-aligned column with a small, gray timestamp and purple indicator dot or checkmark */}
+      <div className="flex flex-col items-end justify-center gap-1.5 flex-shrink-0 pl-1">
+        {timeDisplay && (
+          <span className="text-[11px] text-[#9CA3AF] font-medium tracking-tight">
+            {timeDisplay}
+          </span>
+        )}
+        {unseen > 0 ? (
+          <span className="w-2.5 h-2.5 rounded-full bg-[#9D4EDD] shadow-xs" />
+        ) : (
+          <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        )}
       </div>
     </div>
   );
@@ -4669,77 +4715,173 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     <>
       <div className="social-chat-container" style={{ display: isActive ? 'flex' : 'none', width: '100%', height: '100%', fontFamily: currentFontFamily }}>
         <div className="main-wrap">
-          <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'}`}>
-            <div className="search-wrap relative">
-              <div className="flex items-center gap-3 mb-3 w-full">
-                <button style={{ width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: 'var(--dm-text-primary)', cursor: 'pointer', flexShrink: 0 }} onClick={() => onBack && onBack()}>
-                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                </button>
-                <h2 className="text-xl font-bold" style={{ color: 'var(--dm-text-primary)' }}>Messages</h2>
+          <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'} !bg-[#141111] flex flex-col h-full overflow-hidden border-r border-zinc-800/80`}>
+            
+            {/* 1. Top Section (Dark Mode Header) ~35% */}
+            <div className="bg-[#141111] px-5 pt-6 pb-5 flex flex-col flex-shrink-0 select-none">
+              {/* Header Row */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[12px] sm:text-[13px] text-zinc-400 font-medium tracking-tight">
+                    Welcome {((session?.user?.name || session?.user?.email || 'Oji').split(' ')[0])} 👋
+                  </p>
+                  <h1 className="text-2xl sm:text-[28px] font-black text-white tracking-tight leading-none mt-1">
+                    Chatdong
+                  </h1>
+                </div>
+
+                {/* Circular Notification Bell Icon */}
+                <div 
+                  className="w-10 h-10 rounded-full bg-[#242020] border border-white/10 flex items-center justify-center text-white cursor-pointer hover:bg-[#2e2929] active:scale-95 transition-all shadow-sm"
+                  title="Notifications"
+                >
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                </div>
               </div>
 
-              <div className="relative w-full">
-                <input
-                  type="text"
-                  placeholder="Search people, usernames, or chats..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pr-8"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] cursor-pointer"
-                    title="Clear search"
-                  >
-                    ✕
-                  </button>
-                )}
+              {/* Story Section Header */}
+              <div className="flex items-center justify-between mt-5 mb-3">
+                <span className="text-[14px] font-bold text-white tracking-tight">Story</span>
+                <span className="text-[12px] text-zinc-400 font-medium hover:text-white transition-colors cursor-pointer">See All</span>
               </div>
-              <div className="view-toggle">
-                <button className={view === 'recent' ? 'active' : ''} onClick={() => setView('recent')}>
-                  Chats
-                </button>
-                <button className={view === 'requests' ? 'active' : ''} onClick={() => setView('requests')}>
-                  Requests {requests.length > 0 && <span className="count">{requests.length}</span>}
-                </button>
+
+              {/* Story List (Horizontally Scrolling) */}
+              <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar pb-1 pt-0.5">
+                {/* 1. Add Story Button */}
+                <div className="flex flex-col items-center flex-shrink-0 cursor-pointer group">
+                  <div className="w-[56px] h-[56px] rounded-full bg-[#221E1E] border border-white/15 flex items-center justify-center text-white group-hover:bg-[#2c2727] active:scale-95 transition-all">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                  </div>
+                  <span className="text-[11px] text-zinc-400 font-medium mt-1.5 text-center truncate w-[56px]">Add Story</span>
+                </div>
+
+                {/* 2. Story Avatars */}
+                {(() => {
+                  const sampleStories = [
+                    { id: 'story-1', name: 'Yoga', emoji: '🗿', bg: '#E0F2FE', text: '#0369A1' },
+                    { id: 'story-2', name: 'Dono', emoji: '🏀', bg: '#FCE7F3', text: '#BE185D' },
+                    { id: 'story-3', name: 'Doni', emoji: '💪', bg: '#FEF9C3', text: '#A16207' },
+                    { id: 'story-4', name: 'Rehan', emoji: '✨', bg: '#EDE9FE', text: '#6D28D9' },
+                  ];
+                  const displayStories = users.length > 0 
+                    ? users.slice(0, 10).map((u, i) => {
+                        const p = getPastelForUser(u.id, i);
+                        return { id: u.id, name: u.name.split(' ')[0], emoji: p.emoji, bg: p.bg, text: p.text, image: u.image, userObj: u };
+                      })
+                    : sampleStories;
+
+                  return displayStories.map((storyItem: any, idx: number) => (
+                    <div 
+                      key={storyItem.id || idx}
+                      onClick={() => storyItem.userObj && handleSelectUser(storyItem.userObj)}
+                      className="flex flex-col items-center flex-shrink-0 cursor-pointer group"
+                    >
+                      <div className="p-[2px] rounded-full border-2 border-white/90 group-hover:scale-105 transition-transform">
+                        <div 
+                          className="w-[50px] h-[50px] rounded-full overflow-hidden flex items-center justify-center font-bold text-base shadow-xs"
+                          style={{ background: storyItem.bg, color: storyItem.text }}
+                        >
+                          {storyItem.image && storyItem.image.length > 5 ? (
+                            <img src={storyItem.image} alt={storyItem.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <span>{storyItem.emoji}</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-[11px] text-zinc-300 font-medium mt-1.5 text-center truncate w-[56px]">
+                        {storyItem.name}
+                      </span>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
-            <div className="list">
-              {/* Sort: pinned first, then by recent */}
-              {(view === 'recent'
-                ? [...users].filter(u => !deletedChatIds.has(u.id)).sort((a, b) => {
-                    const ap = pinnedChats.has(a.id) ? 0 : 1;
-                    const bp = pinnedChats.has(b.id) ? 0 : 1;
-                    return ap - bp;
-                  })
-                : requests.filter(u => !deletedChatIds.has(u.id))
-              ).map((user) => {
-                const userEmail = (user.email || '').toLowerCase().trim();
-                const showActivity = (user as any).showActivityStatus !== false;
-                const isOnline = showActivity && ((userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(user.id));
-                const isPinned = pinnedChats.has(user.id);
-                const lastSeenVal = (userEmail && lastSeenMap[userEmail]) || lastSeenMap[user.id] || (user as any).lastSeen || (user as any).lastHeartbeat;
-                return (
-                  <ChatItem
-                    key={user.id}
-                    user={user}
-                    isSelected={selectedUser?.id === user.id}
-                    isOnline={isOnline}
-                    showActivity={showActivity}
-                    isPinned={isPinned}
-                    lastSeenVal={lastSeenVal}
-                    nickname={nicknames[user.id]}
-                    onSelect={handleSelectUser}
-                    onLongPress={setSelectedChatForOptions}
+
+            {/* 2. Bottom Section (Light Mode Bottom Sheet) ~65% */}
+            <div className="flex-1 bg-white rounded-t-[32px] flex flex-col min-h-0 overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.15)] text-zinc-900">
+              {/* Drag Handle */}
+              <div className="w-10 h-1 bg-zinc-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
+
+              {/* Chat Header Row */}
+              <div className="flex items-center justify-between px-5 pt-3 pb-2 flex-shrink-0">
+                <h2 className="text-[18px] font-extrabold text-[#111111] tracking-tight">Recent Chat</h2>
+                <button 
+                  onClick={() => {}}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFF3CD] text-[#854D0E] hover:bg-[#FEEBC8] text-[11px] font-bold transition-colors cursor-pointer border border-[#FEF08A]/70 shadow-xs"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  </svg>
+                  Archive Chat
+                </button>
+              </div>
+
+              {/* Quick Search */}
+              <div className="px-5 pt-1 pb-2 flex-shrink-0">
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-zinc-100/90 border border-zinc-200/70 text-zinc-800">
+                  <svg className="w-4 h-4 text-zinc-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input 
+                    type="text" 
+                    placeholder="Search recent conversations..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-transparent text-xs text-zinc-900 placeholder:text-zinc-400 outline-none"
                   />
-                );
-              })}
-              {(view === 'recent' ? users : requests).length === 0 && searchQuery.length < 2 && (
-                <div className="empty-state">
-                  <p>{view === 'recent' ? 'No recent conversations' : 'No message requests'}</p>
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="text-xs text-zinc-400 hover:text-zinc-600 cursor-pointer">✕</button>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* Chat List */}
+              <div className="flex-1 overflow-y-auto px-3.5 pt-1 pb-28 flex flex-col gap-1 no-scrollbar">
+                {(view === 'recent'
+                  ? [...users].filter(u => !deletedChatIds.has(u.id)).sort((a, b) => {
+                      const ap = pinnedChats.has(a.id) ? 0 : 1;
+                      const bp = pinnedChats.has(b.id) ? 0 : 1;
+                      return ap - bp;
+                    })
+                  : requests.filter(u => !deletedChatIds.has(u.id))
+                ).map((user, idx) => {
+                  const userEmail = (user.email || '').toLowerCase().trim();
+                  const showActivity = (user as any).showActivityStatus !== false;
+                  const isOnline = showActivity && ((userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(user.id));
+                  const isPinned = pinnedChats.has(user.id);
+                  const lastSeenVal = (userEmail && lastSeenMap[userEmail]) || lastSeenMap[user.id] || (user as any).lastSeen || (user as any).lastHeartbeat;
+                  return (
+                    <ChatItem
+                      key={user.id}
+                      user={user}
+                      index={idx}
+                      isSelected={selectedUser?.id === user.id}
+                      isOnline={isOnline}
+                      showActivity={showActivity}
+                      isPinned={isPinned}
+                      lastSeenVal={lastSeenVal}
+                      nickname={nicknames[user.id]}
+                      onSelect={handleSelectUser}
+                      onLongPress={setSelectedChatForOptions}
+                    />
+                  );
+                })}
+                {(view === 'recent' ? users : requests).length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                    <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-2 text-zinc-400">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-bold text-zinc-800">No conversations yet</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">Start searching to connect with people</p>
+                  </div>
+                )}
+              </div>
             </div>
           </aside>
 
