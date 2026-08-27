@@ -14,7 +14,8 @@ import {
   Calendar,
   Trash2,
   Check,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import { getCallHistory } from '@/app/dashboard/actions';
 import { triggerHaptic } from '@/lib/haptics';
