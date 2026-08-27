@@ -4955,7 +4955,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           </div>
                           <div className="flex-1 min-w-0">
                             <h4 className="text-xs font-semibold text-white truncate">{item.title}</h4>
-                            <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-2">{item.body}</p>
+                            <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-2">{item.desc}</p>
                           </div>
                         </div>
                       ))
