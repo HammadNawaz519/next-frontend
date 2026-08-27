@@ -97,7 +97,7 @@ export default function ProfilePanel({
 
   useEffect(() => {
     if (isOpen) {
-      DeviceAccountStore.getAllAccounts().then(setSavedAccounts).catch(() => {});
+      setSavedAccounts(DeviceAccountStore.getSavedAccounts());
     }
   }, [isOpen]);
 
@@ -113,7 +113,7 @@ export default function ProfilePanel({
     try {
       setIsUploadingAvatar(true);
       triggerHaptic('medium');
-      const optimized = await optimizeImageClient(file, 600, 600, 0.85);
+      const optimized = await optimizeImageClient(file, 600, 0.85);
 
       const reader = new FileReader();
       reader.onloadend = async () => {
@@ -127,7 +127,7 @@ export default function ProfilePanel({
         }
         setIsUploadingAvatar(false);
       };
-      reader.readAsDataURL(optimized);
+      reader.readAsDataURL(optimized.file);
     } catch (err) {
       console.error(err);
       setIsUploadingAvatar(false);
@@ -365,8 +365,8 @@ export default function ProfilePanel({
 
           {/* 5. Appearance & Theme */}
           <div 
-            onClick={() => {
-              toggleTheme();
+            onClick={(e) => {
+              toggleTheme(e);
               triggerHaptic('light');
               showToast(`Theme switched to ${theme === 'dark' ? 'Light' : 'Dark'}`);
             }}
@@ -514,16 +514,16 @@ export default function ProfilePanel({
                         key={acc.userId}
                         onClick={() => {
                           if (acc.userId !== (session?.user as any)?.id) {
-                            showToast(`Switching to ${acc.name}...`);
+                            showToast(`Switching to ${acc.displayName || acc.username}...`);
                             router.push('/accounts');
                           }
                         }}
                         className={`flex items-center justify-between p-3 rounded-xl border ${acc.userId === (session?.user as any)?.id ? 'border-purple-200 bg-purple-50/50' : 'border-zinc-100 hover:bg-zinc-50'} cursor-pointer`}
                       >
                         <div className="flex items-center gap-3">
-                          <img src={acc.image || '/Avatar.png'} alt="" className="w-8 h-8 rounded-full object-cover" />
+                          <img src={acc.profilePicture || '/Avatar.png'} alt="" className="w-8 h-8 rounded-full object-cover" />
                           <div>
-                            <p className="text-sm font-semibold text-zinc-900">{acc.name}</p>
+                            <p className="text-sm font-semibold text-zinc-900">{acc.displayName || acc.username}</p>
                             <p className="text-xs text-zinc-500">@{acc.username}</p>
                           </div>
                         </div>
