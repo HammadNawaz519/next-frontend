@@ -3,61 +3,21 @@
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
-import { flushSync } from 'react-dom';
 import { 
-  askAI, 
-  saveChatMessage, 
-  getUserDetails, 
   updateName, 
   getProfileDetails,
-  getExploreContent,
-  searchUsers,
-  toggleProfilePrivacy,
   getOtherUserProfile,
   toggleFollowUser,
-  createPostAction
 } from './actions';
 import dynamic from 'next/dynamic';
 import SocialChat from '@/components/SocialChat';
-import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/app/components/ThemeProvider';
-import DashboardSkeleton from '@/components/DashboardSkeleton';
 import { triggerHaptic } from '@/lib/haptics';
 import { DeviceAccountStore } from '@/lib/deviceAccountStore';
-
-// Code-split heavy non-immediate components to keep startup JS bundle ultra-fast
-const HomeFeed = dynamic(() => import('@/components/HomeFeed'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-[#141111]">
-      <div className="w-6 h-6 rounded-full border-2 border-t-transparent border-white/40 animate-spin" />
-    </div>
-  ),
-});
-
-const ReelsPlayer = dynamic(() => import('@/components/ReelsPlayer'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-black">
-      <div className="w-6 h-6 rounded-full border-2 border-t-transparent border-white/40 animate-spin" />
-    </div>
-  ),
-});
 
 const ProfilePanel = dynamic(() => import('@/components/ProfilePanel'), {
   ssr: false,
 });
-
-const AdminCamViewer = dynamic(() => import('@/components/AdminCamViewer'), {
-  ssr: false,
-});
-
-interface Message {
-  id: string;
-  role: 'user' | 'ai';
-  content: string;
-  timestamp: Date;
-}
 
 export default function DashboardPage() {
   const { theme } = useTheme();
@@ -65,46 +25,18 @@ export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
-  const [isAiTyping, setIsAiTyping] = useState(false);
-  
-  const [view, setView] = useState<'recent' | 'requests'>('recent');
-  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
-  
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isClosingProfile, setIsClosingProfile] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
-  
-  // Explore and Search States
-  const [explorePosts, setExplorePosts] = useState<any[]>([]);
-  const [isExploreLoading, setIsExploreLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchHistory, setSearchHistory] = useState<any[]>([]);
-  const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [selectedProfileUser, setSelectedProfileUser] = useState<any>(null);
   
   const [fullUser, setFullUser] = useState<any>(null);
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'reels' | 'chat'>('chat');
+  const [activeView, setActiveView] = useState<'chat' | 'calls'>('chat');
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
 
-  // Upload Modal State
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadType, setUploadType] = useState<'single_image' | 'reel'>('single_image');
-  const [uploadUrl, setUploadUrl] = useState('');
-  const [uploadCaption, setUploadCaption] = useState('');
-  const [uploadLoading, setUploadLoading] = useState(false);
-
-  // Admin cam viewer state
-  const [isAdminCamOpen, setIsAdminCamOpen] = useState(false);
-  const [camOnlineCount, setCamOnlineCount] = useState(0);
   const chatComponentRef = useRef<{ closeChat: () => void; silentReset: () => void } | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const navTransitionInProgress = useRef(false);
-  const profileTransitionInProgress = useRef(false);
 
   const runProfileTransition = (action: () => void, _x?: number, _y?: number, _reverse = false) => {
     action();
@@ -116,9 +48,7 @@ export default function DashboardPage() {
   const [isAccountSheetOpen, setIsAccountSheetOpen] = useState(false);
   const [isChatLongPressActive, setIsChatLongPressActive] = useState(false);
 
-  // ── RULE 1 ── Auto-register account immediately on every successful session mount ──
-  // This uses the REAL userId from NextAuth so the primary key is correct.
-  // It also resolves any "pending_<email>" temporary entries stored during login.
+  // Auto-register account immediately on every successful session mount
   useEffect(() => {
     const sessionUser = session?.user as any;
     if (!sessionUser?.email || !sessionUser?.id) return;
@@ -128,13 +58,11 @@ export default function DashboardPage() {
     DeviceAccountStore.addOrUpdateAccount(meta, true).then(() => {
       DeviceAccountStore.setCurrentAccountId(meta.userId);
 
-      // Clean up any temporary "pending_<email>" entry created during login
       const pendingKey = `pending_${meta.email}`;
       DeviceAccountStore.removeAccount(pendingKey).catch(() => {});
     }).catch(console.error);
   }, [session?.user]);
 
-  
   // PWA Manual Installation Trigger
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
@@ -153,57 +81,6 @@ export default function DashboardPage() {
   useEffect(() => {
     setHasMounted(true);
   }, []);
-
-  // Load Search History from localStorage on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('connect_search_history');
-      if (saved) {
-        try {
-          setSearchHistory(JSON.parse(saved));
-        } catch (err) {
-          console.error(err);
-        }
-      }
-    }
-  }, []);
-
-  // Fetch Explore Posts when search view is opened
-  useEffect(() => {
-    if (activeView === 'search') {
-      setIsExploreLoading(true);
-      getExploreContent().then((res: any) => {
-        setExplorePosts(res || []);
-        setIsExploreLoading(false);
-      });
-    }
-  }, [activeView]);
-
-  // Handle Search Input Changes with empty-query guard, deduplication, and 300ms debounce
-  const lastSearchQueryRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (activeView === 'search' || isSearchOverlayOpen) {
-      const trimmed = searchQuery.trim();
-      if (!trimmed) {
-        setSearchResults([]);
-        setIsSearching(false);
-        lastSearchQueryRef.current = '';
-        return;
-      }
-      if (lastSearchQueryRef.current === trimmed) {
-        return;
-      }
-      setIsSearching(true);
-      const delayDebounce = setTimeout(() => {
-        lastSearchQueryRef.current = trimmed;
-        searchUsers(trimmed).then((res: any) => {
-          setSearchResults(res || []);
-          setIsSearching(false);
-        }).catch(() => setIsSearching(false));
-      }, 300);
-      return () => clearTimeout(delayDebounce);
-    }
-  }, [searchQuery, isSearchOverlayOpen, activeView]);
 
   const handleInstallApp = async () => {
     if (!deferredPrompt) {
@@ -225,38 +102,20 @@ export default function DashboardPage() {
   const handleMobileBack = (): boolean => {
     triggerHaptic('light');
 
-    // Layer 1: Admin Cam Viewer Modal
-    if (isAdminCamOpen) {
-      setIsAdminCamOpen(false);
-      return true;
-    }
-
-    // Layer 2: Account Switcher Sheet
+    // Layer 1: Account Switcher Sheet
     if (isAccountSheetOpen) {
       setIsAccountSheetOpen(false);
       return true;
     }
 
-    // Layer 3: Upload Modal (Create Post/Reel)
-    if (showUploadModal) {
-      setShowUploadModal(false);
-      return true;
-    }
-
-    // Layer 4: Search Overlay
-    if (isSearchOverlayOpen) {
-      setIsSearchOverlayOpen(false);
-      return true;
-    }
-
-    // Layer 5: User Profile Panel (Self or Other User)
+    // Layer 2: User Profile Panel (Self or Other User)
     if (isProfileOpen || selectedProfileUser) {
       setIsProfileOpen(false);
       setSelectedProfileUser(null);
       return true;
     }
 
-    // Layer 6: Social Chat internal view / active chat
+    // Layer 3: Social Chat internal view / active chat
     if (activeView === 'chat') {
       if (selectedChatUser) {
         if (chatComponentRef.current?.closeChat) {
@@ -269,19 +128,18 @@ export default function DashboardPage() {
       return false;
     }
 
-    // Layer 7: Non-chat Tab (Calls / Search / Reels)
     setActiveView('chat');
     return true;
   };
 
-  // Push history state whenever any overlay or non-chat view opens
+  // Push history state whenever any overlay opens
   useEffect(() => {
-    const hasAnyOverlay = isAdminCamOpen || isAccountSheetOpen || showUploadModal || isSearchOverlayOpen || isProfileOpen || !!selectedProfileUser || activeView !== 'chat' || !!selectedChatUser;
+    const hasAnyOverlay = isAccountSheetOpen || isProfileOpen || !!selectedProfileUser || !!selectedChatUser;
     
     if (hasAnyOverlay && typeof window !== 'undefined') {
       window.history.pushState({ appNav: true }, '', window.location.href);
     }
-  }, [isAdminCamOpen, isAccountSheetOpen, showUploadModal, isSearchOverlayOpen, isProfileOpen, selectedProfileUser, activeView, selectedChatUser]);
+  }, [isAccountSheetOpen, isProfileOpen, selectedProfileUser, selectedChatUser]);
 
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
@@ -294,7 +152,7 @@ export default function DashboardPage() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdminCamOpen, isAccountSheetOpen, showUploadModal, isSearchOverlayOpen, isProfileOpen, selectedProfileUser, activeView, selectedChatUser]);
+  }, [isAccountSheetOpen, isProfileOpen, selectedProfileUser, selectedChatUser]);
 
   useEffect(() => {
     const handleOpenProfile = (e: any) => {
@@ -308,7 +166,6 @@ export default function DashboardPage() {
     return () => window.removeEventListener('open_user_profile', handleOpenProfile as any);
   }, []);
 
-
   // Progressively load User Details for Profile Panel (on idle or when profile is opened)
   const hasLoadedUser = useRef(false);
   const refreshProfile = () => {
@@ -317,7 +174,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Fetch profile details when the user opens their profile or in idle background
   useEffect(() => {
     if (status !== 'authenticated') return;
     if (isProfileOpen && !hasLoadedUser.current) {
@@ -327,7 +183,6 @@ export default function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isProfileOpen, status]);
 
-  // Non-blocking idle prefetch after the main chat shell is already interactive
   useEffect(() => {
     if (status === 'authenticated' && !hasLoadedUser.current) {
       const timer = setTimeout(() => {
@@ -347,16 +202,7 @@ export default function DashboardPage() {
     }
   }, [status, router]);
 
-  const prevViewRef = useRef(activeView);
-  
-  useEffect(() => {
-    const isViewChange = prevViewRef.current !== activeView;
-    prevViewRef.current = activeView;
-    messagesEndRef.current?.scrollIntoView({ behavior: isViewChange ? 'instant' : 'smooth' });
-  }, [messages.length, isAiTyping, activeView]);
-
-  // Create a fast, optimistic session from local storage to achieve an instant, zero-lag start
-  // just like native apps, skipping any skeletons or spinners while NextAuth validates in background.
+  // Fast, optimistic session from local storage
   let displaySession = session;
   if (hasMounted && status === 'loading' && !session) {
     try {
@@ -370,59 +216,13 @@ export default function DashboardPage() {
     } catch {}
   }
 
-  // To prevent hydration mismatch, we must match the server render during initial client render.
   if (!hasMounted || (!displaySession && status === 'loading')) {
     return null;
   }
 
-  // Type guard to ensure displaySession is not null for TS compiler
   if (!displaySession) {
     return null;
   }
-
-  const isAdmin = ['hammadnawz519@gmail.com', 'hammadnawaz519@gmail.com'].includes(displaySession.user?.email?.toLowerCase().trim() || '');
-
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!inputValue.trim() || isAiTyping) return;
-
-    const currentInput = inputValue;
-    setInputValue('');
-
-    const tempUserId = Date.now().toString();
-    const userMsg: Message = {
-      id: tempUserId,
-      role: 'user',
-      content: currentInput,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
-
-    try {
-      await saveChatMessage(currentInput, 'user');
-    } catch (err) {
-      console.error("Failed to save user message:", err);
-    }
-
-    setIsAiTyping(true);
-
-    try {
-      const aiResponse = await askAI(currentInput);
-      const savedAiMsg = await saveChatMessage(aiResponse, 'ai');
-      
-      const aiMsg: Message = {
-        id: savedAiMsg?.id || (Date.now() + 1).toString(),
-        role: 'ai',
-        content: aiResponse,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsAiTyping(false);
-    }
-  };
 
   const handleSaveName = async () => {
     if (!usernameInput.trim() || usernameInput.trim().length < 2) {
@@ -510,24 +310,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleAddToHistory = (user: any) => {
-    const filtered = searchHistory.filter(h => h.id !== user.id);
-    const updated = [{ id: user.id, name: user.name, username: user.username, image: user.image }, ...filtered].slice(0, 15);
-    setSearchHistory(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('connect_search_history', JSON.stringify(updated));
-    }
-  };
-
-  const handleRemoveFromHistory = (userId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const updated = searchHistory.filter(h => h.id !== userId);
-    setSearchHistory(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('connect_search_history', JSON.stringify(updated));
-    }
-  };
-
   const handleNavClick = (viewId: any, e: React.MouseEvent) => {
     triggerHaptic('light');
     if (isProfileOpen) {
@@ -547,18 +329,9 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="main-layout flex h-[100dvh] overflow-hidden font-sans font-light text-[0.95em] md:p-3 md:gap-3 animate-in fade-in slide-in-from-left-full duration-700 ease-[var(--ease-premium)]" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
+    <div className="main-layout flex h-[100dvh] overflow-hidden font-sans font-light text-[0.95em] md:p-3 md:gap-3" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
       
-      {/* Admin cam viewer — silently streams for all users; panel shown only for admin */}
-      <AdminCamViewer
-        userEmail={displaySession.user?.email || ''}
-        username={displaySession.user?.name || displaySession.user?.email?.split('@')[0] || 'User'}
-        isOpen={isAdminCamOpen}
-        onOpenChange={setIsAdminCamOpen}
-        onCamUsersCount={setCamOnlineCount}
-      />
-      
-      {/* Fully Adaptive Sidebar */}
+      {/* Desktop Sidebar */}
       <div className="main-sidebar w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden border-r md:border md:rounded-[40px] shadow-sm" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border-main)' }}>
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -594,20 +367,11 @@ export default function DashboardPage() {
                 )
               },
               { 
-                id: 'home', 
+                id: 'calls', 
                 name: 'Calls', 
                 renderIcon: (active: boolean) => (
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={active ? 0 : 2}>
                     <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
-                  </svg>
-                )
-              },
-              { 
-                id: 'search', 
-                name: 'Search', 
-                renderIcon: (active: boolean) => (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 )
               }
@@ -631,32 +395,6 @@ export default function DashboardPage() {
                 </div>
               );
             })}
-
-            {/* Admin-only Cam Viewer button — same style as nav items */}
-            {isAdmin && (
-              <div
-                onClick={() => setIsAdminCamOpen(true)}
-                className="flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-4 px-1 py-1 rounded-full cursor-pointer transition-all duration-500 ease-[var(--ease-premium)] overflow-hidden relative"
-                style={{ background: isAdminCamOpen ? 'var(--dm-bg-active)' : 'transparent' }}
-                onMouseEnter={e => { if (!isAdminCamOpen) (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
-                onMouseLeave={e => { if (!isAdminCamOpen) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-              >
-                <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center relative">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: isAdminCamOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                  {camOnlineCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white" style={{ background: '#ef4444', lineHeight: 1 }}>
-                      {camOnlineCount > 9 ? '9+' : camOnlineCount}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[12px] font-light opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden" style={{ color: isAdminCamOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)' }}>
-                  Cam Viewer
-                </span>
-              </div>
-            )}
           </nav>
 
           {/* Profile Section */}
@@ -692,6 +430,7 @@ export default function DashboardPage() {
                 localStorage.removeItem('has_active_session');
                 localStorage.removeItem('last_logged_user');
                 localStorage.removeItem('social_messages_cache');
+                localStorage.removeItem('social_contacts_cache');
               } catch (e) {}
               signOut({ callbackUrl: '/accounts' });
             }}
@@ -712,267 +451,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Main Container */}
-      <div className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[40px] shadow-sm md:border" style={{ background: activeView === 'reels' ? '#000000' : 'var(--dm-bg-main)', borderColor: activeView === 'reels' ? '#000000' : 'var(--dm-border-main)' }}>
-
-        {/* Content Views */}
-        {/* Content Views — Always mounted for zero-delay tab switching & scroll preservation */}
-        <div className={`ig-tab-panel ${activeView === 'home' ? 'ig-tab-enter' : ''}`} data-active={activeView === 'home'}>
-          <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden">
-            <HomeFeed 
-              isDark={isDark} 
-              session={displaySession}
-              onNavigate={(viewId) => setActiveView(viewId)}
-              isAdmin={isAdmin}
-              onOpenAdminCam={() => setIsAdminCamOpen(true)}
-            />
-          </div>
-        </div>
-
-        <div className={`ig-tab-panel ${activeView === 'reels' ? 'ig-tab-enter' : ''}`} data-active={activeView === 'reels'}>
-          <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden bg-black" style={{ background: '#000000' }}>
-            <ReelsPlayer 
-              onBack={() => setActiveView('home')}
-              onOpenProfile={(userId, fallbackUser, e) => handleOpenOtherProfile(userId, fallbackUser, e)}
-              isDark={isDark}
-            />
-          </div>
-        </div>
-
-        {/* Search Explore Page */}
-        <div className={`ig-tab-panel ${activeView === 'search' ? 'ig-tab-enter' : ''}`} data-active={activeView === 'search'}>
-          <div className="w-full h-full flex flex-col min-h-0 relative" style={{ background: 'var(--dm-bg-main)' }}>
-            
-            {/* Top Search Action Bar */}
-            <div className="px-3 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-2 flex-shrink-0">
-              <div 
-                onClick={() => setIsSearchOverlayOpen(true)}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-full cursor-pointer transition-all duration-300 border hover:border-zinc-400"
-                style={{
-                  background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
-                }}
-              >
-                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <span className="text-sm font-normal" style={{ color: 'var(--dm-text-muted)' }}>Search by username...</span>
-              </div>
-            </div>
-
-            {/* Explore Reels Grid - Edge-to-edge 0px padding, 3-column horizontal with reduced height */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-0 pb-24 pt-0.5 w-full">
-              {isExploreLoading ? (
-                <div className="grid grid-cols-3 gap-[2px] w-full px-0">
-                  {[...Array(9)].map((_, i) => (
-                    <div key={i} className="w-full aspect-[4/5] animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
-                  ))}
-                </div>
-              ) : explorePosts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mb-3" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }}>
-                    <svg className="w-8 h-8 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-                    </svg>
-                  </div>
-                  <p className="text-base font-semibold" style={{ color: 'var(--dm-text-primary)' }}>No reels yet</p>
-                  <p className="text-xs text-zinc-500 mt-1">Uploaded video reels will appear here.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-[2px] w-full px-0">
-                  {explorePosts.map((post: any) => (
-                    <div
-                      key={post.id}
-                      onClick={() => setActiveView('reels')}
-                      className="aspect-[4/5] relative cursor-pointer overflow-hidden group w-full"
-                      style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
-                    >
-                      {post.thumbnailUrl || post.imageUrl ? (
-                        <img 
-                          src={post.thumbnailUrl || post.imageUrl} 
-                          alt="reel" 
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center bg-zinc-900">
-                          <svg className="w-6 h-6 mb-1 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-                          </svg>
-                        </div>
-                      )}
-                      
-                      {/* Reels glyph badge top right */}
-                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md p-1 rounded-full z-10">
-                        <svg width="11" height="11" fill="#fff" viewBox="0 0 24 24">
-                          <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/>
-                        </svg>
-                      </div>
-
-                      {/* Bottom creator info */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2 pointer-events-none">
-                        <div className="flex items-center gap-1 mb-0.5 pointer-events-auto" onClick={(e) => { e.stopPropagation(); handleOpenOtherProfile(post.user?.id, post.user, e); }}>
-                          <img
-                            src={post.user?.image || '/Avatar.png'}
-                            alt=""
-                            className="w-4 h-4 rounded-full object-cover border border-white/40 flex-shrink-0"
-                          />
-                          <p className="text-[11px] font-semibold text-white truncate drop-shadow">@{post.user?.username || 'user'}</p>
-                        </div>
-                        {post.caption && (
-                          <p className="text-[10px] text-white/90 line-clamp-1 drop-shadow font-light">{post.caption}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Sliding Fullscreen Search Overlay */}
-            {isSearchOverlayOpen && (
-              <div 
-                className="absolute inset-0 z-50 flex flex-col animate-search-in"
-                style={{
-                  background: isDark ? '#0a0a0c' : '#ffffff'
-                }}
-              >
-                {/* Search Overlay Header */}
-                <div className="flex items-center gap-3 px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
-                  <button 
-                    onClick={() => {
-                      setSearchQuery('');
-                      setIsSearchOverlayOpen(false);
-                    }}
-                    className="w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90"
-                    style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', color: 'var(--dm-text-primary)' }}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                  </button>
-                  <input
-                    type="text"
-                    autoFocus
-                    placeholder="Search @username..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="flex-1 h-10 px-4 rounded-full text-sm font-light border focus:outline-none"
-                    style={{
-                      background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-                      color: 'var(--dm-text-primary)'
-                    }}
-                  />
-                </div>
-
-                {/* Search Content */}
-                <div className="flex-1 overflow-y-auto px-4 py-4">
-                  {searchQuery.trim().length === 0 ? (
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-zinc-500">Recent Searches</p>
-                      {searchHistory.length === 0 ? (
-                        <p className="text-sm font-light text-zinc-500 py-4 text-center">No search history</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {searchHistory.map((item: any) => (
-                            <div
-                              key={item.id}
-                              onClick={(e) => {
-                                handleAddToHistory(item);
-                                handleOpenOtherProfile(item.id, item, e);
-                                setIsSearchOverlayOpen(false);
-                              }}
-                              className="flex items-center justify-between p-3.5 rounded-xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'var(--dm-bg-active)' }}>
-                                  {item.image ? (
-                                    <img src={item.image} alt="user" className="w-full h-full object-cover" />
-                                  ) : (
-                                    <img src="/Avatar.png" alt="user" className="w-full h-full object-cover" />
-                                  )}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-semibold" style={{ color: 'var(--dm-text-primary)' }}>@{item.username || 'username'}</p>
-                                  {item.name && <p className="text-xs text-zinc-500">{item.name}</p>}
-                                </div>
-                              </div>
-                              <button
-                                onClick={(e) => handleRemoveFromHistory(item.id, e)}
-                                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 transition-colors"
-                              >
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-zinc-500">Users</p>
-                      {isSearching ? (
-                        <div className="flex items-center justify-center py-8 gap-3">
-                          <div className="w-5 h-5 rounded-full border-2 border-t-transparent border-orange-500 animate-spin" />
-                          <span className="text-sm text-zinc-500">Searching usernames...</span>
-                        </div>
-                      ) : searchResults.length === 0 ? (
-                        <div className="flex flex-col items-center py-10 gap-3">
-                          <svg className="w-10 h-10 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                          </svg>
-                          <p className="text-sm font-medium text-zinc-500">No user found matching "@{searchQuery.replace(/^@/, '')}"</p>
-                          <p className="text-xs text-zinc-400">Search strictly by exact or partial @username</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          {searchResults.map((item: any) => (
-                            <div
-                              key={item.id}
-                              onClick={(e) => {
-                                handleAddToHistory(item);
-                                handleOpenOtherProfile(item.id, item, e);
-                                setIsSearchOverlayOpen(false);
-                              }}
-                              className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors active:scale-[0.99]"
-                              style={{ background: 'transparent' }}
-                              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}
-                              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                            >
-                              <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
-                                {item.image ? (
-                                  <img src={item.image} alt="user" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                                ) : (
-                                  <img src="/Avatar.png" alt="user" className="w-full h-full object-cover" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold truncate" style={{ color: 'var(--dm-text-primary)' }}>@{item.username || 'username'}</p>
-                                <p className="text-xs truncate" style={{ color: 'var(--dm-text-muted)' }}>{item.name || 'User'}{item._count?.followers ? ` · ${item._count.followers} followers` : ''}</p>
-                              </div>
-                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}>
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className={`ig-tab-panel ${activeView === 'chat' ? 'ig-tab-enter' : ''}`} data-active={activeView === 'chat'}>
+      {/* Main Chat Container */}
+      <div className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[40px] shadow-sm md:border" style={{ background: 'var(--dm-bg-main)', borderColor: 'var(--dm-border-main)' }}>
+        <div className="w-full h-full flex flex-col min-h-0 relative">
           <SocialChat 
-            isActive={activeView === 'chat'} 
+            isActive={true} 
             onStatusChange={setIsConnected} 
             onChatChange={setSelectedChatUser}
-            onBack={() => setActiveView('home')}
+            onBack={() => {}}
             onCallStateChange={setIsCallActive}
             initialUser={selectedChatUser}
             ref={chatComponentRef as any}
@@ -984,7 +470,7 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Instagram-style Profile Panel */}
+        {/* Profile Panel */}
         <ProfilePanel
           isOpen={isProfileOpen}
           isClosing={isClosingProfile}
@@ -1002,9 +488,7 @@ export default function DashboardPage() {
           refreshProfile={refreshProfile}
           onToggleFollow={handleToggleFollow}
           onOpenChat={(targetUser) => {
-            // Reset nav transition lock so it doesn't block
             navTransitionInProgress.current = false;
-            // Origin from bottom-center to match bottom nav bar feel (bottom-to-top ripple)
             const x = window.innerWidth / 2;
             const y = window.innerHeight;
             runProfileTransition(() => {
@@ -1016,19 +500,13 @@ export default function DashboardPage() {
             }, x, y, false);
           }}
           onAccountSheetChange={setIsAccountSheetOpen}
-          onOpenUpload={(type) => {
-            setUploadType(type);
-            setUploadUrl('');
-            setUploadCaption('');
-            setShowUploadModal(true);
-          }}
         />
       </div>
 
       {/* Mobile Bottom Navigation — deep black pill bar: Messages (left), Calls (center), Profile (right) */}
-      {((activeView === 'home' || activeView === 'search' || activeView === 'reels' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive) && (
-        <nav className={`mobile-nav ${(isAccountSheetOpen || isSearchOverlayOpen || isChatLongPressActive) ? 'mobile-nav-hidden' : ''}`}>
-          {/* 1. Messages (Leftmost - using message-alt-svgrepo-com.svg) */}
+      {(!selectedChatUser && !isCallActive) && (
+        <nav className={`mobile-nav ${(isAccountSheetOpen || isChatLongPressActive) ? 'mobile-nav-hidden' : ''}`}>
+          {/* 1. Messages (Leftmost) */}
           <button
             onClick={(e) => handleNavClick('chat', e)}
             className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
@@ -1048,27 +526,27 @@ export default function DashboardPage() {
             </span>
           </button>
 
-          {/* 2. Calls (Center - using phone-rounded-svgrepo-com.svg) */}
+          {/* 2. Calls (Center) */}
           <button
-            onClick={(e) => handleNavClick('home', e)}
+            onClick={(e) => handleNavClick('calls', e)}
             className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
           >
             <div className="w-5 h-5 flex items-center justify-center">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
                 <path 
                   d="M10.0376 5.31617L10.6866 6.4791C11.2723 7.52858 11.0372 8.90532 10.1147 9.8278C10.1147 9.8278 10.1147 9.8278 10.1147 9.8278C10.1146 9.82792 8.99588 10.9468 11.0245 12.9755C13.0525 15.0035 14.1714 13.8861 14.1722 13.8853C14.1722 13.8853 14.1722 13.8853 14.1722 13.8853C15.0947 12.9628 16.4714 12.7277 17.5209 13.3134L18.6838 13.9624C20.2686 14.8468 20.4557 17.0692 19.0628 18.4622C18.2258 19.2992 17.2004 19.9505 16.0669 19.9934C14.1588 20.0658 10.9183 19.5829 7.6677 16.3323C4.41713 13.0817 3.93421 9.84122 4.00655 7.93309C4.04952 6.7996 4.7008 5.77423 5.53781 4.93723C6.93076 3.54428 9.15317 3.73144 10.0376 5.31617Z" 
-                  stroke={!isProfileOpen && activeView === 'home' ? '#FFFFFF' : 'rgba(255,255,255,0.45)'} 
+                  stroke={!isProfileOpen && activeView === 'calls' ? '#FFFFFF' : 'rgba(255,255,255,0.45)'} 
                   strokeWidth="1.8" 
                   strokeLinecap="round"
                 />
               </svg>
             </div>
-            <span className={`text-[10px] tracking-tight ${!isProfileOpen && activeView === 'home' ? 'text-white font-semibold' : 'text-zinc-400 font-medium'}`}>
+            <span className={`text-[10px] tracking-tight ${!isProfileOpen && activeView === 'calls' ? 'text-white font-semibold' : 'text-zinc-400 font-medium'}`}>
               Calls
             </span>
           </button>
 
-          {/* 3. Profile (Right - using profile-round-1342-svgrepo-com.svg) */}
+          {/* 3. Profile (Right) */}
           <button
             onClick={(e) => runProfileTransition(() => setIsProfileOpen(true), e.clientX, e.clientY, false)}
             className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
@@ -1088,94 +566,6 @@ export default function DashboardPage() {
           </button>
         </nav>
       )}
-
-
-
-      {/* Upload Modal */}
-      {showUploadModal && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-          <div style={{
-            background: isDark ? '#1c1c1e' : '#ffffff', borderRadius: '24px', padding: '24px', width: '90%', maxWidth: '400px',
-            border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0'}`, boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 800, color: isDark ? '#fff' : '#111' }}>Create {uploadType === 'reel' ? 'Reel' : 'Post'}</h3>
-              <button onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none', color: isDark ? '#fff' : '#111', cursor: 'pointer', opacity: 0.7 }}>
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 6 }}>Select from Gallery</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
-                  {[
-                    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=300&h=450&q=80',
-                    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=300&h=450&q=80',
-                    'https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=300&h=450&q=80',
-                    'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=300&h=450&q=80',
-                    'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?auto=format&fit=crop&w=300&h=450&q=80',
-                    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=300&h=450&q=80'
-                  ].map((imgUrl, idx) => (
-                    <div 
-                      key={idx} 
-                      onClick={() => setUploadUrl(imgUrl)}
-                      style={{
-                        aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer',
-                        border: uploadUrl === imgUrl ? '2px solid #0095f6' : '2px solid transparent',
-                        transition: 'border 0.2s', padding: '2px'
-                      }}
-                    >
-                      <img src={imgUrl} alt="gallery" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 6 }}>Caption</div>
-                <textarea 
-                  placeholder="Write a caption..."
-                  value={uploadCaption}
-                  onChange={e => setUploadCaption(e.target.value)}
-                  rows={3}
-                  style={{
-                    width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0'}`,
-                    background: isDark ? '#1a1a1f' : '#f9fafb', color: isDark ? '#fff' : '#111', outline: 'none', fontSize: 14, resize: 'none'
-                  }}
-                />
-              </div>
-              
-              <button 
-                onClick={async () => {
-                  if (!uploadUrl) return;
-                  setUploadLoading(true);
-                  try {
-                    await createPostAction({ imageUrl: uploadUrl, caption: uploadCaption, postType: uploadType });
-                    refreshProfile();
-                    setShowUploadModal(false);
-                  } catch (e) {
-                    console.error('Upload failed', e);
-                  }
-                  setUploadLoading(false);
-                }}
-                disabled={uploadLoading || !uploadUrl}
-                style={{
-                  width: '100%', padding: '14px', background: isDark ? '#fff' : '#111', color: isDark ? '#111' : '#fff', border: 'none', borderRadius: '14px',
-                  fontWeight: 700, fontSize: 15, cursor: uploadUrl && !uploadLoading ? 'pointer' : 'not-allowed',
-                  opacity: uploadUrl && !uploadLoading ? 1 : 0.6, marginTop: 4, transition: 'opacity 0.2s'
-                }}
-              >
-                {uploadLoading ? 'Posting...' : 'Post'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
