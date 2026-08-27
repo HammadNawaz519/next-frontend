@@ -43,6 +43,17 @@ interface CallsViewProps {
 
 const PASTEL_AVATAR_BGS = ['#FFF3CD', '#E0F2FE', '#FCE7F3', '#FEF9C3', '#EDE9FE', '#DCFCE7'];
 
+export function getDeterministicAvatarBg(key: string): string {
+  if (!key) return PASTEL_AVATAR_BGS[0];
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash << 5) - hash + key.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % PASTEL_AVATAR_BGS.length;
+  return PASTEL_AVATAR_BGS[index];
+}
+
 const SEED_CALLS: CallRecord[] = [
   {
     id: 'seed-1',
@@ -429,9 +440,9 @@ export default function CallsView({
               </p>
             </div>
           ) : (
-            filteredCalls.map((call, idx) => {
-              const bgIndex = idx % PASTEL_AVATAR_BGS.length;
-              const avatarBg = PASTEL_AVATAR_BGS[bgIndex];
+            filteredCalls.map((call) => {
+              const avatarKey = call.partnerUser?.id || call.partnerUser?.username || call.callerId || call.contactName;
+              const avatarBg = getDeterministicAvatarBg(avatarKey);
 
               return (
                 <div
@@ -519,7 +530,14 @@ export default function CallsView({
             
             <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#FFF3CD] flex items-center justify-center font-bold text-zinc-900">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-zinc-900 overflow-hidden shadow-xs"
+                  style={{
+                    backgroundColor: getDeterministicAvatarBg(
+                      selectedCall.partnerUser?.id || selectedCall.partnerUser?.username || selectedCall.callerId || selectedCall.contactName
+                    )
+                  }}
+                >
                   {selectedCall.contactName.charAt(0).toUpperCase()}
                 </div>
                 <div>

@@ -1348,10 +1348,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
-        // Soft pastel yellow and clean rounded-3xl bubble shape matching reference design
+        // Pure soft pill rounded bubble shape with extra light font
         const bubbleClasses = isSent
-          ? `bg-zinc-100 text-zinc-900 px-4 py-3 rounded-[24px] max-w-full self-end text-[13.5px] leading-relaxed shadow-2xs font-normal ${isPrevSameSender ? '-mt-2' : ''}`
-          : `bg-[#FEF5D1] text-zinc-900 px-4 py-3 rounded-[24px] max-w-full text-[13.5px] leading-relaxed shadow-2xs font-normal ${isPrevSameSender ? '-mt-2' : ''}`;
+          ? `bg-zinc-100 text-zinc-900 px-4.5 py-3 !rounded-[28px] max-w-full self-end text-[13.5px] font-light leading-relaxed ${isPrevSameSender ? '-mt-2' : ''}`
+          : `bg-[#FEF5D1] text-zinc-900 px-4.5 py-3 !rounded-[28px] max-w-full text-[13.5px] font-light leading-relaxed ${isPrevSameSender ? '-mt-2' : ''}`;
 
         return (
           <div
@@ -1359,6 +1359,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
             className={`msg ${bubbleClasses} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''} ${isMedia ? '!p-0 !bg-transparent !border-0 !shadow-none' : ''}`}
             style={{
               position: 'relative',
+              borderRadius: '28px',
               transition: isSelected ? 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28)' : 'none',
               transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
             }}
@@ -2420,6 +2421,37 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [showSearchWindow, setShowSearchWindow] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
+  const [globalSearchResults, setGlobalSearchResults] = useState<User[]>([]);
+  const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
+
+  // Global live user search across entire platform
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setGlobalSearchResults([]);
+      setIsSearchingGlobal(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearchingGlobal(true);
+      try {
+        const results = await searchUsers(q);
+        if (Array.isArray(results)) {
+          const myId = (session?.user as any)?.id;
+          const filtered = results.filter((u: any) => u.id !== myId);
+          setGlobalSearchResults(filtered);
+        }
+      } catch (err) {
+        console.warn('Failed to search users globally:', err);
+      } finally {
+        setIsSearchingGlobal(false);
+      }
+    }, 180);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, session]);
+
   const [showReportModal, setShowReportModal] = useState(false);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
@@ -4920,13 +4952,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </div>
                   </div>
 
-                  {/* Notifications List */}
+                  {/* Notifications List (Clean minimal text, no svgs, no emojis) */}
                   <div className="py-2.5 space-y-2 max-h-64 overflow-y-auto no-scrollbar">
                     {notificationsList.length === 0 ? (
                       <div className="py-8 flex flex-col items-center justify-center text-center">
-                        <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-600 mb-2">
-                          <Check className="w-5 h-5 text-zinc-500" />
-                        </div>
                         <p className="text-xs text-zinc-400 font-medium">No new notifications</p>
                       </div>
                     ) : (
@@ -4937,26 +4966,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             setNotificationsList(prev => prev.map(n => n.id === item.id ? { ...n, unread: false } : n));
                             setUnreadNotifications(prev => Math.max(0, prev - 1));
                           }}
-                          className={`p-3 rounded-2xl transition-all flex items-start gap-3 cursor-pointer ${
-                            item.unread ? 'bg-zinc-900 border border-zinc-800/80 hover:bg-zinc-800/70' : 'bg-zinc-900/40 hover:bg-zinc-900/70 opacity-75'
+                          className={`p-3 rounded-2xl transition-colors flex items-center justify-between gap-3 cursor-pointer ${
+                            item.unread ? 'bg-zinc-900 border border-zinc-800 text-white' : 'bg-zinc-900/50 text-zinc-400 opacity-80'
                           }`}
                         >
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                            item.title.toLowerCase().includes('call') ? 'bg-rose-500/15 text-rose-400' :
-                            item.title.toLowerCase().includes('message') ? 'bg-[#9D4EDD]/15 text-[#D8B4E2]' : 'bg-amber-500/15 text-amber-400'
-                          }`}>
-                            {item.title.toLowerCase().includes('call') ? (
-                              <PhoneCall className="w-4 h-4" />
-                            ) : item.title.toLowerCase().includes('message') ? (
-                              <MessageSquare className="w-4 h-4" />
-                            ) : (
-                              <Sparkles className="w-4 h-4" />
-                            )}
-                          </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-xs font-semibold text-white truncate">{item.title}</h4>
-                            <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-2">{item.desc}</p>
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className="text-[13px] font-semibold text-zinc-100 truncate">{item.title}</h4>
+                              <span className="text-[10px] text-zinc-500 font-medium shrink-0">{item.time}</span>
+                            </div>
+                            <p className="text-[12px] text-zinc-400 mt-0.5 line-clamp-1">{item.desc}</p>
                           </div>
+                          {item.unread && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
+                          )}
                         </div>
                       ))
                     )}
@@ -4965,15 +4988,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               )}
             </div>
 
-            {/* 3. Light Bottom Sheet (Chat List) */}
-            <div className="w-full flex-1 bg-white rounded-t-[32px] px-6 pt-3 pb-28 flex flex-col relative shadow-[0_-10px_30px_rgba(0,0,0,0.15)] overflow-hidden min-h-0">
+            {/* 3. Light Bottom Sheet (Chat List & People Search) */}
+            <div className="w-full flex-1 bg-white rounded-t-[32px] px-3.5 sm:px-4 pt-3 pb-28 flex flex-col relative shadow-[0_-10px_30px_rgba(0,0,0,0.15)] overflow-hidden min-h-0">
               {/* Drag Handle */}
               <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto my-1.5 shrink-0" />
 
               {/* Header Row */}
-              <div className="flex justify-between items-center mt-3 mb-3 shrink-0">
+              <div className="flex justify-between items-center mt-3 mb-3 px-1 shrink-0">
                 <h2 className="text-[22px] font-bold text-black tracking-tight">
-                  {isArchivedView ? 'Archived Chats' : 'Recent Chat'}
+                  {isArchivedView ? 'Archived Chats' : (searchQuery.trim() ? 'Search Results' : 'Recent Chat')}
                 </h2>
 
                 {/* Archive Button */}
@@ -4993,13 +5016,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </button>
               </div>
 
-              {/* Quick Search */}
-              <div className="pt-1 pb-3 flex-shrink-0">
-                <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-zinc-100/90 border border-zinc-200/60 text-zinc-800 shadow-2xs">
+              {/* Quick Search - Cute, All-Round, No Shadow */}
+              <div className="pt-1 pb-3 px-1 flex-shrink-0">
+                <div className="flex items-center gap-2.5 px-4.5 py-2.5 rounded-full bg-zinc-100/90 border border-zinc-200/50 text-zinc-800">
                   <Search className="w-[18px] h-[18px] text-zinc-400 flex-shrink-0" strokeWidth={2} />
                   <input 
                     type="text" 
-                    placeholder="Search recent conversations..." 
+                    placeholder="Search people, conversations..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-transparent text-[13.5px] text-zinc-900 placeholder:text-zinc-400 outline-none font-medium"
@@ -5010,15 +5033,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
               </div>
 
-              {/* Chat List Feed */}
-              <div className="flex flex-col gap-4 overflow-y-auto flex-1 pr-0.5 no-scrollbar">
+              {/* Chat & People List Feed */}
+              <div className="flex flex-col gap-1 overflow-y-auto flex-1 pr-0.5 no-scrollbar">
                 {(() => {
                   const baseList = view === 'recent' ? users : requests;
-                  const filtered = baseList
+                  const q = searchQuery.toLowerCase().trim();
+
+                  let filtered = baseList
                     .filter(u => isArchivedView ? archivedChatIds.has(u.id) : (!archivedChatIds.has(u.id) && !deletedChatIds.has(u.id)))
                     .filter(u => {
-                      if (!searchQuery.trim()) return true;
-                      const q = searchQuery.toLowerCase();
+                      if (!q) return true;
                       return (u.name || '').toLowerCase().includes(q) || (u.username || '').toLowerCase().includes(q);
                     })
                     .sort((a, b) => {
@@ -5026,6 +5050,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       const bp = pinnedChats.has(b.id) ? 0 : 1;
                       return ap - bp;
                     });
+
+                  // If user is searching, merge global registered users seamlessly
+                  if (q && globalSearchResults.length > 0) {
+                    const existingIds = new Set(filtered.map(u => u.id));
+                    const newGlobal = globalSearchResults.filter(u => !existingIds.has(u.id));
+                    filtered = [...filtered, ...newGlobal];
+                  }
 
                   if (isRecentLoading && filtered.length === 0) {
                     return (
@@ -5049,16 +5080,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   if (filtered.length === 0) {
                     return (
                       <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                        <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-2 text-zinc-400">
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                          </svg>
-                        </div>
                         <p className="text-sm font-bold text-zinc-800">
-                          {isArchivedView ? 'No archived chats' : 'No conversations yet'}
+                          {isSearchingGlobal ? 'Searching users...' : (q ? `No people found for "${searchQuery}"` : (isArchivedView ? 'No archived chats' : 'No conversations yet'))}
                         </p>
                         <p className="text-xs text-zinc-500 mt-0.5">
-                          {isArchivedView ? 'Archived conversations will appear here' : 'Start searching to connect with people'}
+                          {q ? 'Try searching by a different name or username' : 'Search to connect with anyone on Connect'}
                         </p>
                       </div>
                     );
