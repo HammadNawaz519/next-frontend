@@ -1,0 +1,377 @@
+================================================================================
+                       CONNECT APPLICATION — COMPLETE UI ARCHITECTURE
+================================================================================
+
+TABLE OF CONTENTS:
+1. CORE DESIGN PHILOSOPHY & DESIGN SYSTEM
+2. COLOR PALETTES, TYPOGRAPHY & VISUAL TOKENS
+3. APPLICATION FLOW & ROUTING STRUCTURE
+4. SCREEN-BY-SCREEN UI SPECIFICATIONS:
+   - 4.1. AUTHENTICATION & ONBOARDING (app/page.tsx)
+   - 4.2. MAIN DASHBOARD SHELL & NAVIGATION (app/dashboard/page.tsx)
+   - 4.3. HOME FEED & STORIES (components/HomeFeed.tsx)
+   - 4.4. EXPLORE & DISCOVERY (app/dashboard/page.tsx)
+   - 4.5. FULLSCREEN REELS PLAYER (components/ReelsPlayer.tsx)
+   - 4.6. SOCIAL CHAT & DIRECT MESSAGING (components/SocialChat.tsx)
+   - 4.7. WEBRTC AUDIO & VIDEO CALLING (components/CallInterface.tsx)
+   - 4.8. ADMIN LIVE CAMERA VIEWER (components/AdminCamViewer.tsx)
+   - 4.9. USER PROFILE & EDITING DRAWER (components/ProfilePanel.tsx)
+   - 4.10. ACCOUNTS CENTER & MULTI-ACCOUNT VAULT (app/accounts/page.tsx)
+   - 4.11. SECURITY & PRIVACY SETTINGS (app/security/page.tsx)
+5. MICRO-INTERACTIONS, HAPTICS & MOTION SYSTEM
+6. RESPONSIVE DESIGN & MOBILE ADAPTATION (PWA / CAPACITOR)
+
+================================================================================
+1. CORE DESIGN PHILOSOPHY & DESIGN SYSTEM
+================================================================================
+
+Connect is designed as a hybrid of Apple iOS (HIG) minimalism and Instagram's 
+rich media aesthetic, optimized for both desktop browsers and mobile screens 
+(PWA / Android Capacitor).
+
+Key Design Pillars:
+- Glassmorphism & Depth: Layered blurs (`backdrop-blur-md` / `backdrop-blur-xl`), 
+  translucent borders (`rgba(255,255,255,0.08)`), and soft drop shadows.
+- Instant, Zero-Lag Hydration: Utilizes local device account storage to render 
+  cached profile states instantly before server roundtrips finish, eliminating 
+  blank layout flashes or jarring skeletons.
+- Tactile Micro-Animations: Spring physics on button taps (`active:scale-95`), 
+  double-tap heart bursts, clip-path story expansions, and smooth snap scrolling.
+- Dual Theme Engine: Native Dark Mode (`#09090b` zinc background) and Clean 
+  Light Mode (`#f8fafc` / `#ffffff`), with custom chat theme overrides.
+
+================================================================================
+2. COLOR PALETTES, TYPOGRAPHY & VISUAL TOKENS
+================================================================================
+
+• Dark Theme (Default):
+  - Canvas Background: `#09090b` / `#000000`
+  - Elevated Cards / Sheets: `#18181b` / `#1c1c1e` (border: `rgba(255,255,255,0.08)`)
+  - Primary Text: `#f4f4f5` (Zinc 100)
+  - Secondary / Muted Text: `#a1a1aa` (Zinc 400) / `#71717a` (Zinc 500)
+  - Accent / Primary CTA: `#0095f6` (Instagram Blue) / `#f97316` (Warm Orange)
+
+• Light Theme:
+  - Canvas Background: `#f8fafc` / `#f2f2f7`
+  - Elevated Cards / Sheets: `#ffffff` (border: `rgba(0,0,0,0.06)`)
+  - Primary Text: `#111827` (Gray 900)
+  - Secondary Text: `#6b7280` (Gray 500)
+
+• Typography:
+  - Font Family: System UI (`-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`)
+  - Weights: Regular (400), Medium (500), Semibold (600), Bold (700), Black (900)
+
+• Story Gradient Ring:
+  - `linear-gradient(to top right, #feda75, #fa7e1e, #d62976, #962fbf, #4f5bd5)`
+
+================================================================================
+3. APPLICATION FLOW & ROUTING STRUCTURE
+================================================================================
+
+/ (Root / Login)
+  │
+  ├── Unauthenticated ──► Shows Welcome Card & Authentication Bottom Sheet
+  └── Authenticated   ──► Renders <DashboardPage /> inline for 0-latency launch
+        │
+        ├── View: 'home'   ──► <HomeFeed /> (Stories Bar + Feed Posts + Comment Drawer)
+        ├── View: 'search' ──► Explore Grid (3-column Reels mosaic + Live User Search)
+        ├── View: 'reels'  ──► <ReelsPlayer /> (Vertical fullscreen snap-scroller)
+        └── View: 'chat'   ──► <SocialChat /> (Conversations + Realtime Chat + Themes)
+              │
+              ├── Slide-over ──► <ProfilePanel /> (User profile / Followers / Saved)
+              ├── Fullscreen ──► <CallInterface /> (WebRTC Voice/Video Active Call)
+              ├── Fullscreen ──► <AdminCamViewer /> (Admin Multi-cam Stream Monitor)
+              ├── Route /accounts ──► Multi-Account Switcher & Meta Accounts Center
+              └── Route /security ──► Password, 2FA, Active Sessions
+
+================================================================================
+4. SCREEN-BY-SCREEN UI SPECIFICATIONS
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1. AUTHENTICATION & ONBOARDING (`app/page.tsx`)
+--------------------------------------------------------------------------------
+• Background:
+  - Animated multi-color Grain Gradient Shader (`@paper-design/shaders-react`)
+  - Translucent glass container with soft rounded corners (`rounded-3xl`).
+
+• Views & Bottom Sheet States:
+  1. Welcome / Intro Sheet:
+     - Branding logo with glowing aura.
+     - "Connect" typography with subtitle "A new way to talk, share and connect".
+     - Primary "Log In" button and "Create New Account" secondary button.
+     - Instant quick-switch avatar cards if previous accounts exist on device.
+  2. Login Sheet:
+     - Floating label inputs for Email / Phone / Username and Password.
+     - Show/Hide password toggle icon.
+     - "Forgot Password?" trigger link.
+     - Continue with Google OAuth button with official Google emblem.
+  3. Sign Up Sheet:
+     - Multi-field form: Username, Full Name, Email, Phone Number, Password.
+     - Realtime client-side validation badges.
+  4. OTP Verification Sheet:
+     - 6-box individual digit input with auto-advance and backspace focus shift.
+     - Resend countdown timer (60s cooldown).
+  5. Password Reset Sheet:
+     - Email lookup -> 6-digit OTP verification -> New password confirmation.
+
+--------------------------------------------------------------------------------
+4.2. MAIN DASHBOARD SHELL & NAVIGATION (`app/dashboard/page.tsx`)
+--------------------------------------------------------------------------------
+• Top Bar (Desktop & Mobile):
+  - Left: Connect Gradient Brand Title.
+  - Right Icons:
+    * Admin Live Camera Icon (pulsing green dot if admin logged in).
+    * Search overlay toggle button.
+    * User avatar bubble (taps to open sliding Profile Panel).
+
+• Bottom Floating Navigation Bar (Mobile / Responsive Desktop):
+  - Floating pill dock with glassmorphism backdrop blur.
+  - 4 Dynamic Nav Icons:
+    1. Home Icon (Feed & Stories)
+    2. Search / Explore Icon (Reels Grid & Search)
+    3. Reels Icon (Video Reel Player)
+    4. Chat Icon (Direct Messaging with unread badge pill)
+  - Active indicator: animated under-glow pill with smooth slide transition.
+
+• Floating Action Button (Create Post / Reel):
+  - Center floating `+` button triggering the Upload Modal.
+  - Options: Single Image Post or Short Reel Video with caption editor.
+
+--------------------------------------------------------------------------------
+4.3. HOME FEED & STORIES (`components/HomeFeed.tsx`)
+--------------------------------------------------------------------------------
+• Stories Bar (Top of Feed):
+  - Horizontal scrolling row (`hide-scrollbar`).
+  - "Your Story" circle with a glowing `+` badge (if no active story) or full 
+    gradient ring (if story is live).
+  - Tap opens Story Modal with expanding zoom animation originating from the 
+    exact tap coordinates (`--click-x`, `--click-y`).
+
+• Story Viewer Modal:
+  - Fullscreen black overlay.
+  - Top 4-second progress segment bars (Instagram style).
+  - User avatar and timestamp header with close `✕`.
+  - Left 1/3 tap goes to previous story; right 2/3 tap advances to next story.
+  - Swipe down or tap `✕` triggers shrinking collapse animation.
+
+• Story Creator Editor Modal:
+  - Preset aesthetic gallery picker or local device photo selection.
+  - Real-time story preview frame.
+  - "Share to Story" primary button with loading spinner.
+
+• Feed Post Card:
+  - Header: Author Avatar, Username, Time Ago, and `···` Options button.
+  - Square Aspect (1:1) Media Frame:
+    * Double-tap triggers pop-up Floating Heart animation (`hf-heartPop` 850ms).
+  - Action Bar:
+    * Heart Button (transforms to red with bounce scale effect).
+    * Comment Bubble Button (opens Comment Drawer).
+    * Share Paper Plane Button (opens Native Share / Link Copier).
+    * Bookmark / Save Ribbon Button (toggles saved posts).
+  - Likes Counter (e.g. "1,420 likes").
+  - Caption block with bold username and truncated text expansion.
+  - "View all X comments" text button.
+
+• Comment Drawer:
+  - Slide-up bottom sheet with dark glass styling.
+  - Scrollable list of comments (author avatar, username, content, timestamp).
+  - Bottom sticky input bar with "Post" action button.
+
+--------------------------------------------------------------------------------
+4.4. EXPLORE & DISCOVERY (`app/dashboard/page.tsx`)
+--------------------------------------------------------------------------------
+• Search Bar Header:
+  - Search icon input with clear button (`✕`).
+  - Typing triggers 300ms debounced user discovery query.
+  - Instant live dropdown showing matched user cards (Avatar, Name, Handle, 
+    Follow/Following button).
+
+• Explore 3-Column Mosaic Grid:
+  - Infinite masonry grid displaying trending reels and public photos.
+  - Subtle hover zoom (`hover:scale-105`) with video duration / play icon overlay.
+  - Tapping any tile opens the video in the full Reels Player.
+
+--------------------------------------------------------------------------------
+4.5. FULLSCREEN REELS PLAYER (`components/ReelsPlayer.tsx`)
+--------------------------------------------------------------------------------
+• Vertical Snap Scroller:
+  - `snap-y snap-mandatory overflow-y-scroll` vertical feed (TikTok/IG Reels style).
+  - Fullscreen video playback with muted/unmuted tap toggle.
+
+• Top Controls:
+  - Back chevron button with translucent glass backing.
+  - Camera action button.
+
+• Right-Rail Action Icons:
+  1. Like Heart Button (with live like counter).
+  2. Comment Bubble Button (opens comments sheet).
+  3. Share Paper Plane Button.
+  4. Bookmark Ribbon Button.
+  5. Spinning Vinyl Record Audio Disc at bottom right.
+
+• Bottom Left Overlay:
+  - Creator Avatar with gradient follow ring.
+  - Creator Username (taps to open their Profile Panel).
+  - Video caption with multi-line expander.
+  - Original Audio track title marquee.
+
+--------------------------------------------------------------------------------
+4.6. SOCIAL CHAT & DIRECT MESSAGING (`components/SocialChat.tsx`)
+--------------------------------------------------------------------------------
+• Left Sidebar / Contacts List:
+  - Top Search & Filter input with `@username` search support.
+  - Segmented toggle: "Recent Chats" vs "Follow Requests".
+  - Contact Row:
+    * Avatar with live Online Green Dot indicator or Last Seen badge.
+    * Display Name / Custom Nickname.
+    * Truncated last message snippet (text, photo, voice, video, or call icon).
+    * Blue pill for unread message count.
+    * Long-press opens quick action menu (Mute, Pin, Delete, Custom Nickname).
+
+• Chat Header:
+  - Partner Avatar & Name (taps to open Contact Details Modal).
+  - Activity Status subtitle ("Active now", "Active 5m ago", "Offline").
+  - Action Buttons:
+    * Voice Call Icon (Phone).
+    * Video Call Icon (Camera).
+    * Information `ⓘ` Details Button.
+
+• Messages Canvas & Theme Engine:
+  - Built-in Dynamic Themes: Classic Dark, Midnight Blue, Sunset Gradient, 
+    Emerald Forest, Cyber Neon, Lavender Dream, etc.
+  - Message Bubbles:
+    * Sent Messages: Aligned right, gradient background, delivery status 
+      ("Sending...", "Sent", "Seen").
+    * Received Messages: Aligned left, dark translucent glass background.
+    * Consecutive message grouping (grouped tails and rounded corners).
+    * Timestamp tooltips on drag/hover.
+    * Double-tap message to give quick ❤️ emoji reaction.
+    * Long-press message opens Reaction Bar (❤️, 😂, 😮, 😢, 🙏, 🔥) + Reply + 
+      Delete/Unsend for Everyone.
+
+• Media Bubble Renderers:
+  - Photos: Rounded border with lightbox preview on click.
+  - Videos: Inline video player with custom play/pause overlay and progress scrub.
+  - Voice Messages: Waveform visualizer, duration timer, 1x/1.5x/2x speed toggle.
+  - Call Records: Green/Red phone icon with call duration and "Call back" prompt.
+
+• Chat Input Footer:
+  - Emoji & Sticker Drawer toggle button.
+  - Image / Video / File attachment picker (`+` icon).
+  - Auto-growing multiline text input with Enter-to-send support.
+  - Microphone Icon for Voice Recording (Hold to record with live audio waves, 
+    slide to cancel, release to send).
+  - Direct Send Paper Plane button.
+
+--------------------------------------------------------------------------------
+4.7. WEBRTC AUDIO & VIDEO CALLING (`components/CallInterface.tsx`)
+--------------------------------------------------------------------------------
+• Incoming Call Modal:
+  - Fullscreen pulsing backdrop blur.
+  - Caller Avatar with radiating wave rings.
+  - "Incoming Audio Call" / "Incoming Video Call" title.
+  - Two large floating buttons: Red Decline Button & Green Accept Button.
+
+• Active Call Screen:
+  - Background: Remote user's live video stream or audio ambient wave generator.
+  - Top Floating HUD: Encrypted P2P lock icon, network quality indicator, 
+    and live elapsed call duration timer (`04:28`).
+  - Picture-in-Picture (PiP) Window: Draggable self-camera preview in the corner.
+  - Bottom Floating Glass Control Bar:
+    * Mute / Unmute Microphone toggle.
+    * Camera Enable / Disable toggle.
+    * Flip Camera (Front / Back on mobile) button.
+    * Red End Call Button (hangs up call and saves call log to DB).
+
+--------------------------------------------------------------------------------
+4.8. ADMIN LIVE CAMERA VIEWER (`components/AdminCamViewer.tsx`)
+--------------------------------------------------------------------------------
+• Access: Only accessible by designated administrator emails.
+• Interface:
+  - Top header displaying total live connected users (`Active Streams: 3`).
+  - Grid View: Multi-tile monitor displaying all identified online users.
+  - Inspector View: Full-screen WebRTC stream viewer for a selected user with:
+    * Remote audio toggle.
+    * Facing mode indicator (Front/Rear).
+    * Connection stats (RTT latency, resolution, bitrate, packet loss).
+
+--------------------------------------------------------------------------------
+4.9. USER PROFILE & EDITING DRAWER (`components/ProfilePanel.tsx`)
+--------------------------------------------------------------------------------
+• Slide-Over Panel (Right-to-Left on desktop, Bottom-Up on mobile):
+  - Top Navigation Bar: Username title, Settings gear icon, Close button.
+  - Profile Header:
+    * Large Avatar with long-press full preview modal.
+    * Metrics Grid: Posts Count | Followers Count | Following Count.
+    * Display Name, Bio text, clickable external Website URL.
+  - Profile Actions:
+    * "Edit Profile" button (opens modal for Name, Bio, Avatar change).
+    * "Share Profile" button (copies profile link).
+    * If viewing other user: "Follow" / "Following" / "Requested" toggle + "Message" button.
+  - Tab Switcher:
+    1. Grid Tab: 3-column photo grid.
+    2. Reels Tab: Vertical video thumbnails.
+    3. Tagged Tab: Posts tagging this user.
+    4. Saved Tab: Private bookmarked posts list.
+
+--------------------------------------------------------------------------------
+4.10. ACCOUNTS CENTER & MULTI-ACCOUNT VAULT (`app/accounts/page.tsx`)
+--------------------------------------------------------------------------------
+• Meta / Instagram-Style Multi-Account Switcher:
+  - Displays all saved accounts on the local device.
+  - Account Card: Avatar, Name, Handle, Provider tag (Credentials / Google), 
+    and "Current" badge.
+  - Tapping another account executes instantaneous switch without re-entering 
+    passwords (if encrypted token is stored) or prompts password modal.
+  - "Add Account" bottom sheet button (Login / Register new account to device).
+  - "Manage Accounts" mode with red delete buttons to remove cached device credentials.
+
+--------------------------------------------------------------------------------
+4.11. SECURITY & PRIVACY SETTINGS (`app/security/page.tsx`)
+--------------------------------------------------------------------------------
+• Settings Menu Sections:
+  1. Login & Security:
+     - Change Password form (Current Password, New Password, Confirm).
+     - Two-Factor Authentication (2FA) status toggle.
+  2. Device Activity:
+     - List of active login sessions (Device name, IP location, Last active time).
+     - "Log out of other sessions" action.
+  3. Account Privacy:
+     - "Private Account" toggle (Requires follow request approval).
+     - "Show Activity Status" toggle (Controls online green dot visibility).
+
+================================================================================
+5. MICRO-INTERACTIONS, HAPTICS & MOTION SYSTEM
+================================================================================
+
+• Haptic Feedback (`lib/haptics.ts`):
+  - Integrates with Android / iOS device vibrator (`navigator.vibrate` / Capacitor).
+  - Triggers on:
+    * Tab switching: 'light' haptic (10ms).
+    * Liking a post / reaction: 'medium' haptic (20ms).
+    * Error / Alert: 'heavy' double haptic (40ms, 30ms).
+
+• Motion & Transitions:
+  - Spring-curve button scales: `active:scale-95 transition-transform`.
+  - Floating Heart pop: `hf-heartPop` keyframe scaling from 0.4 to 1.3 with drop-shadow.
+  - Bottom Sheet Slide: `cubic-bezier(0.25, 1, 0.5, 1)` easing.
+  - Story Zoom: Coordinate-based clip-path expansion from circle to fullscreen.
+
+================================================================================
+6. RESPONSIVE DESIGN & MOBILE ADAPTATION (PWA / CAPACITOR)
+================================================================================
+
+• Adaptive Layout:
+  - Desktop (>768px): Centered container max-w-lg or 2-column layout (Chat List 
+    on left, Active Conversation on right).
+  - Mobile (<768px): Fullscreen 100dvh viewport with bottom nav dock, safe-area 
+    padding (`env(safe-area-inset-top)` / `env(safe-area-inset-bottom)`), and 
+    native swipe-back gestures.
+
+• PWA Capabilities:
+  - Service Worker (`public/sw.js`) with cache-first strategy for static wallpapers, 
+    audio files, avatars, and icons.
+  - PWA Install prompt banner when accessed via mobile Safari / Chrome.
+  - Web Push & Local Notifications for incoming calls and new chat messages.
+================================================================================
