@@ -19,6 +19,10 @@ const ProfilePanel = dynamic(() => import('@/components/ProfilePanel'), {
   ssr: false,
 });
 
+const CallsView = dynamic(() => import('@/components/CallsView'), {
+  ssr: false,
+});
+
 export default function DashboardPage() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -451,11 +455,13 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Main Chat Container */}
+      {/* Main Container (Messages / Calls) */}
       <div className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[40px] shadow-sm md:border" style={{ background: 'var(--dm-bg-main)', borderColor: 'var(--dm-border-main)' }}>
-        <div className="w-full h-full flex flex-col min-h-0 relative">
+        
+        {/* Messages View */}
+        <div className={`w-full h-full flex flex-col min-h-0 relative ${activeView === 'chat' ? 'flex' : 'hidden'}`}>
           <SocialChat 
-            isActive={true} 
+            isActive={activeView === 'chat'} 
             onStatusChange={setIsConnected} 
             onChatChange={setSelectedChatUser}
             onBack={() => {}}
@@ -467,6 +473,23 @@ export default function DashboardPage() {
               setIsProfileOpen(true);
             }}
             onLongPressChatChange={setIsChatLongPressActive}
+          />
+        </div>
+
+        {/* Calls History View */}
+        <div className={`w-full h-full flex flex-col min-h-0 relative ${activeView === 'calls' ? 'flex' : 'hidden'}`}>
+          <CallsView 
+            currentUserId={(displaySession.user as any)?.id}
+            onOpenChat={(targetUser) => {
+              setSelectedChatUser({ ...targetUser, _openTs: Date.now() });
+              setActiveView('chat');
+            }}
+            onNavigate={(v) => setActiveView(v)}
+            onOpenProfile={() => setIsProfileOpen(true)}
+            onStartCall={(targetUser, callType) => {
+              setSelectedChatUser({ ...targetUser, _startCallType: callType, _openTs: Date.now() });
+              setActiveView('chat');
+            }}
           />
         </div>
 
