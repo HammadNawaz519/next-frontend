@@ -1953,11 +1953,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }, clientX, clientY, true);
   };
 
-  const handleSelectUser = (user: any, e: React.MouseEvent) => {
+  const handleSelectUser = (user: any, e?: React.MouseEvent) => {
     selectedUserRef.current = user;
     setShowChatDetails(false);
     setShowThemePicker(false);
-    runCircleTransition(() => setSelectedUser(user), e.clientX, e.clientY, false);
+    const clientX = e?.clientX ?? (typeof window !== 'undefined' ? window.innerWidth / 2 : 0);
+    const clientY = e?.clientY ?? (typeof window !== 'undefined' ? window.innerHeight / 2 : 0);
+    runCircleTransition(() => setSelectedUser(user), clientX, clientY, false);
   };
 
   const [view, setView] = useState<'recent' | 'requests'>('recent');

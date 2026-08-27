@@ -984,56 +984,56 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Mobile Bottom Navigation — matching reference capsule pill */}
+      {/* Mobile Bottom Navigation — deep black pill bar: Messages (left), Calls (center), Profile (right) */}
       {((activeView === 'home' || activeView === 'search' || activeView === 'reels' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive) && (
         <nav className={`mobile-nav ${(isAccountSheetOpen || isSearchOverlayOpen || isChatLongPressActive) ? 'mobile-nav-hidden' : ''}`}>
-          {/* 1. Calls */}
-          <button
-            onClick={(e) => handleNavClick('home', e)}
-            className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-3 py-1 outline-none cursor-pointer"
-          >
-            <div className="h-5 flex items-center justify-center">
-              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill={!isProfileOpen && activeView === 'home' ? '#FFFFFF' : 'rgba(255,255,255,0.45)'}>
-                <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
-              </svg>
-            </div>
-            <span className={`text-[10px] font-medium tracking-tight ${!isProfileOpen && activeView === 'home' ? 'text-white font-semibold' : 'text-white/50'}`}>
-              Calls
-            </span>
-          </button>
-
-          {/* 2. Messages */}
+          {/* 1. Messages (Leftmost) */}
           <button
             onClick={(e) => handleNavClick('chat', e)}
-            className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-3 py-1 outline-none cursor-pointer"
+            className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
           >
-            <div className="h-5 flex items-center justify-center">
-              <svg className="w-[22px] h-[19px]" viewBox="0 0 24 24" fill="none">
+            <div className="w-6 h-6 flex items-center justify-center">
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
                 <path 
                   d="M4 6.5C4 4.567 5.567 3 7.5 3h9C18.433 3 20 4.567 20 6.5v7c0 1.933-1.567 3.5-3.5 3.5H9.414a1 1 0 00-.707.293L5.414 20.586A1 1 0 013.707 19.88V6.5A3.5 3.5 0 014 6.5z" 
-                  fill={!isProfileOpen && activeView === 'chat' ? '#D5C7FF' : 'rgba(255,255,255,0.45)'} 
+                  fill={!isProfileOpen && activeView === 'chat' ? '#D8B4E2' : 'rgba(255,255,255,0.45)'} 
                 />
-                <circle cx="8.5" cy="10" r="1.1" fill={!isProfileOpen && activeView === 'chat' ? '#1A1A1E' : '#0B0B0E'} />
-                <circle cx="12" cy="10" r="1.1" fill={!isProfileOpen && activeView === 'chat' ? '#1A1A1E' : '#0B0B0E'} />
-                <circle cx="15.5" cy="10" r="1.1" fill={!isProfileOpen && activeView === 'chat' ? '#1A1A1E' : '#0B0B0E'} />
+                <circle cx="8.5" cy="10" r="1.2" fill={!isProfileOpen && activeView === 'chat' ? '#141111' : '#0D0B0B'} />
+                <circle cx="12" cy="10" r="1.2" fill={!isProfileOpen && activeView === 'chat' ? '#141111' : '#0D0B0B'} />
+                <circle cx="15.5" cy="10" r="1.2" fill={!isProfileOpen && activeView === 'chat' ? '#141111' : '#0D0B0B'} />
               </svg>
             </div>
-            <span className={`text-[10px] font-medium tracking-tight ${!isProfileOpen && activeView === 'chat' ? 'text-white font-semibold' : 'text-white/50'}`}>
+            <span className={`text-[11px] font-medium tracking-tight ${!isProfileOpen && activeView === 'chat' ? 'text-white font-semibold' : 'text-white/45'}`}>
               Messages
             </span>
           </button>
 
-          {/* 3. Profile */}
+          {/* 2. Calls (Center) */}
+          <button
+            onClick={(e) => handleNavClick('home', e)}
+            className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
+          >
+            <div className="w-6 h-6 flex items-center justify-center">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill={!isProfileOpen && activeView === 'home' ? '#FFFFFF' : 'rgba(255,255,255,0.45)'}>
+                <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
+              </svg>
+            </div>
+            <span className={`text-[11px] font-medium tracking-tight ${!isProfileOpen && activeView === 'home' ? 'text-white font-semibold' : 'text-white/45'}`}>
+              Calls
+            </span>
+          </button>
+
+          {/* 3. Profile (Right) */}
           <button
             onClick={(e) => runProfileTransition(() => setIsProfileOpen(true), e.clientX, e.clientY, false)}
-            className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-3 py-1 outline-none cursor-pointer"
+            className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
           >
-            <div className="h-5 flex items-center justify-center">
-              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill={isProfileOpen ? '#FFFFFF' : 'rgba(255,255,255,0.45)'}>
+            <div className="w-6 h-6 flex items-center justify-center">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill={isProfileOpen ? '#FFFFFF' : 'rgba(255,255,255,0.45)'}>
                 <path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z" />
               </svg>
             </div>
-            <span className={`text-[10px] font-medium tracking-tight ${isProfileOpen ? 'text-white font-semibold' : 'text-white/50'}`}>
+            <span className={`text-[11px] font-medium tracking-tight ${isProfileOpen ? 'text-white font-semibold' : 'text-white/45'}`}>
               Profile
             </span>
           </button>

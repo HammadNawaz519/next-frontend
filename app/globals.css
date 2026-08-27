@@ -687,32 +687,32 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   BOTTOM NAVIGATION — dark capsule pill bar
+   BOTTOM NAVIGATION — deep black capsule pill bar
    ═══════════════════════════════════════════════════════════════ */
 .mobile-nav {
   display: none;
   position: fixed;
-  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
-  width: 82%;
-  max-width: 270px;
-  height: 58px;
+  width: 90%;
+  max-width: 360px;
+  height: 66px;
   z-index: 90;
   align-items: center;
   justify-content: space-around;
-  padding: 0 16px;
+  padding: 0 20px;
   border-radius: 9999px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
-  background: #0b0b0e;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  background: #141111;
   /* Smooth slide in/out */
   transition: transform 350ms var(--ease-ig), opacity 350ms var(--ease-ig);
   will-change: transform, opacity;
 }
 
 .mobile-nav-hidden {
-  transform: translate(-50%, 80px) !important;
+  transform: translate(-50%, 90px) !important;
   opacity: 0;
   pointer-events: none;
 }
@@ -730,9 +730,9 @@ body:has([data-comment-drawer="true"]) .mobile-nav {
 
 [data-theme="dark"] .mobile-nav,
 [data-theme="light"] .mobile-nav {
-  background: #0b0b0e !important;
+  background: #141111 !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
 }
 
 .mobile-nav > * { position: relative; z-index: 1; }
