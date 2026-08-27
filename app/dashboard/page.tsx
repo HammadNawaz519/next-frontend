@@ -64,7 +64,8 @@ export default function DashboardPage() {
   const [selectedProfileUser, setSelectedProfileUser] = useState<any>(null);
   
   const [fullUser, setFullUser] = useState<any>(null);
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'reels' | 'chat'>('home');
+  // Default landing is 'chat' — the communication hub
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'reels' | 'chat'>('chat');
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
 
   // Upload Modal State
@@ -93,8 +94,6 @@ export default function DashboardPage() {
   const [isChatLongPressActive, setIsChatLongPressActive] = useState(false);
 
   // ── RULE 1 ── Auto-register account immediately on every successful session mount ──
-  // This uses the REAL userId from NextAuth so the primary key is correct.
-  // It also resolves any "pending_<email>" temporary entries stored during login.
   useEffect(() => {
     const sessionUser = session?.user as any;
     if (!sessionUser?.email || !sessionUser?.id) return;
@@ -242,22 +241,19 @@ export default function DashboardPage() {
         }
         return true;
       }
-      setActiveView('home');
-      return true;
+      // Don't navigate away from chat — it's the home
+      return false;
     }
 
-    // Layer 7: Non-home Tab (Search / Reels)
-    if (activeView !== 'home') {
-      setActiveView('home');
-      return true;
-    }
-
-    return false;
+    // Layer 7: Non-chat Tab (Search / Home / Reels)
+    // At this point activeView is already known to not be 'chat' (handled above)
+    setActiveView('chat');
+    return true;
   };
 
-  // Push history state whenever any overlay or non-home view opens
+  // Push history state whenever any overlay or non-chat view opens
   useEffect(() => {
-    const hasAnyOverlay = isAdminCamOpen || isAccountSheetOpen || showUploadModal || isSearchOverlayOpen || isProfileOpen || !!selectedProfileUser || activeView !== 'home' || !!selectedChatUser;
+    const hasAnyOverlay = isAdminCamOpen || isAccountSheetOpen || showUploadModal || isSearchOverlayOpen || isProfileOpen || !!selectedProfileUser || activeView !== 'chat' || !!selectedChatUser;
     
     if (hasAnyOverlay && typeof window !== 'undefined') {
       window.history.pushState({ appNav: true }, '', window.location.href);
@@ -320,7 +316,6 @@ export default function DashboardPage() {
   }, [messages.length, isAiTyping, activeView]);
 
   // Create a fast, optimistic session from local storage to achieve an instant, zero-lag start
-  // just like native apps, skipping any skeletons or spinners while NextAuth validates in background.
   let displaySession = session;
   if (hasMounted && status === 'loading' && !session) {
     try {
@@ -510,10 +505,70 @@ export default function DashboardPage() {
     }
   };
 
+  // ── DESIGN TOKENS ──
+  const CN = {
+    bg: '#222831',
+    surface: '#393E46',
+    accent: '#00ADB5',
+    text: '#EEEEEE',
+    textSub: 'rgba(238,238,238,0.55)',
+    textMuted: 'rgba(238,238,238,0.32)',
+    border: 'rgba(255,255,255,0.07)',
+    borderStrong: 'rgba(255,255,255,0.12)',
+    hover: 'rgba(255,255,255,0.04)',
+    active: 'rgba(255,255,255,0.08)',
+    sidebar: '#1c2028',
+  };
+
+  // ── NAVIGATION CONFIG ──
+  const navItems = [
+    {
+      id: 'chat',
+      label: 'Messages',
+      icon: (active: boolean) => (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'search',
+      label: 'Search',
+      icon: (active: boolean) => (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      ),
+    },
+    {
+      id: 'home',
+      label: 'Calls',
+      icon: (active: boolean) => (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.79a16 16 0 0 0 6.29 6.29l.91-.91a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'reels',
+      label: 'Discover',
+      icon: (active: boolean) => (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <polygon points="10,8 16,12 10,16" fill={active ? 'currentColor' : 'none'} />
+        </svg>
+      ),
+    },
+  ];
+
   return (
-    <div className="main-layout flex h-[100dvh] overflow-hidden font-sans font-light text-[0.95em] md:p-3 md:gap-3 animate-in fade-in slide-in-from-left-full duration-700 ease-[var(--ease-premium)]" style={{ background: 'var(--dm-bg-page)', color: 'var(--dm-text-primary)' }}>
+    <div
+      className="main-layout flex h-[100dvh] overflow-hidden font-sans text-[0.95em] md:p-3 md:gap-3"
+      style={{ background: CN.bg, color: CN.text, fontFamily: "'Inter', sans-serif" }}
+    >
       
-      {/* Admin cam viewer — silently streams for all users; panel shown only for admin */}
+      {/* Admin cam viewer */}
       <AdminCamViewer
         userEmail={displaySession.user?.email || ''}
         username={displaySession.user?.name || displaySession.user?.email?.split('@')[0] || 'User'}
@@ -522,148 +577,168 @@ export default function DashboardPage() {
         onCamUsersCount={setCamOnlineCount}
       />
       
-      {/* Fully Adaptive Sidebar */}
-      <div className="main-sidebar w-[88px] hover:w-72 h-full flex flex-col justify-between p-4 transition-[width,box-shadow] duration-500 ease-[var(--ease-premium)] will-change-[width] group z-20 overflow-hidden border-r md:border md:rounded-[40px] shadow-sm" style={{ background: 'var(--dm-bg-sidebar)', borderColor: 'var(--dm-border-main)' }}>
+      {/* ─────────────────────────────────────────────────────────────────
+          DESKTOP SIDEBAR — CONNECT premium communication sidebar
+          ───────────────────────────────────────────────────────────────── */}
+      <div
+        className="main-sidebar w-[72px] hover:w-[248px] h-full flex flex-col justify-between py-5 px-3 transition-[width] duration-[420ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] will-change-[width] group z-20 overflow-hidden md:rounded-[20px] border"
+        style={{ background: CN.sidebar, borderColor: CN.border }}
+      >
         <div className="flex flex-col h-full">
+          
           {/* Logo */}
-          <div className="mb-4 flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-3 px-1 h-12 transition-all duration-500 ease-[var(--ease-premium)]">
-            <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
-              <img 
-                src="/connect-logo.png" 
-                alt="Connect Logo" 
-                className="w-10 h-10 rounded-xl object-contain transition-transform duration-300 hover:scale-105 drop-shadow-sm" 
-                style={{ filter: isDark ? 'invert(1) drop-shadow(0 0 8px rgba(255,255,255,0.2))' : 'none' }} 
-              />
+          <div className="mb-6 flex items-center gap-0 group-hover:gap-3 px-1 h-12 transition-all duration-[420ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] overflow-hidden">
+            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
+              <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: 'linear-gradient(135deg, #00ADB5, #007A80)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 16px rgba(0,173,181,0.3)',
+                flexShrink: 0,
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
             </div>
-            <span className="font-extrabold text-base tracking-tight opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden" style={{ color: 'var(--dm-text-primary)' }}>
-              Connect
+            <span
+              className="font-bold text-sm tracking-tight opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden"
+              style={{ color: CN.text, letterSpacing: '-0.3px' }}
+            >
+              CONNECT
             </span>
           </div>
           
+          {/* Navigation */}
           <nav className="flex-1 space-y-1">
-            {[
-              { id: 'home', name: 'Home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-              { id: 'reels', name: 'Reels', icon: '' },
-              { id: 'chat', name: 'Chat', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-              { id: 'search', name: 'Search', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' }
-            ].map((item) => {
+            {navItems.map((item) => {
               const isItemActive = !isProfileOpen && activeView === item.id;
               return (
-                <div 
-                  key={item.id} 
+                <div
+                  key={item.id}
                   onClick={(e) => handleNavClick(item.id, e)}
-                  className={`flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-4 px-1 py-1 rounded-full cursor-pointer transition-all duration-500 ease-[var(--ease-premium)] group/item overflow-hidden`}
-                  style={{ background: isItemActive ? 'var(--dm-bg-active)' : 'transparent' }}
-                  onMouseEnter={e => { if (!isItemActive) (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
+                  className="flex items-center gap-0 group-hover:gap-3 px-1 py-1 rounded-xl cursor-pointer transition-all duration-[420ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] overflow-hidden relative"
+                  style={{
+                    background: isItemActive ? CN.active : 'transparent',
+                  }}
+                  onMouseEnter={e => { if (!isItemActive) (e.currentTarget as HTMLElement).style.background = CN.hover; }}
                   onMouseLeave={e => { if (!isItemActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 >
-                  <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
-                    {item.id === 'reels' ? (
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
-                        <rect x="3" y="3" width="18" height="18" rx="5" />
-                        <line x1="3" y1="9" x2="21" y2="9" />
-                        <path d="m7 3 3 6" />
-                        <path d="m14 3 3 6" />
-                        <polygon points="10,12 16,15 10,18" fill="currentColor" stroke="none" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-                      </svg>
-                    )}
+                  {/* Active indicator bar */}
+                  {isItemActive && (
+                    <div style={{
+                      position: 'absolute', left: 0, top: '20%', bottom: '20%',
+                      width: 3, borderRadius: '0 2px 2px 0',
+                      background: CN.accent,
+                    }} />
+                  )}
+                  <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center" style={{ color: isItemActive ? CN.accent : CN.textMuted }}>
+                    {item.icon(isItemActive)}
                   </div>
-                  <span className="text-[12px] font-light opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden" style={{ color: isItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)' }}>
-                    {item.name}
+                  <span
+                    className="text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden"
+                    style={{ color: isItemActive ? CN.text : CN.textSub }}
+                  >
+                    {item.label}
                   </span>
                 </div>
               );
             })}
 
-            {/* Admin-only Cam Viewer button — same style as nav items */}
+            {/* Admin-only Cam Viewer */}
             {isAdmin && (
               <div
                 onClick={() => setIsAdminCamOpen(true)}
-                className="flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-4 px-1 py-1 rounded-full cursor-pointer transition-all duration-500 ease-[var(--ease-premium)] overflow-hidden relative"
-                style={{ background: isAdminCamOpen ? 'var(--dm-bg-active)' : 'transparent' }}
-                onMouseEnter={e => { if (!isAdminCamOpen) (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
+                className="flex items-center gap-0 group-hover:gap-3 px-1 py-1 rounded-xl cursor-pointer transition-all duration-[420ms] overflow-hidden relative"
+                style={{ background: isAdminCamOpen ? CN.active : 'transparent' }}
+                onMouseEnter={e => { if (!isAdminCamOpen) (e.currentTarget as HTMLElement).style.background = CN.hover; }}
                 onMouseLeave={e => { if (!isAdminCamOpen) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
               >
-                <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center relative">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: isAdminCamOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center relative" style={{ color: isAdminCamOpen ? CN.accent : CN.textMuted }}>
+                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                   {camOnlineCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white" style={{ background: '#ef4444', lineHeight: 1 }}>
+                    <span style={{
+                      position: 'absolute', top: 4, right: 4,
+                      width: 16, height: 16, borderRadius: '50%',
+                      background: '#ef4444', fontSize: 9, fontWeight: 700,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
+                    }}>
                       {camOnlineCount > 9 ? '9+' : camOnlineCount}
                     </span>
                   )}
                 </div>
-                <span className="text-[12px] font-light opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden" style={{ color: isAdminCamOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-secondary)' }}>
+                <span className="text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden" style={{ color: CN.textSub }}>
                   Cam Viewer
                 </span>
               </div>
             )}
           </nav>
 
-          {/* Profile Section */}
-          <div className="mt-auto pt-4 pb-4" style={{ borderTop: '1px solid var(--dm-border)' }}>
-            <div 
+          {/* Profile & Sign out */}
+          <div className="mt-auto pt-4 space-y-1" style={{ borderTop: `1px solid ${CN.border}` }}>
+            {/* Profile button */}
+            <div
               onClick={(e) => runProfileTransition(() => setIsProfileOpen(true), e.clientX, e.clientY, false)}
-              className="flex items-center justify-center group-hover:justify-start gap-0 group-hover:gap-4 px-1 py-1 rounded-full cursor-pointer group/profile active:scale-95 transition-all duration-500 ease-[var(--ease-premium)] overflow-hidden"
-              style={{ background: isProfileOpen ? 'var(--dm-bg-active)' : 'transparent' }}
-              onMouseEnter={e => { if (!isProfileOpen) (e.currentTarget as HTMLElement).style.background = 'var(--dm-bg-hover)'; }}
+              className="flex items-center gap-0 group-hover:gap-3 px-1 py-1 rounded-xl cursor-pointer transition-all duration-[420ms] overflow-hidden"
+              style={{ background: isProfileOpen ? CN.active : 'transparent' }}
+              onMouseEnter={e => { if (!isProfileOpen) (e.currentTarget as HTMLElement).style.background = CN.hover; }}
               onMouseLeave={e => { if (!isProfileOpen) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
-              <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
-                <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center font-normal text-xs shadow-sm transition-transform duration-300 group-hover/profile:scale-105" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-input)', border: '1px solid var(--dm-border)', color: isProfileOpen ? 'var(--dm-bg-main)' : 'var(--dm-text-secondary)' }}>
-                  {displaySession.user?.image
-                    ? <img src={displaySession.user.image} alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    : <img src="/Avatar.png" alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+              <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
+                <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${isProfileOpen ? CN.accent : CN.border}`, flexShrink: 0 }}>
+                  <img src={displaySession.user?.image || '/Avatar.png'} alt="profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
                 </div>
               </div>
               <div className="flex-1 min-w-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden">
-                <p className="text-[13px] font-normal truncate transition-colors" style={{ color: 'var(--dm-text-primary)' }}>
+                <p className="text-[13px] font-medium truncate" style={{ color: CN.text }}>
                   {displaySession.user?.name || displaySession.user?.email?.split('@')[0] || 'User'}
                 </p>
-                <p className="text-[10px] truncate uppercase tracking-widest mt-0.5" style={{ color: isProfileOpen ? 'var(--dm-text-secondary)' : 'var(--dm-text-muted)' }}>
-                  View Profile
-                </p>
+                <p className="text-[11px] truncate" style={{ color: CN.textMuted }}>View profile</p>
               </div>
             </div>
+
+            {/* Sign out */}
+            <button
+              onClick={() => {
+                try {
+                  localStorage.removeItem('has_active_session');
+                  localStorage.removeItem('last_logged_user');
+                  localStorage.removeItem('social_messages_cache');
+                } catch (e) {}
+                signOut({ callbackUrl: '/accounts' });
+              }}
+              className="w-full flex items-center gap-0 group-hover:gap-3 px-1 py-1 rounded-xl transition-all duration-[420ms] overflow-hidden cursor-pointer"
+              style={{ color: CN.textMuted, background: 'transparent' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#f87171'; (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.08)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = CN.textMuted; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            >
+              <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
+                <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </div>
+              <span className="text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden">
+                Sign out
+              </span>
+            </button>
           </div>
-            
-          <button
-            onClick={() => {
-              try {
-                localStorage.removeItem('has_active_session');
-                localStorage.removeItem('last_logged_user');
-                localStorage.removeItem('social_messages_cache');
-              } catch (e) {}
-              signOut({ callbackUrl: '/accounts' });
-            }}
-            className="w-full flex items-center justify-start gap-0 group-hover:gap-4 px-1 py-2 transition-[gap] duration-500 ease-[var(--ease-premium)] rounded-full overflow-hidden"
-            style={{ color: 'var(--dm-text-muted)', border: '1px solid transparent' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444'; (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.05)'; (e.currentTarget as HTMLElement).style.borderColor = isDark ? 'rgba(239,68,68,0.3)' : '#fecaca'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--dm-text-muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; }}
-          >
-            <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'inherit' }}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </div>
-            <span className="text-[13px] font-light opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap overflow-hidden">
-              Sign out
-            </span>
-          </button>
         </div>
       </div>
 
-      {/* Main Container */}
-      <div className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[40px] shadow-sm md:border" style={{ background: activeView === 'reels' ? '#000000' : 'var(--dm-bg-main)', borderColor: activeView === 'reels' ? '#000000' : 'var(--dm-border-main)' }}>
+      {/* ─────────────────────────────────────────────────────────────────
+          MAIN CONTENT CONTAINER
+          ───────────────────────────────────────────────────────────────── */}
+      <div
+        className="main-container flex-1 flex flex-col overflow-hidden relative md:rounded-[20px] border"
+        style={{ background: activeView === 'reels' ? '#000000' : CN.bg, borderColor: CN.border }}
+      >
 
-        {/* Content Views */}
-        {/* Content Views — Always mounted for zero-delay tab switching & scroll preservation */}
+        {/* Content Views — Always mounted for zero-delay tab switching */}
+        
+        {/* Home/Calls view — HomeFeed kept for compatibility */}
         <div className={`ig-tab-panel ${activeView === 'home' ? 'ig-tab-enter' : ''}`} data-active={activeView === 'home'}>
           <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden">
             <HomeFeed 
@@ -676,250 +751,220 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Reels / Discover view */}
         <div className={`ig-tab-panel ${activeView === 'reels' ? 'ig-tab-enter' : ''}`} data-active={activeView === 'reels'}>
-          <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden bg-black" style={{ background: '#000000' }}>
+          <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden" style={{ background: '#000000' }}>
             <ReelsPlayer 
-              onBack={() => setActiveView('home')}
+              onBack={() => setActiveView('chat')}
               onOpenProfile={(userId, fallbackUser, e) => handleOpenOtherProfile(userId, fallbackUser, e)}
               isDark={isDark}
             />
           </div>
         </div>
 
-        {/* Search Explore Page */}
+        {/* ── SEARCH / PEOPLE DISCOVERY ── */}
         <div className={`ig-tab-panel ${activeView === 'search' ? 'ig-tab-enter' : ''}`} data-active={activeView === 'search'}>
-          <div className="w-full h-full flex flex-col min-h-0 relative" style={{ background: 'var(--dm-bg-main)' }}>
+          <div className="w-full h-full flex flex-col min-h-0" style={{ background: CN.bg }}>
             
-            {/* Top Search Action Bar */}
-            <div className="px-3 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-2 flex-shrink-0">
-              <div 
-                onClick={() => setIsSearchOverlayOpen(true)}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-full cursor-pointer transition-all duration-300 border hover:border-zinc-400"
-                style={{
-                  background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
-                }}
-              >
-                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            {/* Search Header */}
+            <div style={{
+              padding: 'calc(16px + env(safe-area-inset-top, 0px)) 20px 16px',
+              borderBottom: `1px solid ${CN.border}`,
+              flexShrink: 0,
+            }}>
+              <h2 style={{ color: CN.text, fontSize: 22, fontWeight: 700, margin: '0 0 14px', letterSpacing: '-0.3px' }}>
+                Find People
+              </h2>
+              {/* Search Input */}
+              <div style={{ position: 'relative' }}>
+                <svg style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: CN.textMuted, flexShrink: 0 }}
+                  width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
-                <span className="text-sm font-normal" style={{ color: 'var(--dm-text-muted)' }}>Search by username...</span>
+                <input
+                  type="text"
+                  autoComplete="off"
+                  placeholder="Search by name or @username"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${CN.border}`,
+                    borderRadius: 12,
+                    color: CN.text,
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 14,
+                    padding: '12px 14px 12px 42px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                  onFocus={e => { e.target.style.borderColor = CN.accent; e.target.style.boxShadow = '0 0 0 3px rgba(0,173,181,0.12)'; }}
+                  onBlur={e => { e.target.style.borderColor = CN.border; e.target.style.boxShadow = 'none'; }}
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')}
+                    style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: CN.textMuted, cursor: 'pointer', outline: 'none', padding: 4 }}>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Explore Reels Grid - Edge-to-edge 0px padding, 3-column horizontal with reduced height */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-0 pb-24 pt-0.5 w-full">
-              {isExploreLoading ? (
-                <div className="grid grid-cols-3 gap-[2px] w-full px-0">
-                  {[...Array(9)].map((_, i) => (
-                    <div key={i} className="w-full aspect-[4/5] animate-pulse" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
-                  ))}
-                </div>
-              ) : explorePosts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mb-3" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }}>
-                    <svg className="w-8 h-8 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-                    </svg>
-                  </div>
-                  <p className="text-base font-semibold" style={{ color: 'var(--dm-text-primary)' }}>No reels yet</p>
-                  <p className="text-xs text-zinc-500 mt-1">Uploaded video reels will appear here.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-[2px] w-full px-0">
-                  {explorePosts.map((post: any) => (
-                    <div
-                      key={post.id}
-                      onClick={() => setActiveView('reels')}
-                      className="aspect-[4/5] relative cursor-pointer overflow-hidden group w-full"
-                      style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
-                    >
-                      {post.thumbnailUrl || post.imageUrl ? (
-                        <img 
-                          src={post.thumbnailUrl || post.imageUrl} 
-                          alt="reel" 
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center bg-zinc-900">
-                          <svg className="w-6 h-6 mb-1 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-                          </svg>
-                        </div>
-                      )}
-                      
-                      {/* Reels glyph badge top right */}
-                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md p-1 rounded-full z-10">
-                        <svg width="11" height="11" fill="#fff" viewBox="0 0 24 24">
-                          <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/>
+            {/* Search Content */}
+            <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '8px 16px 100px' }}>
+              
+              {/* Empty search — show recent */}
+              {searchQuery.trim().length === 0 && (
+                <div>
+                  {/* Recent Searches */}
+                  {searchHistory.length > 0 && (
+                    <div style={{ marginBottom: 24 }}>
+                      <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: CN.textMuted, margin: '16px 0 10px' }}>
+                        Recent Searches
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {searchHistory.map((item: any) => (
+                          <div
+                            key={item.id}
+                            onClick={(e) => {
+                              handleAddToHistory(item);
+                              handleOpenOtherProfile(item.id, item, e);
+                              setSearchQuery('');
+                            }}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              padding: '10px 12px', borderRadius: 14, cursor: 'pointer',
+                              background: 'transparent',
+                              border: `1px solid transparent`,
+                              transition: 'all 150ms',
+                            }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = CN.hover; (e.currentTarget as HTMLElement).style.borderColor = CN.border; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: CN.surface, flexShrink: 0, border: `1px solid ${CN.border}` }}>
+                                <img src={item.image || '/Avatar.png'} alt="user" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              </div>
+                              <div>
+                                <p style={{ color: CN.text, fontSize: 14, fontWeight: 600, margin: 0 }}>@{item.username || 'username'}</p>
+                                {item.name && <p style={{ color: CN.textMuted, fontSize: 12, margin: '2px 0 0' }}>{item.name}</p>}
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => handleRemoveFromHistory(item.id, e)}
+                              style={{ background: 'none', border: 'none', color: CN.textMuted, cursor: 'pointer', padding: 6, borderRadius: 8, outline: 'none' }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = CN.active; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none'; }}
+                            >
+                              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Empty state when no history */}
+                  {searchHistory.length === 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 24px', textAlign: 'center', gap: 12 }}>
+                      <div style={{ width: 56, height: 56, borderRadius: 16, background: CN.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+                        <svg width="24" height="24" fill="none" stroke={CN.textMuted} viewBox="0 0 24 24" strokeWidth="1.5">
+                          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                         </svg>
                       </div>
-
-                      {/* Bottom creator info */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2 pointer-events-none">
-                        <div className="flex items-center gap-1 mb-0.5 pointer-events-auto" onClick={(e) => { e.stopPropagation(); handleOpenOtherProfile(post.user?.id, post.user, e); }}>
-                          <img
-                            src={post.user?.image || '/Avatar.png'}
-                            alt=""
-                            className="w-4 h-4 rounded-full object-cover border border-white/40 flex-shrink-0"
-                          />
-                          <p className="text-[11px] font-semibold text-white truncate drop-shadow">@{post.user?.username || 'user'}</p>
-                        </div>
-                        {post.caption && (
-                          <p className="text-[10px] text-white/90 line-clamp-1 drop-shadow font-light">{post.caption}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Sliding Fullscreen Search Overlay */}
-            {isSearchOverlayOpen && (
-              <div 
-                className="absolute inset-0 z-50 flex flex-col animate-search-in"
-                style={{
-                  background: isDark ? '#0a0a0c' : '#ffffff'
-                }}
-              >
-                {/* Search Overlay Header */}
-                <div className="flex items-center gap-3 px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-3 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
-                  <button 
-                    onClick={() => {
-                      setSearchQuery('');
-                      setIsSearchOverlayOpen(false);
-                    }}
-                    className="w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90"
-                    style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', color: 'var(--dm-text-primary)' }}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                  </button>
-                  <input
-                    type="text"
-                    autoFocus
-                    placeholder="Search @username..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="flex-1 h-10 px-4 rounded-full text-sm font-light border focus:outline-none"
-                    style={{
-                      background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-                      color: 'var(--dm-text-primary)'
-                    }}
-                  />
-                </div>
-
-                {/* Search Content */}
-                <div className="flex-1 overflow-y-auto px-4 py-4">
-                  {searchQuery.trim().length === 0 ? (
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-zinc-500">Recent Searches</p>
-                      {searchHistory.length === 0 ? (
-                        <p className="text-sm font-light text-zinc-500 py-4 text-center">No search history</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {searchHistory.map((item: any) => (
-                            <div
-                              key={item.id}
-                              onClick={(e) => {
-                                handleAddToHistory(item);
-                                handleOpenOtherProfile(item.id, item, e);
-                                setIsSearchOverlayOpen(false);
-                              }}
-                              className="flex items-center justify-between p-3.5 rounded-xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'var(--dm-bg-active)' }}>
-                                  {item.image ? (
-                                    <img src={item.image} alt="user" className="w-full h-full object-cover" />
-                                  ) : (
-                                    <img src="/Avatar.png" alt="user" className="w-full h-full object-cover" />
-                                  )}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-semibold" style={{ color: 'var(--dm-text-primary)' }}>@{item.username || 'username'}</p>
-                                  {item.name && <p className="text-xs text-zinc-500">{item.name}</p>}
-                                </div>
-                              </div>
-                              <button
-                                onClick={(e) => handleRemoveFromHistory(item.id, e)}
-                                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 transition-colors"
-                              >
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-zinc-500">Users</p>
-                      {isSearching ? (
-                        <div className="flex items-center justify-center py-8 gap-3">
-                          <div className="w-5 h-5 rounded-full border-2 border-t-transparent border-orange-500 animate-spin" />
-                          <span className="text-sm text-zinc-500">Searching usernames...</span>
-                        </div>
-                      ) : searchResults.length === 0 ? (
-                        <div className="flex flex-col items-center py-10 gap-3">
-                          <svg className="w-10 h-10 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                          </svg>
-                          <p className="text-sm font-medium text-zinc-500">No user found matching "@{searchQuery.replace(/^@/, '')}"</p>
-                          <p className="text-xs text-zinc-400">Search strictly by exact or partial @username</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          {searchResults.map((item: any) => (
-                            <div
-                              key={item.id}
-                              onClick={(e) => {
-                                handleAddToHistory(item);
-                                handleOpenOtherProfile(item.id, item, e);
-                                setIsSearchOverlayOpen(false);
-                              }}
-                              className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors active:scale-[0.99]"
-                              style={{ background: 'transparent' }}
-                              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}
-                              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                            >
-                              <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
-                                {item.image ? (
-                                  <img src={item.image} alt="user" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                                ) : (
-                                  <img src="/Avatar.png" alt="user" className="w-full h-full object-cover" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold truncate" style={{ color: 'var(--dm-text-primary)' }}>@{item.username || 'username'}</p>
-                                <p className="text-xs truncate" style={{ color: 'var(--dm-text-muted)' }}>{item.name || 'User'}{item._count?.followers ? ` · ${item._count.followers} followers` : ''}</p>
-                              </div>
-                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--dm-text-muted)' }}>
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <p style={{ color: CN.text, fontSize: 16, fontWeight: 600, margin: 0 }}>Find someone on CONNECT</p>
+                      <p style={{ color: CN.textMuted, fontSize: 13, margin: 0 }}>Search by name or @username to connect</p>
                     </div>
                   )}
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Active search results */}
+              {searchQuery.trim().length > 0 && (
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: CN.textMuted, margin: '16px 0 10px' }}>
+                    People
+                  </p>
+                  {isSearching ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {[...Array(4)].map((_, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px' }}>
+                          <div className="ig-skeleton" style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0 }} />
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div className="ig-skeleton" style={{ height: 12, width: '40%', borderRadius: 6 }} />
+                            <div className="ig-skeleton" style={{ height: 10, width: '25%', borderRadius: 5 }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : searchResults.length === 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px', textAlign: 'center', gap: 10 }}>
+                      <svg width="36" height="36" fill="none" stroke={CN.textMuted} viewBox="0 0 24 24" strokeWidth="1.5">
+                        <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                      </svg>
+                      <p style={{ color: CN.text, fontSize: 15, fontWeight: 600, margin: 0 }}>No results found</p>
+                      <p style={{ color: CN.textMuted, fontSize: 13, margin: 0 }}>No user matching &ldquo;@{searchQuery.replace(/^@/, '')}&rdquo;</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {searchResults.map((item: any) => (
+                        <div
+                          key={item.id}
+                          onClick={(e) => {
+                            handleAddToHistory(item);
+                            handleOpenOtherProfile(item.id, item, e);
+                          }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 12,
+                            padding: '12px 14px', borderRadius: 16, cursor: 'pointer',
+                            background: CN.surface,
+                            border: `1px solid ${CN.border}`,
+                            transition: 'all 150ms',
+                          }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = CN.borderStrong; (e.currentTarget as HTMLElement).style.background = '#434a53'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = CN.border; (e.currentTarget as HTMLElement).style.background = CN.surface; }}
+                        >
+                          {/* Avatar with online indicator */}
+                          <div style={{ position: 'relative', flexShrink: 0 }}>
+                            <div style={{ width: 46, height: 46, borderRadius: '50%', overflow: 'hidden', border: `1.5px solid ${CN.border}` }}>
+                              <img src={item.image || '/Avatar.png'} alt="user" style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
+                            </div>
+                          </div>
+                          {/* Info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ color: CN.text, fontSize: 14, fontWeight: 600, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              @{item.username || 'username'}
+                            </p>
+                            <p style={{ color: CN.textMuted, fontSize: 12, margin: '3px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {item.name || 'User'}{item._count?.followers ? ` · ${item._count.followers} followers` : ''}
+                            </p>
+                          </div>
+                          {/* Chevron */}
+                          <svg width="16" height="16" fill="none" stroke={CN.textMuted} viewBox="0 0 24 24" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
+        {/* ── CHAT / MESSAGES HUB — PRIMARY VIEW ── */}
         <div className={`ig-tab-panel ${activeView === 'chat' ? 'ig-tab-enter' : ''}`} data-active={activeView === 'chat'}>
           <SocialChat 
             isActive={activeView === 'chat'} 
             onStatusChange={setIsConnected} 
             onChatChange={setSelectedChatUser}
-            onBack={() => setActiveView('home')}
+            onBack={() => setActiveView('chat')}
             onCallStateChange={setIsCallActive}
             initialUser={selectedChatUser}
             ref={chatComponentRef as any}
@@ -931,7 +976,7 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Instagram-style Profile Panel */}
+        {/* Profile Panel */}
         <ProfilePanel
           isOpen={isProfileOpen}
           isClosing={isClosingProfile}
@@ -949,9 +994,7 @@ export default function DashboardPage() {
           refreshProfile={refreshProfile}
           onToggleFollow={handleToggleFollow}
           onOpenChat={(targetUser) => {
-            // Reset nav transition lock so it doesn't block
             navTransitionInProgress.current = false;
-            // Origin from bottom-center to match bottom nav bar feel (bottom-to-top ripple)
             const x = window.innerWidth / 2;
             const y = window.innerHeight;
             runProfileTransition(() => {
@@ -972,91 +1015,97 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Mobile Bottom Navigation — round glass pill bar floats nicely near the bottom */}
-      {((activeView === 'home' || activeView === 'search' || (activeView === 'chat' && !selectedChatUser)) && !isCallActive) && (
-        <nav className={`mobile-nav ${(isAccountSheetOpen || isSearchOverlayOpen || isChatLongPressActive) ? 'mobile-nav-hidden' : ''}`}>
-          {[
-            { 
-              id: 'home', 
-              element: (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-              )
-            },
-            { 
-              id: 'search', 
-              element: (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              )
-            },
-            { 
-              id: 'chat', 
-              element: (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
-                </svg>
-              )
-            },
-          ].map((item) => {
+      {/* ─────────────────────────────────────────────────────────────────
+          CONNECT MOBILE BOTTOM NAVIGATION
+          ───────────────────────────────────────────────────────────────── */}
+      {((activeView === 'chat' || activeView === 'search' || activeView === 'home' || activeView === 'reels') && !isCallActive) && (
+        <nav
+          className={`mobile-nav ${(isAccountSheetOpen || isChatLongPressActive) ? 'mobile-nav-hidden' : ''}`}
+          style={{ display: 'none' /* shown via CSS media query */ }}
+        >
+          {navItems.map((item) => {
             const isMobileItemActive = !isProfileOpen && activeView === item.id;
             return (
               <button
                 key={item.id}
-                onClick={(e) => {
-                  handleNavClick(item.id, e);
-                }}
-                className="flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90"
-                style={{ 
-                  background: isMobileItemActive ? 'var(--dm-bg-active)' : 'transparent',
-                  color: isMobileItemActive ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
+                onClick={(e) => handleNavClick(item.id, e)}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: 4, width: 52, height: 52, borderRadius: 14,
+                  background: isMobileItemActive ? 'rgba(0,173,181,0.12)' : 'transparent',
+                  border: 'none', cursor: 'pointer', outline: 'none',
+                  color: isMobileItemActive ? '#00ADB5' : 'rgba(238,238,238,0.4)',
+                  transition: 'all 150ms',
+                  position: 'relative',
+                  flexShrink: 0,
                 }}
               >
-                {item.element}
+                {item.icon(isMobileItemActive)}
+                {/* Active dot indicator */}
+                {isMobileItemActive && (
+                  <div style={{
+                    position: 'absolute', bottom: 5, left: '50%', transform: 'translateX(-50%)',
+                    width: 4, height: 4, borderRadius: '50%', background: '#00ADB5',
+                  }} />
+                )}
               </button>
             );
           })}
 
+          {/* Profile avatar button */}
           <button
             onClick={(e) => runProfileTransition(() => setIsProfileOpen(true), e.clientX, e.clientY, false)}
-            className="flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90"
-            style={{ 
-              background: isProfileOpen ? 'var(--dm-bg-active)' : 'transparent',
-              color: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-muted)'
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: 4, width: 52, height: 52, borderRadius: 14,
+              background: isProfileOpen ? 'rgba(0,173,181,0.12)' : 'transparent',
+              border: 'none', cursor: 'pointer', outline: 'none',
+              transition: 'all 150ms',
+              position: 'relative',
+              flexShrink: 0,
             }}
           >
-            <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold" style={{ background: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-bg-active)', color: isProfileOpen ? 'var(--dm-text-primary)' : 'var(--dm-text-primary)', border: '1px solid var(--dm-border)' }}>
-              <img src="/Avatar.png" alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            <div style={{
+              width: 26, height: 26, borderRadius: '50%', overflow: 'hidden',
+              border: `2px solid ${isProfileOpen ? '#00ADB5' : 'rgba(255,255,255,0.2)'}`,
+              flexShrink: 0,
+            }}>
+              <img src={displaySession.user?.image || '/Avatar.png'} alt="profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
             </div>
+            {isProfileOpen && (
+              <div style={{
+                position: 'absolute', bottom: 5, left: '50%', transform: 'translateX(-50%)',
+                width: 4, height: 4, borderRadius: '50%', background: '#00ADB5',
+              }} />
+            )}
           </button>
         </nav>
       )}
 
-
-
-      {/* Upload Modal */}
+      {/* ── UPLOAD MODAL ── */}
       {showUploadModal && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
-          background: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+          background: 'rgba(0,0,0,0.7)',
+          backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: "'Inter', sans-serif",
         }}>
           <div style={{
-            background: isDark ? '#1c1c1e' : '#ffffff', borderRadius: '24px', padding: '24px', width: '90%', maxWidth: '400px',
-            border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0'}`, boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+            background: CN.surface, borderRadius: 24, padding: 24, width: '90%', maxWidth: 400,
+            border: `1px solid ${CN.border}`, boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 800, color: isDark ? '#fff' : '#111' }}>Create {uploadType === 'reel' ? 'Reel' : 'Post'}</h3>
-              <button onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none', color: isDark ? '#fff' : '#111', cursor: 'pointer', opacity: 0.7 }}>
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: CN.text, margin: 0 }}>Create {uploadType === 'reel' ? 'Reel' : 'Post'}</h3>
+              <button onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none', color: CN.textMuted, cursor: 'pointer', outline: 'none' }}>
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 6 }}>Select from Gallery</div>
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: CN.textMuted, marginBottom: 10 }}>Select from Gallery</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
                   {[
                     'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=300&h=450&q=80',
@@ -1070,26 +1119,29 @@ export default function DashboardPage() {
                       key={idx} 
                       onClick={() => setUploadUrl(imgUrl)}
                       style={{
-                        aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer',
-                        border: uploadUrl === imgUrl ? '2px solid #0095f6' : '2px solid transparent',
-                        transition: 'border 0.2s', padding: '2px'
+                        aspectRatio: '1', borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
+                        border: uploadUrl === imgUrl ? `2px solid ${CN.accent}` : `2px solid ${CN.border}`,
+                        transition: 'border 0.2s', padding: 2,
                       }}
                     >
-                      <img src={imgUrl} alt="gallery" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }} />
+                      <img src={imgUrl} alt="gallery" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
                     </div>
                   ))}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#a1a1aa' : '#6b7280', marginBottom: 6 }}>Caption</div>
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: CN.textMuted, marginBottom: 8 }}>Caption</div>
                 <textarea 
                   placeholder="Write a caption..."
                   value={uploadCaption}
                   onChange={e => setUploadCaption(e.target.value)}
                   rows={3}
                   style={{
-                    width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0'}`,
-                    background: isDark ? '#1a1a1f' : '#f9fafb', color: isDark ? '#fff' : '#111', outline: 'none', fontSize: 14, resize: 'none'
+                    width: '100%', padding: '12px 14px', borderRadius: 12,
+                    border: `1px solid ${CN.border}`,
+                    background: 'rgba(255,255,255,0.05)', color: CN.text,
+                    outline: 'none', fontSize: 14, resize: 'none', fontFamily: 'inherit',
+                    boxSizing: 'border-box',
                   }}
                 />
               </div>
@@ -1109,12 +1161,14 @@ export default function DashboardPage() {
                 }}
                 disabled={uploadLoading || !uploadUrl}
                 style={{
-                  width: '100%', padding: '14px', background: isDark ? '#fff' : '#111', color: isDark ? '#111' : '#fff', border: 'none', borderRadius: '14px',
-                  fontWeight: 700, fontSize: 15, cursor: uploadUrl && !uploadLoading ? 'pointer' : 'not-allowed',
-                  opacity: uploadUrl && !uploadLoading ? 1 : 0.6, marginTop: 4, transition: 'opacity 0.2s'
+                  width: '100%', padding: '13px', background: CN.accent,
+                  color: '#fff', border: 'none', borderRadius: 12,
+                  fontWeight: 600, fontSize: 15, cursor: uploadUrl && !uploadLoading ? 'pointer' : 'not-allowed',
+                  opacity: uploadUrl && !uploadLoading ? 1 : 0.5, transition: 'opacity 0.2s',
+                  fontFamily: 'inherit',
                 }}
               >
-                {uploadLoading ? 'Posting...' : 'Post'}
+                {uploadLoading ? 'Posting…' : 'Post'}
               </button>
             </div>
           </div>

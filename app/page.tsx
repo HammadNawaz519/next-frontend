@@ -504,238 +504,426 @@ export default function LoginPage() {
     return u.email.slice(0, 2).toUpperCase();
   };
 
-  // Left panel with grain gradient
+  // ── SHARED COMPONENTS ────────────────────────────────────────────────────
+
+  // Premium CONNECT input field
+  const cnInput = (props: React.InputHTMLAttributes<HTMLInputElement> & { label?: string }) => {
+    const { label, className, ...rest } = props;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {label && (
+          <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(238,238,238,0.4)' }}>
+            {label}
+          </label>
+        )}
+        <input
+          {...rest}
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 12,
+            color: '#EEEEEE',
+            fontFamily: 'inherit',
+            fontSize: 14,
+            padding: '13px 16px',
+            width: '100%',
+            outline: 'none',
+            boxSizing: 'border-box',
+            ...props.style,
+          }}
+          onFocus={e => {
+            (e.target as HTMLInputElement).style.borderColor = '#00ADB5';
+            (e.target as HTMLInputElement).style.boxShadow = '0 0 0 3px rgba(0,173,181,0.15)';
+          }}
+          onBlur={e => {
+            (e.target as HTMLInputElement).style.borderColor = 'rgba(255,255,255,0.1)';
+            (e.target as HTMLInputElement).style.boxShadow = 'none';
+          }}
+        />
+      </div>
+    );
+  };
+
+  // Alert banner (error or info)
+  const cnAlert = (msg: string, type: 'error' | 'info') => (
+    <div style={{
+      fontSize: 13,
+      padding: '10px 14px',
+      borderRadius: 10,
+      background: type === 'error' ? 'rgba(239,68,68,0.1)' : 'rgba(0,173,181,0.1)',
+      border: `1px solid ${type === 'error' ? 'rgba(239,68,68,0.25)' : 'rgba(0,173,181,0.25)'}`,
+      color: type === 'error' ? '#f87171' : '#00ADB5',
+    }}>
+      {msg}
+    </div>
+  );
+
+  // Back button
+  const cnBackBtn = (onClick: () => void) => (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        width: 36, height: 36,
+        borderRadius: 10,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(255,255,255,0.06)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        color: '#EEEEEE',
+        cursor: 'pointer',
+        flexShrink: 0,
+        outline: 'none',
+      }}
+    >
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+    </button>
+  );
+
+  // Desktop left panel — CONNECT premium brand panel
   const renderLeft = () => {
     if (activeSheet === 'success' && successUser) {
       return (
-        <div className="relative overflow-hidden hidden lg:flex flex-col items-end justify-end h-full" style={{ background: 'linear-gradient(145deg, hsl(25,95%,55%), hsl(38,100%,65%), hsl(15,90%,45%))' }}>
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.75\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.08\'/%3E%3C/svg%3E")', backgroundSize: 'cover', opacity: 0.5 }} />
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
-            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '50%', width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', border: '1.5px solid rgba(255,255,255,0.3)' }}>
-              <span style={{ fontSize: 28, color: 'white', fontWeight: 700 }}>✓</span>
-            </div>
-            <p className="text-white font-semibold text-2xl tracking-tight">You&apos;re verified!</p>
-            <p className="text-white/70 text-base font-light">Welcome to the platform</p>
+        <div style={{
+          position: 'relative', overflow: 'hidden',
+          display: 'none',
+          background: 'linear-gradient(145deg, #00ADB5, #007A80)',
+          flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          padding: '48px 40px', gap: 24, textAlign: 'center',
+        }} className="hidden lg:flex">
+          <div style={{
+            width: 72, height: 72, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.15)',
+            border: '1.5px solid rgba(255,255,255,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(8px)',
+          }}>
+            <svg width="32" height="32" fill="none" stroke="white" viewBox="0 0 24 24" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
           </div>
-          <div style={{ position: 'relative', zIndex: 10, width: '100%', padding: '24px 32px', background: 'rgba(0,0,0,0.18)', backdropFilter: 'blur(12px)', borderTop: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', gap: 16 }}>
-            {successUser.image ? (
-              <img src={successUser.image} alt="Profile" style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.4)', objectFit: 'cover' }} />
-            ) : (
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', border: '2px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ color: 'white', fontWeight: 700, fontSize: 18 }}>{getInitials(successUser)}</span>
-              </div>
-            )}
-            <div style={{ minWidth: 0 }}>
-              <p style={{ margin: 0, color: 'white', fontWeight: 600, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{successUser.username || successUser.email.split('@')[0]}</p>
-              <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{successUser.email}</p>
-            </div>
+          <div>
+            <p style={{ color: 'white', fontWeight: 700, fontSize: 22, margin: 0 }}>You&apos;re in!</p>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, margin: '8px 0 0' }}>Welcome to CONNECT</p>
           </div>
         </div>
       );
     }
 
     return (
-      <div className="relative overflow-hidden hidden lg:flex flex-col items-center justify-center h-full">
-        <GrainGradient
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-          colorBack="#F8F9FA"
-          softness={0.5}
-          intensity={0.8}
-          noise={0.06}
-          shape="corners"
-          offsetX={0}
-          offsetY={0}
-          scale={0.8}
-          rotation={0}
-          speed={0.5}
-        />
-        <div className="relative z-10 flex flex-col items-center justify-center gap-6 px-12 text-center">
-          <p
-            className="text-gray-900 font-light lg:tracking-[0.4em] uppercase text-sm lg:[writing-mode:vertical-rl] lg:rotate-180"
-            style={{ letterSpacing: '0.45em', opacity: 0.75 }}
-          >
-            Imagination is the limit
-          </p>
+      <div style={{
+        position: 'relative', overflow: 'hidden',
+        background: '#1c2028',
+        flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '48px 40px', gap: 32, textAlign: 'center',
+      }} className="hidden lg:flex">
+        {/* Ambient blobs */}
+        <div className="cn-ambient-blob" />
+        <div className="cn-ambient-blob" />
+
+        {/* Branding */}
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: 18,
+            background: 'linear-gradient(135deg, #00ADB5, #007A80)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 8px 32px rgba(0,173,181,0.3)',
+          }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </div>
+          <div>
+            <h1 style={{ color: '#EEEEEE', fontSize: 32, fontWeight: 700, margin: 0, letterSpacing: '-0.5px' }}>
+              CONNECT
+            </h1>
+            <p style={{ color: 'rgba(238,238,238,0.45)', fontSize: 13, margin: '8px 0 0', letterSpacing: '0.05em' }}>
+              Premium communication
+            </p>
+          </div>
+        </div>
+
+        {/* Feature pills */}
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 240 }}>
+          {[
+            { icon: '💬', text: 'Realtime messaging' },
+            { icon: '📞', text: 'Voice & video calls' },
+            { icon: '🔒', text: 'Private by design' },
+          ].map((f, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: 10, padding: '10px 14px',
+            }}>
+              <span style={{ fontSize: 16 }}>{f.icon}</span>
+              <span style={{ color: 'rgba(238,238,238,0.6)', fontSize: 13 }}>{f.text}</span>
+            </div>
+          ))}
         </div>
       </div>
     );
   };
 
+  // Desktop right panel — all auth forms
   const renderDesktopRight = () => {
-    // Determine the view inside desktop card
     const view = activeSheet === 'welcome' ? 'signIn' : activeSheet;
+
+    const inputStyle: React.CSSProperties = {
+      width: '100%',
+      background: 'rgba(255,255,255,0.05)',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: 12,
+      color: '#EEEEEE',
+      fontFamily: 'inherit',
+      fontSize: 14,
+      padding: '13px 16px',
+      outline: 'none',
+      boxSizing: 'border-box',
+    };
+
+    const btnPrimary: React.CSSProperties = {
+      width: '100%',
+      background: '#00ADB5',
+      color: '#ffffff',
+      border: 'none',
+      borderRadius: 12,
+      fontFamily: 'inherit',
+      fontSize: 15,
+      fontWeight: 600,
+      padding: '13px 24px',
+      cursor: 'pointer',
+      marginTop: 4,
+    };
+
+    const labelStyle: React.CSSProperties = {
+      fontSize: 11, fontWeight: 600, letterSpacing: '0.06em',
+      textTransform: 'uppercase', color: 'rgba(238,238,238,0.4)',
+      display: 'block', marginBottom: 6,
+    };
+
+    const sharedPanel = (content: React.ReactNode) => (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '40px 40px', height: '100%', overflowY: 'auto',
+        background: '#222831',
+      }}>
+        <div style={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {content}
+        </div>
+      </div>
+    );
 
     if (view === 'verify' || view === 'verifyReset') {
       const isReset = view === 'verifyReset';
-      return (
-        <div className="flex flex-col items-center justify-center p-6 h-full overflow-y-auto bg-white">
-          <div className="w-full max-w-[380px] space-y-5 py-2 text-center">
-            <div>
-              <h1 className="text-[28px] lg:text-[32px] font-normal tracking-tight text-gray-900">Check your inbox</h1>
-              <p className="text-[13px] lg:text-[14px] text-gray-500 mt-1">We sent a 6-digit code to <span className="font-medium text-gray-900">{email}</span></p>
-            </div>
-            {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">{error}</div>}
-            {info && !error && <div className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">{info}</div>}
-            <form onSubmit={isReset ? handleVerifyResetCode : handleVerify} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[12px] lg:text-[13px] font-normal text-gray-700">Verification code</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  autoComplete="one-time-code"
-                  placeholder="000000"
-                  value={otpValue}
-                  onChange={(e) => updateOtpValue(e.target.value)}
-                  className="w-full h-[48px] lg:h-[52px] text-center font-mono text-lg lg:text-xl font-bold tracking-[0.2em] pl-[0.2em] leading-none placeholder:tracking-normal placeholder:font-sans placeholder:text-gray-400 border border-gray-200 rounded-2xl bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-all flex items-center justify-center"
-                />
-              </div>
-              <button type="submit" disabled={loading || otpValue.length < 6} className="w-full h-[44px] lg:h-[48px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-                {loading ? 'Verifying...' : 'Verify Code'}
-              </button>
-            </form>
-            <div className="flex flex-col items-center gap-2 pt-1">
-              <button type="button" onClick={handleResend} disabled={resendCooldown > 0} className="text-[13px] font-normal text-gray-500 hover:text-gray-900 transition-colors disabled:cursor-not-allowed">
-                {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
-              </button>
-              <button type="button" onClick={() => { triggerSheetTransition(isReset ? 'forgotPassword' : 'signUp'); setError(''); setInfo(''); }} className="text-[13px] font-normal text-gray-500 hover:text-gray-900 transition-colors">← Back</button>
-            </div>
-          </div>
+      return sharedPanel(<>
+        <div>
+          <h1 style={{ color: '#EEEEEE', fontSize: 26, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.3px' }}>Check your inbox</h1>
+          <p style={{ color: 'rgba(238,238,238,0.5)', fontSize: 14, margin: 0 }}>
+            We sent a 6-digit code to <strong style={{ color: '#EEEEEE' }}>{email}</strong>
+          </p>
         </div>
-      );
+        {error && cnAlert(error, 'error')}
+        {info && !error && cnAlert(info, 'info')}
+        <form onSubmit={isReset ? handleVerifyResetCode : handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label style={labelStyle}>Verification code</label>
+            <input
+              type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6}
+              autoComplete="one-time-code" placeholder="000000"
+              value={otpValue} onChange={(e) => updateOtpValue(e.target.value)}
+              style={{ ...inputStyle, textAlign: 'center', fontFamily: 'monospace', fontSize: 20, fontWeight: 700, letterSpacing: '0.3em' }}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; e.target.style.boxShadow = '0 0 0 3px rgba(0,173,181,0.15)'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none'; }}
+            />
+          </div>
+          <button type="submit" disabled={loading || otpValue.length < 6} style={{ ...btnPrimary, opacity: loading || otpValue.length < 6 ? 0.5 : 1 }}>
+            {loading ? 'Verifying…' : 'Verify Code'}
+          </button>
+        </form>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+          <button type="button" onClick={handleResend} disabled={resendCooldown > 0}
+            style={{ background: 'none', border: 'none', color: resendCooldown > 0 ? 'rgba(238,238,238,0.3)' : '#00ADB5', fontSize: 13, cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+            {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+          </button>
+          <button type="button" onClick={() => { triggerSheetTransition(isReset ? 'forgotPassword' : 'signUp'); setError(''); setInfo(''); }}
+            style={{ background: 'none', border: 'none', color: 'rgba(238,238,238,0.4)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+            ← Back
+          </button>
+        </div>
+      </>);
     }
 
     if (view === 'success' && successUser) {
-      return (
-        <div className="flex flex-col items-center justify-center p-6 h-full overflow-y-auto bg-white">
-          <div className="w-full max-w-[380px] space-y-5 py-2 text-center">
-            <div>
-              <h1 className="text-[28px] lg:text-[32px] font-normal tracking-tight text-gray-900">You&apos;re in!</h1>
-              <p className="text-[13px] lg:text-[14px] text-gray-500 mt-1">Your email has been verified and your account is ready.</p>
-            </div>
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex items-center gap-4 text-left">
-              {successUser.image ? (
-                <img src={successUser.image} alt="Profile" className="w-12 h-12 rounded-full object-cover border border-gray-200" />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center text-white font-medium text-lg flex-shrink-0">
-                  {getInitials(successUser)}
-                </div>
-              )}
-              <div className="min-w-0">
-                <p className="text-[14px] font-medium text-gray-900 truncate">{successUser.username || successUser.email.split('@')[0]}</p>
-                <p className="text-[12px] text-gray-500 truncate">{successUser.email}</p>
-              </div>
-            </div>
-            <button type="button" onClick={() => { router.push('/dashboard'); }} className="w-full h-[46px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors">Continue to app</button>
+      return sharedPanel(<>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: '50%',
+            background: 'rgba(0,173,181,0.1)',
+            border: '1px solid rgba(0,173,181,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 20px',
+          }}>
+            <svg width="28" height="28" fill="none" stroke="#00ADB5" viewBox="0 0 24 24" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 style={{ color: '#EEEEEE', fontSize: 26, fontWeight: 700, margin: '0 0 8px' }}>You&apos;re in!</h1>
+          <p style={{ color: 'rgba(238,238,238,0.5)', fontSize: 14, margin: 0 }}>Your account is verified and ready.</p>
+        </div>
+        <div style={{
+          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14,
+        }}>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#393E46', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EEEEEE', fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
+            {getInitials(successUser)}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ color: '#EEEEEE', fontWeight: 600, fontSize: 14, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{successUser.username || successUser.email.split('@')[0]}</p>
+            <p style={{ color: 'rgba(238,238,238,0.4)', fontSize: 12, margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{successUser.email}</p>
           </div>
         </div>
-      );
+        <button onClick={() => router.push('/dashboard')} style={btnPrimary}>Continue to CONNECT</button>
+      </>);
     }
 
     if (view === 'forgotPassword') {
-      return (
-        <div className="flex flex-col items-center justify-center p-6 h-full overflow-y-auto bg-white">
-          <div className="w-full max-w-[380px] space-y-5 py-2 text-center">
-            <div>
-              <h1 className="text-[28px] lg:text-[32px] font-normal tracking-tight text-gray-900">Forgot Password</h1>
-              <p className="text-[13px] lg:text-[14px] text-gray-500 mt-1">Enter your email to receive a recovery code.</p>
-            </div>
-            {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">{error}</div>}
-            {info && !error && <div className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">{info}</div>}
-            <form onSubmit={handleSendResetCode} className="space-y-4 text-left">
-              <div className="space-y-1">
-                <label htmlFor="reset-email" className="text-[12px] lg:text-[13px] font-normal text-gray-700">Email</label>
-                <input id="reset-email" type="email" required placeholder="name@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full h-[44px] lg:h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[13px] lg:text-[14px] text-gray-900 placeholder:text-gray-400" />
-              </div>
-              <button type="submit" disabled={loading} className="w-full h-[44px] lg:h-[46px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">{loading ? 'Sending...' : 'Send Reset Code'}</button>
-            </form>
-            <div className="text-center pt-1">
-              <button type="button" onClick={() => { triggerSheetTransition('signIn'); setError(''); }} className="text-[13px] font-normal text-gray-500 hover:text-gray-900 transition-colors">Back to Sign In</button>
-            </div>
-          </div>
+      return sharedPanel(<>
+        <div>
+          <h1 style={{ color: '#EEEEEE', fontSize: 26, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.3px' }}>Forgot Password</h1>
+          <p style={{ color: 'rgba(238,238,238,0.5)', fontSize: 14, margin: 0 }}>Enter your email to receive a recovery code.</p>
         </div>
-      );
+        {error && cnAlert(error, 'error')}
+        {info && !error && cnAlert(info, 'info')}
+        <form onSubmit={handleSendResetCode} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={labelStyle}>Email Address</label>
+            <input id="reset-email" type="email" required placeholder="name@email.com" value={email}
+              onChange={(e) => setEmail(e.target.value)} style={inputStyle}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; e.target.style.boxShadow = '0 0 0 3px rgba(0,173,181,0.15)'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none'; }}
+            />
+          </div>
+          <button type="submit" disabled={loading} style={{ ...btnPrimary, opacity: loading ? 0.6 : 1 }}>{loading ? 'Sending…' : 'Send Reset Code'}</button>
+        </form>
+        <div style={{ textAlign: 'center' }}>
+          <button type="button" onClick={() => { triggerSheetTransition('signIn'); setError(''); }}
+            style={{ background: 'none', border: 'none', color: 'rgba(238,238,238,0.4)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Back to Sign In
+          </button>
+        </div>
+      </>);
     }
 
     if (view === 'resetPassword') {
-      return (
-        <div className="flex flex-col items-center justify-center p-6 h-full overflow-y-auto bg-white">
-          <div className="w-full max-w-[380px] space-y-5 py-2 text-center">
-            <div>
-              <h1 className="text-[28px] lg:text-[32px] font-normal tracking-tight text-gray-900">Set New Password</h1>
-              <p className="text-[13px] lg:text-[14px] text-gray-500 mt-1">Create a strong new password to secure your account.</p>
-            </div>
-            {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">{error}</div>}
-            <form onSubmit={handleResetPassword} className="space-y-3.5 text-left">
-              <div className="space-y-1">
-                <label htmlFor="new-password" className="text-[12px] lg:text-[13px] font-normal text-gray-700">New Password</label>
-                <input id="new-password" type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full h-[44px] lg:h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[13px] lg:text-[14px] text-gray-900 placeholder:text-gray-400" />
-              </div>
-              <div className="space-y-1">
-                <label htmlFor="confirm-new-password" className="text-[12px] lg:text-[13px] font-normal text-gray-700">Confirm Password</label>
-                <input id="confirm-new-password" type="password" required placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full h-[44px] lg:h-[46px] px-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[13px] lg:text-[14px] text-gray-900 placeholder:text-gray-400" />
-              </div>
-              <button type="submit" disabled={loading} className="w-full h-[44px] lg:h-[46px] bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl text-[14px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">{loading ? 'Saving...' : 'Reset Password'}</button>
-            </form>
-          </div>
+      return sharedPanel(<>
+        <div>
+          <h1 style={{ color: '#EEEEEE', fontSize: 26, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.3px' }}>Set New Password</h1>
+          <p style={{ color: 'rgba(238,238,238,0.5)', fontSize: 14, margin: 0 }}>Create a strong new password to secure your account.</p>
         </div>
-      );
+        {error && cnAlert(error, 'error')}
+        <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={labelStyle}>New Password</label>
+            <input id="new-password" type="password" required placeholder="••••••••" value={password}
+              onChange={(e) => setPassword(e.target.value)} style={inputStyle}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; e.target.style.boxShadow = '0 0 0 3px rgba(0,173,181,0.15)'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none'; }}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Confirm Password</label>
+            <input id="confirm-new-password" type="password" required placeholder="••••••••" value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)} style={inputStyle}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; e.target.style.boxShadow = '0 0 0 3px rgba(0,173,181,0.15)'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none'; }}
+            />
+          </div>
+          <button type="submit" disabled={loading} style={{ ...btnPrimary, opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving…' : 'Reset Password'}</button>
+        </form>
+      </>);
     }
 
     const isLogin = view === 'signIn';
-    return (
-      <div className="flex flex-col items-center justify-center p-6 h-full overflow-y-auto bg-white">
-        <div className={`w-full max-w-[380px] ${isLogin ? 'space-y-3 lg:space-y-4' : 'space-y-2 lg:space-y-3'} py-1 text-left`}>
-          <div className="space-y-0.5">
-            <h1 className={`${isLogin ? 'text-[24px] lg:text-[28px] xl:text-[32px]' : 'text-[20px] lg:text-[24px] xl:text-[28px]'} font-normal tracking-tight text-gray-900`}>
-              {isLogin ? 'Welcome back' : 'Create your account'}
-            </h1>
-            <p className={`${isLogin ? 'text-[12px] lg:text-[13px] xl:text-[14px]' : 'text-[11px] lg:text-[12px] xl:text-[13px]'} text-gray-500`}>
-              {isLogin ? "Let's sign you into your Connect account." : 'Create an account to start chatting.'}
-            </p>
-          </div>
-          {error && <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-2xl px-4 py-2">{error}</div>}
-          <div className={`space-y-2 ${isLogin ? 'lg:space-y-3' : 'lg:space-y-2'}`}>
-            <form onSubmit={isLogin ? handleLogin : handleSignup} className={`space-y-2 ${isLogin ? 'lg:space-y-3' : 'lg:space-y-2.5'}`}>
-              {!isLogin && (
-                <div className="space-y-0.5">
-                  <label htmlFor="desktop-username" className="text-[11px] lg:text-[12px] font-normal text-gray-700">Username</label>
-                  <input id="desktop-username" type="text" required placeholder="johndoe" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full h-[38px] lg:h-[42px] px-3.5 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[12px] lg:text-[13px] text-gray-900 placeholder:text-gray-400" />
-                </div>
-              )}
-              <div className="space-y-0.5">
-                <label htmlFor="desktop-email" className={`text-[11px] ${isLogin ? 'lg:text-[13px]' : 'lg:text-[12px]'} font-normal text-gray-700`}>Email</label>
-                <input id="desktop-email" type="email" required placeholder="name@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full ${isLogin ? 'h-[42px] lg:h-[46px] px-4 text-[13px] lg:text-[14px]' : 'h-[38px] lg:h-[42px] px-3.5 text-[12px] lg:text-[13px]'} bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-gray-900 placeholder:text-gray-400`} />
-              </div>
-              {!isLogin && (
-                <div className="space-y-0.5">
-                  <label htmlFor="desktop-phone" className="text-[11px] lg:text-[12px] font-normal text-gray-700">Phone Number</label>
-                  <input id="desktop-phone" type="tel" required placeholder="+92 300 0000000" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full h-[38px] lg:h-[42px] px-3.5 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-[12px] lg:text-[13px] text-gray-900 placeholder:text-gray-400" />
-                </div>
-              )}
-              <div className="space-y-0.5">
-                <label htmlFor="desktop-password" className={`text-[11px] ${isLogin ? 'lg:text-[13px]' : 'lg:text-[12px]'} font-normal text-gray-700`}>Password</label>
-                <input id="desktop-password" type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full ${isLogin ? 'h-[42px] lg:h-[46px] px-4 text-[13px] lg:text-[14px]' : 'h-[38px] lg:h-[42px] px-3.5 text-[12px] lg:text-[13px]'} bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-400 text-gray-900 placeholder:text-gray-400`} />
-              </div>
-              {isLogin && (
-                <div className="text-right">
-                  <span onClick={() => triggerSheetTransition('forgotPassword')} className="text-xs text-zinc-500 hover:text-gray-900 transition-colors cursor-pointer">Forgot Password?</span>
-                </div>
-              )}
-              <button type="submit" disabled={loading} className={`w-full ${isLogin ? 'h-[42px] lg:h-[46px] text-[13px] lg:text-[14px]' : 'h-[38px] lg:h-[42px] text-[12px] lg:text-[13px]'} bg-gray-900 text-white hover:bg-gray-800 font-normal rounded-2xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${isLogin ? '' : 'mt-1'}`}>{loading ? 'Processing...' : isLogin ? 'Sign in' : 'Create account'}</button>
-            </form>
-            <div className="text-center pt-0.5">
-              <button type="button" onClick={() => { triggerSheetTransition(isLogin ? 'signUp' : 'signIn'); setError(''); }} className={`text-[12px] ${isLogin ? 'lg:text-[13px]' : 'lg:text-[12px]'} font-normal text-gray-500 hover:text-gray-900 transition-colors`}>{isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}</button>
-            </div>
-          </div>
-        </div>
+    return sharedPanel(<>
+      <div>
+        <h1 style={{ color: '#EEEEEE', fontSize: 26, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.3px' }}>
+          {isLogin ? 'Welcome back' : 'Create account'}
+        </h1>
+        <p style={{ color: 'rgba(238,238,238,0.5)', fontSize: 14, margin: 0 }}>
+          {isLogin ? 'Sign into your CONNECT account.' : 'Start communicating with CONNECT.'}
+        </p>
       </div>
-    );
+      {error && cnAlert(error, 'error')}
+      {info && !error && cnAlert(info, 'info')}
+      <form onSubmit={isLogin ? handleLogin : handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {!isLogin && (
+          <div>
+            <label style={labelStyle}>Username</label>
+            <input id="desktop-username" type="text" required placeholder="johndoe" value={username}
+              onChange={(e) => setUsername(e.target.value)} style={inputStyle}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; e.target.style.boxShadow = '0 0 0 3px rgba(0,173,181,0.15)'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none'; }}
+            />
+          </div>
+        )}
+        <div>
+          <label style={labelStyle}>Email Address</label>
+          <input id="desktop-email" type="email" required placeholder="name@email.com" value={email}
+            onChange={(e) => setEmail(e.target.value)} style={inputStyle}
+            onFocus={e => { e.target.style.borderColor = '#00ADB5'; e.target.style.boxShadow = '0 0 0 3px rgba(0,173,181,0.15)'; }}
+            onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none'; }}
+          />
+        </div>
+        {!isLogin && (
+          <div>
+            <label style={labelStyle}>Phone Number</label>
+            <input id="desktop-phone" type="tel" required placeholder="+92 300 0000000" value={phone}
+              onChange={(e) => setPhone(e.target.value)} style={inputStyle}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; e.target.style.boxShadow = '0 0 0 3px rgba(0,173,181,0.15)'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none'; }}
+            />
+          </div>
+        )}
+        <div>
+          <label style={labelStyle}>Password</label>
+          <input id="desktop-password" type="password" required placeholder="••••••••" value={password}
+            onChange={(e) => setPassword(e.target.value)} style={inputStyle}
+            onFocus={e => { e.target.style.borderColor = '#00ADB5'; e.target.style.boxShadow = '0 0 0 3px rgba(0,173,181,0.15)'; }}
+            onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none'; }}
+          />
+        </div>
+        {isLogin && (
+          <div style={{ textAlign: 'right' }}>
+            <span onClick={() => triggerSheetTransition('forgotPassword')}
+              style={{ fontSize: 12, color: 'rgba(238,238,238,0.4)', cursor: 'pointer' }}
+              onMouseEnter={e => (e.target as HTMLElement).style.color = '#00ADB5'}
+              onMouseLeave={e => (e.target as HTMLElement).style.color = 'rgba(238,238,238,0.4)'}
+            >
+              Forgot password?
+            </span>
+          </div>
+        )}
+        <button type="submit" disabled={loading} style={{ ...btnPrimary, opacity: loading ? 0.6 : 1 }}>
+          {loading ? 'Processing…' : isLogin ? 'Sign In' : 'Create Account'}
+        </button>
+      </form>
+      <div style={{ textAlign: 'center' }}>
+        <button type="button" onClick={() => { triggerSheetTransition(isLogin ? 'signUp' : 'signIn'); setError(''); }}
+          style={{ background: 'none', border: 'none', color: 'rgba(238,238,238,0.4)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
+          onMouseEnter={e => (e.target as HTMLElement).style.color = '#00ADB5'}
+          onMouseLeave={e => (e.target as HTMLElement).style.color = 'rgba(238,238,238,0.4)'}
+        >
+          {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+        </button>
+      </div>
+    </>);
   };
 
+  // ── RENDER ────────────────────────────────────────────────────────────────
+
   // Render the real DashboardPage instantly to avoid any route transition lag or jitter.
-  // The DashboardPage itself will handle its own graceful loading state or display instantly.
   if (!hasMounted) {
     return null;
   }
@@ -757,564 +945,404 @@ export default function LoginPage() {
 
   if (sessStatus === 'loading') {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0c0c0e] flex flex-col items-center justify-center font-sans">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-zinc-800 to-zinc-900 border border-zinc-700/50 flex items-center justify-center shadow-2xl animate-pulse">
-          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      <div style={{
+        position: 'fixed', inset: 0, background: '#222831',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'Inter', sans-serif",
+      }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 18,
+          background: 'linear-gradient(135deg, #00ADB5, #007A80)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 8px 32px rgba(0,173,181,0.3)',
+          animation: 'pulse 2s ease-in-out infinite',
+        }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
         </div>
       </div>
     );
   }
 
+  // ── MOBILE AUTH LAYOUT ────────────────────────────────────────────────────
+  // Shared sheet style
+  const sheetBase: React.CSSProperties = {
+    position: 'fixed', bottom: 0, left: 0, right: 0,
+    maxWidth: 480, margin: '0 auto',
+    zIndex: 40,
+    background: '#1c2028',
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '24px 24px 0 0',
+    padding: '24px 24px calc(24px + env(safe-area-inset-bottom, 0px))',
+    maxHeight: '90vh',
+    overflowY: 'auto',
+    boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
+    fontFamily: "'Inter', sans-serif",
+  };
+
+  const sheetInputStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 14,
+    color: '#EEEEEE',
+    fontFamily: 'inherit',
+    fontSize: 15,
+    padding: '14px 18px',
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
+
+  const sheetBtn: React.CSSProperties = {
+    width: '100%',
+    background: '#00ADB5',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: 14,
+    fontFamily: 'inherit',
+    fontSize: 15,
+    fontWeight: 600,
+    padding: '15px 24px',
+    cursor: 'pointer',
+  };
+
+  const sheetBtnSecondary: React.CSSProperties = {
+    width: '100%',
+    background: 'rgba(255,255,255,0.06)',
+    color: '#EEEEEE',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 14,
+    fontFamily: 'inherit',
+    fontSize: 15,
+    fontWeight: 500,
+    padding: '15px 24px',
+    cursor: 'pointer',
+  };
+
+  const sheetDrag = (
+    <div style={{ width: 36, height: 4, background: 'rgba(255,255,255,0.15)', borderRadius: 2, margin: '0 auto 20px' }} />
+  );
+
+  const sheetBack = (target: SheetState) => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+      <button type="button" onClick={() => triggerSheetTransition(target)}
+        style={{ width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#EEEEEE', cursor: 'pointer', outline: 'none' }}>
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+      </button>
+      <div style={{ width: 36, height: 4, background: 'rgba(255,255,255,0.15)', borderRadius: 2 }} />
+      <div style={{ width: 36 }} />
+    </div>
+  );
+
+  const errBanner = (msg: string) => msg ? (
+    <div style={{ fontSize: 13, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', marginBottom: 12 }}>{msg}</div>
+  ) : null;
+
+  const infoBanner = (msg: string) => msg ? (
+    <div style={{ fontSize: 13, padding: '10px 14px', borderRadius: 10, background: 'rgba(0,173,181,0.1)', border: '1px solid rgba(0,173,181,0.25)', color: '#00ADB5', marginBottom: 12 }}>{msg}</div>
+  ) : null;
+
+  const sheetVisible = (s: SheetState): React.CSSProperties => ({
+    ...sheetBase,
+    transform: activeSheet === s ? 'translateY(0)' : 'translateY(100%)',
+    opacity: activeSheet === s ? 1 : 0,
+    pointerEvents: activeSheet === s ? 'auto' : 'none',
+    transition: 'transform 350ms cubic-bezier(0.25,1,0.5,1), opacity 300ms ease',
+  });
+
   return (
     <>
-      {/* Mobile viewport layout (under lg: breakpoint) */}
-      <div className="lg:hidden relative h-screen w-full bg-white flex flex-col justify-between overflow-hidden select-none font-sans">
-        
-        {/* Elegant Centered Brand Block (only visible in Welcome sheet) */}
-        <div 
-          className={`absolute inset-x-0 top-[20vh] flex flex-col items-center justify-center text-center px-4 outline-none focus:outline-none transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
-            activeSheet === 'welcome' 
-              ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto' 
-              : 'opacity-0 scale-75 -translate-y-12 pointer-events-none'
-          }`}
-        >
-          <img 
-            src="/logo.png" 
-            alt="Connect Logo" 
-            className="w-16 h-16 object-contain rounded-2xl mb-4 shadow-sm bg-black outline-none focus:outline-none border-none"
-          />
-          <h1 className="text-4xl font-extrabold tracking-widest text-[#121214] uppercase outline-none focus:outline-none select-none">
-            Connect
-          </h1>
-          <p className="text-xs tracking-[0.2em] font-medium text-zinc-500 uppercase mt-2 outline-none select-none">
-            A Chatting App
-          </p>
+      {/* ── MOBILE AUTH LAYOUT (< lg) ── */}
+      <div style={{
+        position: 'relative', height: '100dvh', width: '100%',
+        background: '#222831', display: 'flex', flexDirection: 'column',
+        overflow: 'hidden', fontFamily: "'Inter', sans-serif",
+      }} className="lg:hidden">
+
+        {/* Ambient accent blobs */}
+        <div className="cn-ambient-blob" />
+        <div className="cn-ambient-blob" />
+
+        {/* Welcome brand block — visible only on welcome sheet */}
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', textAlign: 'center',
+          padding: '0 32px', gap: 20, zIndex: 1,
+          transform: activeSheet === 'welcome' ? 'scale(1) translateY(0)' : 'scale(0.9) translateY(-24px)',
+          opacity: activeSheet === 'welcome' ? 1 : 0,
+          pointerEvents: activeSheet === 'welcome' ? 'auto' : 'none',
+          transition: 'all 400ms cubic-bezier(0.25,1,0.5,1)',
+        }}>
+          {/* Logo */}
+          <div style={{
+            width: 72, height: 72, borderRadius: 20,
+            background: 'linear-gradient(135deg, #00ADB5, #007A80)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 12px 40px rgba(0,173,181,0.35)',
+          }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </div>
+          <div>
+            <h1 style={{ color: '#EEEEEE', fontSize: 36, fontWeight: 700, margin: 0, letterSpacing: '-0.5px' }}>CONNECT</h1>
+            <p style={{ color: 'rgba(238,238,238,0.4)', fontSize: 14, margin: '8px 0 0', letterSpacing: '0.04em' }}>Premium communication</p>
+          </div>
         </div>
 
-        {/* Dynamic Top Left Header Block (visible on Sign In, Sign Up, etc.) */}
-        <div 
-          className={`absolute top-[calc(8vh+env(safe-area-inset-top,0px))] left-8 right-8 text-left z-10 flex flex-col transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
-            activeSheet !== 'welcome' && activeSheet !== 'none'
-              ? 'opacity-100 translate-x-0 scale-100 pointer-events-auto' 
-              : 'opacity-0 -translate-x-8 scale-95 pointer-events-none'
-          }`}
-        >
-          <h1 className="text-5xl font-extrabold tracking-tight text-[#121214] sm:text-[3.25rem]">
+        {/* Header above form sheets */}
+        <div style={{
+          position: 'absolute', top: 'calc(40px + env(safe-area-inset-top, 0px))',
+          left: 28, right: 28, zIndex: 10,
+          transform: activeSheet !== 'welcome' && activeSheet !== 'none' ? 'translateX(0)' : 'translateX(-24px)',
+          opacity: activeSheet !== 'welcome' && activeSheet !== 'none' ? 1 : 0,
+          pointerEvents: activeSheet !== 'welcome' && activeSheet !== 'none' ? 'auto' : 'none',
+          transition: 'all 400ms cubic-bezier(0.25,1,0.5,1)',
+        }}>
+          <h1 style={{ color: '#EEEEEE', fontSize: 32, fontWeight: 700, margin: '0 0 6px', letterSpacing: '-0.5px' }}>
             {headerContent.title}
           </h1>
-          <p className="text-[0.95rem] text-zinc-500 font-medium tracking-wide mt-4 leading-relaxed max-w-sm">
+          <p style={{ color: 'rgba(238,238,238,0.45)', fontSize: 14, margin: 0, lineHeight: 1.5 }}>
             {headerContent.subtitle}
           </p>
         </div>
 
-        {/* ── SHEET 1: WELCOME SHEET (Full width on bottom, taller pb-12 height) ── */}
-        <div
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
-            activeSheet === 'welcome' 
-              ? 'translate-y-0 opacity-100 pointer-events-auto' 
-              : 'translate-y-full opacity-0 pointer-events-none'
-          }`}
-        >
-          <div className="w-12 h-1 bg-[#27272a] rounded-full mx-auto mb-6" />
-
-          <div className="flex flex-col gap-3">
-            <button
-              onClick={() => triggerSheetTransition('signIn')}
-              className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md"
-            >
-              Sign In
-            </button>
-            
-            <button
-              onClick={() => triggerSheetTransition('signUp')}
-              className="w-full bg-[#1c1c1e] text-white hover:bg-zinc-800 border border-zinc-800 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm"
-            >
-              Create Account
-            </button>
+        {/* ── SHEET 1: WELCOME ── */}
+        <div style={sheetVisible('welcome')}>
+          {sheetDrag}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button onClick={() => triggerSheetTransition('signIn')} style={sheetBtn}>Sign In</button>
+            <button onClick={() => triggerSheetTransition('signUp')} style={sheetBtnSecondary}>Create Account</button>
           </div>
         </div>
 
-        {/* ── SHEET 2: SIGN IN SHEET (Full width on bottom, taller pb-12 height) ── */}
-        <div
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
-            activeSheet === 'signIn' 
-              ? 'translate-y-0 opacity-100 pointer-events-auto' 
-              : 'translate-y-full opacity-0 pointer-events-none'
-          }`}
-        >
-          {/* Top bar back button */}
-          <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => triggerSheetTransition('welcome')}
-              className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-              title="Back"
-            >
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-            <div className="w-12 h-1 bg-[#27272a] rounded-full" />
-            <div className="w-10" />
-          </div>
-
-          {error && (
-            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
-              {error}
-            </div>
-          )}
-          {info && !error && (
-            <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-4 py-3 mb-4">
-              {info}
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="space-y-3">
-            <input
-              type="email"
-              placeholder="Email Address"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-            />
-
-            <div className="relative">
-              <input
-                type={showMobilePassword ? 'text' : 'password'}
-                placeholder="Password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 pr-12 focus:outline-none transition-colors text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowMobilePassword(!showMobilePassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                {showMobilePassword ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 113.682 3.682M21 12a9.96 9.96 0 01-1.557 3.018m-3.437-1.42A3 3 0 0012 10.012c-.29 0-.57.04-.833.115M17.657 16.657L13.414 12.414m0 0L9 7.999M3 3l18 18" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                )}
+        {/* ── SHEET 2: SIGN IN ── */}
+        <div style={sheetVisible('signIn')}>
+          {sheetBack('welcome')}
+          {errBanner(error)}
+          {!error && infoBanner(info)}
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <input type="email" placeholder="Email Address" required value={email} onChange={e => setEmail(e.target.value)} style={sheetInputStyle}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }} />
+            <div style={{ position: 'relative' }}>
+              <input type={showMobilePassword ? 'text' : 'password'} placeholder="Password" required value={password}
+                onChange={e => setPassword(e.target.value)} style={{ ...sheetInputStyle, paddingRight: 48 }}
+                onFocus={e => { e.target.style.borderColor = '#00ADB5'; }}
+                onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }} />
+              <button type="button" onClick={() => setShowMobilePassword(!showMobilePassword)}
+                style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(238,238,238,0.4)', cursor: 'pointer', outline: 'none' }}>
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {showMobilePassword
+                    ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 113.682 3.682M21 12a9.96 9.96 0 01-1.557 3.018M3 3l18 18" />
+                    : <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></>}
+                </svg>
               </button>
             </div>
-
-            <div className="text-right">
-              <span 
-                onClick={() => triggerSheetTransition('forgotPassword')}
-                className="text-xs text-zinc-500 hover:text-white transition-colors cursor-pointer"
-              >
-                Forgot Password?
+            <div style={{ textAlign: 'right' }}>
+              <span onClick={() => triggerSheetTransition('forgotPassword')}
+                style={{ fontSize: 13, color: 'rgba(238,238,238,0.4)', cursor: 'pointer' }}>
+                Forgot password?
               </span>
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md"
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
+            <button type="submit" disabled={loading} style={{ ...sheetBtn, opacity: loading ? 0.6 : 1 }}>
+              {loading ? 'Signing in…' : 'Sign In'}
             </button>
           </form>
+          <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <button type="button" onClick={() => { triggerSheetTransition('signUp'); setError(''); }}
+              style={{ background: 'none', border: 'none', color: 'rgba(238,238,238,0.4)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Don&apos;t have an account? <span style={{ color: '#00ADB5' }}>Sign up</span>
+            </button>
+          </div>
         </div>
 
-        {/* ── SHEET 3: SIGN UP SHEET ── */}
-        <div
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
-            activeSheet === 'signUp' 
-              ? 'translate-y-0 opacity-100 pointer-events-auto' 
-              : 'translate-y-full opacity-0 pointer-events-none'
-          }`}
-        >
-          {/* Top bar back button */}
-          <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => triggerSheetTransition('welcome')}
-              className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-              title="Back"
-            >
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-            <div className="w-12 h-1 bg-[#27272a] rounded-full" />
-            <div className="w-10" />
-          </div>
-
-          {error && (
-            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSignup} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Username"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-            />
-
-            <input
-              type="email"
-              placeholder="Email Address"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-            />
-
-            <input
-              type="tel"
-              placeholder="+92 300 0000000"
-              required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-            />
-
-            <div className="relative">
-              <input
-                type={showMobilePassword ? 'text' : 'password'}
-                placeholder="Password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 pr-12 focus:outline-none transition-colors text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowMobilePassword(!showMobilePassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                {showMobilePassword ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 113.682 3.682M21 12a9.96 9.96 0 01-1.557 3.018m-3.437-1.42A3 3 0 0012 10.012c-.29 0-.57.04-.833.115M17.657 16.657L13.414 12.414m0 0L9 7.999M3 3l18 18" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                )}
+        {/* ── SHEET 3: SIGN UP ── */}
+        <div style={sheetVisible('signUp')}>
+          {sheetBack('welcome')}
+          {errBanner(error)}
+          <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <input type="text" placeholder="Username" required value={username} onChange={e => setUsername(e.target.value)} style={sheetInputStyle}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }} />
+            <input type="email" placeholder="Email Address" required value={email} onChange={e => setEmail(e.target.value)} style={sheetInputStyle}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }} />
+            <input type="tel" placeholder="+92 300 0000000" required value={phone} onChange={e => setPhone(e.target.value)} style={sheetInputStyle}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }} />
+            <div style={{ position: 'relative' }}>
+              <input type={showMobilePassword ? 'text' : 'password'} placeholder="Password" required value={password}
+                onChange={e => setPassword(e.target.value)} style={{ ...sheetInputStyle, paddingRight: 48 }}
+                onFocus={e => { e.target.style.borderColor = '#00ADB5'; }}
+                onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }} />
+              <button type="button" onClick={() => setShowMobilePassword(!showMobilePassword)}
+                style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(238,238,238,0.4)', cursor: 'pointer', outline: 'none' }}>
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {showMobilePassword
+                    ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 113.682 3.682M21 12a9.96 9.96 0 01-1.557 3.018M3 3l18 18" />
+                    : <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></>}
+                </svg>
               </button>
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
-            >
-              {loading ? 'Creating Account...' : 'Sign Up'}
+            <button type="submit" disabled={loading} style={{ ...sheetBtn, opacity: loading ? 0.6 : 1, marginTop: 4 }}>
+              {loading ? 'Creating Account…' : 'Create Account'}
             </button>
           </form>
+          <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <button type="button" onClick={() => { triggerSheetTransition('signIn'); setError(''); }}
+              style={{ background: 'none', border: 'none', color: 'rgba(238,238,238,0.4)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Already have an account? <span style={{ color: '#00ADB5' }}>Sign in</span>
+            </button>
+          </div>
         </div>
 
         {/* ── SHEET 4: FORGOT PASSWORD ── */}
-        <div
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
-            activeSheet === 'forgotPassword' 
-              ? 'translate-y-0 opacity-100 pointer-events-auto' 
-              : 'translate-y-full opacity-0 pointer-events-none'
-          }`}
-        >
-          {/* Top bar back button */}
-          <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => triggerSheetTransition('signIn')}
-              className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-              title="Back"
-            >
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-            <div className="w-12 h-1 bg-[#27272a] rounded-full" />
-            <div className="w-10" />
-          </div>
-
-          {error && (
-            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
-              {error}
-            </div>
-          )}
-          {info && !error && (
-            <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-4 py-3 mb-4">
-              {info}
-            </div>
-          )}
-
-          <form onSubmit={handleSendResetCode} className="space-y-3">
-            <input
-              type="email"
-              placeholder="Email Address"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-            />
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
-            >
-              {loading ? 'Sending Code...' : 'Send Reset Code'}
+        <div style={sheetVisible('forgotPassword')}>
+          {sheetBack('signIn')}
+          {errBanner(error)}
+          {!error && infoBanner(info)}
+          <form onSubmit={handleSendResetCode} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <input type="email" placeholder="Email Address" required value={email} onChange={e => setEmail(e.target.value)} style={sheetInputStyle}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }} />
+            <button type="submit" disabled={loading} style={{ ...sheetBtn, opacity: loading ? 0.6 : 1 }}>
+              {loading ? 'Sending Code…' : 'Send Reset Code'}
             </button>
           </form>
         </div>
 
         {/* ── SHEET 5: VERIFY RESET CODE ── */}
-        <div
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
-            activeSheet === 'verifyReset' 
-              ? 'translate-y-0 opacity-100 pointer-events-auto' 
-              : 'translate-y-full opacity-0 pointer-events-none'
-          }`}
-        >
-          {/* Top bar back button */}
-          <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => triggerSheetTransition('forgotPassword')}
-              className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-              title="Back"
-            >
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-            <div className="w-12 h-1 bg-[#27272a] rounded-full" />
-            <div className="w-10" />
-          </div>
-
-          {error && (
-            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
-              {error}
-            </div>
-          )}
-          {info && !error && (
-            <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-4 py-3 mb-4">
-              {info}
-            </div>
-          )}
-
-          <form onSubmit={handleVerifyResetCode} className="space-y-4">
-            <div className="mb-4">
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                autoComplete="one-time-code"
-                placeholder="Enter 6-digit code"
-                value={otpValue}
-                onChange={(e) => updateOtpValue(e.target.value)}
-                className="w-full h-[50px] rounded-full bg-[#1c1c1e] text-white text-center font-mono text-lg font-bold tracking-[0.2em] pl-[0.2em] leading-none placeholder:tracking-normal placeholder:font-sans placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 focus:outline-none transition-all flex items-center justify-center"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || otpValue.length < 6}
-              className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md"
-            >
-              {loading ? 'Verifying...' : 'Verify Code'}
+        <div style={sheetVisible('verifyReset')}>
+          {sheetBack('forgotPassword')}
+          {errBanner(error)}
+          {!error && infoBanner(info)}
+          <form onSubmit={handleVerifyResetCode} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoComplete="one-time-code"
+              placeholder="Enter 6-digit code" value={otpValue} onChange={e => updateOtpValue(e.target.value)}
+              style={{ ...sheetInputStyle, textAlign: 'center', fontFamily: 'monospace', fontSize: 20, fontWeight: 700, letterSpacing: '0.3em' }}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }} />
+            <button type="submit" disabled={loading || otpValue.length < 6}
+              style={{ ...sheetBtn, opacity: loading || otpValue.length < 6 ? 0.5 : 1 }}>
+              {loading ? 'Verifying…' : 'Verify Code'}
             </button>
           </form>
-
-          <div className="text-center mt-2">
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={resendCooldown > 0}
-              className="text-xs text-zinc-500 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+          <div style={{ textAlign: 'center', marginTop: 12 }}>
+            <button type="button" onClick={handleResend} disabled={resendCooldown > 0}
+              style={{ background: 'none', border: 'none', color: resendCooldown > 0 ? 'rgba(238,238,238,0.3)' : '#00ADB5', fontSize: 13, cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
               {resendCooldown > 0 ? `Resend Code in ${resendCooldown}s` : 'Resend Code'}
             </button>
           </div>
         </div>
 
         {/* ── SHEET 6: SET NEW PASSWORD ── */}
-        <div
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
-            activeSheet === 'resetPassword' 
-              ? 'translate-y-0 opacity-100 pointer-events-auto' 
-              : 'translate-y-full opacity-0 pointer-events-none'
-          }`}
-        >
-          <div className="w-12 h-1 bg-[#27272a] rounded-full mx-auto mb-6" />
+        <div style={sheetVisible('resetPassword')}>
+          {sheetDrag}
+          {errBanner(error)}
+          <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <input type="password" placeholder="New Password" required value={password} onChange={e => setPassword(e.target.value)} style={sheetInputStyle}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }} />
+            <input type="password" placeholder="Confirm New Password" required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={sheetInputStyle}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }} />
+            <button type="submit" disabled={loading} style={{ ...sheetBtn, opacity: loading ? 0.6 : 1 }}>
+              {loading ? 'Saving…' : 'Reset Password'}
+            </button>
+          </form>
+        </div>
 
-          {error && (
-            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
-              {error}
+        {/* ── SHEET 7: VERIFY EMAIL (OTP) ── */}
+        <div style={sheetVisible('verify')}>
+          {sheetBack('signUp')}
+          {errBanner(error)}
+          {!error && infoBanner(info)}
+          <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoComplete="one-time-code"
+              placeholder="Enter 6-digit code" value={otpValue} onChange={e => updateOtpValue(e.target.value)}
+              style={{ ...sheetInputStyle, textAlign: 'center', fontFamily: 'monospace', fontSize: 20, fontWeight: 700, letterSpacing: '0.3em' }}
+              onFocus={e => { e.target.style.borderColor = '#00ADB5'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }} />
+            <button type="submit" disabled={loading || otpValue.length < 6}
+              style={{ ...sheetBtn, opacity: loading || otpValue.length < 6 ? 0.5 : 1 }}>
+              {loading ? 'Verifying…' : 'Verify Code'}
+            </button>
+          </form>
+          <div style={{ textAlign: 'center', marginTop: 12 }}>
+            <button type="button" onClick={handleResend} disabled={resendCooldown > 0}
+              style={{ background: 'none', border: 'none', color: resendCooldown > 0 ? 'rgba(238,238,238,0.3)' : '#00ADB5', fontSize: 13, cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+              {resendCooldown > 0 ? `Resend Code in ${resendCooldown}s` : 'Resend Code'}
+            </button>
+          </div>
+        </div>
+
+        {/* ── SHEET 8: SUCCESS ── */}
+        <div style={sheetVisible('success')}>
+          {sheetDrag}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16, marginBottom: 24 }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: 'rgba(0,173,181,0.1)', border: '1px solid rgba(0,173,181,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="28" height="28" fill="none" stroke="#00ADB5" viewBox="0 0 24 24" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
             </div>
-          )}
-
-          <form onSubmit={handleResetPassword} className="space-y-3">
-            <input
-              type="password"
-              placeholder="New Password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-            />
-
-            <input
-              type="password"
-              placeholder="Confirm New Password"
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full rounded-full bg-[#1c1c1e] text-white placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 py-3 focus:outline-none transition-colors text-sm"
-            />
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md mt-2"
-          >
-            {loading ? 'Saving...' : 'Reset Password'}
-          </button>
-        </form>
-      </div>
-
-      {/* ── SHEET 7: VERIFY EMAIL (OTP FLOW) ── */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
-          activeSheet === 'verify' 
-            ? 'translate-y-0 opacity-100 pointer-events-auto' 
-            : 'translate-y-full opacity-0 pointer-events-none'
-        }`}
-      >
-        {/* Top bar back button */}
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={() => triggerSheetTransition('signUp')}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-            title="Back"
-          >
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </button>
-          <div className="w-12 h-1 bg-[#27272a] rounded-full" />
-          <div className="w-10" />
-        </div>
-
-        {error && (
-          <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
-            {error}
+            <div>
+              <h2 style={{ color: '#EEEEEE', fontWeight: 700, fontSize: 22, margin: '0 0 6px' }}>Verified!</h2>
+              <p style={{ color: 'rgba(238,238,238,0.5)', fontSize: 14, margin: 0 }}>
+                Your email has been verified and your secure account is ready.
+              </p>
+            </div>
           </div>
-        )}
-        {info && !error && (
-          <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-4 py-3 mb-4">
-            {info}
-          </div>
-        )}
-
-        <form onSubmit={handleVerify} className="space-y-4">
-          <div className="mb-4">
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={6}
-              autoComplete="one-time-code"
-              placeholder="Enter 6-digit code"
-              value={otpValue}
-              onChange={(e) => updateOtpValue(e.target.value)}
-              className="w-full h-[50px] rounded-full bg-[#1c1c1e] text-white text-center font-mono text-lg font-bold tracking-[0.2em] pl-[0.2em] leading-none placeholder:tracking-normal placeholder:font-sans placeholder:text-zinc-500 border border-zinc-800 focus:border-zinc-500 px-5 focus:outline-none transition-all flex items-center justify-center"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || otpValue.length < 6}
-            className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md"
-          >
-            {loading ? 'Verifying...' : 'Verify Code'}
-          </button>
-        </form>
-
-        <div className="text-center mt-2">
-          <button
-            type="button"
-            onClick={handleResend}
-            disabled={resendCooldown > 0}
-            className="text-xs text-zinc-500 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {resendCooldown > 0 ? `Resend Code in ${resendCooldown}s` : 'Resend Code'}
+          <button onClick={() => router.push('/dashboard')} style={sheetBtn}>
+            Continue to CONNECT
           </button>
         </div>
-      </div>
 
-      {/* ── SHEET 8: SUCCESS SHEET ── */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.25)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${
-          activeSheet === 'success' 
-            ? 'translate-y-0 opacity-100 pointer-events-auto' 
-            : 'translate-y-full opacity-0 pointer-events-none'
-        }`}
-      >
-        <div className="w-12 h-1 bg-[#27272a] rounded-full mx-auto mb-6" />
-
-        <div className="flex flex-col items-center text-center space-y-4 mb-6">
-          <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center text-emerald-400">
-            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-white">Verified!</h2>
-          <p className="text-sm text-zinc-400">
-            Your email has been verified and your secure account is ready.
-          </p>
-        </div>
-
-        <button
+        {/* Backdrop */}
+        <div
           onClick={() => {
-            router.push('/dashboard');
+            if (activeSheet === 'signIn' || activeSheet === 'signUp' || activeSheet === 'forgotPassword') {
+              triggerSheetTransition('welcome');
+            }
           }}
-          className="w-full bg-white text-black hover:bg-zinc-200 transition-all active:scale-98 rounded-full py-3.5 font-bold text-center text-sm shadow-md"
-        >
-          Continue to Dashboard
-        </button>
+          style={{
+            position: 'absolute', inset: 0,
+            background: 'rgba(0,0,0,0.5)', zIndex: 30,
+            opacity: activeSheet !== 'welcome' && activeSheet !== 'none' ? 1 : 0,
+            pointerEvents: activeSheet !== 'welcome' && activeSheet !== 'none' ? 'auto' : 'none',
+            transition: 'opacity 300ms ease',
+            backdropFilter: 'blur(2px)',
+          }}
+        />
       </div>
 
-      {/* Safe interactive backdrop to dismiss open sheets */}
-      <div 
-        onClick={() => {
-          if (activeSheet === 'signIn' || activeSheet === 'signUp' || activeSheet === 'forgotPassword') {
-            triggerSheetTransition('welcome');
-          }
-        }}
-        className={`absolute inset-0 bg-black/25 z-30 transition-opacity duration-500 ${
-          activeSheet !== 'welcome' && activeSheet !== 'none' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-      />
-      </div>
-
-      <div className="hidden lg:flex h-screen w-full items-center justify-center overflow-hidden bg-[#F4F4F4] py-[0.25in] px-6 md:px-12 select-none font-sans">
-        <div 
-          className="w-full max-w-[960px] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_-10px_rgba(0,0,0,0.4)] bg-white border border-gray-100 flex flex-col lg:grid lg:grid-cols-2" 
-          style={{ 
-            position: 'relative', 
-            zIndex: 1,
-            height: 'min(680px, calc(100vh - 0.5in))',
-          }}
-        >
+      {/* ── DESKTOP AUTH LAYOUT (>= lg) ── */}
+      <div style={{
+        display: 'none', height: '100vh', width: '100%',
+        alignItems: 'center', justifyContent: 'center',
+        background: '#1a1e25',
+        fontFamily: "'Inter', sans-serif",
+        padding: '24px',
+      }} className="hidden lg:flex">
+        <div style={{
+          width: '100%', maxWidth: 900,
+          borderRadius: 28,
+          overflow: 'hidden',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          height: 'min(640px, calc(100vh - 48px))',
+        }}>
           {renderLeft()}
-          <div className="h-full bg-white overflow-hidden">
+          <div style={{ height: '100%', overflow: 'hidden' }}>
             {renderDesktopRight()}
           </div>
         </div>

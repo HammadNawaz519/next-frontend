@@ -419,15 +419,13 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 font-sans ${isDark ? 'bg-[#09090b] text-white' : 'bg-white text-gray-900'}`}>
-      <div className="max-w-xl mx-auto px-5 pt-8 pb-10 md:pt-12">
+    <div style={{ minHeight: '100vh', background: '#222831', color: '#EEEEEE', fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ maxWidth: 520, margin: '0 auto', padding: '24px 20px calc(40px + env(safe-area-inset-bottom,0px))' }}>
         {/* Top Header Controls */}
-        <div className="flex items-center justify-between mb-4">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <button
             onClick={() => router.push('/dashboard')}
-            className={`p-2 px-3 rounded-full transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold ${
-              isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300' : 'bg-gray-200/80 hover:bg-gray-200 text-gray-800'
-            }`}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(238,238,238,0.7)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', outline: 'none' }}
           >
             <ArrowLeft className="w-4 h-4" />
             Back
@@ -436,27 +434,27 @@ export default function AccountsPage() {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className={`p-2 rounded-full transition-all active:scale-95 ${
-                isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300' : 'bg-gray-200/80 hover:bg-gray-200 text-gray-800'
-              }`}
+              style={{ padding: '8px 10px', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(238,238,238,0.7)', cursor: 'pointer', outline: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <MoreVertical className="w-5 h-5" />
             </button>
 
             {showDropdown && (
-              <div className={`absolute right-0 mt-2 w-52 border rounded-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-200 ${
-                isDark ? 'bg-[#16161a] border-zinc-800 text-white' : 'bg-white border-gray-200 text-gray-900'
-              }`}>
+              <div style={{ position: 'absolute', right: 0, marginTop: 8, width: 200, background: '#393E46', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: 6, zIndex: 50, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
                 <button
                   onClick={() => { setShowDropdown(false); setViewMode(viewMode === 'remove' ? 'list' : 'remove'); }}
-                  className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 text-rose-500 hover:bg-rose-500/10 transition-colors"
+                  style={{ width: '100%', textAlign: 'left', padding: '9px 12px', fontSize: 13, fontWeight: 600, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 8, color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.08)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'none'}
                 >
                   <Trash2 className="w-4 h-4" />
                   {viewMode === 'remove' ? 'Done Managing' : 'Remove Account'}
                 </button>
                 <button
                   onClick={() => { setShowDropdown(false); setViewMode(viewMode === 'removeSaved' ? 'list' : 'removeSaved'); }}
-                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 transition-colors ${isDark ? 'text-zinc-300 hover:bg-zinc-800' : 'text-gray-600 hover:bg-gray-100'}`}
+                  style={{ width: '100%', textAlign: 'left', padding: '9px 12px', fontSize: 13, fontWeight: 600, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(238,238,238,0.6)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'none'}
                 >
                   <Key className="w-4 h-4" />
                   {viewMode === 'removeSaved' ? 'Done' : 'Remove Saved Login'}
@@ -466,21 +464,33 @@ export default function AccountsPage() {
           </div>
         </div>
 
-        {/* Top-Left Charcoal Black 2-Line Header (NO LOGO, NO SUBTITLE) */}
-        <div className="text-left mb-8 pt-3">
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.08] text-[#1c1c22] dark:text-zinc-100 font-sans">
-            Account<br />Center
-          </h1>
+        {/* CONNECT Account Center Header */}
+        <div style={{ marginBottom: 32, paddingTop: 8 }}>
+          {/* Brand mark */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #00ADB5, #007A80)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(0,173,181,0.25)' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </div>
+            <div>
+              <h1 style={{ color: '#EEEEEE', fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: '-0.3px' }}>Account Center</h1>
+              <p style={{ color: 'rgba(238,238,238,0.4)', fontSize: 12, margin: '2px 0 0' }}>Manage your CONNECT accounts</p>
+            </div>
+          </div>
         </div>
 
         {/* Clean Simple Accounts List Container — Fully Rounded Rows (Shifted Down) */}
-        <div className="flex flex-col gap-3 mb-10">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 32 }}>
           {(viewMode === 'remove' || viewMode === 'removeSaved') && (
-            <div className="flex items-center justify-between py-2 px-1">
-              <span className="text-xs font-bold text-amber-500">Managing Saved Accounts</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 4px' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b' }}>Managing Saved Accounts</span>
               <button
                 onClick={() => setViewMode('list')}
-                className="text-xs font-bold text-blue-500 hover:text-blue-400 transition-colors"
+                style={{ fontSize: 12, fontWeight: 700, color: '#00ADB5', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
               >
                 Done
               </button>
@@ -488,9 +498,9 @@ export default function AccountsPage() {
           )}
 
           {displayAccounts.length === 0 && (
-            <p className={`text-sm text-center py-8 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
+            <div style={{ textAlign: 'center', padding: '48px 24px', color: 'rgba(238,238,238,0.35)', fontSize: 14 }}>
               No accounts saved on this device yet.
-            </p>
+            </div>
           )}
 
           {displayAccounts.map((acc) => {
@@ -499,37 +509,55 @@ export default function AccountsPage() {
               : (acc.displayName ? acc.displayName : (acc.email ? acc.email.split('@')[0] : 'User'));
             const isSaved = acc.isSavedOnDevice;
             const isSwitchingThis = switchingId === acc.userId;
+            const isCurrent = !!(session?.user?.email && session.user.email.toLowerCase() === acc.email.toLowerCase());
 
             return (
               <div
                 key={acc.userId || acc.email}
                 onClick={() => viewMode === 'list' && handleAccountClick(acc)}
-                className={`flex items-center justify-between py-3.5 px-5 rounded-full border transition-all cursor-pointer ${
-                  isDark ? 'border-zinc-800 bg-[#16161a] hover:bg-zinc-800/50' : 'border-gray-200 bg-[#f9fafb] hover:bg-gray-100'
-                }`}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '14px 16px', borderRadius: 16,
+                  border: isCurrent ? '1px solid rgba(0,173,181,0.35)' : '1px solid rgba(255,255,255,0.07)',
+                  background: isCurrent ? 'rgba(0,173,181,0.07)' : '#393E46',
+                  cursor: 'pointer',
+                  transition: 'all 150ms',
+                }}
+                onMouseEnter={e => { if (!isCurrent) (e.currentTarget as HTMLElement).style.background = '#434a53'; }}
+                onMouseLeave={e => { if (!isCurrent) (e.currentTarget as HTMLElement).style.background = '#393E46'; }}
               >
-                <div className="flex items-center gap-3.5 min-w-0">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                   {acc.profilePicture ? (
-                    <img src={acc.profilePicture} alt={displayHandle} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                    <img src={acc.profilePicture} alt={displayHandle} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: isCurrent ? '2px solid #00ADB5' : '1.5px solid rgba(255,255,255,0.1)' }} />
                   ) : (
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0 ${
-                      isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-gray-200 text-gray-700'
-                    }`}>
+                    <div style={{
+                      width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 14, fontWeight: 700, textTransform: 'uppercase', flexShrink: 0,
+                      background: isCurrent ? 'rgba(0,173,181,0.2)' : 'rgba(255,255,255,0.08)',
+                      color: isCurrent ? '#00ADB5' : 'rgba(238,238,238,0.6)',
+                      border: isCurrent ? '2px solid rgba(0,173,181,0.4)' : '1.5px solid rgba(255,255,255,0.1)',
+                    }}>
                       {getInitials(acc)}
                     </div>
                   )}
-                  <div className="min-w-0 text-left">
-                    <span className="text-sm font-bold truncate block">{displayHandle}</span>
+                  <div style={{ minWidth: 0, textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#EEEEEE', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayHandle}</span>
+                      {isCurrent && (
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: 'rgba(0,173,181,0.15)', color: '#00ADB5', border: '1px solid rgba(0,173,181,0.25)', flexShrink: 0 }}>Active</span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 12, color: 'rgba(238,238,238,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', marginTop: 2 }}>{acc.email}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0 pl-2">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, paddingLeft: 8 }}>
                   {isSwitchingThis ? (
-                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <div style={{ width: 16, height: 16, border: '2px solid #00ADB5', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
                   ) : viewMode === 'remove' ? (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleRemoveAccount(acc.userId); }}
-                      className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                      style={{ padding: 6, color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8 }}
                       title="Remove account from device"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -537,13 +565,13 @@ export default function AccountsPage() {
                   ) : viewMode === 'removeSaved' && isSaved ? (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleRemoveSavedLogin(acc.userId); }}
-                      className="p-1.5 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors"
+                      style={{ padding: 6, color: '#f59e0b', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8 }}
                       title="Remove saved login info"
                     >
                       <Key className="w-4 h-4" />
                     </button>
                   ) : (
-                    <ChevronRight className={`w-4 h-4 ${isDark ? 'text-zinc-600' : 'text-gray-400'}`} />
+                    <ChevronRight style={{ width: 16, height: 16, color: 'rgba(238,238,238,0.3)' }} />
                   )}
                 </div>
               </div>
@@ -551,18 +579,18 @@ export default function AccountsPage() {
           })}
         </div>
 
-        {/* Bottom Action Buttons: Log Into Another Account */}
-        <div className="flex flex-col gap-3.5 pt-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {/* Bottom Action Buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 4 }}>
           <Button
             onClick={() => { setShowLoginSheet(true); setShowSignupSheet(false); }}
-            className="w-full bg-[#1c1c1e] hover:bg-zinc-800 text-white border border-zinc-800 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-md"
+            style={{ width: '100%', background: '#00ADB5', color: '#ffffff', border: 'none', height: 48, borderRadius: 14, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}
           >
-            Log Into Existing Account
+            Log Into Another Account
           </Button>
 
           <Button
             onClick={() => { setShowSignupSheet(true); setShowLoginSheet(false); }}
-            className="w-full bg-white hover:bg-zinc-100 text-[#121214] border border-gray-200 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-sm"
+            style={{ width: '100%', background: 'rgba(255,255,255,0.06)', color: '#EEEEEE', border: '1px solid rgba(255,255,255,0.1)', height: 48, borderRadius: 14, fontWeight: 500, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}
           >
             Create a New Account
           </Button>
@@ -571,28 +599,28 @@ export default function AccountsPage() {
 
       {/* Password Prompt Modal for Non-Saved Credentials */}
       {selectedAccount && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#18181b] border border-zinc-800 rounded-3xl p-6 w-full max-w-sm text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold mb-1">Enter Password</h3>
-            <p className="text-xs text-zinc-400 mb-4">
-              Enter password for <span className="text-white font-semibold">{selectedAccount.email}</span>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: "'Inter', sans-serif" }}>
+          <div style={{ background: '#393E46', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: 24, width: '100%', maxWidth: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#EEEEEE', margin: '0 0 6px' }}>Enter Password</h3>
+            <p style={{ fontSize: 13, color: 'rgba(238,238,238,0.5)', marginBottom: 20 }}>
+              Enter password for <span style={{ color: '#EEEEEE', fontWeight: 600 }}>{selectedAccount.email}</span>
             </p>
 
-            <form onSubmit={handlePasswordLogin} className="space-y-4">
-              <div className="relative">
+            <form onSubmit={handlePasswordLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ position: 'relative' }}>
                 <Input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-[#27272a] border-zinc-700 text-white placeholder:text-zinc-500 pr-10 h-11 rounded-xl text-sm"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: '#EEEEEE', height: 44, borderRadius: 12, paddingRight: 40, fontSize: 14, fontFamily: 'inherit' }}
                   autoFocus
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(238,238,238,0.4)', cursor: 'pointer', outline: 'none' }}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>

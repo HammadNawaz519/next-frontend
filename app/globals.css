@@ -2,125 +2,121 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════
-   MOTION DESIGN TOKENS — Instagram-matching motion system
+   CONNECT DESIGN SYSTEM — v3.0
+   Primary Palette:
+     #222831  — Background
+     #393E46  — Surface
+     #00ADB5  — Accent
+     #EEEEEE  — Text
    ═══════════════════════════════════════════════════════════════ */
+
+/* ── MOTION TOKENS ── */
 :root {
-  /* Easing — FastOutSlowIn, the Instagram standard */
+  --ease-cn:       cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-ig:       cubic-bezier(0.2, 0.0, 0.0, 1.0);
   --ease-out:      cubic-bezier(0.0, 0.0, 0.2, 1.0);
   --ease-premium:  cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring:   cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
-  /* Durations */
   --dur-instant:  100ms;
   --dur-fast:     150ms;
   --dur-screen:   200ms;
-  --dur-sheet:    250ms;
-  --dur-hero:     300ms;
+  --dur-sheet:    280ms;
+  --dur-hero:     350ms;
 
-  /* ── LIGHT MODE DESIGN TOKENS ── */
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ── CONNECT CORE TOKENS ── */
+  --cn-bg:          #222831;
+  --cn-surface:     #393E46;
+  --cn-accent:      #00ADB5;
+  --cn-accent-dim:  rgba(0, 173, 181, 0.15);
+  --cn-accent-glow: rgba(0, 173, 181, 0.25);
+  --cn-text:        #EEEEEE;
+  --cn-text-sub:    rgba(238, 238, 238, 0.6);
+  --cn-text-muted:  rgba(238, 238, 238, 0.35);
+  --cn-border:      rgba(255, 255, 255, 0.07);
+  --cn-border-strong: rgba(255, 255, 255, 0.12);
+  --cn-hover:       rgba(255, 255, 255, 0.04);
+  --cn-active:      rgba(255, 255, 255, 0.08);
+  --cn-shadow:      0 4px 24px rgba(0, 0, 0, 0.4);
+  --cn-shadow-sm:   0 2px 12px rgba(0, 0, 0, 0.3);
 
-  --dm-bg-page:        #f3f4f6;
-  --dm-bg-sidebar:     #ffffff;
-  --dm-bg-main:        #ffffff;
-  --dm-bg-input:       #ffffff;
-  --dm-bg-hover:       #f9fafb;
-  --dm-bg-active:      #f3f4f6;
-  --dm-border:         #e5e7eb;
-  --dm-border-main:    #d1d5db;
-  --dm-text-primary:   #111827;
-  --dm-text-secondary: #6b7280;
-  --dm-text-muted:     #9ca3af;
-  --dm-text-heading:   #111827;
-  --dm-shadow-sidebar: 0 4px 25px rgba(0,0,0,0.05);
-  --dm-shadow-main:    0 4px 30px rgba(0,0,0,0.05);
-  --dm-thumb:          #000000;
-  --dm-chat-sent-bg:   #000000;
-  --dm-chat-sent-text: #ffffff;
-  --dm-chat-recv-bg:   #ffffff;
-  --dm-chat-recv-text: #111827;
-  --dm-header-bg:      rgba(255,255,255,0.7);
-  --dm-input-border:   #f3f4f6;
-  --dm-input-ring:     rgba(0,0,0,0.05);
-  --dm-typing-bg:      #f3f4f6;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   DARK MODE TOKENS
-   ═══════════════════════════════════════════════════════════════ */
-[data-theme="dark"],
-html.dark,
-.dark {
-  --background: #000000;
-  --foreground: #ffffff;
-
-  --dm-bg-page:        #000000;
-  --dm-bg-sidebar:     #000000;
-  --dm-bg-main:        #000000;
-  --dm-bg-input:       #121212;
-  --dm-bg-hover:       #181818;
-  --dm-bg-active:      #262626;
-  --dm-border:         #262626;
-  --dm-border-main:    #262626;
-  --dm-text-primary:   #f5f5f5;
-  --dm-text-secondary: #a8a8a8;
-  --dm-text-muted:     #737373;
-  --dm-text-heading:   #ffffff;
+  /* ── COMPONENT TOKENS ── (mapped for SocialChat/existing components) */
+  --dm-bg-page:        #222831;
+  --dm-bg-sidebar:     #1c2028;
+  --dm-bg-main:        #222831;
+  --dm-bg-input:       #393E46;
+  --dm-bg-hover:       rgba(255,255,255,0.04);
+  --dm-bg-active:      rgba(255,255,255,0.08);
+  --dm-border:         rgba(255,255,255,0.07);
+  --dm-border-main:    rgba(255,255,255,0.07);
+  --dm-text-primary:   #EEEEEE;
+  --dm-text-secondary: rgba(238,238,238,0.6);
+  --dm-text-muted:     rgba(238,238,238,0.35);
+  --dm-text-heading:   #EEEEEE;
   --dm-shadow-sidebar: none;
   --dm-shadow-main:    none;
-  --dm-thumb:          #ffffff;
-  --dm-chat-sent-bg:   #3797f0;
+  --dm-thumb:          #00ADB5;
+  --dm-chat-sent-bg:   #00ADB5;
   --dm-chat-sent-text: #ffffff;
-  --dm-chat-recv-bg:   #262626;
-  --dm-chat-recv-text: #f5f5f5;
-  --dm-header-bg:      rgba(0,0,0,0.85);
-  --dm-input-border:   #262626;
-  --dm-input-ring:     rgba(255,255,255,0.15);
-  --dm-typing-bg:      #262626;
+  --dm-chat-recv-bg:   #393E46;
+  --dm-chat-recv-text: #EEEEEE;
+  --dm-header-bg:      rgba(34,40,49,0.92);
+  --dm-input-border:   rgba(255,255,255,0.07);
+  --dm-input-ring:     rgba(0,173,181,0.3);
+  --dm-typing-bg:      #393E46;
+
+  /* legacy compat */
+  --background: #222831;
+  --foreground: #EEEEEE;
+  --color-background: #222831;
+  --color-foreground: #EEEEEE;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Fira Code', monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --background: #000000;
-    --foreground: #ffffff;
-    --dm-bg-page:        #000000;
-    --dm-bg-sidebar:     #000000;
-    --dm-bg-main:        #000000;
-    --dm-bg-input:       #121212;
-    --dm-bg-hover:       #181818;
-    --dm-bg-active:      #262626;
-    --dm-border:         #262626;
-    --dm-border-main:    #262626;
-    --dm-text-primary:   #f5f5f5;
-    --dm-text-secondary: #a8a8a8;
-    --dm-text-muted:     #737373;
-    --dm-text-heading:   #ffffff;
-    --dm-shadow-sidebar: none;
-    --dm-shadow-main:    none;
-    --dm-thumb:          #ffffff;
-    --dm-chat-sent-bg:   #3797f0;
-    --dm-chat-sent-text: #ffffff;
-    --dm-chat-recv-bg:   #262626;
-    --dm-chat-recv-text: #f5f5f5;
-    --dm-header-bg:      rgba(0,0,0,0.85);
-    --dm-input-border:   #262626;
-    --dm-input-ring:     rgba(255,255,255,0.15);
-    --dm-typing-bg:      #262626;
-  }
+/* ── Force dark theme everywhere — CONNECT is always dark ── */
+html, body,
+[data-theme="dark"],
+[data-theme="light"],
+html.dark,
+.dark,
+:root:not([data-theme="light"]) {
+  --dm-bg-page:        #222831;
+  --dm-bg-sidebar:     #1c2028;
+  --dm-bg-main:        #222831;
+  --dm-bg-input:       #393E46;
+  --dm-bg-hover:       rgba(255,255,255,0.04);
+  --dm-bg-active:      rgba(255,255,255,0.08);
+  --dm-border:         rgba(255,255,255,0.07);
+  --dm-border-main:    rgba(255,255,255,0.07);
+  --dm-text-primary:   #EEEEEE;
+  --dm-text-secondary: rgba(238,238,238,0.6);
+  --dm-text-muted:     rgba(238,238,238,0.35);
+  --dm-text-heading:   #EEEEEE;
+  --dm-shadow-sidebar: none;
+  --dm-shadow-main:    none;
+  --dm-thumb:          #00ADB5;
+  --dm-chat-sent-bg:   #00ADB5;
+  --dm-chat-sent-text: #ffffff;
+  --dm-chat-recv-bg:   #393E46;
+  --dm-chat-recv-text: #EEEEEE;
+  --dm-header-bg:      rgba(34,40,49,0.92);
+  --dm-input-border:   rgba(255,255,255,0.07);
+  --dm-input-ring:     rgba(0,173,181,0.3);
+  --dm-typing-bg:      #393E46;
+  --background: #222831;
+  --foreground: #EEEEEE;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   THEME COLOR TRANSITION — smooth light ↔ dark interpolation
+   THEME COLOR TRANSITION — smooth interpolation
    ═══════════════════════════════════════════════════════════════ */
 *,
 *::before,
 *::after {
-  /* Only animate GPU-friendly color properties. Never layout props. */
   transition-property: background-color, border-color, color, fill, stroke;
   transition-duration: 250ms;
   transition-timing-function: var(--ease-ig);
-  /* Critical: do NOT include transform/opacity here — that breaks per-element animations */
 }
 
 /* Remove theme transition from elements that have their own animations */
@@ -142,7 +138,7 @@ img {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   VIEW TRANSITION API — kept for profile hero only
+   VIEW TRANSITION API
    ═══════════════════════════════════════════════════════════════ */
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -155,15 +151,6 @@ img {
 .view-transition-reverse::view-transition-old(root) { z-index: 9999; }
 .view-transition-reverse::view-transition-new(root) { z-index: 1; }
 
-:root {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --ease-premium: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
 html, body {
   height: 100%;
   margin: 0;
@@ -171,9 +158,123 @@ html, body {
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--cn-bg);
+  color: var(--cn-text);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CONNECT UTILITY CLASSES
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Card surface */
+.cn-card {
+  background: var(--cn-surface);
+  border: 1px solid var(--cn-border);
+  border-radius: 16px;
+  box-shadow: var(--cn-shadow-sm);
+}
+
+/* Premium input */
+.cn-input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--cn-border-strong);
+  border-radius: 12px;
+  color: var(--cn-text);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 12px 16px;
+  width: 100%;
+  outline: none;
+  transition: border-color 200ms var(--ease-cn), box-shadow 200ms var(--ease-cn);
+}
+.cn-input::placeholder { color: var(--cn-text-muted); }
+.cn-input:focus {
+  border-color: var(--cn-accent);
+  box-shadow: 0 0 0 3px var(--cn-accent-dim);
+}
+
+/* Primary button */
+.cn-btn-primary {
+  background: var(--cn-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: opacity 150ms, transform 150ms, box-shadow 200ms;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.cn-btn-primary:hover { opacity: 0.88; box-shadow: 0 4px 16px var(--cn-accent-glow); }
+.cn-btn-primary:active { transform: scale(0.97); }
+.cn-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Secondary button */
+.cn-btn-secondary {
+  background: var(--cn-active);
+  color: var(--cn-text);
+  border: 1px solid var(--cn-border-strong);
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 11px 24px;
+  cursor: pointer;
+  transition: background 150ms, transform 150ms;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.cn-btn-secondary:hover { background: rgba(255,255,255,0.08); }
+.cn-btn-secondary:active { transform: scale(0.97); }
+
+/* Online status dot */
+.cn-status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px var(--cn-bg);
+  flex-shrink: 0;
+}
+.cn-status-dot.away { background: #f59e0b; }
+.cn-status-dot.offline { background: var(--cn-text-muted); }
+
+/* User card */
+.cn-user-card {
+  background: var(--cn-surface);
+  border: 1px solid var(--cn-border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms, transform 150ms;
+}
+.cn-user-card:hover {
+  background: rgba(57,62,70,0.9);
+  border-color: var(--cn-border-strong);
+}
+.cn-user-card:active { transform: scale(0.99); }
+
+/* Accent label */
+.cn-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cn-text-muted);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -185,20 +286,23 @@ body {
   scrollbar-width: none;
 }
 
+/* Themed scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
 /* ═══════════════════════════════════════════════════════════════
    TAB PANEL — always-mounted, CSS-toggled visibility
-   Preserves scroll position + React state exactly like Instagram
    ═══════════════════════════════════════════════════════════════ */
 .ig-tab-panel {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  /* Hidden state: invisible but keep in DOM */
   visibility: hidden;
   pointer-events: none;
   opacity: 0;
-  /* DO NOT use display:none — it destroys scroll position */
 }
 
 .ig-tab-panel[data-active="true"] {
@@ -209,8 +313,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   TAB SWITCH ANIMATION — subtle fade + scale + micro-lift
-   Duration: 200ms  Curve: FastOutSlowIn
+   TAB SWITCH ANIMATION
    ═══════════════════════════════════════════════════════════════ */
 @keyframes ig-tab-in {
   from {
@@ -245,28 +348,16 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   CHAT PANEL SLIDE — slide from right like Instagram DMs
+   CHAT PANEL SLIDE
    ═══════════════════════════════════════════════════════════════ */
 @keyframes ig-chat-in {
-  from {
-    opacity: 0;
-    transform: translateX(28px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes ig-chat-out {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(-12px);
-  }
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(-12px); }
 }
 
 .ig-chat-enter {
@@ -280,28 +371,16 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   PROFILE SLIDE-UP — slides up from 16px, fades in
+   PROFILE SLIDE-UP
    ═══════════════════════════════════════════════════════════════ */
 @keyframes ig-profile-up {
-  from {
-    opacity: 0;
-    transform: translateY(16px) scale(0.99);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(16px) scale(0.99); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes ig-profile-down {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(12px) scale(0.99);
-  }
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(12px) scale(0.99); }
 }
 
 .ig-profile-enter {
@@ -348,17 +427,11 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   DIALOG — scale + fade, 180ms
+   DIALOG — scale + fade
    ═══════════════════════════════════════════════════════════════ */
 @keyframes ig-dialog-in {
-  from {
-    opacity: 0;
-    transform: scale(0.94);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 .ig-dialog-enter {
@@ -367,17 +440,11 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   FLOATING MENU — opacity + scale + lift, 170ms
+   FLOATING MENU
    ═══════════════════════════════════════════════════════════════ */
 @keyframes ig-menu-in {
-  from {
-    opacity: 0;
-    transform: scale(0.94) translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+  from { opacity: 0; transform: scale(0.94) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .ig-menu-enter {
@@ -387,28 +454,16 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MESSAGE BUBBLE — sent + received entry
+   MESSAGE BUBBLE ANIMATIONS
    ═══════════════════════════════════════════════════════════════ */
 @keyframes ig-msg-sent {
-  from {
-    opacity: 0;
-    transform: scale(0.94) translateY(7px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+  from { opacity: 0; transform: scale(0.94) translateY(7px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 @keyframes ig-msg-recv {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .ig-msg-sent {
@@ -422,7 +477,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   TYPING INDICATOR — 3 dots with sequential pulse
+   TYPING INDICATOR
    ═══════════════════════════════════════════════════════════════ */
 .ig-typing-dots {
   display: inline-flex;
@@ -457,7 +512,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   REACTION POP — scale(0→1.1→1), no bounce
+   REACTION POP
    ═══════════════════════════════════════════════════════════════ */
 @keyframes ig-reaction-pop {
   0%   { transform: scale(0);   opacity: 0; }
@@ -489,9 +544,9 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SHIMMER SKELETON — replaces animate-pulse
+   CONNECT SHIMMER SKELETON
    ═══════════════════════════════════════════════════════════════ */
-@keyframes ig-shimmer {
+@keyframes cn-shimmer {
   0%   { background-position: -200% center; }
   100% { background-position: 200% center; }
 }
@@ -499,27 +554,21 @@ body {
 .ig-skeleton {
   background: linear-gradient(
     90deg,
-    var(--dm-bg-hover) 25%,
-    var(--dm-bg-active) 50%,
-    var(--dm-bg-hover) 75%
+    #393E46 25%,
+    #434a53 50%,
+    #393E46 75%
   );
   background-size: 200% 100%;
-  animation: ig-shimmer 1.4s ease-in-out infinite;
+  animation: cn-shimmer 1.6s ease-in-out infinite;
   border-radius: 8px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SEARCH OVERLAY — fade + slide from top (subtle)
+   SEARCH OVERLAY ANIMATION
    ═══════════════════════════════════════════════════════════════ */
 @keyframes ig-search-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .animate-search-in {
@@ -541,75 +590,45 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   ANIMATED BLOB BACKGROUND (auth pages)
+   CONNECT AUTH AMBIENT — subtle dark ambient for auth screens
    ═══════════════════════════════════════════════════════════════ */
-.animated-bg {
-  position: relative;
-  background: #F2EAE0;
-  overflow: hidden;
+@keyframes cn-ambient-1 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(30px, 20px) scale(1.08); }
+  100% { transform: translate(10px, 40px) scale(0.95); }
+}
+@keyframes cn-ambient-2 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(-20px, -15px) scale(1.05); }
+  100% { transform: translate(-8px, -30px) scale(0.92); }
 }
 
-.animated-bg::before,
-.animated-bg::after,
-.animated-bg .blob3,
-.animated-bg .blob4 {
-  content: '';
+.cn-ambient-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(40px);
-  opacity: 0.6;
-  will-change: transform;
-  transform: translateZ(0);
   pointer-events: none;
-  z-index: 0;
-  /* blobs have their own animation — exclude from theme transition */
+  filter: blur(60px);
+  opacity: 0.18;
   transition: none;
 }
-
-.animated-bg::before {
-  width: 22vw; height: 22vw; background: #BDA6CE;
-  top: 5%; left: 5%;
-  animation: blob1 14s ease-in-out infinite alternate;
+.cn-ambient-blob:nth-child(1) {
+  width: 300px; height: 300px;
+  background: #00ADB5;
+  top: -80px; right: -80px;
+  animation: cn-ambient-1 18s ease-in-out infinite alternate;
 }
-.animated-bg::after {
-  width: 20vw; height: 20vw; background: #9B8EC7;
-  bottom: 5%; right: 5%;
-  animation: blob2 18s ease-in-out infinite alternate;
-}
-.animated-bg .blob3 {
-  width: 20vw; height: 20vw; background: #B4D3D9;
-  bottom: 8%; left: 10%;
-  animation: blob3 20s ease-in-out infinite alternate;
-}
-.animated-bg .blob4 {
-  width: 18vw; height: 18vw; background: #BDA6CE;
-  top: 8%; right: 8%;
-  animation: blob4 16s ease-in-out infinite alternate;
+.cn-ambient-blob:nth-child(2) {
+  width: 250px; height: 250px;
+  background: #00ADB5;
+  bottom: -60px; left: -60px;
+  animation: cn-ambient-2 22s ease-in-out infinite alternate;
 }
 
-@keyframes blob1 {
-  0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(8vw, 12vh) scale(1.1); }
-  100% { transform: translate(3vw, 20vh) scale(0.95); }
-}
-@keyframes blob2 {
-  0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(-10vw, -8vh) scale(1.08); }
-  100% { transform: translate(-4vw, -16vh) scale(0.92); }
-}
-@keyframes blob3 {
-  0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(12vw, -10vh) scale(1.05); }
-  100% { transform: translate(6vw, -18vh) scale(1.1); }
-}
-@keyframes blob4 {
-  0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(-8vw, 10vh) scale(0.95); }
-  100% { transform: translate(-14vw, 6vh) scale(1.08); }
-}
+/* Legacy blob classes kept for backward compat */
+.animated-bg { position: relative; background: var(--cn-bg); overflow: hidden; }
 
 /* ═══════════════════════════════════════════════════════════════
-   PROFILE PANEL — legacy classes kept for desktop compatibility
+   PROFILE PANEL ANIMATIONS
    ═══════════════════════════════════════════════════════════════ */
 @keyframes profileSlideIn {
   from { transform: translateX(100%); opacity: 0; }
@@ -623,7 +642,7 @@ body {
 .animate-profile-out { animation: profileSlideOut 0.24s var(--ease-out) forwards; }
 
 /* ═══════════════════════════════════════════════════════════════
-   REELS ANIMATIONS
+   REELS / FEED ANIMATIONS
    ═══════════════════════════════════════════════════════════════ */
 @keyframes heartPop {
   0%   { transform: scale(0);   opacity: 0; }
@@ -654,11 +673,7 @@ body {
 .home-blob-bg {
   position: absolute; inset: 0;
   overflow: hidden; pointer-events: none; z-index: 0;
-  background: transparent;
-}
-[data-theme="dark"] .home-blob-bg {
-  background: #000000 !important;
-  background-image: none !important;
+  background: var(--cn-bg);
 }
 .home-blob { display: none; }
 
@@ -687,34 +702,32 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   BOTTOM NAVIGATION — glass pill bar
+   CONNECT MOBILE BOTTOM NAVIGATION
    ═══════════════════════════════════════════════════════════════ */
 .mobile-nav {
   display: none;
   position: fixed;
-  bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
-  width: 85%;
-  max-width: 280px;
-  height: 58px;
+  width: calc(100% - 32px);
+  max-width: 320px;
+  height: 62px;
   z-index: 90;
   align-items: center;
   justify-content: space-around;
-  padding: 0 16px;
-  border-radius: 28px;
-  border: 1px solid rgba(255,255,255,0.15);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
-  background: rgba(255,255,255,0.45);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  padding: 0 8px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  background: #1c2028;
   /* Smooth slide in/out */
   transition: transform 350ms var(--ease-ig), opacity 350ms var(--ease-ig);
   will-change: transform, opacity;
 }
 
 .mobile-nav-hidden {
-  transform: translate(-50%, 80px) !important;
+  transform: translate(-50%, 90px) !important;
   opacity: 0;
   pointer-events: none;
 }
@@ -730,18 +743,10 @@ body:has([data-comment-drawer="true"]) .mobile-nav {
   pointer-events: none !important;
 }
 
-[data-theme="dark"] .mobile-nav {
-  background: rgba(15,15,20,0.6);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
-}
-
 .mobile-nav > * { position: relative; z-index: 1; }
 
 /* ═══════════════════════════════════════════════════════════════
-   PREVENT ANY NATIVE VIDEO PLAY BUTTON / POSTER OVERLAYS
+   PREVENT NATIVE VIDEO CONTROLS
    ═══════════════════════════════════════════════════════════════ */
 video::-webkit-media-controls,
 video::-webkit-media-controls-start-playback-button,
@@ -754,4 +759,3 @@ video::-webkit-media-controls-panel {
   opacity: 0 !important;
   pointer-events: none !important;
 }
-
