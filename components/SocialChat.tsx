@@ -28,6 +28,7 @@ import dynamic from 'next/dynamic';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { triggerHaptic } from '@/lib/haptics';
 import { Bell, Plus, Archive, CheckCheck, Check, Search, X } from 'lucide-react';
+import ChatInput from './ChatInput';
 import './SocialChat.css';
 
 // Code-split CallInterface so WebRTC and media engines load strictly on-demand when a call starts
@@ -1256,7 +1257,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         flexDirection: 'row',
         alignItems: 'flex-end',
         justifyContent: isSent ? 'flex-end' : 'flex-start',
-        gap: isSent ? '0px' : '6px',
+        gap: '0px',
         width: '100%',
         padding: '0',
         userSelect: 'none',
@@ -1293,20 +1294,6 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
       >
         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
       </div>
-
-      {!isSent && !isAI && (
-        <img
-          src={selectedUser?.image && selectedUser.image.length > 5 ? selectedUser.image : '/Avatar.png'}
-          alt=""
-          className="msg-small-avatar"
-          style={{
-            visibility: isNextSameSender ? 'hidden' : 'visible',
-            marginBottom: '2px',
-            flexShrink: 0,
-          }}
-          referrerPolicy="no-referrer"
-        />
-      )}
 
       {/* Consecutive Grouping Tail Logic — column wrapper keeps bubble + time stacked */}
       <div style={{
@@ -3928,11 +3915,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }, [selectedUser?.id, lastMsgId]);
 
-  const handleSendMessage = async (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent, explicitText?: string) => {
     e?.preventDefault();
-    if (!inputValue.trim() || !selectedUser || !session?.user) return;
+    const textToSend = (explicitText !== undefined ? explicitText : inputValue).trim();
+    if (!textToSend || !selectedUser || !session?.user) return;
 
-    const currentContent = inputValue.trim();
+    const currentContent = textToSend;
     const senderId = (session.user as any).id;
     setInputValue('');
     setShowAIMention(false);
@@ -5343,29 +5331,110 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     multiple
                   />
 
-                  {/* ── SCREEN 1: REDESIGNED MESSAGE COMPOSER ── */}
-                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[500px] bg-white rounded-full flex items-center p-1.5 pr-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)] border border-gray-100 z-30">
-                    {/* LEFT: Gallery/Image Button */}
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:text-zinc-800 active:scale-95 transition-all flex-shrink-0 cursor-pointer hover:bg-zinc-100"
-                      title="Send photo or video"
-                    >
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-                        <circle cx="9" cy="9" r="2"/>
-                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-                      </svg>
-                    </button>
+                  {/* ── INTERACTIVE CHAT INPUT PILL ── */}
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[360px] z-30">
+                    <ChatInput
+                      onSendMessage={(text) => handleSendMessage(undefined, text)}
+                      onSendVoice={async (audioBlob, duration) => {
+                        if (selectedUser && socket && session?.user) {
+                          const senderId = (session.user as any).id;
+                          const stableId = 'voice-' + Date.now() + Math.random().toString(36).substring(7);
+                          const localPreview = URL.createObjectURL(audioBlob);
 
-                    {/* CENTER: Soft Grey Rounded Input */}
-                    <input
-                      type="text"
-                      placeholder="Type a message..."
-                      value={inputValue}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setInputValue(val);
+                          const optimisticMsg: any = {
+                            id: stableId,
+                            senderId: senderId,
+                            receiverId: selectedUser.id,
+                            content: localPreview,
+                            type: 'voice',
+                            createdAt: new Date(),
+                            isSeen: false,
+                            status: 'sending',
+                            uploadProgress: 0,
+                          };
+                          setMessages(prev => [...prev, optimisticMsg]);
+                          setMessagesCache(prev => {
+                            const current = prev[selectedUser.id] || [];
+                            return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
+                          });
+
+                          try {
+                            const presignRes = await fetch('/api/chat/media/presign', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                filename: `voice_${Date.now()}.webm`,
+                                mimeType: 'audio/webm',
+                                fileSize: audioBlob.size,
+                                chatType: 'dm',
+                              }),
+                            });
+
+                            let finalAudioUrl = localPreview;
+                            let storagePath: string | undefined;
+
+                            if (presignRes.ok) {
+                              const { uploadUrl, fileUrl, storagePath: sPath } = await presignRes.json();
+                              const uploadRes = await fetch(uploadUrl, {
+                                method: 'PUT',
+                                body: audioBlob,
+                                headers: { 'Content-Type': 'audio/webm' },
+                              });
+                              if (uploadRes.ok) {
+                                finalAudioUrl = fileUrl;
+                                storagePath = sPath;
+                              }
+                            }
+
+                            const savedMsg = await saveSocialMessage(
+                              selectedUser.id,
+                              finalAudioUrl,
+                              'voice',
+                              null,
+                              {
+                                mediaUrl: finalAudioUrl,
+                                mimeType: 'audio/webm',
+                                fileSize: audioBlob.size,
+                                storagePath,
+                              }
+                            );
+
+                            if (savedMsg) {
+                              setMessages(prev => prev.map(m => m.id === stableId ? {
+                                ...(savedMsg as any),
+                                id: (savedMsg as any).id || stableId,
+                                isSeen: m.isSeen || (savedMsg as any).isSeen || false,
+                                status: 'sent'
+                              } : m));
+
+                              setMessagesCache(prev => {
+                                const current = prev[selectedUser.id] || [];
+                                return {
+                                  ...prev,
+                                  [selectedUser.id]: current.map(m => m.id === stableId ? {
+                                    ...(savedMsg as any),
+                                    id: (savedMsg as any).id || stableId,
+                                    isSeen: m.isSeen || (savedMsg as any).isSeen || false,
+                                    status: 'sent'
+                                  } : m)
+                                };
+                              });
+
+                              socket.emit('send_social_message', {
+                                ...(savedMsg as any),
+                                id: (savedMsg as any).id || stableId,
+                                receiverId: selectedUser.id,
+                                receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+                                ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
+                              });
+                            }
+                          } catch (err) {
+                            console.error('Failed to upload voice message:', err);
+                            setMessages(prev => prev.map(m => m.id === stableId ? { ...m, status: 'error' } : m));
+                          }
+                        }
+                      }}
+                      onTyping={() => {
                         if (socket && selectedUser) {
                           if (!typingTimeoutRef.current) { socket.emit('typing', { receiverEmail: selectedUser.email }); }
                           else { clearTimeout(typingTimeoutRef.current); }
@@ -5375,42 +5444,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           }, 2000);
                         }
                       }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                      className="flex-1 bg-zinc-100/90 hover:bg-zinc-100 focus:bg-zinc-100 border border-zinc-200/70 rounded-full px-4 py-2 text-[14px] text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors mx-1.5"
                     />
-
-                    {/* RIGHT: Dynamic Mic / Send Button */}
-                    {inputValue.trim().length === 0 ? (
-                      /* Mic Button by default */
-                      <button
-                        onClick={isRecording ? stopRecording : startRecording}
-                        className={`w-10 h-10 rounded-full bg-[#F3E8FF] text-[#9D4EDD] flex items-center justify-center flex-shrink-0 cursor-pointer hover:bg-[#ebd5ff] active:scale-95 transition-all shadow-xs ${isRecording ? 'animate-pulse' : ''}`}
-                        title={isRecording ? "Stop Recording" : "Voice Message"}
-                      >
-                        <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                          <line x1="12" x2="12" y1="19" y2="22"/>
-                        </svg>
-                      </button>
-                    ) : (
-                      /* Send Button with Custom send-1-svgrepo-com SVG when text exists */
-                      <button
-                        onClick={handleSendMessage}
-                        className="w-10 h-10 rounded-full bg-[#9D4EDD] hover:bg-[#8b3ec9] text-white flex items-center justify-center flex-shrink-0 cursor-pointer active:scale-95 transition-all shadow-md"
-                        title="Send Message"
-                      >
-                        <svg className="w-5 h-5 text-white" viewBox="-0.5 0 25 25" fill="none" stroke="currentColor">
-                          <path d="M2.33045 8.38999C0.250452 11.82 9.42048 14.9 9.42048 14.9C9.42048 14.9 12.5005 24.07 15.9305 21.99C19.5705 19.77 23.9305 6.13 21.0505 3.27C18.1705 0.409998 4.55045 4.74999 2.33045 8.38999Z" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M15.1999 9.12L9.41992 14.9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </button>
-                    )}
                   </div>
                 </div>
 
