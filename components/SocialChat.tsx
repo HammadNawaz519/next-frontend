@@ -27,6 +27,7 @@ import {
 import dynamic from 'next/dynamic';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { triggerHaptic } from '@/lib/haptics';
+import { Bell, Plus, Archive, CheckCheck, Check, Search, X } from 'lucide-react';
 import './SocialChat.css';
 
 // Code-split CallInterface so WebRTC and media engines load strictly on-demand when a call starts
@@ -1998,7 +1999,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   const [userStory, setUserStory] = useState<{ id: string; media: string; time: string } | null>(null);
   const storyInputRef = useRef<HTMLInputElement>(null);
-  const [viewStory, setViewStory] = useState<{ name: string; avatar?: string; media: string; time: string; isMe?: boolean } | null>(null);
+  const [viewStory, setViewStory] = useState<{ name: string; avatar?: string; media?: string; emoji?: string; time?: string; isMe?: boolean } | null>(null);
 
   const handleStoryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -4792,61 +4793,127 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               onChange={handleStoryUpload} 
             />
 
-            {/* 1. Header & Safe Area (Top) */}
-            <div className="w-full bg-[#141111] pt-14 px-6 pb-6 flex items-center justify-between select-none relative flex-shrink-0">
-              {/* Left: Greeting & Brand */}
-              <div className="flex flex-col">
-                <span className="text-[13px] text-zinc-400 font-medium">
-                  Welcome back 👋
-                </span>
-                <h1 className="text-[26px] font-bold text-white tracking-tight leading-none mt-1">
-                  Connect
-                </h1>
-              </div>
+            {/* 1. Header Layout (Strict 2-Row Dark Section) */}
+            <div className="w-full bg-[#141111] pt-14 px-6 pb-4 flex flex-col gap-6 select-none flex-shrink-0">
+              
+              {/* Row 1 (App Header) */}
+              <div className="flex justify-between items-center w-full">
+                {/* Left Column: Greeting & Brand */}
+                <div className="flex flex-col">
+                  <span className="text-[13px] text-zinc-400 font-medium">
+                    Welcome {session?.user?.name ? session.user.name.split(' ')[0] : 'Oji'} 👋
+                  </span>
+                  <h1 className="text-[26px] font-bold text-white tracking-tight leading-tight">
+                    Connect
+                  </h1>
+                </div>
 
-              {/* Right: Story Button (+ or Avatar) & Notification Bell */}
-              <div className="flex items-center gap-3">
-                {/* Dynamic Story Indicator / Add Story */}
-                {userStory ? (
-                  <div 
-                    onClick={() => setViewStory({ name: 'Your Story', media: userStory.media, time: userStory.time, isMe: true })}
-                    className="w-11 h-11 rounded-full ring-2 ring-[#9D4EDD] ring-offset-2 ring-offset-[#141111] overflow-hidden flex items-center justify-center cursor-pointer active:scale-95 transition-all bg-[#FFF3CD] shadow-sm"
-                    title="View Your Active Story"
-                  >
-                    {session?.user?.image ? (
-                      <img src={session.user.image} alt="You" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    ) : (
-                      <span className="text-lg">👨🏻</span>
-                    )}
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => storyInputRef.current?.click()}
-                    className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white hover:border-zinc-700 active:scale-95 transition-all cursor-pointer shadow-xs"
-                    title="Add Story"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 4v16m8-8H4" />
-                    </svg>
-                  </button>
-                )}
-
-                {/* Notification Bell Button */}
+                {/* Right: ONLY the Notification Bell button */}
                 <div className="relative">
                   <button
-                    onClick={() => setShowNotificationsDrawer(prev => !prev)}
-                    className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-white cursor-pointer hover:bg-zinc-800 active:scale-95 transition-all shadow-xs"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowNotificationsDrawer(prev => !prev);
+                    }}
+                    className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center relative cursor-pointer active:scale-95 transition-all shadow-xs hover:bg-zinc-800"
                     title="Notifications"
                   >
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                    </svg>
+                    <Bell className="w-5 h-5 text-white" strokeWidth={2} />
                     {unreadNotifications > 0 && (
-                      <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-[#9D4EDD] rounded-full ring-2 ring-[#141111]" />
+                      <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full absolute top-2 right-2 ring-2 ring-[#141111]" />
                     )}
                   </button>
                 </div>
+              </div>
+
+              {/* Row 2 (Story Section Title) */}
+              <div className="flex justify-between items-center w-full">
+                <span className="text-[18px] font-bold text-white">Story</span>
+                <span 
+                  onClick={() => triggerHaptic('light')}
+                  className="text-[13px] text-zinc-400 cursor-pointer hover:text-white transition-colors"
+                >
+                  See All
+                </span>
+              </div>
+
+              {/* 2. Story Carousel & Functional Add Story Button */}
+              <div className="flex flex-row items-start gap-4 overflow-x-auto pb-2 no-scrollbar w-full">
+                {/* Item 1 (Add Story Button - Functional) */}
+                <div
+                  onClick={() => {
+                    triggerHaptic('light');
+                    storyInputRef.current?.click();
+                  }}
+                  className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
+                >
+                  <div className="w-[64px] h-[64px] rounded-full border border-zinc-700 bg-zinc-900/60 flex items-center justify-center transition-all group-hover:border-zinc-500 active:scale-95">
+                    <Plus className="w-6 h-6 text-zinc-300" strokeWidth={2} />
+                  </div>
+                  <span className="text-[12px] text-zinc-400 group-hover:text-white transition-colors">
+                    Add Story
+                  </span>
+                </div>
+
+                {/* Active User Uploaded Story (If any) */}
+                {userStory && (
+                  <div
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setViewStory({
+                        name: 'Your Story',
+                        media: userStory.media,
+                        time: userStory.time,
+                        isMe: true,
+                        avatar: session?.user?.image || undefined
+                      });
+                    }}
+                    className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
+                  >
+                    <div className="w-[64px] h-[64px] rounded-full ring-2 ring-[#9D4EDD] ring-offset-2 ring-offset-[#141111] overflow-hidden flex items-center justify-center bg-[#FFF3CD] shadow-sm active:scale-95 transition-all">
+                      {session?.user?.image ? (
+                        <img src={session.user.image} alt="You" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="text-2xl">👨🏻</span>
+                      )}
+                    </div>
+                    <span className="text-[12px] text-zinc-300 font-medium group-hover:text-white transition-colors">
+                      Your Story
+                    </span>
+                  </div>
+                )}
+
+                {/* Items 2+ (Contact Reference Stories) */}
+                {[
+                  { id: 'st-1', name: 'Yoga', emoji: '🗿', bg: '#E0F2FE', time: '12m ago' },
+                  { id: 'st-2', name: 'Dono', emoji: '🏀', bg: '#FCE7F3', time: '1h ago' },
+                  { id: 'st-3', name: 'Kasino', emoji: '💪', bg: '#FEF9C3', time: '3h ago' },
+                  { id: 'st-4', name: 'Jessica', emoji: '🌸', bg: '#EDE9FE', time: '5h ago' }
+                ].map((st) => (
+                  <div
+                    key={st.id}
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setViewStory({
+                        name: st.name,
+                        emoji: st.emoji,
+                        media: '',
+                        time: st.time
+                      });
+                    }}
+                    className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
+                  >
+                    <div 
+                      className="w-[64px] h-[64px] rounded-full ring-2 ring-white ring-offset-2 ring-offset-[#141111] flex items-center justify-center text-2xl active:scale-95 transition-all shadow-sm"
+                      style={{ backgroundColor: st.bg }}
+                    >
+                      <span>{st.emoji}</span>
+                    </div>
+                    <span className="text-[12px] text-zinc-300 group-hover:text-white transition-colors">
+                      {st.name}
+                    </span>
+                  </div>
+                ))}
               </div>
 
               {/* Notification Modal Drawer */}
@@ -4931,53 +4998,38 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               )}
             </div>
 
-            {/* 2. Bottom Sheet (Bottom 65% of Screen) */}
-            <div className="w-full flex-1 bg-white rounded-t-[32px] px-6 pt-3 pb-28 flex flex-col relative shadow-[0_-12px_30px_rgba(0,0,0,0.15)] overflow-hidden min-h-0">
-              {/* Sheet Drag Handle */}
-              <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto my-1 flex-shrink-0" />
+            {/* 3. Light Bottom Sheet (Chat List) */}
+            <div className="w-full flex-1 bg-white rounded-t-[32px] px-6 pt-3 pb-28 flex flex-col relative shadow-[0_-10px_30px_rgba(0,0,0,0.15)] overflow-hidden min-h-0">
+              {/* Drag Handle */}
+              <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto my-1.5 shrink-0" />
 
-              {/* Sub-Header Row */}
-              <div className="flex justify-between items-center mt-4 mb-3 flex-shrink-0">
-                <h2 className="text-[22px] font-bold text-zinc-950 tracking-tight">
-                  {isArchivedView ? 'Archived Chats' : 'Recent Chats'}
+              {/* Header Row */}
+              <div className="flex justify-between items-center mt-3 mb-3 shrink-0">
+                <h2 className="text-[22px] font-bold text-black tracking-tight">
+                  {isArchivedView ? 'Archived Chats' : 'Recent Chat'}
                 </h2>
 
-                {/* Archive Toggle Button */}
+                {/* Archive Button */}
                 <button 
-                  onClick={() => setIsArchivedView(prev => !prev)}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-all cursor-pointer ${
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setIsArchivedView(prev => !prev);
+                  }}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-semibold transition-all cursor-pointer ${
                     isArchivedView
-                      ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                      : 'bg-[#FFF3CD] text-zinc-900 hover:bg-[#ffeaa7]'
+                      ? 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                      : 'bg-[#FFF3CD] text-black hover:bg-[#ffeaa7]'
                   }`}
                 >
-                  {isArchivedView ? (
-                    <>
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
-                        <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
-                      </svg>
-                      <span>Inbox</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <rect width="20" height="5" x="2" y="3" rx="1" />
-                        <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
-                        <path d="M10 12h4" />
-                      </svg>
-                      <span>Archive Chat</span>
-                    </>
-                  )}
+                  <Archive className="w-3.5 h-3.5" strokeWidth={2} />
+                  <span>{isArchivedView ? 'Inbox' : 'Archive'}</span>
                 </button>
               </div>
 
               {/* Quick Search */}
               <div className="pt-1 pb-3 flex-shrink-0">
                 <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-zinc-100/90 border border-zinc-200/70 text-zinc-800">
-                  <svg className="w-4 h-4 text-zinc-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+                  <Search className="w-4 h-4 text-zinc-400 flex-shrink-0" strokeWidth={2} />
                   <input 
                     type="text" 
                     placeholder="Search recent conversations..." 
@@ -6793,6 +6845,50 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           session={session}
           activeTheme={activeTheme}
         />
+      )}
+
+      {/* Story Viewer Modal */}
+      {viewStory && (
+        <div className="fixed inset-0 z-[70] bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm h-[80vh] max-h-[700px] bg-zinc-900 rounded-3xl overflow-hidden flex flex-col shadow-2xl border border-zinc-800">
+            {/* Story Top Progress Bar */}
+            <div className="absolute top-4 left-4 right-4 z-20 flex gap-1.5">
+              <div className="h-1 flex-1 bg-white/40 rounded-full overflow-hidden">
+                <div className="h-full bg-white animate-[storyProgress_5s_linear_forwards]" />
+              </div>
+            </div>
+            {/* Top User Info & Close */}
+            <div className="absolute top-8 left-4 right-4 z-20 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-[#FFF3CD] flex items-center justify-center text-sm font-bold text-zinc-900">
+                  {viewStory.avatar ? <img src={viewStory.avatar} className="w-full h-full object-cover rounded-full" /> : viewStory.name.charAt(0)}
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white leading-tight">{viewStory.name}</p>
+                  <p className="text-[10px] text-zinc-400">{viewStory.time || 'Today'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewStory(null)}
+                className="w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            {/* Story Content */}
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-950 p-4">
+              {viewStory.media && (viewStory.media.startsWith('blob:') || viewStory.media.startsWith('data:') || viewStory.media.startsWith('http')) ? (
+                <img src={viewStory.media} alt="" className="w-full h-full object-contain" />
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-4 text-center">
+                  <span className="text-6xl">{viewStory.emoji || '✨'}</span>
+                  <p className="text-lg font-bold text-white">{viewStory.name}'s Story</p>
+                  <p className="text-sm text-zinc-400">Shared moments with friends on Connect</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
