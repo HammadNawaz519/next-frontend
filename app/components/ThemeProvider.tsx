@@ -24,8 +24,7 @@ const ThemeContext = createContext<ThemeContextType>({
 export const useTheme = () => useContext(ThemeContext);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // CONNECT defaults to dark — our entire design system is built on #222831
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>('light');
   const [ripple, setRipple] = useState({ active: false, x: 0, y: 0, color: '#fff' });
 
   const applyTheme = useCallback((newTheme: Theme) => {
@@ -46,8 +45,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (stored === 'dark' || stored === 'light') {
       applyTheme(stored);
     } else {
-      // Default to dark for CONNECT
-      applyTheme('dark');
+      applyTheme(mediaQuery.matches ? 'dark' : 'light');
     }
 
     const handleSystemThemeChange = (e: MediaQueryListEvent) => {

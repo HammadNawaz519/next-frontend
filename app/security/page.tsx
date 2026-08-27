@@ -15,14 +15,14 @@ export default function SecurityPage() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  // CONNECT design system — always dark
-  const bg = '#222831';
-  const card = '#393E46';
-  const border = 'rgba(255,255,255,0.08)';
-  const txt = '#EEEEEE';
-  const sub = 'rgba(238,238,238,0.5)';
-  const inputBg = 'rgba(255,255,255,0.05)';
-  const inputBorder = 'rgba(255,255,255,0.12)';
+  // Colours — same palette as ProfilePanel
+  const bg = isDark ? '#09090b' : '#f2f2f7';
+  const card = isDark ? 'rgba(255,255,255,0.02)' : '#ffffff';
+  const border = isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb';
+  const txt = isDark ? '#f4f4f5' : '#111827';
+  const sub = isDark ? '#71717a' : '#6b7280';
+  const inputBg = isDark ? '#1c1c1e' : '#f9fafb';
+  const inputBorder = isDark ? '#3a3a3c' : '#d1d5db';
 
   // ── Change Password ──
   const [cpCurrent, setCpCurrent] = useState('');
