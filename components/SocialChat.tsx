@@ -1348,10 +1348,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
-        // Bubble shape tokens
+        // Soft pastel yellow and clean rounded-3xl bubble shape matching reference design
         const bubbleClasses = isSent
-          ? `bg-zinc-100 text-zinc-900 px-4 py-3 rounded-[20px] rounded-tr-[4px] max-w-full self-end text-[14px] leading-relaxed shadow-sm font-normal ${isPrevSameSender ? '-mt-2' : ''}`
-          : `bg-[#FFF3CD] text-zinc-900 px-4 py-3 rounded-[20px] rounded-tl-[4px] max-w-full text-[14px] leading-relaxed shadow-sm font-normal ${isPrevSameSender ? '-mt-2' : ''}`;
+          ? `bg-zinc-100 text-zinc-900 px-4 py-3 rounded-[24px] max-w-full self-end text-[13.5px] leading-relaxed shadow-2xs font-normal ${isPrevSameSender ? '-mt-2' : ''}`
+          : `bg-[#FEF5D1] text-zinc-900 px-4 py-3 rounded-[24px] max-w-full text-[13.5px] leading-relaxed shadow-2xs font-normal ${isPrevSameSender ? '-mt-2' : ''}`;
 
         return (
           <div
@@ -1665,7 +1665,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
       })()}
 
       {/* Time text below message bubble */}
-      <span className={`text-[11px] font-medium text-zinc-400 mt-1 select-none ${isSent ? 'mr-1 self-end text-right' : 'ml-1 self-start text-left'}`}>
+      <span className={`text-[11px] font-medium text-zinc-400 mt-1 select-none ${isSent ? 'mr-2 self-end text-right' : 'ml-2 self-start text-left'}`}>
         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
       </span>
 
@@ -4995,17 +4995,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
               {/* Quick Search */}
               <div className="pt-1 pb-3 flex-shrink-0">
-                <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-zinc-100/90 border border-zinc-200/70 text-zinc-800">
-                  <Search className="w-4 h-4 text-zinc-400 flex-shrink-0" strokeWidth={2} />
+                <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-zinc-100/90 border border-zinc-200/60 text-zinc-800 shadow-2xs">
+                  <Search className="w-[18px] h-[18px] text-zinc-400 flex-shrink-0" strokeWidth={2} />
                   <input 
                     type="text" 
                     placeholder="Search recent conversations..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-transparent text-xs text-zinc-900 placeholder:text-zinc-400 outline-none"
+                    className="w-full bg-transparent text-[13.5px] text-zinc-900 placeholder:text-zinc-400 outline-none font-medium"
                   />
                   {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} className="text-xs text-zinc-400 hover:text-zinc-600 cursor-pointer">✕</button>
+                    <button onClick={() => setSearchQuery('')} className="text-xs text-zinc-400 hover:text-zinc-600 cursor-pointer p-1">✕</button>
                   )}
                 </div>
               </div>
@@ -5099,7 +5099,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               <div className="flex flex-col h-full w-full overflow-hidden bg-[#141111] relative">
                 
                 {/* ── SCREEN 1: DARK HEADER (Top Bar) ── */}
-                <div className="w-full bg-[#141111] pt-14 pb-8 px-5 flex items-center justify-between shrink-0 select-none z-20">
+                <div className="w-full bg-[#141111] pt-14 pb-7 px-5 flex items-center justify-between shrink-0 select-none z-20">
                   {/* Left: Back Button + Contact Information */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* Back Action (ChevronLeft) */}
@@ -5119,7 +5119,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           setShowChatDetails(true);
                         }
                       }}
-                      className="flex items-center gap-3 flex-1 ml-2 cursor-pointer min-w-0"
+                      className="flex items-center gap-3 flex-1 ml-1 cursor-pointer min-w-0"
                       title="View Profile & Chat Details"
                     >
                       {/* Avatar */}
@@ -5157,8 +5157,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </div>
                   </div>
 
-                  {/* Right: Call Action Controls (Voice & Video Call) */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Right: Options & Call Controls */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleCall('audio'); }}
                       className="w-10 h-10 rounded-full bg-zinc-800/80 border border-zinc-700/50 hover:bg-zinc-700/80 active:scale-95 text-white flex items-center justify-center cursor-pointer transition-all shadow-xs"
@@ -5167,21 +5167,30 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <Phone className="w-4 h-4 text-white" strokeWidth={2} />
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleCall('video'); }}
+                      onClick={() => {
+                        if (selectedUser) {
+                          setNicknameInput(nicknames[selectedUser.id] || '');
+                          setShowChatDetails(true);
+                        }
+                      }}
                       className="w-10 h-10 rounded-full bg-zinc-800/80 border border-zinc-700/50 hover:bg-zinc-700/80 active:scale-95 text-white flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                      title="Video Call"
+                      title="Chat Info"
                     >
-                      <Video className="w-4 h-4 text-white" strokeWidth={2} />
+                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="6" r="1.5" />
+                        <circle cx="12" cy="12" r="1.5" />
+                        <circle cx="12" cy="18" r="1.5" />
+                      </svg>
                     </button>
                   </div>
                 </div>
 
                 {/* ── SCREEN 1: LIGHT MESSAGES SHEET (Smooth rounded-t-[36px]) ── */}
-                <div className="w-full flex-1 bg-white rounded-t-[36px] px-5 pt-6 pb-24 flex flex-col -mt-4 shadow-[0_-12px_32px_rgba(0,0,0,0.25)] relative overflow-hidden z-10 min-h-0">
+                <div className="w-full flex-1 bg-white rounded-t-[36px] px-5 pt-5 pb-20 flex flex-col relative shadow-[0_-12px_32px_rgba(0,0,0,0.25)] overflow-hidden z-10 min-h-0">
                   {/* Centered Date Pill */}
-                  <div className="flex justify-center mb-6 shrink-0">
-                    <div className="bg-[#F3E8FF] text-[#9D4EDD] px-4 py-1.5 rounded-full text-[12px] font-semibold tracking-wide shadow-sm">
-                      {formatDateSeparator(new Date())}
+                  <div className="flex justify-center mb-5 shrink-0">
+                    <div className="bg-[#F3E8FF] text-[#9D4EDD] px-4 py-1.5 rounded-full text-[12px] font-semibold tracking-wide shadow-xs">
+                      Today
                     </div>
                   </div>
 
@@ -5306,7 +5315,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   />
 
                   {/* ── INTERACTIVE CHAT INPUT PILL ── */}
-                  <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-full z-30 flex justify-center">
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-full z-30 flex justify-center">
                     <ChatInput
                       onSendMessage={(text) => handleSendMessage(undefined, text)}
                       onOpenGallery={() => fileInputRef.current?.click()}
@@ -5486,7 +5495,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group"
                         >
                           <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-colors shadow-xs">
-                            <MessageSquare className="w-5 h-5 text-zinc-300" strokeWidth={2} />
+                            <svg className="w-5 h-5 text-zinc-300" viewBox="-0.5 0 25 25" fill="none" stroke="currentColor">
+                              <path d="M2.33045 8.38999C0.250452 11.82 9.42048 14.9 9.42048 14.9C9.42048 14.9 12.5005 24.07 15.9305 21.99C19.5705 19.77 23.9305 6.13 21.0505 3.27C18.1705 0.409998 4.55045 4.74999 2.33045 8.38999Z" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M15.1999 9.12L9.41992 14.9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
                           </div>
                           <span className="text-[11px] font-medium text-zinc-300">Message</span>
                         </button>
@@ -6836,13 +6848,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         <div className="fixed inset-0 z-[70] bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="relative w-full max-w-sm h-[80vh] max-h-[700px] bg-zinc-900 rounded-3xl overflow-hidden flex flex-col shadow-2xl border border-zinc-800">
             {/* Story Top Progress Bar */}
-            <div className="absolute top-4 left-4 right-4 z-20 flex gap-1.5">
+            <div className="absolute top-6 left-5 right-5 z-20 flex gap-1.5 pt-2">
               <div className="h-1 flex-1 bg-white/40 rounded-full overflow-hidden">
                 <div className="h-full bg-white animate-[storyProgress_5s_linear_forwards]" />
               </div>
             </div>
             {/* Top User Info & Close */}
-            <div className="absolute top-8 left-4 right-4 z-20 flex items-center justify-between">
+            <div className="absolute top-11 left-5 right-5 z-20 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-[#FFF3CD] flex items-center justify-center text-sm font-bold text-zinc-900">
                   {viewStory.avatar ? <img src={viewStory.avatar} className="w-full h-full object-cover rounded-full" /> : viewStory.name.charAt(0)}
@@ -6854,7 +6866,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               </div>
               <button
                 onClick={() => setViewStory(null)}
-                className="w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 cursor-pointer"
               >
                 ✕
               </button>

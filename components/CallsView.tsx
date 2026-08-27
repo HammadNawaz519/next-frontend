@@ -325,28 +325,28 @@ export default function CallsView({
           </div>
         )}
 
-        {/* Summary Metrics Pill Bar (Quick Stats) */}
+        {/* Summary Metrics Pill Bar (Quick Stats - Clean Calm Styling) */}
         <div className="grid grid-cols-3 gap-2 my-2">
           {/* Received */}
-          <div className="bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-2.5 flex flex-col items-center shadow-sm">
+          <div className="bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-2.5 flex flex-col items-center shadow-xs">
             <span className="text-[10px] text-zinc-400 font-medium">Received</span>
-            <span className="text-[13px] font-bold text-emerald-400 mt-0.5">
+            <span className="text-[13px] font-bold text-zinc-200 mt-0.5">
               {metrics.received} {metrics.received === 1 ? 'call' : 'calls'}
             </span>
           </div>
 
           {/* Sent */}
-          <div className="bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-2.5 flex flex-col items-center shadow-sm">
+          <div className="bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-2.5 flex flex-col items-center shadow-xs">
             <span className="text-[10px] text-zinc-400 font-medium">Sent</span>
-            <span className="text-[13px] font-bold text-indigo-400 mt-0.5">
+            <span className="text-[13px] font-bold text-zinc-200 mt-0.5">
               {metrics.sent} {metrics.sent === 1 ? 'call' : 'calls'}
             </span>
           </div>
 
           {/* Missed */}
-          <div className="bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-2.5 flex flex-col items-center shadow-sm">
+          <div className="bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-2.5 flex flex-col items-center shadow-xs">
             <span className="text-[10px] text-zinc-400 font-medium">Missed</span>
-            <span className="text-[13px] font-bold text-rose-400 mt-0.5">
+            <span className="text-[13px] font-bold text-zinc-300 mt-0.5">
               {metrics.missed} missed
             </span>
           </div>
@@ -363,10 +363,10 @@ export default function CallsView({
                   triggerHaptic('light');
                   setActiveTab(tab);
                 }}
-                className={`flex-1 text-center py-1.5 px-2 rounded-xl text-[12px] transition-all cursor-pointer ${
+                className={`flex-1 py-1.5 rounded-xl text-[12px] font-semibold transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-[#9D4EDD] text-white font-semibold shadow-sm'
-                    : 'text-zinc-400 hover:text-white font-medium'
+                    ? 'bg-zinc-800 text-white shadow-xs'
+                    : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
                 {tab}
@@ -376,7 +376,7 @@ export default function CallsView({
         </div>
       </div>
 
-      {/* ── 3. Light Bottom Sheet — Call Records Feed (Bottom 66% of Screen) ── */}
+      {/* ── 3. Light Bottom Sheet (Call History List) ── */}
       <div className="w-full flex-1 bg-white rounded-t-[32px] px-6 pt-3 pb-28 flex flex-col relative shadow-[0_-12px_30px_rgba(0,0,0,0.15)] overflow-hidden">
         
         {/* Sheet Drag Handle */}
@@ -390,7 +390,7 @@ export default function CallsView({
           {calls.length > 0 && (
             <button
               onClick={handleClearHistory}
-              className="text-[12px] font-semibold text-zinc-400 hover:text-rose-500 cursor-pointer transition-colors"
+              className="text-[12px] font-semibold text-zinc-400 hover:text-zinc-700 cursor-pointer transition-colors"
             >
               Clear History
             </button>
@@ -460,11 +460,7 @@ export default function CallsView({
                     </div>
 
                     <div className="flex flex-col gap-1 ml-3.5 min-w-0">
-                      <span
-                        className={`text-[15px] font-bold truncate leading-tight ${
-                          call.status === 'missed' ? 'text-rose-600' : 'text-zinc-900'
-                        }`}
-                      >
+                      <span className="text-[15px] font-bold text-zinc-900 truncate leading-tight">
                         {call.contactName}
                       </span>
 
@@ -488,8 +484,8 @@ export default function CallsView({
                         )}
                         {call.status === 'missed' && (
                           <>
-                            <PhoneMissed className="w-[13px] h-[13px] text-rose-500" strokeWidth={2.5} />
-                            <span className="text-rose-500 font-semibold">Missed call</span>
+                            <PhoneMissed className="w-[13px] h-[13px] text-zinc-400" strokeWidth={2.5} />
+                            <span className="text-zinc-500 font-medium">Missed call</span>
                           </>
                         )}
                       </div>
