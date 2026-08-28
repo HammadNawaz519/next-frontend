@@ -4857,15 +4857,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         <div className="main-wrap">
           <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'} !bg-[#141111] flex flex-col h-full overflow-hidden border-r border-zinc-800/80 select-none`}>
             
-            {/* Hidden Story Upload Input */}
-            <input 
-              type="file" 
-              ref={storyInputRef} 
-              accept="image/*,video/*" 
-              className="hidden" 
-              onChange={handleStoryUpload} 
-            />
-
             {/* 1. Header Layout (Strict 2-Row Dark Section with smooth search collapse) */}
             <div className={`w-full bg-[#141111] px-6 transition-all duration-300 ease-out select-none flex-shrink-0 ${
               isSearchFocused ? 'max-h-0 opacity-0 pt-0 pb-0 overflow-hidden pointer-events-none' : 'pt-14 pb-4 max-h-[300px] opacity-100 flex flex-col gap-6'

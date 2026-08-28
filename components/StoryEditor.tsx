@@ -88,13 +88,13 @@ export default function StoryEditor({
         setSelectedMediaUrl(url);
         setMode('media');
       } else {
-        const optimized = await optimizeImageClient(file, { maxWidth: 1080, maxHeight: 1920, quality: 0.85 });
+        const optimized = await optimizeImageClient(file, 1920, 0.85);
         const reader = new FileReader();
         reader.onloadend = () => {
           setSelectedMediaUrl(reader.result as string);
           setMode('media');
         };
-        reader.readAsDataURL(optimized);
+        reader.readAsDataURL(optimized.file);
       }
     } catch (err) {
       console.error('File selection error:', err);
