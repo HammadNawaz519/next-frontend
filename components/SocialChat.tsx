@@ -17,6 +17,8 @@ import {
   askAI,
   saveCall,
   toggleShowActivityStatus,
+  getActiveStoriesAction,
+  deleteStoryAction,
 } from '@/app/dashboard/actions';
 import {
   optimizeImageClient,
@@ -50,6 +52,7 @@ import {
   FileText,
   Mic as LucideMic,
 } from 'lucide-react';
+import StoryEditor from './StoryEditor';
 import ChatInput from './ChatInput';
 import './SocialChat.css';
 
@@ -804,11 +807,11 @@ const IGMessageOverlay = ({
 };
 
 const PASTEL_PALETTES = [
-  { bg: '#E0F2FE', text: '#0369A1', emoji: '👨' }, // Soft Blue
-  { bg: '#FCE7F3', text: '#BE185D', emoji: '🏀' }, // Soft Pink
-  { bg: '#FEF9C3', text: '#A16207', emoji: '💪' }, // Soft Yellow
-  { bg: '#EDE9FE', text: '#6D28D9', emoji: '✨' }, // Soft Purple
-  { bg: '#D1FAE5', text: '#047857', emoji: '🦄' }, // Soft Emerald
+  { bg: '#FEF5D1', text: '#854D0E', emoji: '👨🏻' }, // Soft Pale Yellow (User image 1)
+  { bg: '#E0F2FE', text: '#0369A1', emoji: '🐺' }, // Soft Pastel Blue (User image 2)
+  { bg: '#FCE7F3', text: '#BE185D', emoji: '😍' }, // Soft Pastel Pink (User image 3)
+  { bg: '#FEF9C3', text: '#A16207', emoji: '🦄' }, // Soft Pastel Cream (User image 4)
+  { bg: '#EDE9FE', text: '#6D28D9', emoji: '✨' }, // Soft Lavender
 ];
 
 const getPastelForUser = (userIdOrName?: string) => {
@@ -1987,32 +1990,59 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [deletedChatIds, setDeletedChatIds] = useState<Set<string>>(new Set());
   const [selectedChatForOptions, setSelectedChatForOptions] = useState<User | null>(null);
 
-  // Connect Redesign Notifications & Stories state
-  const [unreadNotifications, setUnreadNotifications] = useState<number>(2);
+  // Connect Notifications & Stories state (Clean, starts empty, populated by real events)
+  const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
   const [showNotificationsDrawer, setShowNotificationsDrawer] = useState<boolean>(false);
-  const [notificationsList, setNotificationsList] = useState([
-    { id: '1', title: 'Missed Voice Call', desc: 'Yoga tried to call you 10m ago', time: '10m', unread: true },
-    { id: '2', title: 'New Message', desc: 'Rehan Wangsaff: Hey, are you free today?', time: '1h', unread: true },
-    { id: '3', title: 'Story Alert', desc: 'Dono added a new story', time: '3h', unread: false }
-  ]);
+  const [notificationsList, setNotificationsList] = useState<
+    { id: string; title: string; desc: string; time: string; unread: boolean }[]
+  >([]);
 
   const [isArchivedView, setIsArchivedView] = useState<boolean>(false);
   const [archivedChatIds, setArchivedChatIds] = useState<Set<string>>(new Set());
 
+  const [showStoryEditor, setShowStoryEditor] = useState<boolean>(false);
+  const [activeStories, setActiveStories] = useState<any[]>([]);
   const [userStory, setUserStory] = useState<{ id: string; media: string; time: string } | null>(null);
-  const storyInputRef = useRef<HTMLInputElement>(null);
-  const [viewStory, setViewStory] = useState<{ name: string; avatar?: string; media?: string; emoji?: string; time?: string; isMe?: boolean } | null>(null);
+  const [viewStory, setViewStory] = useState<{ id?: string; name: string; avatar?: string; media?: string; emoji?: string; time?: string; isMe?: boolean } | null>(null);
 
-  const handleStoryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
+  // Load real active stories on mount and after session is ready
+  useEffect(() => {
+    if (!session?.user) return;
+    getActiveStoriesAction().then((stories: any[]) => {
+      if (Array.isArray(stories)) {
+        setActiveStories(stories);
+        const myId = (session.user as any)?.id;
+        const myActive = stories.find((s: any) => s.userId === myId);
+        if (myActive) {
+          setUserStory({
+            id: myActive.id,
+            media: myActive.imageUrl,
+            time: 'Active'
+          });
+        }
+      }
+    }).catch(err => console.warn('Could not load stories:', err));
+  }, [session]);
+
+  const handleStoryPosted = (newStory: any) => {
+    setActiveStories(prev => [newStory, ...prev.filter(s => s.id !== newStory.id)]);
     setUserStory({
-      id: `story-${Date.now()}`,
-      media: url,
+      id: newStory.id,
+      media: newStory.imageUrl,
       time: 'Just now'
     });
-    e.target.value = '';
+  };
+
+  const handleDeleteCurrentStory = async (storyId: string) => {
+    triggerHaptic('heavy');
+    setViewStory(null);
+    setUserStory(null);
+    setActiveStories(prev => prev.filter(s => s.id !== storyId));
+    try {
+      await deleteStoryAction(storyId);
+    } catch (err) {
+      console.error("Failed to delete story:", err);
+    }
   };
 
   // Notify parent component when long press options sheet is open/closed
@@ -4845,10 +4875,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               <div className="flex justify-between items-center w-full">
                 {/* Left Column: Greeting & Brand */}
                 <div className="flex flex-col">
-                  <span className="text-[13px] text-zinc-400 font-medium">
-                    Welcome {session?.user?.name ? session.user.name.split(' ')[0] : 'Oji'} 👋
+                  <span className="text-[12.5px] text-zinc-400 font-medium tracking-wide">
+                    Welcome {session?.user?.name ? session.user.name.split(' ')[0] : 'User'} 👋
                   </span>
-                  <h1 className="text-[26px] font-bold text-white tracking-tight leading-tight">
+                  <h1 className="text-[28px] font-black text-white tracking-tight leading-tight bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text">
                     Connect
                   </h1>
                 </div>
@@ -4871,29 +4901,33 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
               </div>
 
-              {/* Row 2 (Story Section Title) */}
+              {/* Row 2 (Story Section Title & Search Trigger) */}
               <div className="flex justify-between items-center w-full mt-2">
                 <span className="text-[18px] font-bold text-white tracking-tight">Story</span>
-                <span 
-                  onClick={() => triggerHaptic('light')}
-                  className="text-[13px] text-zinc-400 cursor-pointer hover:text-white transition-colors font-medium"
+                <button 
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setIsSearchFocused(true);
+                  }}
+                  className="flex items-center gap-1.5 text-[13px] text-zinc-400 hover:text-white transition-colors font-medium px-2 py-1 rounded-lg hover:bg-white/5 cursor-pointer"
                 >
-                  See All
-                </span>
+                  <Search className="w-3.5 h-3.5" strokeWidth={2.2} />
+                  <span>Search</span>
+                </button>
               </div>
 
-              {/* 2. Story Carousel (Clean, no demo mock stories) */}
+              {/* 2. Story Carousel */}
               <div className="flex flex-row items-start gap-4 overflow-x-auto pt-1 pb-3 no-scrollbar w-full">
-                {/* Item 1 (Add Story Button - Functional) */}
+                {/* Item 1 (Add Story Button - Opens Real Story Editor) */}
                 <div
                   onClick={() => {
                     triggerHaptic('light');
-                    storyInputRef.current?.click();
+                    setShowStoryEditor(true);
                   }}
                   className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
                 >
-                  <div className="w-[64px] h-[64px] rounded-full border-2 border-dashed border-zinc-700 bg-zinc-900/80 flex items-center justify-center transition-all group-hover:border-zinc-500 active:scale-95">
-                    <Plus className="w-6 h-6 text-zinc-300" strokeWidth={2.2} />
+                  <div className="w-[64px] h-[64px] rounded-full border-2 border-dashed border-zinc-700 bg-zinc-900/80 flex items-center justify-center transition-all group-hover:border-[#9D4EDD] active:scale-95 shadow-xs">
+                    <Plus className="w-6 h-6 text-zinc-300 group-hover:text-white transition-colors" strokeWidth={2.2} />
                   </div>
                   <span className="text-[12px] text-zinc-400 group-hover:text-white transition-colors font-medium">
                     Add Story
@@ -4906,6 +4940,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     onClick={() => {
                       triggerHaptic('light');
                       setViewStory({
+                        id: userStory.id,
                         name: 'Your Story',
                         media: userStory.media,
                         time: userStory.time,
@@ -4915,7 +4950,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     }}
                     className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
                   >
-                    <div className="w-[64px] h-[64px] rounded-full ring-2 ring-[#9D4EDD] ring-offset-2 ring-offset-[#141111] overflow-hidden flex items-center justify-center bg-[#FFF3CD] shadow-sm active:scale-95 transition-all">
+                    <div className="w-[64px] h-[64px] rounded-full ring-2 ring-[#9D4EDD] ring-offset-2 ring-offset-[#141111] overflow-hidden flex items-center justify-center bg-[#FEF5D1] shadow-sm active:scale-95 transition-all">
                       {session?.user?.image ? (
                         <img src={session.user.image} alt="You" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       ) : (
@@ -4927,6 +4962,45 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </span>
                   </div>
                 )}
+
+                {/* Followed / Connected Users Active Stories */}
+                {activeStories
+                  .filter(s => s.userId !== (session?.user as any)?.id)
+                  .map(story => {
+                    const pastel = getPastelForUser(story.user?.id || story.user?.name);
+                    return (
+                      <div
+                        key={story.id}
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setViewStory({
+                            id: story.id,
+                            name: story.user?.name || 'Contact',
+                            media: story.imageUrl,
+                            time: formatChatTime(story.createdAt),
+                            isMe: false,
+                            avatar: story.user?.image || undefined,
+                            emoji: pastel.emoji
+                          });
+                        }}
+                        className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
+                      >
+                        <div 
+                          className="w-[64px] h-[64px] rounded-full ring-2 ring-[#9D4EDD] ring-offset-2 ring-offset-[#141111] overflow-hidden flex items-center justify-center shadow-sm active:scale-95 transition-all"
+                          style={{ background: pastel.bg, color: pastel.text }}
+                        >
+                          {story.user?.image ? (
+                            <img src={story.user.image} alt={story.user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <span className="text-2xl">{pastel.emoji}</span>
+                          )}
+                        </div>
+                        <span className="text-[12px] text-zinc-300 font-medium group-hover:text-white transition-colors truncate max-w-[64px] text-center">
+                          {story.user?.name ? story.user.name.split(' ')[0] : 'Story'}
+                        </span>
+                      </div>
+                    );
+                  })}
               </div>
 
               {/* Notification Modal Drawer */}
@@ -5153,10 +5227,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
               )}
 
-              {/* Quick Search - Cute, All-Round, Animated with Back Arrow on focus */}
-              <div className="pt-1 pb-3 px-1 flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  {isSearchFocused && (
+              {/* Quick Search - Only rendered when search mode is active */}
+              {isSearchFocused && (
+                <div className="pt-1 pb-3 px-1 flex-shrink-0 animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
                         triggerHaptic('light');
@@ -5168,23 +5242,23 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     >
                       <ChevronLeft className="w-5 h-5 text-zinc-800" strokeWidth={2.2} />
                     </button>
-                  )}
-                  <div className="flex-1 flex items-center gap-2.5 px-4.5 py-2.5 rounded-full bg-zinc-100/90 border border-zinc-200/50 text-zinc-800 transition-all">
-                    <Search className="w-[18px] h-[18px] text-zinc-400 flex-shrink-0" strokeWidth={2} />
-                    <input 
-                      type="text" 
-                      placeholder="Search people, conversations..." 
-                      value={searchQuery}
-                      onFocus={() => setIsSearchFocused(true)}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full bg-transparent text-[13.5px] text-zinc-900 placeholder:text-zinc-400 outline-none font-medium"
-                    />
-                    {searchQuery && (
-                      <button onClick={() => setSearchQuery('')} className="text-xs text-zinc-400 hover:text-zinc-600 cursor-pointer p-1">✕</button>
-                    )}
+                    <div className="flex-1 flex items-center gap-2.5 px-4.5 py-2.5 rounded-full bg-zinc-100/90 border border-zinc-200/50 text-zinc-800 transition-all">
+                      <Search className="w-[18px] h-[18px] text-zinc-400 flex-shrink-0" strokeWidth={2} />
+                      <input 
+                        type="text" 
+                        autoFocus
+                        placeholder="Search people, conversations..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-transparent text-[13.5px] text-zinc-900 placeholder:text-zinc-400 outline-none font-medium"
+                      />
+                      {searchQuery && (
+                        <button onClick={() => setSearchQuery('')} className="text-xs text-zinc-400 hover:text-zinc-600 cursor-pointer p-1">✕</button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Chat & People List Feed */}
               <div className="flex flex-col gap-1 overflow-y-auto flex-1 pr-0.5 no-scrollbar">
@@ -7040,23 +7114,38 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 <div className="h-full bg-white animate-[storyProgress_5s_linear_forwards]" />
               </div>
             </div>
-            {/* Top User Info & Close */}
+            {/* Top User Info & Actions */}
             <div className="absolute top-11 left-5 right-5 z-20 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-[#FFF3CD] flex items-center justify-center text-sm font-bold text-zinc-900">
-                  {viewStory.avatar ? <img src={viewStory.avatar} className="w-full h-full object-cover rounded-full" /> : viewStory.name.charAt(0)}
+                <div className="w-8 h-8 rounded-full bg-[#FEF5D1] flex items-center justify-center text-sm font-bold text-zinc-900">
+                  {viewStory.avatar ? <img src={viewStory.avatar} className="w-full h-full object-cover rounded-full" /> : (viewStory.emoji || viewStory.name.charAt(0))}
                 </div>
                 <div>
                   <p className="text-xs font-bold text-white leading-tight">{viewStory.name}</p>
                   <p className="text-[10px] text-zinc-400">{viewStory.time || 'Today'}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setViewStory(null)}
-                className="w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 cursor-pointer"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-2">
+                {viewStory.isMe && viewStory.id && (
+                  <button
+                    onClick={() => {
+                      if (confirm('Delete your story?')) {
+                        handleDeleteCurrentStory(viewStory.id!);
+                      }
+                    }}
+                    className="w-8 h-8 rounded-full bg-red-500/30 hover:bg-red-500/50 text-red-300 flex items-center justify-center text-xs transition-colors cursor-pointer"
+                    title="Delete Story"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  onClick={() => setViewStory(null)}
+                  className="w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
             {/* Story Content */}
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-950 p-4">
@@ -7073,6 +7162,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           </div>
         </div>
       )}
+      {/* Story Editor Modal Component */}
+      <StoryEditor
+        isOpen={showStoryEditor}
+        onClose={() => setShowStoryEditor(false)}
+        onStoryPosted={handleStoryPosted}
+        currentUser={session?.user}
+      />
     </>
   );
 });

@@ -1212,19 +1212,66 @@ export async function getActiveStoriesAction() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return [];
 
-  const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email }
+  const currentUser = await (prisma.user as any).findUnique({
+    where: { email: session.user.email },
+    include: {
+      following: { select: { id: true } }
+    }
   });
   if (!currentUser) return [];
 
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  return await (prisma as any).story.findMany({
-    where: {
-      userId: currentUser.id,
-      createdAt: { gte: twentyFourHoursAgo }
-    },
-    orderBy: { createdAt: 'asc' }
+  const userIds = [currentUser.id, ...(currentUser.following || []).map((f: any) => f.id)];
+
+  try {
+    const stories = await (prisma as any).story.findMany({
+      where: {
+        userId: { in: userIds },
+        createdAt: { gte: twentyFourHoursAgo }
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            image: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    return stories;
+  } catch (err) {
+    console.error("Failed to load active stories:", err);
+    return [];
+  }
+}
+
+export async function deleteStoryAction(storyId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { error: 'Not authenticated' };
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email }
   });
+  if (!user) return { error: 'User not found' };
+
+  const story = await (prisma as any).story.findUnique({
+    where: { id: storyId }
+  });
+  if (!story) return { error: 'Story not found' };
+
+  if (story.userId !== user.id) {
+    return { error: 'Unauthorized to delete this story' };
+  }
+
+  await (prisma as any).story.delete({
+    where: { id: storyId }
+  });
+
+  return { success: true };
 }
 
 export async function toggleLikeAction(postId: string) {
