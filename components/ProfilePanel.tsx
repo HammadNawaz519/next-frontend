@@ -12,7 +12,6 @@ import {
   UserPlus,
   UserCheck,
   MessageCircle,
-  Globe,
 } from 'lucide-react';
 import {
   updateProfileImageAction,
@@ -27,20 +26,14 @@ interface Props {
   session: any;
   fullUser: any;
   targetUser?: any;
-  isDark: boolean;
-  onEditName?: () => void;
-  onInstall?: () => void;
-  hasUnreadNotifications?: boolean;
+  isDark?: boolean;
   refreshProfile?: () => void;
   onToggleFollow?: (targetUserId: string) => void;
   onOpenChat?: (user: any) => void;
-  onAccountSheetChange?: (isOpen: boolean) => void;
-  onOpenUpload?: (type: 'single_image' | 'reel') => void;
 }
 
 export default function ProfilePanel({
   isOpen,
-  isClosing,
   onClose,
   session,
   fullUser,
@@ -69,10 +62,8 @@ export default function ProfilePanel({
   const curUsername = activeUserData?.username || (session?.user as any)?.username || (curEmail ? curEmail.split('@')[0] : 'user');
   const curName = activeUserData?.name || session?.user?.name || 'User';
   const curImage = activeUserData?.image || session?.user?.image || '';
-  const curBio = activeUserData?.bio || '';
-  const curWebsite = activeUserData?.website || '';
 
-  // Sync state on user change
+  // Sync counts on user change
   useEffect(() => {
     if (activeUserData) {
       const followers = activeUserData.followers || [];
@@ -193,7 +184,7 @@ export default function ProfilePanel({
             </h1>
           </div>
 
-          {/* Right side: Top Edit icon for self */}
+          {/* Right side: Top Edit SVG icon (visual only, no functions) */}
           <div className="flex items-center">
             {isSelf && (
               <div className="p-2 text-white/80 flex items-center justify-center">
@@ -203,7 +194,7 @@ export default function ProfilePanel({
           </div>
         </div>
 
-        {/* Avatar Section */}
+        {/* Avatar / DP Section */}
         <div className="relative mt-2">
           <div className="w-24 h-24 rounded-full ring-4 ring-white/10 ring-offset-4 ring-offset-[#141111] overflow-hidden bg-zinc-900 flex items-center justify-center shadow-xl">
             {curImage ? (
@@ -245,24 +236,6 @@ export default function ProfilePanel({
         <p className="text-[13px] text-[#D8B4E2] font-medium mt-0.5 text-center">
           @{curUsername}
         </p>
-
-        {curBio && (
-          <p className="text-[12.5px] text-zinc-400 mt-1.5 text-center max-w-xs leading-relaxed">
-            {curBio}
-          </p>
-        )}
-
-        {curWebsite && (
-          <a
-            href={curWebsite.startsWith('http') ? curWebsite : `https://${curWebsite}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-[11.5px] text-[#D8B4E2] hover:underline mt-1 font-medium"
-          >
-            <Globe className="w-3 h-3" />
-            <span>{curWebsite.replace(/^https?:\/\//, '')}</span>
-          </a>
-        )}
       </div>
 
       {/* ── 2. Bottom Light Sheet ── */}
@@ -270,7 +243,7 @@ export default function ProfilePanel({
         {/* Sheet Drag Handle */}
         <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-1 mb-1 shrink-0" />
 
-        {/* ── Followers & Following Capsules (Clean & Round) ── */}
+        {/* ── Followers & Following Round Capsules ── */}
         <div className="flex items-center justify-center gap-4 w-full">
           <div className="flex-1 py-4 px-6 rounded-full bg-zinc-50 border border-zinc-100 flex flex-col items-center justify-center shadow-xs">
             <span className="text-[22px] font-black text-zinc-900 leading-tight">
@@ -329,7 +302,7 @@ export default function ProfilePanel({
           </div>
         )}
 
-        {/* ── Refined Log Out Button for Self ── */}
+        {/* ── Log Out Button for Self ── */}
         {isSelf && (
           <div className="mt-auto mb-4">
             <button

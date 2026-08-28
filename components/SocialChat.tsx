@@ -1214,8 +1214,8 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
         // Continuous high-radius capsule shape on all 4 corners, soft colors, generous horizontal & compact vertical padding
         const bubbleClasses = isSent
-          ? `bg-[#F4F4F5] text-zinc-900 px-5 py-2.5 !rounded-[24px] w-fit max-w-[85%] text-[14px] font-normal leading-[1.4] shadow-xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`
-          : `bg-[#241F1F] text-zinc-100 border border-white/10 px-5 py-2.5 !rounded-[24px] w-fit max-w-[85%] text-[14px] font-normal leading-[1.4] shadow-xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`;
+          ? `bg-[#2D2626] text-white border border-white/10 px-5 py-2.5 !rounded-[24px] w-fit max-w-[85%] text-[14px] font-normal leading-[1.4] shadow-xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`
+          : `bg-[#1E1A1A] text-zinc-100 border border-white/10 px-5 py-2.5 !rounded-[24px] w-fit max-w-[85%] text-[14px] font-normal leading-[1.4] shadow-xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`;
 
         return (
           <div
