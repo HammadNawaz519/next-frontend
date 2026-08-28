@@ -1162,6 +1162,16 @@ export async function createStoryAction(imageUrl: string) {
     data: {
       imageUrl: finalImageUrl,
       userId: user.id
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          image: true
+        }
+      }
     }
   });
 
