@@ -4268,17 +4268,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     let storagePath = '';
 
     if (presignRes.ok) {
-      const presignData = await presignRes.json();
-      const ticket = presignData.ticket;
-      if (ticket?.uploadUrl) {
-        // Direct upload to Supabase Storage
-        await uploadBinaryWithProgress(ticket.uploadUrl, optimizedFile, mimeType, onProgress);
-        if (thumbnailBlob && ticket.thumbnailUploadUrl) {
-          await uploadBinaryWithProgress(ticket.thumbnailUploadUrl, thumbnailBlob, 'image/jpeg');
+      try {
+        const presignData = await presignRes.json();
+        const ticket = presignData.ticket;
+        if (ticket?.uploadUrl) {
+          // Direct upload to Supabase Storage
+          await uploadBinaryWithProgress(ticket.uploadUrl, optimizedFile, mimeType, onProgress);
+          if (thumbnailBlob && ticket.thumbnailUploadUrl) {
+            await uploadBinaryWithProgress(ticket.thumbnailUploadUrl, thumbnailBlob, 'image/jpeg');
+          }
+          mediaUrl = ticket.publicUrl;
+          thumbnailUrl = ticket.thumbnailUrl || ticket.publicUrl;
+          storagePath = ticket.storagePath;
         }
-        mediaUrl = ticket.publicUrl;
-        thumbnailUrl = ticket.thumbnailUrl || ticket.publicUrl;
-        storagePath = ticket.storagePath;
+      } catch (presignErr) {
+        console.warn('Direct storage upload failed, falling back to server multipart upload:', presignErr);
       }
     }
 

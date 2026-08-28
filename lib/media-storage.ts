@@ -6,6 +6,7 @@ import {
   SUPABASE_URL,
 } from "./supabase";
 import * as path from "path";
+import * as fs from "fs";
 
 export { CHAT_MEDIA_BUCKET, PUBLIC_MEDIA_BUCKET, SUPABASE_URL };
 
@@ -169,7 +170,7 @@ export async function createMediaUploadTicket(
 }
 
 /**
- * Server-side upload of a buffer directly to Supabase Storage (bypasses third-party CDNs).
+ * Server-side upload of a buffer to Supabase Storage with local & data URL fallback.
  */
 export async function uploadBufferToStorage(
   bucket: string,
@@ -177,21 +178,46 @@ export async function uploadBufferToStorage(
   buffer: Buffer,
   contentType: string = "application/octet-stream"
 ): Promise<{ url: string; path: string }> {
-  const supabase = getSupabaseAdminClient();
+  try {
+    const supabase = getSupabaseAdminClient();
+    const { error } = await supabase.storage
+      .from(bucket)
+      .upload(storagePath, buffer, {
+        contentType,
+        upsert: true,
+      });
 
-  const { error } = await supabase.storage
-    .from(bucket)
-    .upload(storagePath, buffer, {
-      contentType,
-      upsert: true,
-    });
-
-  if (error) {
-    throw new Error(`Failed to upload to Supabase Storage: ${error.message}`);
+    if (!error) {
+      const url = getStoragePublicUrl(bucket, storagePath);
+      return { url, path: storagePath };
+    }
+    console.warn("[Storage] Supabase upload failed, activating local storage fallback:", error.message);
+  } catch (err: any) {
+    console.warn("[Storage] Supabase client error, activating fallback:", err?.message);
   }
 
-  const url = getStoragePublicUrl(bucket, storagePath);
-  return { url, path: storagePath };
+  // Fallback 1: Save to public/uploads/
+  try {
+    const publicUploadDir = path.join(process.cwd(), "public", "uploads", bucket);
+    if (!fs.existsSync(publicUploadDir)) {
+      fs.mkdirSync(publicUploadDir, { recursive: true });
+    }
+    const cleanFileName = storagePath.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const localFilePath = path.join(publicUploadDir, cleanFileName);
+    fs.writeFileSync(localFilePath, buffer);
+    return {
+      url: `/uploads/${bucket}/${cleanFileName}`,
+      path: storagePath,
+    };
+  } catch (localErr: any) {
+    console.warn("[Storage] Local filesystem write fallback:", localErr?.message);
+    // Fallback 2: Data URL
+    const base64 = buffer.toString("base64");
+    return {
+      url: `data:${contentType};base64,${base64}`,
+      path: storagePath,
+    };
+  }
 }
 
 /**
