@@ -96,14 +96,17 @@ export default function ChatInput({
   };
 
   // ── Speech-to-Text Multi-language Recognition ──
-  const toggleSpeechToText = () => {
+  const toggleSpeechToText = async () => {
     if (disabled) return;
 
     const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition ||
+      (window as any).mozSpeechRecognition ||
+      (window as any).msSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert('Speech recognition is not supported in this browser.');
+      alert('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
       return;
     }
 
@@ -111,12 +114,30 @@ export default function ChatInput({
       try {
         speechRecognitionRef.current?.stop();
       } catch (e) {}
+      speechRecognitionRef.current = null;
       setIsListeningSpeech(false);
       triggerHaptic('light');
       return;
     }
 
     try {
+      // Request mic access silently if needed
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          const testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          testStream.getTracks().forEach((t) => t.stop());
+        } catch (permErr) {
+          console.warn('Microphone permission check:', permErr);
+        }
+      }
+
+      if (speechRecognitionRef.current) {
+        try {
+          speechRecognitionRef.current.stop();
+        } catch (e) {}
+        speechRecognitionRef.current = null;
+      }
+
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -140,17 +161,21 @@ export default function ChatInput({
       recognition.onerror = (event: any) => {
         console.warn('Speech recognition error:', event.error);
         setIsListeningSpeech(false);
+        speechRecognitionRef.current = null;
       };
 
       recognition.onend = () => {
         setIsListeningSpeech(false);
+        speechRecognitionRef.current = null;
       };
 
       speechRecognitionRef.current = recognition;
       recognition.start();
+      setIsListeningSpeech(true);
     } catch (err) {
       console.error('Speech recognition start failed:', err);
       setIsListeningSpeech(false);
+      speechRecognitionRef.current = null;
     }
   };
 

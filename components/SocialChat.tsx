@@ -987,13 +987,8 @@ const ChatItem = memo(({
         <span className="text-[11px] font-medium text-zinc-400">
           {timeDisplay || '12:45 PM'}
         </span>
-        {unseen > 0 ? (
+        {unseen > 0 && (
           <span className="w-2 h-2 rounded-full bg-[#9D4EDD]" />
-        ) : (
-          <svg className="w-[15px] h-[15px] text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 6 7 17l-5-5" />
-            <path d="m22 10-7.5 7.5L13 16" />
-          </svg>
         )}
       </div>
     </div>
