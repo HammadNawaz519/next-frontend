@@ -531,7 +531,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Mobile Bottom Navigation — single unified bottom bar: Messages (left), Calls (center), Profile (right) */}
-      {(!selectedChatUser && !isCallActive && !isProfileOpen && !isSearchActive && !isStoryEditorOpen) && (
+      {(!selectedChatUser && !isCallActive && !isSearchActive && !isStoryEditorOpen) && (
         <nav className={`mobile-nav ${(isAccountSheetOpen || isChatLongPressActive) ? 'mobile-nav-hidden' : ''}`}>
           {/* 1. Messages (Leftmost) */}
           <button
@@ -579,12 +579,12 @@ export default function DashboardPage() {
             className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
           >
             <div className="w-5 h-5 flex items-center justify-center">
-              <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke={isProfileOpen ? '#FFFFFF' : 'rgba(255,255,255,0.45)'} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke={isProfileOpen ? '#D8B4E2' : 'rgba(255,255,255,0.45)'} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </div>
-            <span className={`text-[10px] tracking-tight ${isProfileOpen ? 'text-white font-semibold' : 'text-zinc-400 font-medium'}`}>
+            <span className={`text-[10px] tracking-tight ${isProfileOpen ? 'text-[#D8B4E2] font-semibold' : 'text-zinc-400 font-medium'}`}>
               Profile
             </span>
           </button>
