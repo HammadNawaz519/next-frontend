@@ -16,43 +16,63 @@ import {
 } from "@/lib/media-storage";
 
 export async function askAI(prompt: string) {
-  const apiKey = process.env.VITE_GROQ_API_KEY;
-  const model = process.env.VITE_GROQ_MODEL || "llama-3.3-70b-versatile";
+  const apiKey =
+    process.env.GROQ_API_KEY ||
+    process.env.VITE_GROQ_API_KEY ||
+    process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
   if (!apiKey) {
     throw new Error("AI API Key is missing");
   }
 
-  try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: [
-          {
-            role: "system",
-            content: "You are a helpful, knowledgeable, and friendly AI assistant. Answer any question clearly and concisely. You can help with anything — writing, coding, math, general knowledge, advice, or just a conversation.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 1024,
-      }),
-    });
+  const modelsToTry = [
+    process.env.GROQ_MODEL || "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "qwen/qwen3.8-27b",
+    "groq/compound-mini"
+  ];
 
-    const data = await response.json();
-    return data.choices[0].message.content;
-  } catch (error) {
-    console.error("[AI_ERROR]", error);
-    throw new Error("Failed to get AI response");
+  for (const model of modelsToTry) {
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are Grok AI, a witty, intelligent, and helpful assistant inside Connect. Answer clearly, accurately, and concisely in the user's language (English, Urdu, etc.).",
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 1024,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(`Model ${model} returned non-200:`, errorText);
+        continue;
+      }
+
+      const data = await response.json();
+      const answer = data?.choices?.[0]?.message?.content;
+      if (answer) return answer;
+    } catch (error) {
+      console.warn(`Model ${model} failed, trying next:`, error);
+    }
   }
+
+  throw new Error("Failed to get AI response");
 }
 
 export async function getSocialUser(userId: string) {

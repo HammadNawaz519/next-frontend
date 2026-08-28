@@ -38,9 +38,9 @@ export default function ChatInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<any>(null);
 
-  // Check for @ symbol in text to show AI suggestion
+  // Show @ai suggestion when user types @ or ends with @
   useEffect(() => {
-    if (message.endsWith('@') || message.includes('@') && !message.includes('@ai')) {
+    if (message.endsWith('@') || (message.includes('@') && !message.includes('@ai') && !message.includes('@grok'))) {
       setShowAiSuggestion(true);
     } else {
       setShowAiSuggestion(false);
@@ -108,7 +108,6 @@ export default function ChatInput({
     }
 
     if (isListeningSpeech) {
-      // Stop speech recognition
       try {
         speechRecognitionRef.current?.stop();
       } catch (e) {}
@@ -121,7 +120,6 @@ export default function ChatInput({
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      // Auto-detect or user locale with Urdu/English support
       recognition.lang = navigator.language || 'en-US';
 
       recognition.onstart = () => {
@@ -239,7 +237,6 @@ export default function ChatInput({
     pointerStartX.current = null;
   };
 
-  // Pointer event handlers for slide-to-cancel
   const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (isSpeechToTextEnabled) {
@@ -279,16 +276,16 @@ export default function ChatInput({
   const hasText = message.trim().length > 0;
 
   return (
-    <div className="w-full relative flex flex-col items-center">
+    <div className="w-full relative flex flex-col items-start">
       
-      {/* ── @AI Popover Indicator ── */}
+      {/* ── @AI Suggestion Badge (Clean White Theme on exact top of input) ── */}
       {showAiSuggestion && (
         <button
           type="button"
           onClick={handleInsertAiTag}
-          className="mb-2 px-3.5 py-1.5 rounded-full bg-[#181515] border border-zinc-700 text-white text-xs font-bold shadow-xl flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 cursor-pointer hover:bg-zinc-800"
+          className="mb-2 ml-4 px-3.5 py-1.5 rounded-full bg-white border border-zinc-200 text-zinc-900 text-[12.5px] font-bold shadow-[0_4px_16px_rgba(0,0,0,0.12)] flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 cursor-pointer hover:bg-zinc-50 active:scale-95 transition-all"
         >
-          <Sparkles className="w-3.5 h-3.5 text-[#9D4EDD]" />
+          <Sparkles className="w-4 h-4 text-[#9D4EDD]" />
           <span>Ask Grok AI (@ai)</span>
         </button>
       )}

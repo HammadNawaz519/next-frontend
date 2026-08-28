@@ -11,11 +11,8 @@ import {
   Mic as LucideMic,
   Volume2,
   VolumeX,
-  Sparkles,
-  Shield,
   Trash2,
-  Ban,
-  Check
+  Ban
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 
@@ -97,27 +94,27 @@ export default function ChatDetails({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-[#141111] animate-in slide-in-from-right-full duration-300 overflow-y-auto no-scrollbar font-sans select-none text-white">
+    <div className="absolute inset-0 z-50 flex flex-col bg-[#141111] animate-in slide-in-from-right-full duration-300 overflow-y-auto no-scrollbar font-sans select-none">
       
-      {/* ── 1. TOP HEADER BAR ── */}
-      <div className="pt-14 pb-4 px-5 flex items-center justify-between shrink-0 bg-[#141111] sticky top-0 z-20 border-b border-zinc-800/60">
+      {/* ── TOP DARK BAR (HEADER & HERO) ── */}
+      <div className="pt-14 pb-5 px-5 flex items-center justify-between shrink-0 bg-[#141111] sticky top-0 z-20">
         <button
           onClick={() => {
             setEditingNickname(false);
             onClose();
           }}
-          className="w-11 h-11 rounded-full bg-[#181515] border border-zinc-800 flex items-center justify-center cursor-pointer hover:bg-zinc-800 active:scale-90 transition-all text-white outline-none"
+          className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center cursor-pointer hover:bg-zinc-800 active:scale-90 transition-all text-white outline-none"
           title="Back to conversation"
         >
-          <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
+          <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2.4} />
         </button>
-        <span className="text-[17px] font-bold text-white tracking-tight">Details</span>
-        <div className="w-11" />
+        <span className="text-[16px] font-bold text-white tracking-tight">Details</span>
+        <div className="w-10" />
       </div>
 
-      {/* ── 2. HERO PROFILE SECTION ── */}
-      <div className="flex flex-col items-center px-6 pt-5 pb-6">
-        <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-[#181515] border-2 border-zinc-800 text-3xl shadow-xl">
+      {/* Hero Avatar, Name & Quick Call Actions */}
+      <div className="flex flex-col items-center px-6 pb-6 select-none">
+        <div className="w-22 h-22 rounded-full overflow-hidden flex items-center justify-center bg-zinc-900 border-2 border-zinc-800 text-3xl shadow-xl">
           {selectedUser.image && selectedUser.image.length > 5 ? (
             <img
               src={selectedUser.image}
@@ -130,28 +127,28 @@ export default function ChatDetails({
           )}
         </div>
 
-        <h2 className="text-[20px] font-bold text-white mt-3.5 tracking-tight text-center">
+        {/* User Name (No @username) */}
+        <h2 className="text-[20px] font-bold text-white mt-3 tracking-tight text-center">
           {nicknames[selectedUser.id] || selectedUser.name}
         </h2>
-        <span className="text-[13px] text-[#D8B4E2] font-medium mt-0.5">
-          @{selectedUser.username || (selectedUser.name || 'user').toLowerCase().replace(/\s+/g, '')}
-        </span>
-        <span className="text-[12px] text-zinc-400 mt-1 font-medium">
+        <span className="text-[12px] text-zinc-400 mt-0.5 font-medium">
           {isOnline ? 'Online' : lastSeenText ? `Active ${lastSeenText}` : 'Offline'}
         </span>
 
-        {/* Action Buttons Row */}
-        <div className="flex items-center justify-center gap-4 w-full max-w-xs mt-5">
-          {/* Audio Call */}
+        {/* Quick Action Buttons Row */}
+        <div className="grid grid-cols-3 gap-3 w-full max-w-[280px] mt-5">
+          {/* Voice Call */}
           <button
             onClick={() => {
               onClose();
               onStartCall('audio');
             }}
-            className="flex-1 h-12 rounded-full bg-[#181515] border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center gap-2 text-white transition-all cursor-pointer active:scale-95 shadow-sm"
+            className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group outline-none"
           >
-            <Phone className="w-4 h-4 text-white" strokeWidth={2.2} />
-            <span className="text-[13px] font-bold">Audio</span>
+            <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-colors shadow-xs">
+              <Phone className="w-5 h-5 text-zinc-200" strokeWidth={2} />
+            </div>
+            <span className="text-[11px] font-semibold text-zinc-300">Audio</span>
           </button>
 
           {/* Video Call */}
@@ -160,51 +157,55 @@ export default function ChatDetails({
               onClose();
               onStartCall('video');
             }}
-            className="flex-1 h-12 rounded-full bg-[#181515] border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center gap-2 text-white transition-all cursor-pointer active:scale-95 shadow-sm"
+            className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group outline-none"
           >
-            <Video className="w-4 h-4 text-white" strokeWidth={2.2} />
-            <span className="text-[13px] font-bold">Video</span>
+            <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-colors shadow-xs">
+              <Video className="w-5 h-5 text-zinc-200" strokeWidth={2} />
+            </div>
+            <span className="text-[11px] font-semibold text-zinc-300">Video</span>
           </button>
 
-          {/* Search */}
+          {/* Search in Chat */}
           <button
             onClick={() => {
               onClose();
               onOpenSearch();
             }}
-            className="w-12 h-12 rounded-full bg-[#181515] border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-all cursor-pointer active:scale-95 shadow-sm shrink-0"
-            title="Search in chat"
+            className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group outline-none"
           >
-            <Search className="w-4 h-4 text-white" strokeWidth={2.2} />
+            <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-colors shadow-xs">
+              <Search className="w-5 h-5 text-zinc-200" strokeWidth={2} />
+            </div>
+            <span className="text-[11px] font-semibold text-zinc-300">Search</span>
           </button>
         </div>
       </div>
 
-      {/* ── 3. PREFERENCES & SETTINGS (CLEAN CONNECT DARK ROUND CARDS) ── */}
-      <div className="px-5 pb-16 flex flex-col gap-5">
+      {/* ── BOTTOM LIGHT SHEET (MATCHING CHAT UI DESIGN LANGUAGE) ── */}
+      <div className="flex-1 bg-white rounded-t-[32px] px-5 pt-6 pb-24 flex flex-col gap-6 text-zinc-900 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
         
-        {/* Section: Preferences */}
+        {/* Section 1: Preferences */}
         <div className="flex flex-col gap-2">
-          <span className="text-[12px] font-bold text-zinc-500 uppercase tracking-wider px-2">Preferences</span>
-          <div className="bg-[#181515] border border-zinc-800/90 rounded-3xl p-2 divide-y divide-zinc-800/60 shadow-lg">
+          <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">Preferences</span>
+          <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-2 divide-y divide-zinc-100">
             
             {/* Voice Typing (Speech to Text) Toggle */}
-            <div className="flex items-center justify-between py-3 px-3.5">
+            <div className="flex items-center justify-between py-3 px-2">
               <div className="flex flex-col pr-2">
-                <span className="text-[14px] font-bold text-white">Voice Typing (Speech to Text)</span>
-                <span className="text-[12px] text-zinc-400 mt-0.5">
-                  Speak in English, Urdu, or any language to type automatically
+                <span className="text-[14px] font-semibold text-zinc-800">Voice Typing (Speech to Text)</span>
+                <span className="text-[12px] text-zinc-500 mt-0.5">
+                  Speak in English, Urdu, or other languages to type
                 </span>
               </div>
               <button
                 type="button"
                 onClick={handleToggleVoiceTyping}
                 className={`w-12 h-7 rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
-                  speechToText ? 'bg-[#9D4EDD]' : 'bg-zinc-800'
+                  speechToText ? 'bg-[#9D4EDD]' : 'bg-zinc-200'
                 }`}
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                  className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${
                     speechToText ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
@@ -214,25 +215,19 @@ export default function ChatDetails({
             {/* Notifications Mute Row */}
             <div
               onClick={onToggleMute}
-              className="flex items-center justify-between py-3 px-3.5 cursor-pointer hover:bg-zinc-800/40 rounded-2xl transition-colors"
+              className="flex items-center justify-between py-3 px-2 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors"
             >
-              <div className="flex items-center gap-3">
-                {isChatMuted ? (
-                  <VolumeX className="w-4 h-4 text-zinc-400" />
-                ) : (
-                  <Volume2 className="w-4 h-4 text-zinc-300" />
-                )}
-                <span className="text-[14px] font-bold text-white">Notifications</span>
+              <div className="flex items-center gap-2.5">
+                {isChatMuted ? <VolumeX className="w-4 h-4 text-zinc-500" /> : <Volume2 className="w-4 h-4 text-zinc-700" />}
+                <span className="text-[14px] font-semibold text-zinc-800">Notifications</span>
               </div>
-              <span className="text-[13px] font-semibold text-zinc-400">
-                {isChatMuted ? 'Muted' : 'Enabled'}
-              </span>
+              <span className="text-[13px] font-medium text-zinc-500">{isChatMuted ? 'Muted' : 'Sound & Banners'}</span>
             </div>
 
             {/* Nickname Row */}
-            <div className="py-3 px-3.5">
+            <div className="py-3 px-2">
               <div className="flex items-center justify-between">
-                <span className="text-[14px] font-bold text-white">Nickname</span>
+                <span className="text-[14px] font-semibold text-zinc-800">Nickname</span>
                 {!editingNickname ? (
                   <button
                     onClick={() => {
@@ -246,13 +241,13 @@ export default function ChatDetails({
                 ) : null}
               </div>
               {editingNickname && (
-                <div className="flex items-center gap-2 mt-3 pt-1">
+                <div className="flex items-center gap-2 mt-2.5 pt-1">
                   <input
                     type="text"
                     placeholder="Enter nickname..."
                     value={nicknameInput}
                     onChange={(e) => setNicknameInput(e.target.value)}
-                    className="flex-1 px-4 py-2 text-xs bg-zinc-900 border border-zinc-700 rounded-full outline-none text-white focus:border-[#9D4EDD]"
+                    className="flex-1 px-3.5 py-2 text-xs bg-white border border-zinc-200 rounded-full outline-none text-zinc-900 focus:border-[#9D4EDD]"
                     autoFocus
                   />
                   <button
@@ -260,13 +255,13 @@ export default function ChatDetails({
                       onUpdateNickname(selectedUser.id, nicknameInput.trim());
                       setEditingNickname(false);
                     }}
-                    className="px-4 py-2 bg-[#9D4EDD] text-white rounded-full text-xs font-bold cursor-pointer outline-none hover:bg-[#8A38CC]"
+                    className="px-4 py-2 bg-[#9D4EDD] hover:bg-[#8A38CC] text-white rounded-full text-xs font-bold cursor-pointer outline-none shadow-xs"
                   >
                     Save
                   </button>
                   <button
                     onClick={() => setEditingNickname(false)}
-                    className="px-4 py-2 bg-zinc-800 text-zinc-400 hover:text-white rounded-full text-xs font-medium cursor-pointer outline-none"
+                    className="px-3.5 py-2 bg-zinc-200 text-zinc-700 rounded-full text-xs font-medium cursor-pointer outline-none"
                   >
                     Cancel
                   </button>
@@ -277,35 +272,35 @@ export default function ChatDetails({
             {/* Theme Row */}
             <div
               onClick={onOpenThemePicker}
-              className="flex items-center justify-between py-3 px-3.5 cursor-pointer hover:bg-zinc-800/40 rounded-2xl transition-colors"
+              className="flex items-center justify-between py-3 px-2 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors"
             >
-              <span className="text-[14px] font-bold text-white">Chat Theme</span>
+              <span className="text-[14px] font-semibold text-zinc-800">Chat Theme</span>
               <div className="flex items-center gap-1.5">
-                <span className="text-[13px] font-semibold text-zinc-400">{activeTheme.name}</span>
-                <span className="text-zinc-500 font-bold">›</span>
+                <span className="text-[13px] font-medium text-zinc-500">{activeTheme.name}</span>
+                <span className="text-zinc-400 font-bold">›</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Section: Shared Content */}
+        {/* Section 2: Shared Content */}
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between px-2">
-            <span className="text-[12px] font-bold text-zinc-500 uppercase tracking-wider">Shared Content</span>
-            <span className="text-[11px] text-zinc-500 font-medium">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider">Shared Content</span>
+            <span className="text-[11px] text-zinc-400 font-medium">
               {sharedMedia.picsAndVideos.length + sharedMedia.files.length} items
             </span>
           </div>
 
-          <div className="bg-[#181515] border border-zinc-800/90 rounded-3xl p-4 shadow-lg flex flex-col gap-3">
-            {/* Tab switch */}
-            <div className="flex items-center bg-zinc-900/90 p-1 rounded-full border border-zinc-800">
+          <div className="flex flex-col gap-3">
+            {/* Pill Tab Switcher */}
+            <div className="flex items-center bg-zinc-100 p-1 rounded-full border border-zinc-200/60 max-w-sm">
               <button
                 onClick={() => setDetailsTab('media')}
                 className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                   detailsTab === 'media'
-                    ? 'bg-[#9D4EDD] text-white shadow-xs'
-                    : 'text-zinc-400 hover:text-white'
+                    ? 'bg-white text-zinc-900 shadow-xs'
+                    : 'text-zinc-500 hover:text-zinc-800'
                 }`}
               >
                 Media ({sharedMedia.picsAndVideos.length})
@@ -314,26 +309,27 @@ export default function ChatDetails({
                 onClick={() => setDetailsTab('files')}
                 className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                   detailsTab === 'files'
-                    ? 'bg-[#9D4EDD] text-white shadow-xs'
-                    : 'text-zinc-400 hover:text-white'
+                    ? 'bg-white text-zinc-900 shadow-xs'
+                    : 'text-zinc-500 hover:text-zinc-800'
                 }`}
               >
                 Files & Voice ({sharedMedia.files.length})
               </button>
             </div>
 
-            {/* Media list */}
+            {/* Media Content List */}
             {detailsTab === 'media' && (
               sharedMedia.picsAndVideos.length === 0 ? (
-                <div className="py-8 text-center text-zinc-500 text-xs">
-                  No photos or videos shared yet
+                <div className="bg-zinc-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center text-zinc-400">
+                  <ImageIcon className="w-8 h-8 mb-1.5 text-zinc-300" strokeWidth={1.5} />
+                  <span className="text-[13px] font-medium">No photos or videos shared yet</span>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-2 pt-1">
+                <div className="grid grid-cols-3 gap-2">
                   {sharedMedia.picsAndVideos.slice(0, 30).map((m) => (
                     <div
                       key={m.id}
-                      className="aspect-square rounded-2xl overflow-hidden bg-zinc-900 cursor-pointer relative border border-zinc-800"
+                      className="aspect-square rounded-2xl overflow-hidden bg-zinc-100 cursor-pointer relative shadow-xs"
                       onClick={() => onPreviewMedia(m.content, m.type === 'video' ? 'video' : 'image')}
                     >
                       {m.type === 'video' ? (
@@ -347,24 +343,25 @@ export default function ChatDetails({
               )
             )}
 
-            {/* Files list */}
+            {/* Files & Voice Content List */}
             {detailsTab === 'files' && (
               sharedMedia.files.length === 0 ? (
-                <div className="py-8 text-center text-zinc-500 text-xs">
-                  No files or voice notes shared yet
+                <div className="bg-zinc-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center text-zinc-400">
+                  <FileText className="w-8 h-8 mb-1.5 text-zinc-300" strokeWidth={1.5} />
+                  <span className="text-[13px] font-medium">No files or voice notes shared yet</span>
                 </div>
               ) : (
-                <div className="space-y-2 pt-1">
+                <div className="space-y-2">
                   {sharedMedia.files.map((m) => (
                     <div
                       key={m.id}
-                      className="p-3 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-between gap-3"
+                      className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-[#9D4EDD]/20 text-[#D8B4E2] flex items-center justify-center text-sm font-bold shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-purple-100 text-[#9D4EDD] flex items-center justify-center text-sm font-bold shrink-0">
                           {m.type === 'voice' ? <LucideMic className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
                         </div>
-                        <span className="text-xs font-semibold text-white truncate">
+                        <span className="text-xs font-semibold text-zinc-800 truncate">
                           {m.type === 'voice' ? 'Voice Message' : m.content}
                         </span>
                       </div>
@@ -388,43 +385,29 @@ export default function ChatDetails({
           </div>
         </div>
 
-        {/* Section: Privacy & Security */}
+        {/* Section 3: Privacy & Security */}
         <div className="flex flex-col gap-2">
-          <span className="text-[12px] font-bold text-zinc-500 uppercase tracking-wider px-2">Privacy & Security</span>
-          <div className="bg-[#181515] border border-zinc-800/90 rounded-3xl p-2 divide-y divide-zinc-800/60 shadow-lg">
-            
-            {/* Clear Chat History */}
+          <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">Privacy & Security</span>
+          <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-2 divide-y divide-zinc-100">
             <div
               onClick={onOpenClearConfirm}
-              className="flex items-center justify-between py-3.5 px-3.5 cursor-pointer hover:bg-zinc-800/40 rounded-2xl transition-colors group"
+              className="flex items-center justify-between py-3 px-2 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors group"
             >
-              <div className="flex flex-col">
-                <span className="text-[14px] font-bold text-white group-hover:text-red-400 transition-colors">
-                  Clear Chat History
-                </span>
-                <span className="text-[12px] text-zinc-400 mt-0.5">
-                  Clear messages from your conversation
-                </span>
-              </div>
-              <Trash2 className="w-4 h-4 text-zinc-500 group-hover:text-red-400 transition-colors" />
+              <span className="text-[14px] font-semibold text-zinc-800 group-hover:text-red-500 transition-colors">
+                Clear Chat History
+              </span>
+              <span className="text-xs text-zinc-400 font-medium">Delete messages</span>
             </div>
 
-            {/* Block / Unblock Contact */}
             <div
               onClick={onToggleBlock}
-              className="flex items-center justify-between py-3.5 px-3.5 cursor-pointer hover:bg-zinc-800/40 rounded-2xl transition-colors group"
+              className="flex items-center justify-between py-3 px-2 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors group"
             >
-              <div className="flex flex-col">
-                <span className="text-[14px] font-bold text-white group-hover:text-red-400 transition-colors">
-                  {isUserBlocked ? 'Unblock Contact' : 'Block Contact'}
-                </span>
-                <span className="text-[12px] text-zinc-400 mt-0.5">
-                  {isUserBlocked ? 'User is currently blocked' : 'Stop receiving calls and messages'}
-                </span>
-              </div>
-              <Ban className="w-4 h-4 text-zinc-500 group-hover:text-red-400 transition-colors" />
+              <span className="text-[14px] font-semibold text-zinc-800 group-hover:text-red-500 transition-colors">
+                {isUserBlocked ? 'Unblock Contact' : 'Block Contact'}
+              </span>
+              <span className="text-xs text-zinc-400 font-medium">{isUserBlocked ? 'Blocked' : 'Active'}</span>
             </div>
-
           </div>
         </div>
 
