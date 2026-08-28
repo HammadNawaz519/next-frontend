@@ -269,6 +269,13 @@ export default function ChatInput({
     }
   };
 
+  const handlePointerCancel = () => {
+    if (isSpeechToTextEnabled) return;
+    if (isRecording) {
+      stopRecording(true);
+    }
+  };
+
   const hasText = message.trim().length > 0;
 
   return (
