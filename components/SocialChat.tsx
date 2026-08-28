@@ -1519,8 +1519,8 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                   <div style={{ fontSize: '14px', lineHeight: '1.4', wordBreak: 'break-word', whiteSpace: 'pre-wrap', textAlign: 'left', width: '100%' }}>
                     <span>{cleanMsgContent}</span>
                     {isAI && (
-                      <div className="flex justify-end mt-1 -mb-0.5">
-                        <span className="text-[10px] text-zinc-400 font-medium select-none">AI</span>
+                      <div className="flex justify-end items-center mt-1 -mb-0.5 select-none pointer-events-none">
+                        <span className="text-[10.5px] font-semibold text-zinc-400/80 tracking-wider">AI</span>
                       </div>
                     )}
                   </div>
