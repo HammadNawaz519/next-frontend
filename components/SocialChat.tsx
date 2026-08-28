@@ -1530,11 +1530,6 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         );
       })()}
 
-      {/* Timestamp directly below the bubble: Left-aligned for incoming, Right-aligned for outgoing */}
-      <span className={`text-[11px] font-normal text-zinc-400 mt-1 px-2 select-none ${isSent ? 'self-end' : 'self-start'}`}>
-        {formatChatTime(msg.createdAt)}
-      </span>
-
       {/* Status indicator row under the last sent message */}
       {isSent && (
         <SentMessageStatus msg={msg} isDark={isDark} isLastSentInGroup={isLastSentInGroup} partnerLastSeen={partnerLastSeen} />
@@ -4736,15 +4731,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 >
                   <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
                 </button>
-                <div className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-zinc-900 border border-zinc-800 text-white outline-none ring-0 focus-within:ring-0 focus-within:border-zinc-700 transition-all">
-                  <Search className="w-4 h-4 text-[#9D4EDD] flex-shrink-0" strokeWidth={2.2} />
+                <div className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-zinc-900 border border-zinc-800 text-white outline-none ring-0 transition-colors">
+                  <Search className="w-4 h-4 text-zinc-400 flex-shrink-0" strokeWidth={2} />
                   <input 
                     type="text" 
                     autoFocus
-                    placeholder="Search people & conversations..." 
+                    placeholder="Search..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-transparent text-[13.5px] text-white placeholder:text-zinc-500 outline-none focus:outline-none ring-0 font-medium"
+                    className="w-full bg-transparent text-[13.5px] text-white placeholder:text-zinc-500 outline-none focus:outline-none ring-0 font-normal"
                   />
                   {searchQuery && (
                     <button 
