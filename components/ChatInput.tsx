@@ -166,7 +166,7 @@ export default function ChatInput({
   const hasText = message.trim().length > 0;
 
   return (
-    <div className="w-full h-[62px] bg-white border border-zinc-100/90 rounded-full flex items-center justify-between px-2.5 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.08)] relative select-none">
+    <div className="w-full h-[58px] bg-white border border-zinc-200/80 rounded-full flex items-center justify-between px-2.5 py-1 shadow-[0_4px_20px_rgba(0,0,0,0.06)] relative select-none">
       
       {/* ── LEFT: Gallery Button (gallery-round-svgrepo-com.svg) ── */}
       <button
@@ -176,7 +176,7 @@ export default function ChatInput({
           onOpenGallery?.();
         }}
         disabled={disabled || isRecording}
-        className="w-11 h-11 rounded-full bg-zinc-100/90 hover:bg-zinc-200/80 active:scale-90 flex items-center justify-center text-zinc-600 transition-all cursor-pointer outline-none shrink-0"
+        className="w-10 h-10 rounded-full bg-zinc-100/90 hover:bg-zinc-200/80 active:scale-90 flex items-center justify-center text-zinc-600 transition-all cursor-pointer outline-none shrink-0"
         title="Attach Media & Files"
       >
         <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">

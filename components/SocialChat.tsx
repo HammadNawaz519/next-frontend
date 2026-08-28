@@ -5245,13 +5245,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
 
                 {/* ── SCREEN 1: LIGHT MESSAGES SHEET (Smooth rounded-t-[32px], zero redundant top margin) ── */}
-                <div className="w-full flex-1 bg-white rounded-t-[32px] px-4 pt-3 pb-0 flex flex-col relative shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-hidden z-20 min-h-0">
+                <div className="w-full flex-1 bg-white rounded-t-[32px] px-3 pt-0 pb-0 flex flex-col relative shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-hidden z-20 min-h-0">
 
-                  {/* Messages Scroll Area - Clean padding above floating input bar */}
+                  {/* Messages Scroll Area - Full space from top curves down to floating input */}
                   <div
                     ref={messagesContainerRef}
                     onScroll={handleMessagesScroll}
-                    className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden flex-1 no-scrollbar pr-0.5 pt-2 pb-24"
+                    className="flex flex-col gap-2.5 overflow-y-auto overflow-x-hidden flex-1 no-scrollbar px-1 pt-3 pb-20 w-full"
                   >
                     {isLoadingMessages && messages.length === 0 && (
                       <div className="chat-skeleton-container">
@@ -5358,9 +5358,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     multiple
                   />
 
-                  {/* ── INTERACTIVE CHAT INPUT PILL ── */}
-                  <div className="absolute bottom-2.5 left-0 right-0 w-full px-2 z-30 flex justify-center pointer-events-none">
-                    <div className="w-[95%] max-w-[440px] pointer-events-auto">
+                  {/* ── INTERACTIVE CHAT INPUT PILL (95% width, positioned down) ── */}
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[95%] max-w-[460px] z-30 flex justify-center pointer-events-none">
+                    <div className="w-full pointer-events-auto">
                       <ChatInput
                         onSendMessage={(text) => handleSendMessage(undefined, text)}
                         onOpenGallery={() => fileInputRef.current?.click()}

@@ -4,1129 +4,483 @@ import React, { useState, useEffect, useRef } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
-  MoreVertical, Trash2, UserPlus, Lock, Eye, EyeOff, X, ArrowLeft,
-  ChevronRight, Check, Key, Shield, LogIn, Mail, User, Phone
+  Users,
+  UserPlus,
+  Trash2,
+  Lock,
+  Eye,
+  EyeOff,
+  ChevronLeft,
+  ArrowRight,
+  Check,
+  AlertCircle,
+  MoreVertical,
+  LogIn,
+  Mail,
+  User,
 } from 'lucide-react';
-import dynamic from 'next/dynamic';
-import { useTheme } from '@/app/components/ThemeProvider';
 import { DeviceAccountStore, DeviceAccountMeta } from '@/lib/deviceAccountStore';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-
-// Extend DeviceAccountMeta with computed UI property
-type AccountDisplay = DeviceAccountMeta & { isCurrent: boolean };
-
-const GrainGradient = dynamic(
-  () => import('@paper-design/shaders-react').then((mod) => mod.GrainGradient),
-  { ssr: false }
-);
+import { triggerHaptic } from '@/lib/haptics';
 
 export default function AccountsPage() {
   const router = useRouter();
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const { data: session } = useSession();
 
-  const [mounted, setMounted] = useState(false);
-  // ── Three SEPARATE concepts ──
-  const [savedAccounts, setSavedAccounts] = useState<DeviceAccountMeta[]>([]); // Saved on device
-  const [viewMode, setViewMode] = useState<'list' | 'remove' | 'removeSaved'>('list');
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [savedAccounts, setSavedAccounts] = useState<DeviceAccountMeta[]>([]);
+  const [viewMode, setViewMode] = useState<'list' | 'remove'>('list');
+  const [showAddAccountModal, setShowAddAccountModal] = useState(false);
+  const [authTab, setAuthTab] = useState<'signIn' | 'signUp'>('signIn');
 
-  // Password Modal for accounts without saved credentials
+  // Password Prompt for switching account
   const [selectedAccount, setSelectedAccount] = useState<DeviceAccountMeta | null>(null);
+  const [passwordPrompt, setPasswordPrompt] = useState('');
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+  const [promptLoading, setPromptLoading] = useState(false);
+  const [promptError, setPromptError] = useState('');
+
+  // Add Account Form Fields
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [switchingId, setSwitchingId] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
 
-  // Signup & Login Modal State
-  const [showSignupSheet, setShowSignupSheet] = useState(false);
-  const [signupName, setSignupName] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPhone, setSignupPhone] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupLoading, setSignupLoading] = useState(false);
-  const [signupError, setSignupError] = useState('');
-  // 'form' = filling out details, 'otp' = verifying email code
-  const [signupStep, setSignupStep] = useState<'form' | 'otp'>('form');
-  const [signupOtp, setSignupOtp] = useState(['', '', '', '', '', '']);
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpError, setOtpError] = useState('');
-  const [signupShowPassword, setSignupShowPassword] = useState(false);
-
-  const [showLoginSheet, setShowLoginSheet] = useState(false);
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginLoading, setLoginLoading] = useState(false);
-  const [loginError, setLoginError] = useState('');
-
-  // ── Forgot Password / Reset State inside Login Sheet ──
-  const [loginStep, setLoginStep] = useState<'login' | 'forgot-password' | 'reset-otp' | 'success'>('login');
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetOtp, setResetOtp] = useState(['', '', '', '', '', '']);
-  const [resetNewPw, setResetNewPw] = useState('');
-  const [resetConfirmPw, setResetConfirmPw] = useState('');
-  const [resetShowPw, setResetShowPw] = useState(false);
-  const [resetShowConfirm, setResetShowConfirm] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
-  const [resetError, setResetError] = useState('');
-
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const resetSignupSheet = () => {
-    setSignupName(''); setSignupEmail(''); setSignupPhone(''); setSignupPassword('');
-    setSignupError(''); setSignupStep('form');
-    setSignupOtp(['', '', '', '', '', '']);
-    setOtpError('');
-    setSignupShowPassword(false);
-  };
-
-  const resetLoginSheet = () => {
-    setLoginEmail(''); setLoginPassword(''); setLoginError('');
-    setLoginStep('login');
-    setResetEmail('');
-    setResetOtp(['', '', '', '', '', '']);
-    setResetNewPw(''); setResetConfirmPw('');
-    setResetShowPw(false); setResetShowConfirm(false);
-    setResetError('');
-  };
-
-  const handleSignupSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSignupLoading(true);
-    setSignupError('');
-    try {
-      const res = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: signupName,
-          email: signupEmail,
-          password: signupPassword,
-          phone: signupPhone,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSignupError(data.message || 'Registration failed. Please try again.');
-      } else {
-        // Move to OTP verification step
-        setSignupStep('otp');
-        setSignupOtp(['', '', '', '', '', '']);
-        setOtpError('');
-      }
-    } catch (err) {
-      setSignupError('An unexpected error occurred. Please try again.');
-    } finally {
-      setSignupLoading(false);
-    }
-  };
-
-  const handleOtpChange = (index: number, value: string) => {
-    const digit = value.replace(/\D/g, '').slice(-1);
-    const newOtp = [...signupOtp];
-    newOtp[index] = digit;
-    setSignupOtp(newOtp);
-    if (digit && index < 5) {
-      const next = document.getElementById(`ac-otp-${index + 1}`);
-      next?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !signupOtp[index] && index > 0) {
-      const prev = document.getElementById(`ac-otp-${index - 1}`);
-      prev?.focus();
-    }
-  };
-
-  const handleOtpVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setOtpLoading(true);
-    setOtpError('');
-    const code = signupOtp.join('');
-    if (code.length < 6) {
-      setOtpError('Please enter the full 6-digit code.');
-      setOtpLoading(false);
-      return;
-    }
-    try {
-      const res = await fetch('/api/verify-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: signupEmail, code }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setOtpError(data.message || 'Verification failed. Please try again.');
-      } else {
-        // Account created — sign in immediately and stay in the app
-        const signInRes = await signIn('credentials', {
-          redirect: false,
-          email: signupEmail,
-          password: signupPassword,
-        });
-        setShowSignupSheet(false);
-        resetSignupSheet();
-        if (signInRes?.ok) {
-          router.push('/dashboard');
-        }
-      }
-    } catch (err) {
-      setOtpError('An unexpected error occurred.');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  const handleManualLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginLoading(true);
-    setLoginError('');
-    try {
-      const res = await signIn('credentials', {
-        redirect: false,
-        email: loginEmail,
-        password: loginPassword,
-      });
-      if (res?.error) {
-        setLoginError('Invalid credentials. Please check your email and password.');
-      } else {
-        setShowLoginSheet(false);
-        resetLoginSheet();
-        router.push('/dashboard');
-      }
-    } catch (err) {
-      setLoginError('An unexpected error occurred.');
-    } finally {
-      setLoginLoading(false);
-    }
-  };
-
-  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setResetLoading(true);
-    setResetError('');
-    try {
-      const res = await fetch('/api/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: resetEmail }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setResetError(data.message || 'Failed to send reset code.');
-      } else {
-        setResetOtp(['', '', '', '', '', '']);
-        setResetNewPw('');
-        setResetConfirmPw('');
-        setLoginStep('reset-otp');
-      }
-    } catch (err) {
-      setResetError('An unexpected error occurred. Please try again.');
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
-  const handleResetOtpChange = (index: number, value: string) => {
-    const digit = value.replace(/\D/g, '').slice(-1);
-    const newOtp = [...resetOtp];
-    newOtp[index] = digit;
-    setResetOtp(newOtp);
-    if (digit && index < 5) {
-      const next = document.getElementById(`acc-reset-otp-${index + 1}`);
-      next?.focus();
-    }
-  };
-
-  const handleResetOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !resetOtp[index] && index > 0) {
-      const prev = document.getElementById(`acc-reset-otp-${index - 1}`);
-      prev?.focus();
-    }
-  };
-
-  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setResetLoading(true);
-    setResetError('');
-    if (resetNewPw !== resetConfirmPw) {
-      setResetError('Passwords do not match.');
-      setResetLoading(false);
-      return;
-    }
-    try {
-      const res = await fetch('/api/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: resetEmail,
-          code: resetOtp.join(''),
-          newPassword: resetNewPw,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setResetError(data.message || 'Failed to reset password. Please try again.');
-      } else {
-        setLoginStep('success');
-      }
-    } catch (err) {
-      setResetError('An unexpected error occurred. Please try again.');
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
-  const curUserId = (session?.user as any)?.id || '';
-  const curEmail = session?.user?.email?.toLowerCase().trim() || '';
-
-  // ── Load all device accounts on mount and after any changes ──
-  const loadAccounts = () => {
-    const accounts = DeviceAccountStore.getSavedAccounts();
+  // Load accounts on mount
+  const loadAccounts = async () => {
+    const accounts = await DeviceAccountStore.getSavedAccounts();
     setSavedAccounts(accounts);
   };
 
   useEffect(() => {
-    setMounted(true);
     loadAccounts();
   }, []);
 
-  // Build displayAccounts: current account pinned at top with Active badge
-  const displayAccounts = React.useMemo(() => {
-    return savedAccounts.map(acc => ({
-      ...acc,
-      isCurrent: acc.userId === curUserId || acc.email === curEmail,
-    } as AccountDisplay)).sort((a, b) => {
-      if (a.isCurrent) return -1;
-      if (b.isCurrent) return 1;
-      return new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime();
-    });
-  }, [savedAccounts, curUserId, curEmail]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
+  // One-Tap or Password Account Switch
+  const handleSelectAccount = async (acc: DeviceAccountMeta) => {
+    triggerHaptic('medium');
+    const currentEmail = session?.user?.email?.toLowerCase().trim();
+    if (acc.email.toLowerCase().trim() === currentEmail) {
+      router.push('/dashboard');
+      return;
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
-  if (!mounted) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#050505]' : 'bg-[#f3f4f6]'}`}>
-        <div className={`w-8 h-8 border-2 rounded-full animate-spin ${isDark ? 'border-white/20 border-t-white' : 'border-black/20 border-t-black'}`} />
-      </div>
-    );
-  }
-
-  // ── RULE 23: Remove entire account record from device ──
-  const handleRemoveAccount = async (userId: string) => {
-    await DeviceAccountStore.removeAccount(userId);
-    loadAccounts();
-    if (displayAccounts.filter(a => !a.isCurrent).length === 0) setViewMode('list');
-  };
-
-  // ── RULE 11 / 23: Remove only the saved credential, keep the account visible ──
-  const handleRemoveSavedLogin = async (userId: string) => {
-    await DeviceAccountStore.removeSavedLogin(userId);
-    loadAccounts();
-  };
-
-  // ── Account click handler ──
-  const handleAccountClick = async (acc: AccountDisplay) => {
-    if (acc.isCurrent) return;
-
-    // Check for valid saved credential
-    const hasCredential = await DeviceAccountStore.hasValidCredential(acc.userId);
-
-    if (hasCredential && acc.isSavedOnDevice) {
-      // ── RULE 6: Instant passwordless switch ──
-      setSwitchingId(acc.userId);
+    // Try auto-switching if credentials available
+    const credentials = await DeviceAccountStore.getCredentials(acc.userId);
+    if (credentials?.password) {
+      setPromptLoading(true);
       try {
         const res = await signIn('credentials', {
           redirect: false,
           email: acc.email,
-          password: '__session_restore__',
+          password: credentials.password,
         });
         if (res?.ok) {
-          await DeviceAccountStore.refreshCredential(acc.userId, acc.provider);
-          DeviceAccountStore.setCurrentAccountId(acc.userId);
+          await DeviceAccountStore.setActiveAccount(acc.userId);
           router.push('/dashboard');
           return;
         }
-        // Credential invalidated by backend — fall through to password prompt
-        await DeviceAccountStore.removeSavedLogin(acc.userId);
-        loadAccounts();
-      } catch (err) {}
-      setSwitchingId(null);
+      } catch (e) {}
+      setPromptLoading(false);
     }
 
-    // ── RULE 7: No valid credential — prompt for password ──
+    // If no saved password or auto-login failed, show password prompt
     setSelectedAccount(acc);
-    setPassword('');
-    setError('');
-    setShowPassword(false);
+    setPasswordPrompt('');
+    setPromptError('');
   };
 
-  // ── Handle manual password login for unsaved accounts ──
-  const handlePasswordLogin = async (e: React.FormEvent) => {
+  const handlePasswordPromptSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedAccount) return;
-    setLoading(true);
-    setError('');
+    if (!selectedAccount || !passwordPrompt) return;
+    triggerHaptic('medium');
+    setPromptLoading(true);
+    setPromptError('');
+
     try {
       const res = await signIn('credentials', {
         redirect: false,
         email: selectedAccount.email,
-        password: password,
+        password: passwordPrompt,
       });
 
-      if (res?.error) {
-        setError('Incorrect password.');
-      } else {
-        // ── RULE 21: Save credential on successful auth, add to saved accounts ──
-        const meta: Omit<DeviceAccountMeta, 'isSavedOnDevice' | 'lastUsedAt'> = {
-          userId: selectedAccount.userId,
-          email: selectedAccount.email,
-          username: selectedAccount.username,
-          displayName: selectedAccount.displayName,
-          profilePicture: selectedAccount.profilePicture,
-          provider: selectedAccount.provider,
-        };
-        await DeviceAccountStore.addOrUpdateAccount(meta, true);
-        DeviceAccountStore.setCurrentAccountId(selectedAccount.userId);
-        loadAccounts();
-        setSelectedAccount(null);
+      if (res?.ok) {
+        await DeviceAccountStore.saveCredentials(selectedAccount.userId, selectedAccount.email, passwordPrompt);
+        await DeviceAccountStore.setActiveAccount(selectedAccount.userId);
         router.push('/dashboard');
+      } else {
+        setPromptError('Invalid password. Please try again.');
+        setPromptLoading(false);
       }
     } catch (err) {
-      setError('An error occurred.');
-    } finally {
-      setLoading(false);
+      setPromptError('Connection error. Please try again.');
+      setPromptLoading(false);
     }
   };
 
-  const getInitials = (acc: DeviceAccountMeta) => {
-    if (acc.username) return acc.username.slice(0, 2).toUpperCase();
-    if (acc.displayName) return acc.displayName.slice(0, 2).toUpperCase();
-    return acc.email.slice(0, 2).toUpperCase();
+  const handleRemoveAccount = async (userId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    triggerHaptic('medium');
+    await DeviceAccountStore.removeAccount(userId);
+    loadAccounts();
   };
 
+  // Add Account Submit (Sign In or Sign Up)
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    triggerHaptic('medium');
+    setAuthLoading(true);
+    setAuthError('');
+
+    if (authTab === 'signIn') {
+      try {
+        const res = await signIn('credentials', { redirect: false, email, password });
+        if (res?.ok) {
+          const cleanEmail = email.toLowerCase().trim();
+          await DeviceAccountStore.addOrUpdateAccount({
+            userId: `pending_${cleanEmail}`,
+            email: cleanEmail,
+            username: cleanEmail.split('@')[0],
+            displayName: cleanEmail.split('@')[0],
+            profilePicture: '',
+            provider: 'credentials',
+          }, true);
+          await DeviceAccountStore.saveCredentials(`pending_${cleanEmail}`, cleanEmail, password);
+          setShowAddAccountModal(false);
+          router.push('/dashboard');
+        } else {
+          setAuthError(res?.error === 'EMAIL_NOT_VERIFIED' ? 'Email not verified. Please verify on main login screen.' : 'Invalid email or password.');
+          setAuthLoading(false);
+        }
+      } catch (err) {
+        setAuthError('Connection error. Please try again.');
+        setAuthLoading(false);
+      }
+    } else {
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setAuthError(data.message || 'Registration failed.');
+          setAuthLoading(false);
+        } else {
+          // Send to main screen for OTP verification
+          router.push('/?sheet=verify');
+        }
+      } catch (err) {
+        setAuthError('Signup failed. Please try again.');
+        setAuthLoading(false);
+      }
+    }
+  };
+
+  const curEmail = session?.user?.email?.toLowerCase().trim();
+
   return (
-    <div className={`min-h-screen transition-colors duration-500 font-sans ${isDark ? 'bg-[#09090b] text-white' : 'bg-white text-gray-900'}`}>
-      <div className="max-w-xl mx-auto px-5 pt-8 pb-10 md:pt-12">
-        {/* Top Header Controls */}
-        <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 h-screen w-full flex flex-col bg-[#141111] overflow-hidden font-sans select-none">
+      
+      {/* ── 1. TOP DARK REGION: HEADER ── */}
+      <div className="w-full bg-[#141111] pt-14 pb-8 px-6 flex flex-col items-center relative select-none shrink-0">
+        <div className="w-full flex items-center justify-between mb-4">
           <button
             onClick={() => router.push('/dashboard')}
-            className={`p-2 px-3 rounded-full transition-all active:scale-95 flex items-center gap-1.5 text-xs font-bold ${
-              isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300' : 'bg-gray-200/80 hover:bg-gray-200 text-gray-800'
-            }`}
+            className="p-1.5 -ml-1.5 text-white hover:text-zinc-300 active:scale-95 transition-all cursor-pointer outline-none bg-transparent"
+            title="Back to Dashboard"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Back
+            <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
           </button>
 
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setShowDropdown(!showDropdown)}
-              className={`p-2 rounded-full transition-all active:scale-95 ${
-                isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300' : 'bg-gray-200/80 hover:bg-gray-200 text-gray-800'
-              }`}
-            >
-              <MoreVertical className="w-5 h-5" />
-            </button>
-
-            {showDropdown && (
-              <div className={`absolute right-0 mt-2 w-52 border rounded-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-200 ${
-                isDark ? 'bg-[#16161a] border-zinc-800 text-white' : 'bg-white border-gray-200 text-gray-900'
-              }`}>
-                <button
-                  onClick={() => { setShowDropdown(false); setViewMode(viewMode === 'remove' ? 'list' : 'remove'); }}
-                  className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 text-rose-500 hover:bg-rose-500/10 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  {viewMode === 'remove' ? 'Done Managing' : 'Remove Account'}
-                </button>
-                <button
-                  onClick={() => { setShowDropdown(false); setViewMode(viewMode === 'removeSaved' ? 'list' : 'removeSaved'); }}
-                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 transition-colors ${isDark ? 'text-zinc-300 hover:bg-zinc-800' : 'text-gray-600 hover:bg-gray-100'}`}
-                >
-                  <Key className="w-4 h-4" />
-                  {viewMode === 'removeSaved' ? 'Done' : 'Remove Saved Login'}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Top-Left Charcoal Black 2-Line Header (NO LOGO, NO SUBTITLE) */}
-        <div className="text-left mb-8 pt-3">
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.08] text-[#1c1c22] dark:text-zinc-100 font-sans">
-            Account<br />Center
+          <h1 className="text-[20px] font-black text-white tracking-tight">
+            Accounts
           </h1>
+
+          <button
+            onClick={() => {
+              triggerHaptic('light');
+              setViewMode(viewMode === 'list' ? 'remove' : 'list');
+            }}
+            className="text-[13px] font-bold text-[#D8B4E2] hover:text-white transition-all cursor-pointer p-1"
+          >
+            {viewMode === 'list' ? 'Manage' : 'Done'}
+          </button>
         </div>
 
-        {/* Clean Simple Accounts List Container — Fully Rounded Rows (Shifted Down) */}
-        <div className="flex flex-col gap-3 mb-10">
-          {(viewMode === 'remove' || viewMode === 'removeSaved') && (
-            <div className="flex items-center justify-between py-2 px-1">
-              <span className="text-xs font-bold text-amber-500">Managing Saved Accounts</span>
-              <button
-                onClick={() => setViewMode('list')}
-                className="text-xs font-bold text-blue-500 hover:text-blue-400 transition-colors"
-              >
-                Done
-              </button>
-            </div>
-          )}
+        <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center shadow-lg mb-2">
+          <Users className="w-7 h-7 text-[#D8B4E2]" />
+        </div>
 
-          {displayAccounts.length === 0 && (
-            <p className={`text-sm text-center py-8 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
-              No accounts saved on this device yet.
-            </p>
-          )}
+        <p className="text-[13px] text-zinc-400 text-center font-normal">
+          Switch between your accounts or add a new one
+        </p>
+      </div>
 
-          {displayAccounts.map((acc) => {
-            const displayHandle = acc.username 
-              ? acc.username.replace(/^@/, '').split('@')[0] 
-              : (acc.displayName ? acc.displayName : (acc.email ? acc.email.split('@')[0] : 'User'));
-            const isSaved = acc.isSavedOnDevice;
-            const isSwitchingThis = switchingId === acc.userId;
+      {/* ── 2. BOTTOM WHITE SHEET: SAVED ACCOUNTS LIST ── */}
+      <div className="w-full flex-1 bg-white rounded-t-[32px] px-6 pt-5 pb-8 flex flex-col relative shadow-[0_-12px_35px_rgba(0,0,0,0.15)] overflow-y-auto no-scrollbar min-h-0 text-zinc-900">
+        
+        {/* Sheet Drag Handle */}
+        <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-1 mb-4 shrink-0" />
 
+        <div className="w-full max-w-[440px] mx-auto flex flex-col gap-3">
+          
+          {/* List of Saved Accounts */}
+          {savedAccounts.map((acc) => {
+            const isCurrent = acc.email.toLowerCase().trim() === curEmail;
             return (
               <div
-                key={acc.userId || acc.email}
-                onClick={() => viewMode === 'list' && handleAccountClick(acc)}
-                className={`flex items-center justify-between py-3.5 px-5 rounded-full border transition-all cursor-pointer ${
-                  isDark ? 'border-zinc-800 bg-[#16161a] hover:bg-zinc-800/50' : 'border-gray-200 bg-[#f9fafb] hover:bg-gray-100'
+                key={acc.userId}
+                onClick={() => viewMode === 'list' && handleSelectAccount(acc)}
+                className={`w-full p-3.5 rounded-2xl border flex items-center justify-between transition-all ${
+                  isCurrent
+                    ? 'bg-zinc-50 border-zinc-300 shadow-2xs'
+                    : 'bg-white border-zinc-100 hover:bg-zinc-50/80 cursor-pointer shadow-xs'
                 }`}
               >
                 <div className="flex items-center gap-3.5 min-w-0">
-                  {acc.profilePicture ? (
-                    <img src={acc.profilePicture} alt={displayHandle} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-                  ) : (
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0 ${
-                      isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-gray-200 text-gray-700'
-                    }`}>
-                      {getInitials(acc)}
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-900 flex items-center justify-center text-white font-bold text-base shrink-0 shadow-xs">
+                    {acc.profilePicture ? (
+                      <img src={acc.profilePicture} alt={acc.displayName} className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{(acc.displayName || acc.username || 'U').charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[15px] font-bold text-zinc-900 truncate">
+                        {acc.displayName || acc.username}
+                      </span>
+                      {isCurrent && (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                          Active
+                        </span>
+                      )}
                     </div>
-                  )}
-                  <div className="min-w-0 text-left">
-                    <span className="text-sm font-bold truncate block">{displayHandle}</span>
+                    <span className="text-[12px] text-zinc-500 truncate font-normal">
+                      {acc.email}
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0 pl-2">
-                  {isSwitchingThis ? (
-                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                  ) : viewMode === 'remove' ? (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleRemoveAccount(acc.userId); }}
-                      className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
-                      title="Remove account from device"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  ) : viewMode === 'removeSaved' && isSaved ? (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleRemoveSavedLogin(acc.userId); }}
-                      className="p-1.5 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors"
-                      title="Remove saved login info"
-                    >
-                      <Key className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <ChevronRight className={`w-4 h-4 ${isDark ? 'text-zinc-600' : 'text-gray-400'}`} />
-                  )}
-                </div>
+                {/* Right Action */}
+                {viewMode === 'remove' ? (
+                  <button
+                    onClick={(e) => handleRemoveAccount(acc.userId, e)}
+                    className="w-9 h-9 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition-all cursor-pointer"
+                    title="Remove Account"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <div className="text-zinc-400">
+                    <ArrowRight className="w-4 h-4" />
+                  </div>
+                )}
               </div>
             );
           })}
-        </div>
 
-        {/* Bottom Action Buttons: Log Into Another Account */}
-        <div className="flex flex-col gap-3.5 pt-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Button
-            onClick={() => { setShowLoginSheet(true); setShowSignupSheet(false); }}
-            className="w-full bg-[#1c1c1e] hover:bg-zinc-800 text-white border border-zinc-800 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-md"
+          {/* Add Another Account Button */}
+          <button
+            onClick={() => {
+              triggerHaptic('light');
+              setEmail('');
+              setPassword('');
+              setUsername('');
+              setAuthError('');
+              setShowAddAccountModal(true);
+            }}
+            className="w-full h-14 rounded-full border-2 border-dashed border-zinc-200 hover:border-zinc-400 text-zinc-700 font-bold text-[14px] flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.99] mt-2"
           >
-            Log Into Existing Account
-          </Button>
-
-          <Button
-            onClick={() => { setShowSignupSheet(true); setShowLoginSheet(false); }}
-            className="w-full bg-white hover:bg-zinc-100 text-[#121214] border border-gray-200 h-12 rounded-full font-bold text-xs transition-all duration-200 shadow-sm"
-          >
-            Create a New Account
-          </Button>
+            <UserPlus className="w-4 h-4" />
+            <span>Add Another Account</span>
+          </button>
         </div>
       </div>
 
-      {/* Password Prompt Modal for Non-Saved Credentials */}
+      {/* ── MODAL A: PASSWORD PROMPT FOR SWITCHING ACCOUNT ── */}
       {selectedAccount && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#18181b] border border-zinc-800 rounded-3xl p-6 w-full max-w-sm text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold mb-1">Enter Password</h3>
-            <p className="text-xs text-zinc-400 mb-4">
-              Enter password for <span className="text-white font-semibold">{selectedAccount.email}</span>
-            </p>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center p-0 md:p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-[440px] bg-white rounded-t-[32px] md:rounded-[32px] p-6 flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-6">
+            <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-2 mb-1 shrink-0" />
+            
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-900 flex items-center justify-center text-white font-bold text-base shrink-0">
+                {selectedAccount.profilePicture ? (
+                  <img src={selectedAccount.profilePicture} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{(selectedAccount.displayName || 'U').charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <h3 className="text-[16px] font-bold text-zinc-900 truncate">
+                  Sign in to {selectedAccount.displayName || selectedAccount.username}
+                </h3>
+                <span className="text-[12px] text-zinc-500 truncate">{selectedAccount.email}</span>
+              </div>
+            </div>
 
-            <form onSubmit={handlePasswordLogin} className="space-y-4">
-              <div className="relative">
-                <Input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="bg-[#27272a] border-zinc-700 text-white placeholder:text-zinc-500 pr-10 h-11 rounded-xl text-sm"
-                  autoFocus
+            {promptError && (
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-[12.5px] font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{promptError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handlePasswordPromptSubmit} className="flex flex-col gap-3.5 mt-1">
+              <div className="w-full h-14 bg-zinc-50 border border-zinc-200 rounded-full px-5 flex items-center gap-3 focus-within:bg-white focus-within:border-zinc-900 transition-all">
+                <Lock className="w-5 h-5 text-zinc-400 shrink-0" />
+                <input
+                  type={showPasswordPrompt ? 'text' : 'password'}
+                  value={passwordPrompt}
+                  onChange={(e) => setPasswordPrompt(e.target.value)}
+                  placeholder="Enter account password"
                   required
+                  autoFocus
+                  className="w-full bg-transparent text-[14.5px] text-zinc-900 placeholder:text-zinc-400 font-normal outline-none"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                  onClick={() => setShowPasswordPrompt(!showPasswordPrompt)}
+                  className="text-zinc-400 hover:text-zinc-600 p-1 outline-none"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPasswordPrompt ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
 
-              <div className="text-right">
+              <div className="flex items-center gap-3 mt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setResetEmail(selectedAccount.email);
-                    setSelectedAccount(null);
-                    setPassword('');
-                    setShowLoginSheet(true);
-                    setLoginStep('forgot-password');
-                    setResetError('');
-                  }}
-                  className="text-xs text-zinc-400 hover:text-white transition-colors"
-                >
-                  Forgot password?
-                </button>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setSelectedAccount(null);
-                    setPassword('');
-                  }}
-                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 h-10 rounded-full font-semibold text-xs"
+                  onClick={() => setSelectedAccount(null)}
+                  className="flex-1 h-13 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold text-[14px] transition-all cursor-pointer"
                 >
                   Cancel
-                </Button>
-                <Button
+                </button>
+                <button
                   type="submit"
-                  disabled={loading}
-                  className="flex-1 bg-white hover:bg-zinc-200 text-black h-10 rounded-full font-bold text-xs"
+                  disabled={promptLoading}
+                  className="flex-1 h-13 rounded-full bg-[#141111] hover:bg-black text-white font-bold text-[14px] shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {loading ? 'Signing in...' : 'Sign In'}
-                </Button>
+                  {promptLoading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <span>Sign In</span>
+                  )}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Log Into Another Account - Bottom Sheet (Sliding up from bottom) */}
-      <div 
-        className={`fixed inset-0 z-[500] transition-all duration-500 ${showLoginSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-      >
-        <div 
-          className="absolute inset-0 bg-black/60 backdrop-blur-md" 
-          onClick={() => { setShowLoginSheet(false); resetLoginSheet(); }}
-        />
-        <div 
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-40 bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.35)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 cubic-bezier(0.25,1,0.5,1) ${showLoginSheet ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'}`}
-        >
-          {/* Top handle bar */}
-          <div className="w-12 h-1 bg-[#27272a] rounded-full mx-auto mb-6" />
+      {/* ── MODAL B: ADD ACCOUNT (SIGN IN / SIGN UP) ── */}
+      {showAddAccountModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center p-0 md:p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-[440px] bg-white rounded-t-[32px] md:rounded-[32px] p-6 flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-6 max-h-[90vh] overflow-y-auto no-scrollbar">
+            <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-2 mb-1 shrink-0" />
 
-          {/* Content */}
-          <div className="relative h-full flex flex-col space-y-6">
-            {/* STEP 1: LOGIN FORM */}
-            {loginStep === 'login' && (
-              <>
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => { setShowLoginSheet(false); resetLoginSheet(); }}
-                    className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-                    title="Back"
-                  >
-                    <ArrowLeft className="w-4 h-4 text-white" />
-                  </button>
-                </div>
+            {/* Segmented Pill Tabs */}
+            <div className="w-full bg-zinc-100 p-1 rounded-full flex items-center">
+              <button
+                type="button"
+                onClick={() => { setAuthTab('signIn'); setAuthError(''); }}
+                className={`flex-1 py-2 rounded-full text-[13px] font-bold transition-all cursor-pointer ${
+                  authTab === 'signIn' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAuthTab('signUp'); setAuthError(''); }}
+                className={`flex-1 py-2 rounded-full text-[13px] font-bold transition-all cursor-pointer ${
+                  authTab === 'signUp' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500'
+                }`}
+              >
+                Create Account
+              </button>
+            </div>
 
-                <div className="text-center space-y-2">
-                  <h1 className="text-2xl font-semibold text-white">Welcome Back</h1>
-                  <p className="text-white/70">Sign in to your account</p>
-                </div>
-
-                {loginError && (
-                  <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-center font-semibold">
-                    {loginError}
-                  </div>
-                )}
-
-                <form onSubmit={handleManualLoginSubmit} className="space-y-4">
-                  <div className="space-y-2 text-left">
-                    <label htmlFor="login-email" className="text-white/90 text-sm font-medium block">
-                      Email
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                      <Input
-                        id="login-email"
-                        type="email"
-                        value={loginEmail}
-                        onChange={(e) => setLoginEmail(e.target.value)}
-                        className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                        placeholder="Enter your email"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 text-left">
-                    <label htmlFor="login-password" className="text-white/90 text-sm font-medium block">
-                      Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                      <Input
-                        id="login-password"
-                        type={showPassword ? 'text' : 'password'}
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        className="pl-10 pr-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                        placeholder="Enter your password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setResetEmail(loginEmail);
-                        setResetError('');
-                        setLoginStep('forgot-password');
-                      }}
-                      className="text-white/70 hover:text-white text-xs transition-colors font-medium"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={loginLoading}
-                    className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4"
-                  >
-                    {loginLoading ? 'Signing in...' : 'Sign In'}
-                  </Button>
-                </form>
-              </>
-            )}
-
-            {/* STEP 2: FORGOT PASSWORD FORM */}
-            {loginStep === 'forgot-password' && (
-              <>
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => { setLoginStep('login'); setResetError(''); }}
-                    className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-                    title="Back to Sign In"
-                  >
-                    <ArrowLeft className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-
-                <div className="text-center space-y-2">
-                  <h1 className="text-2xl font-semibold text-white">Reset Password</h1>
-                  <p className="text-white/70 text-sm">Enter your email to receive a reset code</p>
-                </div>
-
-                {resetError && (
-                  <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-center font-semibold">
-                    {resetError}
-                  </div>
-                )}
-
-                <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
-                  <div className="space-y-2 text-left">
-                    <label htmlFor="acc-reset-email" className="text-white/90 text-sm font-medium block">
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                      <Input
-                        id="acc-reset-email"
-                        type="email"
-                        value={resetEmail}
-                        onChange={(e) => { setResetEmail(e.target.value); setResetError(''); }}
-                        className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                        placeholder="Enter your email"
-                        required
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={resetLoading || !resetEmail.trim()}
-                    className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4 disabled:opacity-50"
-                  >
-                    {resetLoading ? 'Sending code...' : 'Send Reset Code'}
-                  </Button>
-                </form>
-              </>
-            )}
-
-            {/* STEP 3: RESET OTP & NEW PASSWORD */}
-            {loginStep === 'reset-otp' && (
-              <>
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => { setLoginStep('forgot-password'); setResetError(''); }}
-                    className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-                    title="Back"
-                  >
-                    <ArrowLeft className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-
-                <div className="text-center space-y-2">
-                  <div className="w-12 h-12 bg-white/10 border border-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <Shield className="w-6 h-6 text-white" />
-                  </div>
-                  <h1 className="text-2xl font-semibold text-white">Check your email</h1>
-                  <p className="text-white/60 text-xs">We sent a 6-digit code to</p>
-                  <p className="text-white font-medium text-xs">{resetEmail}</p>
-                </div>
-
-                {resetError && (
-                  <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-center font-semibold">
-                    {resetError}
-                  </div>
-                )}
-
-                <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
-                  {/* OTP inputs */}
-                  <div className="flex justify-center space-x-2 my-2">
-                    {resetOtp.map((digit, index) => (
-                      <input
-                        key={index}
-                        id={`acc-reset-otp-${index}`}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleResetOtpChange(index, e.target.value)}
-                        onKeyDown={(e) => handleResetOtpKeyDown(index, e)}
-                        className="w-10 h-12 text-center text-lg font-bold bg-[#1c1c1e] border border-zinc-800 text-white rounded-xl focus:outline-none focus:border-white/50 transition-colors"
-                        autoFocus={index === 0}
-                      />
-                    ))}
-                  </div>
-
-                  {/* New password */}
-                  <div className="space-y-2 text-left">
-                    <label htmlFor="acc-reset-new-pw" className="text-white/90 text-sm font-medium block">
-                      New Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                      <Input
-                        id="acc-reset-new-pw"
-                        type={resetShowPw ? 'text' : 'password'}
-                        value={resetNewPw}
-                        onChange={(e) => { setResetNewPw(e.target.value); setResetError(''); }}
-                        className="pl-10 pr-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                        placeholder="Enter new password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setResetShowPw(!resetShowPw)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
-                      >
-                        {resetShowPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Confirm new password */}
-                  <div className="space-y-2 text-left">
-                    <label htmlFor="acc-reset-confirm-pw" className="text-white/90 text-sm font-medium block">
-                      Confirm New Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                      <Input
-                        id="acc-reset-confirm-pw"
-                        type={resetShowConfirm ? 'text' : 'password'}
-                        value={resetConfirmPw}
-                        onChange={(e) => { setResetConfirmPw(e.target.value); setResetError(''); }}
-                        className="pl-10 pr-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                        placeholder="Confirm new password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setResetShowConfirm(!resetShowConfirm)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
-                      >
-                        {resetShowConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    {resetConfirmPw && resetNewPw !== resetConfirmPw && (
-                      <p className="text-xs text-red-400">Passwords do not match</p>
-                    )}
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={resetLoading || resetOtp.join('').length < 6 || !resetNewPw || resetNewPw !== resetConfirmPw}
-                    className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4 disabled:opacity-50"
-                  >
-                    {resetLoading ? 'Resetting...' : 'Reset Password'}
-                  </Button>
-                </form>
-              </>
-            )}
-
-            {/* STEP 4: SUCCESS */}
-            {loginStep === 'success' && (
-              <div className="flex flex-col justify-center items-center space-y-6 text-center py-6">
-                <div className="w-16 h-16 bg-[#1c1c1e] border border-white/10 rounded-full flex items-center justify-center">
-                  <Check className="w-8 h-8 text-white" />
-                </div>
-                <div className="space-y-2">
-                  <h1 className="text-2xl font-semibold text-white">Success!</h1>
-                  <p className="text-white/70 text-sm">
-                    Your password has been successfully reset.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => {
-                    setLoginEmail(resetEmail);
-                    setLoginStep('login');
-                  }}
-                  className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4"
-                >
-                  Continue to Login
-                </Button>
+            {authError && (
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-[12.5px] font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{authError}</span>
               </div>
             )}
+
+            <form onSubmit={handleAuthSubmit} className="flex flex-col gap-3.5">
+              {authTab === 'signUp' && (
+                <div className="w-full h-14 bg-zinc-50 border border-zinc-200 rounded-full px-5 flex items-center gap-3 focus-within:bg-white focus-within:border-zinc-900 transition-all">
+                  <User className="w-5 h-5 text-zinc-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Username"
+                    required
+                    className="w-full bg-transparent text-[14.5px] text-zinc-900 placeholder:text-zinc-400 font-normal outline-none"
+                  />
+                </div>
+              )}
+
+              <div className="w-full h-14 bg-zinc-50 border border-zinc-200 rounded-full px-5 flex items-center gap-3 focus-within:bg-white focus-within:border-zinc-900 transition-all">
+                <Mail className="w-5 h-5 text-zinc-400 shrink-0" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email address"
+                  required
+                  className="w-full bg-transparent text-[14.5px] text-zinc-900 placeholder:text-zinc-400 font-normal outline-none"
+                />
+              </div>
+
+              <div className="w-full h-14 bg-zinc-50 border border-zinc-200 rounded-full px-5 flex items-center gap-3 focus-within:bg-white focus-within:border-zinc-900 transition-all">
+                <Lock className="w-5 h-5 text-zinc-400 shrink-0" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  required
+                  className="w-full bg-transparent text-[14.5px] text-zinc-900 placeholder:text-zinc-400 font-normal outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-zinc-400 hover:text-zinc-600 p-1 outline-none"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddAccountModal(false)}
+                  className="flex-1 h-13 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold text-[14px] transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="flex-1 h-13 rounded-full bg-[#141111] hover:bg-black text-white font-bold text-[14px] shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {authLoading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <span>{authTab === 'signIn' ? 'Sign In' : 'Sign Up'}</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Create New Account - Bottom Sheet (Sliding up from bottom) */}
-      <div 
-        className={`fixed inset-0 z-[10000] transition-all duration-500 ${showSignupSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-      >
-        <div 
-          className="absolute inset-0 bg-black/60 backdrop-blur-md" 
-          onClick={() => { setShowSignupSheet(false); resetSignupSheet(); }}
-        />
-        <div 
-          className={`fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-[10001] bg-[#121214] border-t border-[#1e1e21] rounded-t-[2.5rem] p-8 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.35)] max-h-[90vh] overflow-y-auto no-scrollbar transform transition-all duration-500 ${showSignupSheet ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'}`}
-        >
-          {/* Top handle bar */}
-          <div className="w-12 h-1 bg-[#27272a] rounded-full mx-auto mb-6" />
-
-          {/* ── STEP: Form ── */}
-          {signupStep === 'form' && (
-            <div className="flex flex-col space-y-6">
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => { setShowSignupSheet(false); resetSignupSheet(); }}
-                  className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-                  title="Back"
-                >
-                  <ArrowLeft className="w-4 h-4 text-white" />
-                </button>
-              </div>
-
-              <div className="text-center space-y-2">
-                <h1 className="text-2xl font-semibold text-white">Create Account</h1>
-                <p className="text-white/70">Join us today</p>
-              </div>
-
-              {signupError && (
-                <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-center font-semibold">
-                  {signupError}
-                </div>
-              )}
-
-              <form onSubmit={handleSignupSubmit} className="space-y-4">
-                <div className="space-y-2 text-left">
-                  <label htmlFor="ac-signup-name" className="text-white/90 text-sm font-medium block">Username</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                    <Input
-                      id="ac-signup-name"
-                      type="text"
-                      value={signupName}
-                      onChange={(e) => setSignupName(e.target.value)}
-                      className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                      placeholder="Username"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-left">
-                  <label htmlFor="ac-signup-email" className="text-white/90 text-sm font-medium block">Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                    <Input
-                      id="ac-signup-email"
-                      type="email"
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                      className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                      placeholder="Enter your email"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-left">
-                  <label htmlFor="ac-signup-phone" className="text-white/90 text-sm font-medium block">Phone Number</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                    <Input
-                      id="ac-signup-phone"
-                      type="tel"
-                      value={signupPhone}
-                      onChange={(e) => setSignupPhone(e.target.value)}
-                      className="pl-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                      placeholder="Enter your phone number (+92...)"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-left">
-                  <label htmlFor="ac-signup-password" className="text-white/90 text-sm font-medium block">Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
-                    <Input
-                      id="ac-signup-password"
-                      type={signupShowPassword ? 'text' : 'password'}
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      className="pl-10 pr-10 bg-[#1c1c1e] border-zinc-800 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 h-11 rounded-xl text-sm"
-                      placeholder="Create a password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setSignupShowPassword(!signupShowPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
-                    >
-                      {signupShowPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={signupLoading}
-                  className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md mt-4"
-                >
-                  {signupLoading ? 'Sending verification...' : 'Create Account'}
-                </Button>
-              </form>
-            </div>
-          )}
-
-          {/* ── STEP: OTP Verification ── */}
-          {signupStep === 'otp' && (
-            <div className="flex flex-col space-y-6">
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setSignupStep('form')}
-                  className="w-9 h-9 rounded-full flex items-center justify-center bg-[#1c1c1e] hover:bg-zinc-800 border border-[#1e1e21] text-white transition-colors"
-                  title="Back"
-                >
-                  <ArrowLeft className="w-4 h-4 text-white" />
-                </button>
-              </div>
-
-              <div className="text-center space-y-2">
-                <div className="w-14 h-14 bg-white/10 border border-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Shield className="w-7 h-7 text-white" />
-                </div>
-                <h1 className="text-2xl font-semibold text-white">Check your email</h1>
-                <p className="text-white/60 text-sm">We sent a 6-digit code to</p>
-                <p className="text-white font-semibold text-sm">{signupEmail}</p>
-              </div>
-
-              {otpError && (
-                <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-center font-semibold">
-                  {otpError}
-                </div>
-              )}
-
-              <form onSubmit={handleOtpVerify} className="space-y-6">
-                <div className="flex justify-center gap-2">
-                  {signupOtp.map((digit, i) => (
-                    <input
-                      key={i}
-                      id={`ac-otp-${i}`}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleOtpChange(i, e.target.value)}
-                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                      className="w-11 h-14 text-center text-xl font-bold bg-[#1c1c1e] border border-zinc-700 text-white rounded-2xl focus:outline-none focus:border-white/60 transition-colors"
-                      autoFocus={i === 0}
-                    />
-                  ))}
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={otpLoading || signupOtp.join('').length < 6}
-                  className="w-full bg-white hover:bg-zinc-200 text-black font-bold h-11 rounded-full text-sm transition-all duration-200 shadow-md"
-                >
-                  {otpLoading ? 'Verifying...' : 'Verify & Create Account'}
-                </Button>
-              </form>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
