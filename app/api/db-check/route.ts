@@ -10,7 +10,7 @@ export async function GET() {
 
     return NextResponse.json({
       status: "connected ✅",
-      database: "Neon PostgreSQL (neondb)",
+      database: "Supabase PostgreSQL (supabase)",
       tables: {
         users: userCount,
         accounts: accountCount,
