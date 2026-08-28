@@ -27,7 +27,6 @@ model User {
   accounts Account[]
   sessions Session[]
   messages Message[]
-  translationHistory TranslationHistory[]
 
   sentSocialMessages     SocialMessage[] @relation("SentMessages")
   receivedSocialMessages SocialMessage[] @relation("ReceivedMessages")
@@ -38,41 +37,19 @@ model User {
   callsMade     SocialCall[] @relation("CallsMade")
   callsReceived SocialCall[] @relation("CallsReceived")
 
-  // Social Connections
+  // Social Connections (Follow System)
   followers User[] @relation("UserFollows")
   following User[] @relation("UserFollows")
 
   sentFollowRequests     FollowRequest[] @relation("SentFollowRequests")
   receivedFollowRequests FollowRequest[] @relation("ReceivedFollowRequests")
 
-  // Posts
-  // Posts
+  // Media & Stories
   posts      Post[]
   likes      Like[]
   comments   Comment[]
   savedPosts SavedPost[]
   stories    Story[]
-
-  // Accounts Center Relations
-  profileSync     ProfileSyncSetting?
-  securitySetting SecuritySetting?
-  activeSessions  ActiveSession[]
-  searchHistories SearchHistory[]
-  offPlatformLogs OffPlatformActivity[]
-  dataExports     DataExportJob[]
-  adPreference    AdPreference?
-  paymentTokens   PaymentVaultToken[]
-  vaultAddresses  VaultAddress[]
-}
-
-model TranslationHistory {
-  id        String   @id @default(cuid())
-  userId    String
-  text      String   @db.Text
-  language  String   @default("en")
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model SocialMessage {
@@ -268,122 +245,4 @@ model Story {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-}
-
-// ==========================================
-// ACCOUNTS CENTER FEDERATED MODULES
-// ==========================================
-
-model ProfileSyncSetting {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  syncPolicy   String   @default("FULL_SYNC") // "FULL_SYNC", "AVATAR_ONLY", "MANUAL"
-  syncName     Boolean  @default(true)
-  syncBio      Boolean  @default(true)
-  syncAvatar   Boolean  @default(true)
-  lastSyncedAt DateTime @default(now())
-}
-
-model CrossPostConfig {
-  id              String   @id @default(cuid())
-  userId          String
-  targetPlatform  String   // "INSTAGRAM", "FACEBOOK", "THREADS"
-  autoPostStories Boolean  @default(false)
-  autoPostFeed    Boolean  @default(false)
-  autoPostReels   Boolean  @default(false)
-
-  @@unique([userId, targetPlatform])
-}
-
-model SecuritySetting {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isTwoFactorEnabled Boolean  @default(false)
-  totpSecret         String?
-  backupCodes        String[] @default([])
-  loginAlertsEmail   Boolean  @default(true)
-  loginAlertsPush    Boolean  @default(true)
-}
-
-model ActiveSession {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessionToken    String   @unique
-  deviceName      String   @default("Mobile App")
-  deviceOs        String   @default("iOS / Android")
-  ipAddress       String   @default("127.0.0.1")
-  locationCity    String   @default("San Francisco")
-  locationCountry String   @default("United States")
-  lastActiveAt    DateTime @default(now())
-  isCurrent       Boolean  @default(false)
-}
-
-model SearchHistory {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  platform       String   @default("INSTAGRAM")
-  query          String
-  targetEntityId String?
-  searchedAt     DateTime @default(now())
-}
-
-model OffPlatformActivity {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  partnerName    String
-  appOrDomain    String
-  eventType      String
-  eventTimestamp DateTime @default(now())
-  isCleared      Boolean  @default(false)
-}
-
-model DataExportJob {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  exportFormat String   @default("JSON")
-  status       String   @default("PENDING") // "PENDING", "PROCESSING", "COMPLETED"
-  downloadUrl  String?
-  requestedAt  DateTime @default(now())
-}
-
-model AdPreference {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sensitiveTopicsHidden String[] @default(["Gambling", "Politics"])
-  usePartnerData        Boolean  @default(true)
-  personalizedAds       Boolean  @default(true)
-}
-
-model PaymentVaultToken {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider       String   @default("STRIPE")
-  vaultedTokenId String
-  cardLast4      String
-  cardBrand      String
-  expiryMonth    Int
-  expiryYear     Int
-  isDefault      Boolean  @default(false)
-  createdAt      DateTime @default(now())
-}
-
-model VaultAddress {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipientName String
-  streetAddress String
-  city          String
-  state         String
-  postalCode    String
-  country       String   @default("United States")
-  isDefault     Boolean  @default(false)
 }
