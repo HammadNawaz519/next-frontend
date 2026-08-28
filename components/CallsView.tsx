@@ -40,6 +40,7 @@ interface CallsViewProps {
   onNavigate?: (view: 'chat' | 'calls') => void;
   onOpenProfile?: () => void;
   onStartCall?: (user: any, type: 'audio' | 'video') => void;
+  onSearchActiveChange?: (isSearching: boolean) => void;
 }
 
 const PASTEL_AVATAR_BGS = ['#FFF3CD', '#E0F2FE', '#FCE7F3', '#FEF9C3', '#EDE9FE', '#DCFCE7'];
@@ -70,27 +71,26 @@ const SEED_CALLS: CallRecord[] = [
   },
   {
     id: 'seed-2',
-    callerId: 'me',
-    receiverId: 'u3',
+    callerId: 'u3',
+    receiverId: 'me',
     type: 'video',
-    status: 'sent',
-    duration: 724, // 12m 04s
-    createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(), // 3 hours ago
-    contactName: 'Sarah Jenkins',
-    contactUsername: 'sarah_j',
-    partnerUser: { id: 'u3', name: 'Sarah Jenkins', username: 'sarah_j' }
+    status: 'missed',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2.5).toISOString(), // 2.5 hrs ago
+    contactName: 'Aleeza Khan',
+    contactUsername: 'aleeza_k',
+    partnerUser: { id: 'u3', name: 'Aleeza Khan', username: 'aleeza_k' }
   },
   {
     id: 'seed-3',
-    callerId: 'u4',
-    receiverId: 'me',
+    callerId: 'me',
+    receiverId: 'u4',
     type: 'audio',
-    status: 'missed',
-    duration: 0,
-    createdAt: new Date(Date.now() - 1000 * 60 * 360).toISOString(), // 6 hours ago
-    contactName: 'Alex Rivera',
-    contactUsername: 'arivera',
-    partnerUser: { id: 'u4', name: 'Alex Rivera', username: 'arivera' }
+    status: 'sent',
+    duration: 890, // 14m 50s
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(), // 18 hrs ago
+    contactName: 'Bilal Farooq',
+    contactUsername: 'bilal_f',
+    partnerUser: { id: 'u4', name: 'Bilal Farooq', username: 'bilal_f' }
   },
   {
     id: 'seed-4',
@@ -98,35 +98,22 @@ const SEED_CALLS: CallRecord[] = [
     receiverId: 'me',
     type: 'video',
     status: 'received',
-    duration: 515, // 8m 35s
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // Yesterday
-    contactName: 'Elena Rostova',
-    contactUsername: 'elena_r',
-    partnerUser: { id: 'u5', name: 'Elena Rostova', username: 'elena_r' }
+    duration: 1450, // 24m 10s
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(), // Yesterday
+    contactName: 'Sara Daniyal',
+    contactUsername: 'sara_d',
+    partnerUser: { id: 'u5', name: 'Sara Daniyal', username: 'sara_d' }
   },
   {
     id: 'seed-5',
-    callerId: 'me',
-    receiverId: 'u6',
-    type: 'audio',
-    status: 'sent',
-    duration: 185, // 3m 05s
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(),
-    contactName: 'David Chen',
-    contactUsername: 'david_c',
-    partnerUser: { id: 'u6', name: 'David Chen', username: 'david_c' }
-  },
-  {
-    id: 'seed-6',
-    callerId: 'u7',
+    callerId: 'u6',
     receiverId: 'me',
     type: 'audio',
     status: 'missed',
-    duration: 0,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 50).toISOString(),
-    contactName: 'Jessica Taylor',
-    contactUsername: 'jess_t',
-    partnerUser: { id: 'u7', name: 'Jessica Taylor', username: 'jess_t' }
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(), // 3 days ago
+    contactName: 'Hamza Sheikh',
+    contactUsername: 'hamza_s',
+    partnerUser: { id: 'u6', name: 'Hamza Sheikh', username: 'hamza_s' }
   }
 ];
 
@@ -135,7 +122,8 @@ export default function CallsView({
   onOpenChat,
   onNavigate,
   onOpenProfile,
-  onStartCall
+  onStartCall,
+  onSearchActiveChange
 }: CallsViewProps) {
   const [calls, setCalls] = useState<CallRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -143,89 +131,119 @@ export default function CallsView({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  // Fetch real call history from server action, fallback to seed
+  // Synchronize search state with parent for bottom bar hiding
+  const handleOpenSearch = () => {
+    triggerHaptic('light');
+    setIsSearchOpen(true);
+    onSearchActiveChange?.(true);
+  };
+
+  const handleCloseSearch = () => {
+    triggerHaptic('light');
+    setSearchQuery('');
+    setIsSearchOpen(false);
+    onSearchActiveChange?.(false);
+  };
+
+  // Load call history
   useEffect(() => {
-    let mounted = true;
-    (async () => {
+    let isMounted = true;
+    async function loadData() {
       try {
-        const data = await getCallHistory();
-        if (!mounted) return;
-        if (Array.isArray(data) && data.length > 0) {
-          const mapped: CallRecord[] = data.map((item: any) => {
-            const isMe = currentUserId ? item.callerId === currentUserId : false;
-            let status: 'received' | 'sent' | 'missed' = 'received';
-            if (item.status === 'missed' || item.status === 'rejected') {
-              status = 'missed';
-            } else if (isMe) {
-              status = 'sent';
-            } else {
-              status = 'received';
-            }
-
-            const partner = isMe ? item.receiver : item.caller;
-            const partnerUser = isMe
-              ? { id: item.receiverId, name: item.receiver?.name, image: item.receiver?.image }
-              : { id: item.callerId, name: item.caller?.name, image: item.caller?.image };
-
-            return {
-              id: item.id,
-              callerId: item.callerId,
-              receiverId: item.receiverId,
-              type: item.type || 'audio',
-              status,
-              duration: item.duration || 0,
-              createdAt: item.createdAt,
-              contactName: partner?.name || 'User',
-              contactImage: partner?.image,
-              partnerUser
-            };
-          });
-          setCalls(mapped);
-        } else {
-          setCalls(SEED_CALLS);
+        setLoading(true);
+        // Load local custom calls
+        let localCalls: CallRecord[] = [];
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem('connect_call_history');
+          if (stored) {
+            try {
+              localCalls = JSON.parse(stored);
+            } catch (e) {}
+          }
         }
-      } catch (err) {
-        console.error('Failed to load call history:', err);
-        setCalls(SEED_CALLS);
+
+        // Fetch DB calls if available
+        let dbCalls: CallRecord[] = [];
+        try {
+          const fetched = await getCallHistory();
+          if (Array.isArray(fetched)) {
+            dbCalls = fetched.map((item: any) => {
+              const isCaller = String(item.callerId) === String(currentUserId);
+              const partner = isCaller ? item.receiver : item.caller;
+              let status: 'received' | 'sent' | 'missed' = 'received';
+              if (item.status === 'MISSED') {
+                status = 'missed';
+              } else if (isCaller) {
+                status = 'sent';
+              } else {
+                status = 'received';
+              }
+
+              return {
+                id: item.id,
+                callerId: item.callerId,
+                receiverId: item.receiverId,
+                type: item.type === 'VIDEO' ? 'video' : 'audio',
+                status,
+                duration: item.duration || 0,
+                createdAt: item.createdAt,
+                contactName: partner?.name || 'User',
+                contactImage: partner?.image || '',
+                contactUsername: partner?.username || '',
+                partnerUser: partner
+              };
+            });
+          }
+        } catch (err) {
+          console.warn('DB call history fetch error, using local fallback:', err);
+        }
+
+        if (!isMounted) return;
+
+        // Combine DB, local, and seeds
+        const map = new Map<string, CallRecord>();
+        [...localCalls, ...dbCalls].forEach((c) => {
+          if (c && c.id) map.set(c.id, c);
+        });
+
+        if (map.size === 0) {
+          SEED_CALLS.forEach((c) => map.set(c.id, c));
+        }
+
+        const merged = Array.from(map.values()).sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setCalls(merged);
+      } catch (e) {
+        console.error('Call log load failed:', e);
+        if (isMounted) setCalls(SEED_CALLS);
       } finally {
-        if (mounted) setLoading(false);
+        if (isMounted) setLoading(false);
       }
-    })();
+    }
+
+    loadData();
     return () => {
-      mounted = false;
+      isMounted = false;
     };
   }, [currentUserId]);
 
-  // Metric counts
-  const metrics = useMemo(() => {
-    let received = 0;
-    let sent = 0;
-    let missed = 0;
-    calls.forEach((c) => {
-      if (c.status === 'received') received++;
-      else if (c.status === 'sent') sent++;
-      else if (c.status === 'missed') missed++;
-    });
-    return { received, sent, missed };
-  }, [calls]);
-
-  // Filtered calls
+  // Filtered calls based on activeTab and searchQuery
   const filteredCalls = useMemo(() => {
     return calls.filter((c) => {
-      // Tab filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesName = c.contactName?.toLowerCase().includes(q);
+        const matchesUser = c.contactUsername?.toLowerCase().includes(q);
+        if (!matchesName && !matchesUser) return false;
+      }
+
       if (activeTab === 'Received' && c.status !== 'received') return false;
       if (activeTab === 'Sent' && c.status !== 'sent') return false;
       if (activeTab === 'Missed' && c.status !== 'missed') return false;
 
-      // Search filter
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        return (
-          c.contactName.toLowerCase().includes(q) ||
-          (c.contactUsername || '').toLowerCase().includes(q)
-        );
-      }
       return true;
     });
   }, [calls, activeTab, searchQuery]);
@@ -235,57 +253,61 @@ export default function CallsView({
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     if (mins > 0) {
-      return `${mins}m ${secs.toString().padStart(2, '0')}s`;
+      return `${mins}m ${secs}s`;
     }
     return `${secs}s`;
   };
 
-  const formatExactDuration = (seconds?: number) => {
-    if (!seconds || seconds <= 0) return '0 seconds';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    if (mins > 0) {
-      return `${mins} minute${mins > 1 ? 's' : ''} ${secs} second${secs !== 1 ? 's' : ''}`;
-    }
-    return `${secs} second${secs !== 1 ? 's' : ''}`;
-  };
-
-  const formatTimeAgo = (dateInput: string | Date) => {
-    const date = new Date(dateInput);
+  const formatCallDate = (dateVal: string | Date) => {
+    const d = new Date(dateVal);
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const isToday =
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear();
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (isToday) return `Today, ${timeStr}`;
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday =
+      d.getDate() === yesterday.getDate() &&
+      d.getMonth() === yesterday.getMonth() &&
+      d.getFullYear() === yesterday.getFullYear();
+
+    if (isYesterday) return `Yesterday, ${timeStr}`;
+
+    return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${timeStr}`;
   };
 
-  const formatExactDateTime = (dateInput: string | Date) => {
-    const date = new Date(dateInput);
-    return date.toLocaleString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
+  const getStatusIcon = (status: 'received' | 'sent' | 'missed') => {
+    switch (status) {
+      case 'received':
+        return <PhoneIncoming className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.4} />;
+      case 'sent':
+        return <PhoneOutgoing className="w-3.5 h-3.5 text-[#9D4EDD]" strokeWidth={2.4} />;
+      case 'missed':
+        return <PhoneMissed className="w-3.5 h-3.5 text-rose-500" strokeWidth={2.4} />;
+    }
   };
 
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const handleStartCall = (call: CallRecord, overrideType?: 'audio' | 'video') => {
+    triggerHaptic('medium');
+    const targetType = overrideType || call.type;
+    const userToCall = call.partnerUser || {
+      id: call.callerId === currentUserId ? call.receiverId : call.callerId,
+      name: call.contactName,
+      username: call.contactUsername,
+      image: call.contactImage
+    };
+
+    if (onStartCall) {
+      onStartCall(userToCall, targetType);
+    }
+  };
 
   const handleClearHistory = () => {
-    triggerHaptic('medium');
-    setShowClearConfirm(true);
-  };
-
-  const confirmClearAll = () => {
     triggerHaptic('heavy');
     setCalls([]);
     if (typeof window !== 'undefined') {
@@ -295,12 +317,10 @@ export default function CallsView({
   };
 
   return (
-    <div className="h-full w-full relative flex flex-col bg-[#141111] overflow-hidden font-sans select-none">
+    <div className="w-full h-full flex flex-col bg-[#141111] overflow-hidden select-none relative font-sans">
       
-      {/* ── 2. Dark Header & History Filters (Compact & High) ── */}
-      <div className={`w-full bg-[#141111] px-6 transition-all duration-300 ease-out select-none flex-shrink-0 ${
-        isSearchOpen ? 'max-h-0 opacity-0 pt-0 pb-0 overflow-hidden pointer-events-none' : 'pt-14 pb-3 max-h-[240px] opacity-100 flex flex-col gap-3'
-      }`}>
+      {/* ── 1. DARK HEADER (TITLES & SEGMENTED TABS) ── */}
+      <div className="w-full bg-[#141111] pt-14 pb-3 px-6 flex flex-col gap-3 shrink-0 select-none">
         
         {/* Top Bar */}
         <div className="flex justify-between items-center w-full">
@@ -313,20 +333,17 @@ export default function CallsView({
             </h1>
           </div>
 
-          {/* Frameless Search Icon */}
+          {/* Frameless Borderless Search Icon */}
           <button
-            onClick={() => {
-              triggerHaptic('light');
-              setIsSearchOpen(true);
-            }}
-            className="p-2 text-zinc-400 hover:text-white cursor-pointer active:scale-95 transition-all outline-none"
+            onClick={handleOpenSearch}
+            className="w-10 h-10 rounded-full text-white hover:text-zinc-300 hover:bg-white/5 active:scale-90 flex items-center justify-center transition-all cursor-pointer outline-none border-0"
             title="Search Calls"
           >
             <Search className="w-5 h-5 text-zinc-300 hover:text-white" strokeWidth={2.2} />
           </button>
         </div>
 
-        {/* Segmented Filter Tabs — Full round pills matching the whole app */}
+        {/* Segmented Filter Tabs */}
         <div className="w-full bg-zinc-900/80 p-1.5 rounded-full flex items-center border border-zinc-800/60 mt-0.5">
           {(['All', 'Received', 'Sent', 'Missed'] as const).map((tab) => {
             const isActive = activeTab === tab;
@@ -350,65 +367,26 @@ export default function CallsView({
         </div>
       </div>
 
-      {/* ── 3. Light Bottom Sheet (Call History List with Animated Upward Expansion) ── */}
-      <div className={`w-full flex-1 bg-white relative overflow-hidden min-h-0 shadow-[0_-12px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-out flex flex-col ${
-        isSearchOpen ? 'rounded-t-none sm:rounded-t-[32px] px-3.5 sm:px-6 pt-12 sm:pt-4 pb-12' : 'rounded-t-[32px] px-3.5 sm:px-6 pt-3 pb-28'
-      }`}>
+      {/* ── 2. LIGHT BOTTOM SHEET CONTAINER ── */}
+      <div className="w-full flex-1 bg-white rounded-t-[32px] px-3.5 sm:px-6 pt-3 pb-28 relative overflow-hidden min-h-0 shadow-[0_-12px_30px_rgba(0,0,0,0.15)] flex flex-col">
         
-        {/* Sheet Drag Handle (Hidden when searching) */}
-        {!isSearchOpen && (
-          <div className="w-10 h-1.5 bg-zinc-200 rounded-full mx-auto my-1 shrink-0" />
-        )}
-
-        {/* Animated Search Bar / Top Search Controls */}
-        {isSearchOpen && (
-          <div className="pt-1 pb-3 px-1 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  triggerHaptic('light');
-                  setSearchQuery('');
-                  setIsSearchOpen(false);
-                }}
-                className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center cursor-pointer active:scale-95 transition-all shrink-0 shadow-2xs"
-                title="Back to Call History"
-              >
-                <ChevronLeft className="w-5 h-5 text-zinc-800" strokeWidth={2.2} />
-              </button>
-              <div className="flex-1 flex items-center gap-2.5 px-4.5 py-2.5 rounded-full bg-zinc-100/90 border border-zinc-200/50 text-zinc-800 transition-all">
-                <Search className="w-[18px] h-[18px] text-zinc-400 flex-shrink-0" strokeWidth={2} />
-                <input 
-                  type="text" 
-                  autoFocus
-                  placeholder="Search calls, contacts..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-transparent text-[13.5px] text-zinc-900 placeholder:text-zinc-400 outline-none font-medium"
-                />
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="text-xs text-zinc-400 hover:text-zinc-600 cursor-pointer p-1">✕</button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Sheet Drag Handle */}
+        <div className="w-10 h-1.5 bg-zinc-200 rounded-full mx-auto my-1 shrink-0" />
 
         {/* Section Header */}
-        {!isSearchOpen && (
-          <div className="flex justify-between items-center mt-2.5 mb-2 px-1 shrink-0">
-            <h2 className="text-[18px] font-bold text-zinc-900 tracking-tight">
-              {activeTab === 'All' ? 'All Records' : `${activeTab} Calls`}
-            </h2>
-            {calls.length > 0 && (
-              <button
-                onClick={handleClearHistory}
-                className="text-[12px] font-semibold text-zinc-400 hover:text-red-500 cursor-pointer transition-colors"
-              >
-                Clear History
-              </button>
-            )}
-          </div>
-        )}
+        <div className="flex justify-between items-center mt-2.5 mb-2 px-1 shrink-0">
+          <h2 className="text-[18px] font-bold text-zinc-900 tracking-tight">
+            {activeTab === 'All' ? 'All Records' : `${activeTab} Calls`}
+          </h2>
+          {calls.length > 0 && (
+            <button
+              onClick={handleClearHistory}
+              className="text-[12px] font-semibold text-zinc-400 hover:text-red-500 cursor-pointer transition-colors"
+            >
+              Clear History
+            </button>
+          )}
+        </div>
 
         {/* Call Log Feed List */}
         <div className="flex flex-col gap-1 overflow-y-auto flex-1 no-scrollbar divide-y divide-zinc-100 pr-0.5">
@@ -434,37 +412,35 @@ export default function CallsView({
               </div>
               <p className="text-sm font-bold text-zinc-800">No call records found</p>
               <p className="text-xs text-zinc-500 mt-0.5">
-                {searchQuery
-                  ? `No calls matching "${searchQuery}"`
-                  : activeTab === 'All'
+                {activeTab === 'All'
                   ? 'Your incoming and outgoing call history will appear here.'
                   : `No ${activeTab.toLowerCase()} calls recorded.`}
               </p>
             </div>
           ) : (
             filteredCalls.map((call) => {
-              const avatarKey = call.partnerUser?.id || call.partnerUser?.username || call.callerId || call.contactName;
+              const avatarKey =
+                call.partnerUser?.id ||
+                call.partnerUser?.username ||
+                call.callerId ||
+                call.contactName;
               const avatarBg = getDeterministicAvatarBg(avatarKey);
 
               return (
                 <div
                   key={call.id}
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setSelectedCall(call);
-                  }}
-                  className="flex items-center justify-between py-3.5 px-2 hover:bg-zinc-50/90 rounded-2xl transition-all cursor-pointer group"
+                  onClick={() => setSelectedCall(call)}
+                  className="flex items-center justify-between py-3 px-1.5 rounded-2xl hover:bg-zinc-50 transition-colors cursor-pointer group"
                 >
-                  {/* Left Section (Avatar + Details) */}
-                  <div className="flex items-center min-w-0">
+                  <div className="flex items-center gap-3.5 min-w-0">
                     <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 overflow-hidden font-bold text-zinc-800 shadow-sm"
+                      className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm text-zinc-800 shrink-0 overflow-hidden shadow-xs"
                       style={{ backgroundColor: avatarBg }}
                     >
                       {call.contactImage ? (
                         <img
                           src={call.contactImage}
-                          alt=""
+                          alt={call.contactName}
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -472,42 +448,52 @@ export default function CallsView({
                       )}
                     </div>
 
-                    <div className="flex flex-col gap-1 ml-3.5 min-w-0">
-                      <span className="text-[15px] font-bold text-zinc-900 truncate leading-tight">
+                    <div className="flex flex-col min-w-0">
+                      <span
+                        className={`text-[15px] font-bold truncate ${
+                          call.status === 'missed' ? 'text-rose-600' : 'text-zinc-900'
+                        }`}
+                      >
                         {call.contactName}
                       </span>
-
-                      {/* Status Line: Plain text without small SVG icons */}
-                      <div className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-500">
-                        {call.status === 'missed' ? (
-                          <span className="text-zinc-500 font-medium">
-                            Missed {call.type === 'video' ? 'Video' : 'Voice'} Call
-                          </span>
-                        ) : call.status === 'received' ? (
-                          <span>
-                            Incoming {call.type === 'video' ? 'Video' : 'Voice'} Call • {formatDuration(call.duration)}
-                          </span>
-                        ) : (
-                          <span>
-                            Outgoing {call.type === 'video' ? 'Video' : 'Voice'} Call • {formatDuration(call.duration)}
-                          </span>
-                        )}
+                      <div className="flex items-center gap-1.5 mt-0.5 text-xs text-zinc-500">
+                        {getStatusIcon(call.status)}
+                        <span className="capitalize">{call.status}</span>
+                        <span>•</span>
+                        <span>{formatCallDate(call.createdAt)}</span>
+                        {call.duration && call.duration > 0 ? (
+                          <>
+                            <span>•</span>
+                            <span className="font-semibold text-zinc-600">
+                              {formatDuration(call.duration)}
+                            </span>
+                          </>
+                        ) : null}
                       </div>
                     </div>
                   </div>
 
-                  {/* Right Section (Timestamp & Simple Grey Media Icon with No Outline / Box) */}
-                  <div className="flex flex-col items-end gap-1.5 shrink-0 ml-2">
-                    <span className="text-[11px] font-medium text-zinc-400 text-right">
-                      {formatTimeAgo(call.createdAt)}
-                    </span>
-                    <div className="flex items-center justify-center p-0.5">
-                      {call.type === 'video' ? (
-                        <Video className="w-4 h-4 text-zinc-400" strokeWidth={1.8} />
-                      ) : (
-                        <Phone className="w-4 h-4 text-zinc-400" strokeWidth={1.8} />
-                      )}
-                    </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartCall(call, 'audio');
+                      }}
+                      className="w-9 h-9 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center cursor-pointer active:scale-90 transition-all outline-none"
+                      title="Audio Call"
+                    >
+                      <Phone className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartCall(call, 'video');
+                      }}
+                      className="w-9 h-9 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center cursor-pointer active:scale-90 transition-all outline-none"
+                      title="Video Call"
+                    >
+                      <Video className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               );
@@ -516,32 +502,151 @@ export default function CallsView({
         </div>
       </div>
 
-      {/* ── 4. Record Detail Drawer (On Row Click) ── */}
-      {selectedCall && (
-        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-3xl p-6 flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-300 shadow-2xl">
-            
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-zinc-900 overflow-hidden shadow-xs"
-                  style={{
-                    backgroundColor: getDeterministicAvatarBg(
-                      selectedCall.partnerUser?.id || selectedCall.partnerUser?.username || selectedCall.callerId || selectedCall.contactName
-                    )
-                  }}
+      {/* ── 3. FULL-SCREEN CALL SEARCH OVERLAY (MATCHING CHAT DETAILS SEARCH UI) ── */}
+      {isSearchOpen && (
+        <div className="absolute inset-0 z-50 flex flex-col bg-[#141111] animate-in fade-in duration-200 overflow-hidden select-none">
+          {/* Top Dark Header */}
+          <div className="w-full bg-[#141111] pt-14 pb-4 px-5 flex items-center gap-3 shrink-0 select-none">
+            {/* Back button: borderless, outline-free */}
+            <button
+              onClick={handleCloseSearch}
+              className="w-10 h-10 rounded-full text-white hover:text-zinc-300 hover:bg-white/5 active:scale-90 transition-all flex items-center justify-center cursor-pointer outline-none border-0"
+              title="Back to call history"
+            >
+              <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2.4} />
+            </button>
+
+            {/* Search Input Pill */}
+            <div className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-zinc-900 border border-zinc-800 text-white outline-none ring-0 transition-colors">
+              <Search className="w-4 h-4 text-zinc-400 flex-shrink-0" strokeWidth={2} />
+              <input
+                type="text"
+                autoFocus
+                placeholder="Search calls, contacts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent text-[13.5px] text-white placeholder:text-zinc-500 outline-none focus:outline-none ring-0 font-normal"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="w-5 h-5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs flex items-center justify-center cursor-pointer transition-colors outline-none border-0"
                 >
-                  {selectedCall.contactName.charAt(0).toUpperCase()}
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom White Container */}
+          <div className="w-full flex-1 bg-white rounded-t-[32px] px-4 pt-4 pb-20 shadow-[0_-10px_30px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden min-h-0">
+            <div className="flex flex-col gap-1 overflow-y-auto flex-1 no-scrollbar divide-y divide-zinc-100 pr-0.5">
+              {!searchQuery.trim() ? (
+                <div className="py-16 text-center text-zinc-400 text-xs font-medium">
+                  Type a name or username to search call logs
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-zinc-900 leading-tight">
-                    {selectedCall.contactName}
-                  </h3>
-                  <p className="text-xs text-zinc-500">
-                    @{selectedCall.contactUsername || 'contact'}
-                  </p>
+              ) : filteredCalls.length === 0 ? (
+                <div className="py-16 text-center text-zinc-400 text-xs font-medium">
+                  No call logs found matching &quot;{searchQuery}&quot;
                 </div>
-              </div>
+              ) : (
+                filteredCalls.map((call) => {
+                  const avatarKey =
+                    call.partnerUser?.id ||
+                    call.partnerUser?.username ||
+                    call.callerId ||
+                    call.contactName;
+                  const avatarBg = getDeterministicAvatarBg(avatarKey);
+
+                  return (
+                    <div
+                      key={call.id}
+                      onClick={() => {
+                        handleCloseSearch();
+                        setSelectedCall(call);
+                      }}
+                      className="flex items-center justify-between py-3 px-1.5 rounded-2xl hover:bg-zinc-50 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div
+                          className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm text-zinc-800 shrink-0 overflow-hidden shadow-xs"
+                          style={{ backgroundColor: avatarBg }}
+                        >
+                          {call.contactImage ? (
+                            <img
+                              src={call.contactImage}
+                              alt={call.contactName}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span>{call.contactName.charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col min-w-0">
+                          <span
+                            className={`text-[15px] font-bold truncate ${
+                              call.status === 'missed' ? 'text-rose-600' : 'text-zinc-900'
+                            }`}
+                          >
+                            {call.contactName}
+                          </span>
+                          <div className="flex items-center gap-1.5 mt-0.5 text-xs text-zinc-500">
+                            {getStatusIcon(call.status)}
+                            <span className="capitalize">{call.status}</span>
+                            <span>•</span>
+                            <span>{formatCallDate(call.createdAt)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCloseSearch();
+                            handleStartCall(call, 'audio');
+                          }}
+                          className="w-9 h-9 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center cursor-pointer active:scale-90 transition-all outline-none"
+                          title="Audio Call"
+                        >
+                          <Phone className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCloseSearch();
+                            handleStartCall(call, 'video');
+                          }}
+                          className="w-9 h-9 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center cursor-pointer active:scale-90 transition-all outline-none"
+                          title="Video Call"
+                        >
+                          <Video className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 4. CALL DETAILS MODAL ── */}
+      {selectedCall && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
+          onClick={() => setSelectedCall(null)}
+        >
+          <div
+            className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl flex flex-col gap-4 text-zinc-900 animate-in slide-in-from-bottom-4 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                Call Information
+              </span>
               <button
                 onClick={() => setSelectedCall(null)}
                 className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 cursor-pointer"
@@ -550,113 +655,108 @@ export default function CallsView({
               </button>
             </div>
 
-            {/* Details Body */}
-            <div className="space-y-3 py-2">
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50 border border-zinc-100">
-                <span className="text-xs font-semibold text-zinc-500">Call Type</span>
-                <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
-                  {selectedCall.status === 'received' && (
-                    <span className="text-emerald-600 flex items-center gap-1">
-                      <PhoneIncoming className="w-3.5 h-3.5" /> Incoming {selectedCall.type === 'video' ? 'Video' : 'Voice'} Call
-                    </span>
-                  )}
-                  {selectedCall.status === 'sent' && (
-                    <span className="text-indigo-600 flex items-center gap-1">
-                      <PhoneOutgoing className="w-3.5 h-3.5" /> Outgoing {selectedCall.type === 'video' ? 'Video' : 'Voice'} Call
-                    </span>
-                  )}
-                  {selectedCall.status === 'missed' && (
-                    <span className="text-rose-600 flex items-center gap-1">
-                      <PhoneMissed className="w-3.5 h-3.5" /> Missed {selectedCall.type === 'video' ? 'Video' : 'Voice'} Call
-                    </span>
-                  )}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50 border border-zinc-100">
-                <span className="text-xs font-semibold text-zinc-500">Duration</span>
-                <span className="text-xs font-bold text-zinc-900">
-                  {formatExactDuration(selectedCall.duration)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50 border border-zinc-100">
-                <span className="text-xs font-semibold text-zinc-500">Date & Time</span>
-                <span className="text-xs font-semibold text-zinc-700">
-                  {formatExactDateTime(selectedCall.createdAt)}
-                </span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex flex-col gap-2.5 pt-1">
-              <button
-                onClick={() => {
-                  triggerHaptic('light');
-                  if (onStartCall && selectedCall.partnerUser) {
-                    onStartCall(selectedCall.partnerUser, selectedCall.type);
-                  }
-                  setSelectedCall(null);
+            <div className="flex items-center gap-3.5 py-2">
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg text-zinc-800 shrink-0 overflow-hidden shadow-xs"
+                style={{
+                  backgroundColor: getDeterministicAvatarBg(
+                    selectedCall.partnerUser?.id || selectedCall.contactName
+                  )
                 }}
-                className="w-full bg-[#9D4EDD] text-white py-3.5 rounded-2xl font-semibold text-[14px] flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all shadow-md hover:bg-[#8338ec]"
               >
-                {selectedCall.type === 'video' ? (
-                  <Video className="w-4 h-4" strokeWidth={2} />
+                {selectedCall.contactImage ? (
+                  <img
+                    src={selectedCall.contactImage}
+                    alt={selectedCall.contactName}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
-                  <Phone className="w-4 h-4" strokeWidth={2} />
+                  <span>{selectedCall.contactName.charAt(0).toUpperCase()}</span>
                 )}
-                <span>Call Back ({selectedCall.type === 'video' ? 'Video' : 'Voice'})</span>
-              </button>
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-lg font-bold text-zinc-900 truncate">
+                  {selectedCall.contactName}
+                </span>
+                <span className="text-xs text-zinc-500">
+                  {selectedCall.contactUsername ? `@${selectedCall.contactUsername}` : 'Connect User'}
+                </span>
+              </div>
+            </div>
 
+            <div className="bg-zinc-50 rounded-2xl p-3.5 space-y-2 border border-zinc-100 text-xs text-zinc-600">
+              <div className="flex justify-between items-center">
+                <span>Call Type</span>
+                <span className="font-semibold text-zinc-900 capitalize">
+                  {selectedCall.type} Call
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Status</span>
+                <span
+                  className={`font-semibold capitalize ${
+                    selectedCall.status === 'missed' ? 'text-rose-600' : 'text-zinc-900'
+                  }`}
+                >
+                  {selectedCall.status}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Duration</span>
+                <span className="font-semibold text-zinc-900">
+                  {formatDuration(selectedCall.duration)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Date & Time</span>
+                <span className="font-semibold text-zinc-900">
+                  {formatCallDate(selectedCall.createdAt)}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 pt-1">
               <button
                 onClick={() => {
-                  triggerHaptic('light');
-                  if (onOpenChat && selectedCall.partnerUser) {
-                    onOpenChat(selectedCall.partnerUser);
-                  } else if (onNavigate) {
-                    onNavigate('chat');
-                  }
                   setSelectedCall(null);
+                  handleStartCall(selectedCall, 'audio');
                 }}
-                className="w-full bg-[#141111] text-white py-3.5 rounded-2xl font-semibold text-[14px] flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
+                className="py-2.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
               >
-                <MessageCircle className="w-4 h-4" strokeWidth={2} />
-                <span>Send Message</span>
+                <Phone className="w-3.5 h-3.5" />
+                <span>Audio</span>
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Clear History Confirmation Modal ── */}
-      {showClearConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[320px] bg-white rounded-3xl p-5 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-150"
-          >
-            <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-3">
-              <Trash2 className="w-6 h-6" strokeWidth={2} />
-            </div>
-            <h3 className="text-[17px] font-bold text-zinc-900 leading-tight">Clear Call History?</h3>
-            <p className="text-[13px] text-zinc-500 mt-1.5 leading-relaxed">
-              All incoming, outgoing, and missed call logs will be removed from your activity.
-            </p>
-            <div className="grid grid-cols-2 gap-2.5 w-full mt-5">
               <button
                 onClick={() => {
-                  triggerHaptic('light');
-                  setShowClearConfirm(false);
+                  setSelectedCall(null);
+                  handleStartCall(selectedCall, 'video');
                 }}
-                className="py-2.5 px-4 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-semibold text-[13.5px] transition-colors cursor-pointer active:scale-95"
+                className="py-2.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
               >
-                Cancel
+                <Video className="w-3.5 h-3.5" />
+                <span>Video</span>
               </button>
               <button
-                onClick={confirmClearAll}
-                className="py-2.5 px-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-semibold text-[13.5px] transition-colors cursor-pointer active:scale-95 shadow-xs"
+                onClick={() => {
+                  setSelectedCall(null);
+                  if (onOpenChat) {
+                    onOpenChat(
+                      selectedCall.partnerUser || {
+                        id:
+                          selectedCall.callerId === currentUserId
+                            ? selectedCall.receiverId
+                            : selectedCall.callerId,
+                        name: selectedCall.contactName,
+                        username: selectedCall.contactUsername,
+                        image: selectedCall.contactImage
+                      }
+                    );
+                  }
+                }}
+                className="py-2.5 rounded-full bg-[#9D4EDD] hover:bg-[#8A38CC] text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-xs"
               >
-                Clear All
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span>Message</span>
               </button>
             </div>
           </div>

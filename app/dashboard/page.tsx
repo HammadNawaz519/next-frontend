@@ -494,6 +494,7 @@ export default function DashboardPage() {
               setSelectedChatUser({ ...targetUser, _startCallType: callType, _openTs: Date.now() });
               setActiveView('chat');
             }}
+            onSearchActiveChange={setIsSearchActive}
           />
         </div>
 

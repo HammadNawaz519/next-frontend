@@ -1486,13 +1486,14 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
             ) : (
               <>
                 {msg.type === 'voice' && (
-                  <div className="relative">
-                    <audio src={msg.content} controls className="max-w-[240px]" />
-                    {isSending && (
-                      <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center rounded-lg text-white text-[10px] font-medium">
-                        Uploading voice...
-                      </div>
-                    )}
+                  <div className="relative flex items-center py-0.5">
+                    <audio
+                      src={msg.content}
+                      controls
+                      controlsList="nodownload noplaybackrate nofullscreen"
+                      preload="auto"
+                      className="max-w-[240px] h-9 outline-none"
+                    />
                   </div>
                 )}
                 {msg.type === 'file' && (
