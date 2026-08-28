@@ -5775,10 +5775,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     <div className="w-full bg-[#141111] pt-14 pb-5 px-5 flex items-center gap-3 shrink-0 select-none">
                       <button
                         onClick={() => setShowSearchWindow(false)}
-                        className="p-1.5 -ml-1.5 text-white hover:text-zinc-300 active:scale-95 transition-all flex-shrink-0 cursor-pointer outline-none border-0 ring-0 focus:outline-none bg-transparent"
+                        className="w-10 h-10 rounded-full text-white hover:text-zinc-300 hover:bg-white/5 active:scale-90 transition-all flex items-center justify-center cursor-pointer outline-none border-0"
                         title="Back to chat"
                       >
-                        <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
+                        <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2.4} />
                       </button>
 
                       <div className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-zinc-900 border border-zinc-800 text-white outline-none ring-0 transition-colors">

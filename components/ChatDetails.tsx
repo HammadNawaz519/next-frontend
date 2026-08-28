@@ -81,16 +81,16 @@ export default function ChatDetails({
   return (
     <div className="absolute inset-0 z-50 flex flex-col bg-[#141111] animate-in slide-in-from-right-full duration-300 overflow-hidden font-sans select-none">
       
-      {/* ── 1. TOP BAR (BACK BUTTON, NAME & SEARCH BUTTON ON TOP RIGHT) ── */}
+      {/* ── 1. TOP BAR (BACK BUTTON, NAME & SEARCH BUTTON ON TOP RIGHT - NO BORDER, NO OUTLINE) ── */}
       <div className="pt-14 pb-4 px-5 flex items-center justify-between shrink-0 bg-[#141111] z-20">
         
-        {/* Left: Back button matching chat UI */}
+        {/* Left: Back button matching chat UI (no outline, no border) */}
         <button
           onClick={() => {
             setEditingNickname(false);
             onClose();
           }}
-          className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center cursor-pointer hover:bg-zinc-800 active:scale-90 transition-all text-white outline-none"
+          className="w-10 h-10 rounded-full text-white hover:text-zinc-300 hover:bg-white/5 flex items-center justify-center cursor-pointer active:scale-90 transition-all outline-none border-0"
           title="Back to conversation"
         >
           <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2.4} />
@@ -101,16 +101,16 @@ export default function ChatDetails({
           {nicknames[selectedUser.id] || selectedUser.name}
         </h2>
 
-        {/* Right: Search button with border */}
+        {/* Right: Search button (no outline, no border) */}
         <button
           onClick={() => {
             onClose();
             onOpenSearch();
           }}
-          className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-all cursor-pointer active:scale-90 shadow-xs"
+          className="w-10 h-10 rounded-full text-white hover:text-zinc-300 hover:bg-white/5 flex items-center justify-center transition-all cursor-pointer active:scale-90 outline-none border-0"
           title="Search in chat"
         >
-          <Search className="w-4 h-4 text-white" strokeWidth={2.2} />
+          <Search className="w-5 h-5 text-white" strokeWidth={2.2} />
         </button>
       </div>
 

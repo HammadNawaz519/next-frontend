@@ -128,15 +128,12 @@ export default function ChatInput({
       };
 
       recognition.onresult = (event: any) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
+        let fullTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          fullTranscript += event.results[i][0].transcript;
         }
-        if (transcript) {
-          setMessage((prev) => {
-            const cleanPrev = prev.trim();
-            return cleanPrev ? `${cleanPrev} ${transcript.trim()}` : transcript.trim();
-          });
+        if (fullTranscript) {
+          setMessage(fullTranscript);
         }
       };
 
@@ -278,15 +275,15 @@ export default function ChatInput({
   return (
     <div className="w-full relative flex flex-col items-start">
       
-      {/* ── @AI Suggestion Badge (Clean White Theme on exact top of input) ── */}
+      {/* ── @AI Suggestion Badge (Zinc Aesthetic & Taller Height) ── */}
       {showAiSuggestion && (
         <button
           type="button"
           onClick={handleInsertAiTag}
-          className="mb-2 ml-4 px-3.5 py-1.5 rounded-full bg-white border border-zinc-200 text-zinc-900 text-[12.5px] font-bold shadow-[0_4px_16px_rgba(0,0,0,0.12)] flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 cursor-pointer hover:bg-zinc-50 active:scale-95 transition-all"
+          className="mb-2.5 ml-4 px-4 py-2 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-[13px] font-semibold shadow-[0_4px_16px_rgba(0,0,0,0.15)] flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 cursor-pointer active:scale-95 transition-all outline-none border-0"
         >
           <Sparkles className="w-4 h-4 text-[#9D4EDD]" />
-          <span>Ask Grok AI (@ai)</span>
+          <span>Ask AI</span>
         </button>
       )}
 
