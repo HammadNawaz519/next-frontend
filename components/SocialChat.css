@@ -1888,27 +1888,29 @@
 }
 
 /* =========================================
-   INSTAGRAM-STYLE DATE SEPARATOR
+   INSTAGRAM-STYLE DATE SEPARATOR (pinned pill)
    ========================================= */
 .social-chat-container .date-separator {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 4px 0 2px;
+  margin: 12px 0 8px;
   animation: dateSepFadeIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   pointer-events: none;
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 
 .social-chat-container .date-separator span {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--dm-text-muted, #8e8e8e);
-  background: rgba(128,128,128,0.12);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  padding: 3px 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #9D4EDD;
+  background: #F3E8FF;
+  padding: 4px 16px;
   border-radius: 20px;
+  box-shadow: 0 1px 4px rgba(157,78,221,0.10);
 }
 
 @keyframes dateSepFadeIn {

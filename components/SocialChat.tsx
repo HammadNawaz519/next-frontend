@@ -1278,6 +1278,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
   const hasReactions = Object.keys(reactionCounts).length > 0;
 
+  // Compute swipe-reveal time label once
+  const swipeTimeLabel = formatChatDotTime(msg.createdAt);
+  const swipeOpacity = effectiveSwipeOffset < -6 ? Math.min(1, Math.abs(effectiveSwipeOffset) / 30) : 0;
+
   return (
     <div
       className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${isSelected ? 'selected-item' : ''} animate-in slide-in-from-bottom-2 duration-300 relative`}
@@ -1290,7 +1294,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
       style={{
         display: 'flex',
         flexDirection: 'row',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         justifyContent: isSent ? 'flex-end' : 'flex-start',
         gap: '0px',
         width: '100%',
@@ -1304,30 +1308,29 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
           : 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)',
         transform: effectiveSwipeOffset !== 0
           ? `translateX(${effectiveSwipeOffset}px)`
-          : 'none',
+          : 'translateX(0px)',
       }}
     >
-      {/* Revealed Timestamp on Swipe Left (Instagram / iOS Messages style) */}
+      {/* Revealed Timestamp on Swipe Left — pinned to the right edge of visible area */}
       <div
-        className="revealed-swipe-timestamp"
         style={{
           position: 'absolute',
-          right: '-52px',
+          right: 0,
           top: '50%',
-          transform: 'translateY(-50%)',
-          opacity: effectiveSwipeOffset < -6 ? Math.min(1, Math.abs(effectiveSwipeOffset) / 30) : 0,
-          transition: isSwiping ? 'none' : 'opacity 0.22s ease',
+          transform: `translateY(-50%) translateX(calc(100% + 10px))`,
+          opacity: swipeOpacity,
+          transition: isSwiping ? 'opacity 0.05s' : 'opacity 0.22s ease',
           pointerEvents: 'none',
           display: 'flex',
           alignItems: 'center',
-          fontSize: '0.70rem',
+          fontSize: '11px',
           fontWeight: 500,
-          color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.5)',
+          color: 'rgba(120,120,120,0.85)',
           whiteSpace: 'nowrap',
-          letterSpacing: '-0.01em',
+          letterSpacing: '0',
         }}
       >
-        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+        {swipeTimeLabel}
       </div>
 
       {/* Consecutive Grouping Tail Logic — column wrapper keeps bubble + time stacked */}
@@ -1362,10 +1365,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
-        // Big, elegant, rounded bubble shapes matching the design image
+        // Classic pill bubble shape — uniform rounded corners on all sides
         const bubbleClasses = isSent
-          ? `bg-[#F4F4F5] text-zinc-900 px-5 py-3.5 !rounded-[24px] !rounded-tr-[8px] max-w-[85%] self-end text-[14.5px] font-normal leading-relaxed shadow-2xs ${isPrevSameSender ? '-mt-2' : ''}`
-          : `bg-[#FEF5D1] text-zinc-900 px-5 py-3.5 !rounded-[24px] !rounded-tl-[8px] max-w-[85%] self-start text-[14.5px] font-normal leading-relaxed shadow-2xs ${isPrevSameSender ? '-mt-2' : ''}`;
+          ? `bg-zinc-100 text-zinc-900 px-4.5 py-3 !rounded-[28px] max-w-[80%] self-end text-[13.5px] font-normal leading-relaxed ${isPrevSameSender ? '-mt-2' : ''}`
+          : `bg-[#FEF5D1] text-zinc-900 px-4.5 py-3 !rounded-[28px] max-w-[80%] self-start text-[13.5px] font-normal leading-relaxed ${isPrevSameSender ? '-mt-2' : ''}`;
 
         return (
           <div
@@ -1373,7 +1376,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
             className={`msg ${bubbleClasses} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''} ${isMedia ? '!p-0 !bg-transparent !border-0 !shadow-none' : ''}`}
             style={{
               position: 'relative',
-              borderRadius: isSent ? '24px 8px 24px 24px' : '8px 24px 24px 24px',
+              borderRadius: '28px',
               transition: isSelected ? 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28)' : 'none',
               transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
             }}
@@ -1679,12 +1682,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         );
       })()}
 
-      {/* Time text below message bubble matching reference image */}
-      <span className={`text-[11.5px] font-normal text-zinc-400 mt-1 select-none ${isSent ? 'mr-1.5 self-end text-right' : 'ml-1.5 self-start text-left'}`}>
-        {formatChatDotTime(msg.createdAt)}
-      </span>
-
-      {/* Status indicator row under the last sent message */}
+      {/* Status indicator row under the last sent message — no timestamp shown below bubble */}
       {isSent && (
         <SentMessageStatus msg={msg} isDark={isDark} isLastSentInGroup={isLastSentInGroup} partnerLastSeen={partnerLastSeen} />
       )}
@@ -5423,8 +5421,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </div>
                   </div>
 
-                  {/* Right: Options & Call Controls - Frameless, Outline None */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Right: Audio Call + Video Call — Frameless, Outline None */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleCall('audio'); }}
                       className="p-2 text-white hover:text-zinc-300 active:scale-95 cursor-pointer transition-all outline-none border-0 bg-transparent"
@@ -5433,32 +5431,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <Phone className="w-5 h-5 text-white" strokeWidth={2} />
                     </button>
                     <button
-                      onClick={() => {
-                        if (selectedUser) {
-                          setNicknameInput(nicknames[selectedUser.id] || '');
-                          setShowChatDetails(true);
-                        }
-                      }}
+                      onClick={(e) => { e.stopPropagation(); handleCall('video'); }}
                       className="p-2 text-white hover:text-zinc-300 active:scale-95 cursor-pointer transition-all outline-none border-0 bg-transparent"
-                      title="Chat Info"
+                      title="Video Call"
                     >
-                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="5" r="1.75" />
-                        <circle cx="12" cy="12" r="1.75" />
-                        <circle cx="12" cy="19" r="1.75" />
-                      </svg>
+                      <Video className="w-5 h-5 text-white" strokeWidth={2} />
                     </button>
                   </div>
                 </div>
 
                 {/* ── SCREEN 1: LIGHT MESSAGES SHEET (Smooth rounded-t-[36px]) ── */}
-                <div className="w-full flex-1 bg-white rounded-t-[36px] px-5 pt-5 pb-20 flex flex-col relative shadow-[0_-12px_32px_rgba(0,0,0,0.25)] overflow-hidden z-10 min-h-0">
-                  {/* Centered Date Pill */}
-                  <div className="flex justify-center mb-5 shrink-0">
-                    <div className="bg-[#F3E8FF] text-[#9D4EDD] px-4 py-1.5 rounded-full text-[12px] font-semibold tracking-wide shadow-xs">
-                      Today
-                    </div>
-                  </div>
+                <div className="w-full flex-1 bg-white rounded-t-[36px] px-4 pt-3 pb-20 flex flex-col relative shadow-[0_-12px_32px_rgba(0,0,0,0.25)] overflow-hidden z-10 min-h-0">
 
                   {/* Messages Scroll Area */}
                   <div
