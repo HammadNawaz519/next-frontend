@@ -5163,7 +5163,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               <div className="bg-[#141111] h-full w-full flex flex-col overflow-hidden relative m-0 p-0">
                 
                 {/* ── SCREEN 1: DARK HEADER (Top Bar - Frameless & Sleek) ── */}
-                <div className="w-full bg-[#141111] pt-14 pb-8 px-5 flex items-center justify-between shrink-0 select-none z-20 m-0 border-none">
+                <div className="w-full bg-[#141111] pt-12 pb-3 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
                   {/* Left: Back Button + Contact Information */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* Back Action (ChevronLeft) */}
@@ -5244,8 +5244,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   </div>
                 </div>
 
-                {/* ── SCREEN 1: LIGHT MESSAGES SHEET (Smooth rounded-t-[36px], zero redundant top margin) ── */}
-                <div className="w-full flex-1 bg-white rounded-t-[36px] rounded-b-none -mt-4 px-4 pt-4 pb-0 mb-0 flex flex-col relative shadow-[0_-12px_32px_rgba(0,0,0,0.25)] overflow-hidden z-10 min-h-0">
+                {/* ── SCREEN 1: LIGHT MESSAGES SHEET (Smooth rounded-t-[32px], zero redundant top margin) ── */}
+                <div className="w-full flex-1 bg-white rounded-t-[32px] px-4 pt-3 pb-0 flex flex-col relative shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-hidden z-20 min-h-0">
 
                   {/* Messages Scroll Area - Clean padding above floating input bar */}
                   <div
@@ -5359,8 +5359,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   />
 
                   {/* ── INTERACTIVE CHAT INPUT PILL ── */}
-                  <div className="absolute bottom-4 left-0 right-0 w-full px-4 z-30 flex justify-center pointer-events-none">
-                    <div className="w-full max-w-[350px] pointer-events-auto">
+                  <div className="absolute bottom-2.5 left-0 right-0 w-full px-2 z-30 flex justify-center pointer-events-none">
+                    <div className="w-[95%] max-w-[440px] pointer-events-auto">
                       <ChatInput
                         onSendMessage={(text) => handleSendMessage(undefined, text)}
                         onOpenGallery={() => fileInputRef.current?.click()}
