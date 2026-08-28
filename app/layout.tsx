@@ -68,13 +68,7 @@ export default function RootLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Comfortaa:wght@600&family=Fira+Code:wght@500&family=Oswald:wght@600&family=Playfair+Display:wght@600&family=Satisfy&display=swap"
           rel="stylesheet"
-          media="print"
-          // @ts-ignore
-          onLoad="this.media='all'"
         />
-        <noscript>
-          <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Comfortaa:wght@600&family=Fira+Code:wght@500&family=Oswald:wght@600&family=Playfair+Display:wght@600&family=Satisfy&display=swap" rel="stylesheet" />
-        </noscript>
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
