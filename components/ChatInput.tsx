@@ -222,10 +222,10 @@ export default function ChatInput({
           type="button"
           onClick={handleSend}
           disabled={disabled}
-          className="w-12 h-12 rounded-full bg-[#E0F2FE] flex items-center justify-center text-[#0284C7] shrink-0 cursor-pointer active:scale-90 transition-all hover:bg-[#BAE6FD] outline-none shadow-xs"
+          className="w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs"
           title="Send Message"
         >
-          <svg className="w-5 h-5 text-[#0284C7]" viewBox="-0.5 0 25 25" fill="none" stroke="currentColor">
+          <svg className="w-5 h-5 text-zinc-700" viewBox="-0.5 0 25 25" fill="none" stroke="currentColor">
             <path d="M2.33045 8.38999C0.250452 11.82 9.42048 14.9 9.42048 14.9C9.42048 14.9 12.5005 24.07 15.9305 21.99C19.5705 19.77 23.9305 6.13 21.0505 3.27C18.1705 0.409998 4.55045 4.74999 2.33045 8.38999Z" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M15.1999 9.12L9.41992 14.9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -241,12 +241,12 @@ export default function ChatInput({
             if (!isRecording) startRecording();
             else stopRecording(false);
           }}
-          className={`w-12 h-12 rounded-full bg-[#EDE9FE] flex items-center justify-center text-[#9D4EDD] shrink-0 cursor-pointer active:scale-90 transition-all hover:bg-[#DDD6FE] outline-none touch-none ${
-            isRecording ? 'ring-4 ring-[#EDE9FE] animate-pulse' : ''
+          className={`w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 touch-none shadow-2xs ${
+            isRecording ? 'ring-4 ring-zinc-200 animate-pulse bg-zinc-200' : ''
           }`}
           title={isRecording ? 'Release to send, slide left to cancel' : 'Hold or tap to record voice'}
         >
-          <svg className="w-5 h-5 text-[#9D4EDD]" viewBox="0 0 1920 1920" fill="currentColor">
+          <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 1920 1920" fill="currentColor">
             <path d="M425.818 709.983V943.41c0 293.551 238.946 532.497 532.497 532.497 293.55 0 532.496-238.946 532.496-532.497V709.983h96.818V943.41c0 330.707-256.438 602.668-580.9 627.471l-.006 252.301h242.044V1920H667.862v-96.818h242.043l-.004-252.3C585.438 1546.077 329 1274.116 329 943.41V709.983h96.818ZM958.315 0c240.204 0 435.679 195.475 435.679 435.68v484.087c0 240.205-195.475 435.68-435.68 435.68-240.204 0-435.679-195.475-435.679-435.68V435.68C522.635 195.475 718.11 0 958.315 0Z" fillRule="evenodd"/>
           </svg>
         </button>

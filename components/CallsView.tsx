@@ -326,8 +326,8 @@ export default function CallsView({
           </button>
         </div>
 
-        {/* Segmented Filter Tabs — Clean without numbers */}
-        <div className="w-full bg-zinc-900/80 p-1 rounded-2xl flex items-center border border-zinc-800/60 mt-0.5">
+        {/* Segmented Filter Tabs — Full round pills matching the whole app */}
+        <div className="w-full bg-zinc-900/80 p-1.5 rounded-full flex items-center border border-zinc-800/60 mt-0.5">
           {(['All', 'Received', 'Sent', 'Missed'] as const).map((tab) => {
             const isActive = activeTab === tab;
             return (
@@ -337,7 +337,7 @@ export default function CallsView({
                   triggerHaptic('light');
                   setActiveTab(tab);
                 }}
-                className={`flex-1 py-2 rounded-xl text-[12.5px] font-semibold transition-all cursor-pointer ${
+                className={`flex-1 py-2 rounded-full text-[12.5px] font-semibold transition-all cursor-pointer outline-none border-0 ring-0 ${
                   isActive
                     ? 'bg-zinc-800 text-white shadow-xs'
                     : 'text-zinc-400 hover:text-zinc-200'

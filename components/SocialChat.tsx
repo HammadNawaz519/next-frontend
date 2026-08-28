@@ -950,9 +950,6 @@ const ChatItem = memo(({
             <span>{pastel.emoji}</span>
           )}
         </div>
-        {showActivity && isOnline && (
-          <span className="w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white absolute bottom-0 right-0" />
-        )}
       </div>
 
       {/* Middle Details */}
@@ -1003,7 +1000,7 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup, partnerLastSee
   if (!isLastSentInGroup) return null;
   if (msg.type === 'call' || msg.type === 'deleted') return null;
 
-  const isSending = (msg as any).status === 'sending';
+  const isSending = (msg as any).status === 'sending' && (String(msg.id).startsWith('temp-') || String(msg.id).startsWith('optimistic-') || String(msg.id).startsWith('msg-'));
   if (isSending) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px', fontSize: '0.68rem', fontWeight: 600, color: isDark ? '#e4e4e7' : '#18181b', marginTop: '2px', pointerEvents: 'none' }}>
@@ -1466,7 +1463,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                   </div>
                 )}
                 {msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
-                  <div style={{ fontSize: '14px', lineHeight: '1.4', wordBreak: 'break-word', whiteSpace: 'pre-wrap', textAlign: 'center', width: '100%' }}>
+                  <div style={{ fontSize: '14px', lineHeight: '1.4', wordBreak: 'break-word', whiteSpace: 'pre-wrap', textAlign: 'left', width: '100%' }}>
                     <span>{msg.content}</span>
                   </div>
                 ) : null}
@@ -1673,9 +1670,10 @@ const triggerStunningNotification = async (
  *  Works for messages coming from getSocialMessages (Prisma) as well as
  *  the return value of saveSocialMessage. */
 const normalizeMsg = (m: any): any => {
+  const res = { ...m, status: undefined };
   if (m.replyToId && !m.replyTo) {
     return {
-      ...m,
+      ...res,
       replyTo: {
         id: m.replyToId,
         content: m.replyToContent ?? '',
@@ -1683,7 +1681,7 @@ const normalizeMsg = (m: any): any => {
       },
     };
   }
-  return m;
+  return res;
 };
 
 const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange, initialUser, onOpenProfile, onLongPressChatChange, onSearchActiveChange, onStoryEditorChange }: SocialChatProps, ref) => {
@@ -4888,17 +4886,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 {/* Notification Modal Drawer */}
                 {showNotificationsDrawer && (
                   <div className="absolute top-28 right-4 left-4 z-50 bg-[#181515] border border-zinc-800/90 rounded-3xl p-5 shadow-[0_20px_60px_rgba(0,0,0,0.8)] animate-in fade-in slide-in-from-top-3 duration-200 text-white backdrop-blur-xl">
-                    {/* Drawer Header */}
-                    <div className="flex items-center justify-between pb-3.5 border-b border-zinc-800/80">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-full bg-[#9D4EDD]/15 text-[#9D4EDD] flex items-center justify-center text-sm font-bold">
-                          <Bell className="w-4 h-4 text-[#9D4EDD]" strokeWidth={2.2} />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-white leading-tight">Notifications</span>
-                          <span className="text-[11px] text-zinc-400">Recent activity & alerts</span>
-                        </div>
-                      </div>
+                    {/* Drawer Header - Clean without extra svg or subtitle */}
+                    <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
+                      <span className="text-base font-bold text-white tracking-tight">Notifications</span>
                       <button
                         onClick={() => setShowNotificationsDrawer(false)}
                         className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
@@ -5195,7 +5185,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         const pastel = getPastelForUser(selectedUser.id || selectedUser.username || selectedUser.name);
                         return (
                           <div 
-                            className="w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0 overflow-hidden relative shadow-xs"
+                            className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-lg shrink-0 relative"
                             style={{ background: pastel.bg, color: pastel.text }}
                           >
                             {selectedUser.image && selectedUser.image.length > 5 ? (
@@ -6181,61 +6171,79 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       {/* --- STORY VIEWER MODAL OVERLAY --- */}
       {viewStory && (
-        <div className="fixed inset-0 z-[2000] bg-black flex flex-col justify-between p-4 animate-in fade-in duration-200 select-none">
-          {/* Story Progress Bar */}
-          <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-3">
-            <div className="h-full bg-white rounded-full animate-[pulse_2s_ease-in-out_infinite]" style={{ width: '100%' }} />
+        <div className="fixed inset-0 z-[2000] bg-black/95 flex flex-col justify-between p-4 animate-in fade-in duration-200 select-none">
+          {/* Animated Top Progress Bar */}
+          <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-2.5 mt-1">
+            <div className="h-full bg-white rounded-full transition-all duration-100 ease-linear animate-[storyProgress_6s_linear_forwards]" style={{ width: '100%' }} />
           </div>
 
-          {/* Top Header */}
-          <div className="flex items-center justify-between px-2 pt-2 z-10">
+          {/* Top Header - Touching near top with clean controls */}
+          <div className="flex items-center justify-between px-2 pt-1 z-10">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#FFF3CD] flex items-center justify-center font-bold text-black overflow-hidden ring-2 ring-white">
+              <div className="w-9 h-9 rounded-full bg-[#FFF3CD] flex items-center justify-center font-bold text-black overflow-hidden ring-2 ring-white">
                 {viewStory.avatar ? (
                   <img src={viewStory.avatar} className="w-full h-full object-cover" />
                 ) : (
-                  <span>👤</span>
+                  <span>{viewStory.emoji || '👤'}</span>
                 )}
               </div>
               <div>
                 <h4 className="text-sm font-bold text-white leading-tight">{viewStory.name}</h4>
-                <span className="text-[11px] text-zinc-400">{viewStory.time}</span>
+                <span className="text-[11px] text-zinc-400">{viewStory.time || 'Today'}</span>
               </div>
             </div>
-            <button 
-              onClick={() => setViewStory(null)} 
-              className="w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center cursor-pointer hover:bg-black/80 active:scale-90 transition-transform"
-            >
-              ✕
-            </button>
+            <div className="flex items-center gap-2">
+              {viewStory.isMe && viewStory.id && (
+                <button
+                  onClick={() => {
+                    if (confirm('Delete your story?')) {
+                      handleDeleteCurrentStory(viewStory.id!);
+                    }
+                  }}
+                  className="w-8 h-8 rounded-full bg-red-500/30 hover:bg-red-500/50 text-red-300 flex items-center justify-center text-xs transition-colors cursor-pointer"
+                  title="Delete Story"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+              <button 
+                onClick={() => setViewStory(null)} 
+                className="w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center cursor-pointer hover:bg-black/80 active:scale-90 transition-transform"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           {/* Media in Center */}
-          <div className="flex-1 flex items-center justify-center my-4 overflow-hidden rounded-3xl bg-zinc-950/80">
-            {viewStory.media ? (
+          <div className="flex-1 flex items-center justify-center my-3 overflow-hidden rounded-3xl bg-zinc-950/80">
+            {viewStory.media && (viewStory.media.startsWith('blob:') || viewStory.media.startsWith('data:') || viewStory.media.startsWith('http')) ? (
               <img src={viewStory.media} alt="Story" className="max-w-full max-h-full object-contain rounded-2xl" />
             ) : (
               <div className="text-center text-zinc-400 text-sm font-medium p-8">
-                <div className="text-4xl mb-3">📸</div>
-                <span>No media attached to this story preview</span>
+                <div className="text-5xl mb-3">{viewStory.emoji || '📸'}</div>
+                <p className="text-base font-bold text-white">{viewStory.name}'s Story</p>
+                <span className="text-xs text-zinc-500">Shared moments with friends on Connect</span>
               </div>
             )}
           </div>
 
-          {/* Bottom Quick Reply */}
-          <div className="flex items-center gap-2 pb-6 px-2">
-            <input 
-              type="text" 
-              placeholder={`Reply to ${viewStory.name}...`} 
-              className="flex-1 bg-white/10 border border-white/20 rounded-full px-4 py-3 text-sm text-white placeholder:text-zinc-400 outline-none"
-            />
-            <button 
-              onClick={() => setViewStory(null)} 
-              className="px-5 py-3 bg-[#9D4EDD] hover:bg-[#883ec5] rounded-full text-sm font-bold text-white cursor-pointer transition-colors"
-            >
-              Send
-            </button>
-          </div>
+          {/* Bottom Quick Reply - ONLY shown for OTHER people's stories */}
+          {!viewStory.isMe && (
+            <div className="flex items-center gap-2 pb-6 px-2">
+              <input 
+                type="text" 
+                placeholder={`Reply to ${viewStory.name}...`} 
+                className="flex-1 bg-white/10 border border-white/20 rounded-full px-4 py-3 text-sm text-white placeholder:text-zinc-400 outline-none focus:border-white/40 transition-colors"
+              />
+              <button 
+                onClick={() => setViewStory(null)} 
+                className="px-5 py-3 bg-zinc-100 hover:bg-zinc-200 rounded-full text-sm font-bold text-zinc-900 cursor-pointer transition-colors"
+              >
+                Send
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -6730,64 +6738,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         />
       )}
 
-      {/* Story Viewer Modal */}
-      {viewStory && (
-        <div className="fixed inset-0 z-[70] bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm h-[80vh] max-h-[700px] bg-zinc-900 rounded-3xl overflow-hidden flex flex-col shadow-2xl border border-zinc-800">
-            {/* Story Top Progress Bar */}
-            <div className="absolute top-6 left-5 right-5 z-20 flex gap-1.5 pt-2">
-              <div className="h-1 flex-1 bg-white/40 rounded-full overflow-hidden">
-                <div className="h-full bg-white animate-[storyProgress_5s_linear_forwards]" />
-              </div>
-            </div>
-            {/* Top User Info & Actions */}
-            <div className="absolute top-11 left-5 right-5 z-20 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-[#FEF5D1] flex items-center justify-center text-sm font-bold text-zinc-900">
-                  {viewStory.avatar ? <img src={viewStory.avatar} className="w-full h-full object-cover rounded-full" /> : (viewStory.emoji || viewStory.name.charAt(0))}
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-white leading-tight">{viewStory.name}</p>
-                  <p className="text-[10px] text-zinc-400">{viewStory.time || 'Today'}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {viewStory.isMe && viewStory.id && (
-                  <button
-                    onClick={() => {
-                      if (confirm('Delete your story?')) {
-                        handleDeleteCurrentStory(viewStory.id!);
-                      }
-                    }}
-                    className="w-8 h-8 rounded-full bg-red-500/30 hover:bg-red-500/50 text-red-300 flex items-center justify-center text-xs transition-colors cursor-pointer"
-                    title="Delete Story"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                <button
-                  onClick={() => setViewStory(null)}
-                  className="w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-            {/* Story Content */}
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-950 p-4">
-              {viewStory.media && (viewStory.media.startsWith('blob:') || viewStory.media.startsWith('data:') || viewStory.media.startsWith('http')) ? (
-                <img src={viewStory.media} alt="" className="w-full h-full object-contain" />
-              ) : (
-                <div className="flex flex-col items-center justify-center gap-4 text-center">
-                  <span className="text-6xl">{viewStory.emoji || '✨'}</span>
-                  <p className="text-lg font-bold text-white">{viewStory.name}'s Story</p>
-                  <p className="text-sm text-zinc-400">Shared moments with friends on Connect</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+
       {/* Story Editor Modal Component */}
       <StoryEditor
         isOpen={showStoryEditor}
