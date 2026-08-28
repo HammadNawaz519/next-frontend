@@ -1214,8 +1214,8 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
         // Continuous high-radius capsule shape on all 4 corners, soft colors, generous horizontal & compact vertical padding
         const bubbleClasses = isSent
-          ? `bg-[#2D2626] text-white border border-white/10 px-5 py-2.5 !rounded-[24px] w-fit max-w-[85%] text-[14px] font-normal leading-[1.4] shadow-xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`
-          : `bg-[#1E1A1A] text-zinc-100 border border-white/10 px-5 py-2.5 !rounded-[24px] w-fit max-w-[85%] text-[14px] font-normal leading-[1.4] shadow-xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`;
+          ? `bg-[#F4F4F5] text-zinc-900 px-6 py-2.5 !rounded-[24px] w-fit max-w-full text-[14px] font-normal leading-[1.4] shadow-2xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`
+          : `bg-[#FFF3CD] text-zinc-900 px-6 py-2.5 !rounded-[24px] w-fit max-w-full text-[14px] font-normal leading-[1.4] shadow-2xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`;
 
         return (
           <div
@@ -1229,7 +1229,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
             }}
           >
             {msg.replyTo && (
-              <div className={`w-full mb-1.5 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden text-left ${isSent ? 'border-zinc-400 bg-black/10 text-zinc-900' : 'border-[#D8B4E2] bg-white/5 text-zinc-200'}`}>
+              <div className={`w-full mb-1.5 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden text-left ${isSent ? 'border-zinc-400 bg-black/5 text-zinc-900' : 'border-amber-400 bg-black/5 text-zinc-900'}`}>
                 <span className="font-bold text-[11px] opacity-90">{msg.replyTo.senderName || 'Quoted Message'}</span>
                 <span className="truncate text-[11px] opacity-85">{msg.replyTo.content}</span>
               </div>
@@ -5162,8 +5162,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             {selectedUser ? (
               <div className="flex flex-col h-full w-full overflow-hidden bg-[#141111] relative">
                 
-                {/* ── SCREEN 1: DARK FULL HEADER (Top Bar - Frameless & Sleek) ── */}
-                <div className="w-full bg-[#141111] pt-12 pb-3.5 px-4 flex items-center justify-between shrink-0 select-none z-20 border-b border-white/5">
+                {/* ── SCREEN 1: DARK HEADER (Top Bar - Frameless & Sleek) ── */}
+                <div className="w-full bg-[#141111] pt-14 pb-7 px-5 flex items-center justify-between shrink-0 select-none z-20">
                   {/* Left: Back Button + Contact Information */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* Back Action (ChevronLeft) */}
@@ -5205,10 +5205,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                       {/* Contact Name & Presence */}
                       <div className="flex flex-col min-w-0">
-                        <h3 className="text-[16.5px] font-bold text-white truncate leading-tight">
+                        <h3 className="text-[17px] font-bold text-white truncate leading-tight">
                           {nicknames[selectedUser.id] || selectedUser.name}
                         </h3>
-                        <span className="text-[11.5px] text-zinc-400 mt-0.5 truncate font-medium">
+                        <span className="text-[12px] text-zinc-400 mt-0.5 truncate font-medium">
                           {(() => {
                             const userEmail = (selectedUser.email || '').toLowerCase().trim();
                             const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
@@ -5244,14 +5244,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   </div>
                 </div>
 
-                {/* ── SEAMLESS FULL DARK CHAT CANVAS ── */}
-                <div className="w-full flex-1 bg-[#141111] px-4 pt-3 pb-2 flex flex-col relative overflow-hidden z-10 min-h-0">
+                {/* ── SCREEN 1: LIGHT MESSAGES SHEET (Smooth rounded-t-[36px], zero redundant top margin) ── */}
+                <div className="w-full flex-1 bg-white rounded-t-[36px] px-4 pt-2 pb-2 flex flex-col relative shadow-[0_-12px_32px_rgba(0,0,0,0.25)] overflow-hidden z-10 min-h-0">
 
                   {/* Messages Scroll Area - Clean padding above floating input bar */}
                   <div
                     ref={messagesContainerRef}
                     onScroll={handleMessagesScroll}
-                    className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden flex-1 no-scrollbar pr-0.5 pb-20 pt-1"
+                    className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden flex-1 no-scrollbar pr-0.5 pb-16 pt-1"
                   >
                     {isLoadingMessages && messages.length === 0 && (
                       <div className="chat-skeleton-container">
@@ -5324,12 +5324,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       });
                     })()}
                     {!isLoadingMessages && messages.filter(msg => msg.type !== 'accepted').length === 0 && (
-                      <div className="flex flex-col items-center justify-center py-16 text-center">
-                        <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center text-2xl mb-2">
-                          💬
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <div className="w-14 h-14 rounded-full bg-[#FFF3CD] flex items-center justify-center text-2xl mb-2">
+                          👨🏻
                         </div>
-                        <h3 className="text-base font-bold text-white">Start a conversation</h3>
-                        <p className="text-xs text-zinc-400 mt-0.5">Send a message to start chatting with {selectedUser.name}</p>
+                        <h3 className="text-base font-bold text-black">Start a conversation</h3>
+                        <p className="text-xs text-gray-400 mt-0.5">Send a message to start chatting with {selectedUser.name}</p>
                       </div>
                     )}
                     <div ref={messagesEndRef} />
@@ -5337,14 +5337,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                   {/* Reply bar if replying */}
                   {replyToMessage && (
-                    <div className="mx-2 mb-2 p-2.5 rounded-2xl bg-[#1E1A1A] border border-white/10 flex items-center justify-between shadow-sm">
+                    <div className="mx-2 mb-2 p-2.5 rounded-2xl bg-zinc-100 border border-zinc-200/70 flex items-center justify-between shadow-2xs">
                       <div className="flex flex-col min-w-0 pr-2">
-                        <span className="text-[11px] font-bold text-[#D8B4E2]">
+                        <span className="text-[11px] font-bold text-[#9D4EDD]">
                           Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : selectedUser?.name}
                         </span>
-                        <span className="text-xs text-zinc-300 truncate">{replyToMessage.content}</span>
+                        <span className="text-xs text-zinc-600 truncate">{replyToMessage.content}</span>
                       </div>
-                      <button onClick={() => setReplyToMessage(null)} className="text-xs text-zinc-400 hover:text-white p-1 cursor-pointer">✕</button>
+                      <button onClick={() => setReplyToMessage(null)} className="text-xs text-zinc-400 hover:text-black p-1 cursor-pointer">✕</button>
                     </div>
                   )}
 
