@@ -425,6 +425,11 @@ export default function CallsView({
                       </div>
                     </div>
                   </div>
+
+                  {/* Right: Tells Voice Call or Video Call */}
+                  <span className="text-[12.5px] font-medium text-zinc-400 shrink-0 select-none pr-1">
+                    {call.type === 'video' ? 'Video Call' : 'Voice Call'}
+                  </span>
                 </div>
               );
             })
@@ -518,6 +523,11 @@ export default function CallsView({
                           </div>
                         </div>
                       </div>
+
+                      {/* Right: Tells Voice Call or Video Call */}
+                      <span className="text-[12.5px] font-medium text-zinc-400 shrink-0 select-none pr-1">
+                        {call.type === 'video' ? 'Video Call' : 'Voice Call'}
+                      </span>
                     </div>
                   );
                 })

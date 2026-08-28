@@ -4018,9 +4018,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         type: 'text'
       };
       setMessages(prev => [...prev, userMsg]);
+      setMessagesCache(prev => {
+        const current = prev[selectedUser.id] || [];
+        return { ...prev, [selectedUser.id]: [...current, userMsg] };
+      });
 
       // Save user prompt to DB
-      saveSocialMessage(selectedUser.id, currentContent, 'text').catch(err =>
+      saveSocialMessage(selectedUser.id, currentContent, 'text').then((savedUserMsg) => {
+        if (savedUserMsg) {
+          setMessages(prev => prev.map(m => m.id === userTempId ? { ...(savedUserMsg as any), id: (savedUserMsg as any).id || userTempId } : m));
+        }
+      }).catch(err =>
         console.error('Failed to save AI user query:', err)
       );
 
@@ -4034,15 +4042,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           senderId: 'ai',
           receiverId: senderId,
           isAi: true,
+          type: 'ai',
           createdAt: new Date(),
-          type: 'text'
         };
         setMessages(prev => [...prev, aiMsg]);
+        setMessagesCache(prev => {
+          const current = prev[selectedUser.id] || [];
+          return { ...prev, [selectedUser.id]: [...current, aiMsg] };
+        });
 
-        // Save pure clean AI response to DB as normal message
-        saveSocialMessage(selectedUser.id, cleanAiAnswer, 'text').catch(err =>
-          console.error('Failed to save AI response:', err)
-        );
+        // Save pure clean AI response to DB with type 'ai'
+        const savedAiMsg = await saveSocialMessage(selectedUser.id, cleanAiAnswer, 'ai');
+        if (savedAiMsg) {
+          setMessages(prev => prev.map(m => m.id === aiTempId ? { ...(savedAiMsg as any), id: (savedAiMsg as any).id || aiTempId, type: 'ai', isAi: true, senderId: 'ai' } : m));
+        }
       } catch (e) {
         const errAiMsg: any = {
           id: 'ai-err-' + Date.now(),
@@ -4050,8 +4063,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           senderId: 'ai',
           receiverId: senderId,
           isAi: true,
+          type: 'ai',
           createdAt: new Date(),
-          type: 'text'
         };
         setMessages(prev => [...prev, errAiMsg]);
       }
@@ -5585,15 +5598,38 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               let storagePath: string | undefined;
 
                               if (presignRes.ok) {
-                                const { uploadUrl, fileUrl, storagePath: sPath } = await presignRes.json();
-                                const uploadRes = await fetch(uploadUrl, {
-                                  method: 'PUT',
-                                  body: audioBlob,
-                                  headers: { 'Content-Type': 'audio/webm' },
-                                });
-                                if (uploadRes.ok) {
-                                  finalAudioUrl = fileUrl;
-                                  storagePath = sPath;
+                                try {
+                                  const { uploadUrl, fileUrl, storagePath: sPath } = await presignRes.json();
+                                  const uploadRes = await fetch(uploadUrl, {
+                                    method: 'PUT',
+                                    body: audioBlob,
+                                    headers: { 'Content-Type': 'audio/webm' },
+                                  });
+                                  if (uploadRes.ok) {
+                                    finalAudioUrl = fileUrl;
+                                    storagePath = sPath;
+                                  }
+                                } catch (e) {
+                                  console.warn('Presigned upload failed, trying multipart:', e);
+                                }
+                              }
+
+                              if (!finalAudioUrl || finalAudioUrl.startsWith('blob:')) {
+                                try {
+                                  const formData = new FormData();
+                                  formData.append('file', audioBlob, `voice_${Date.now()}.webm`);
+                                  formData.append('receiverId', selectedUser.id);
+                                  formData.append('type', 'voice');
+                                  const uploadRes = await fetch('/api/chat/upload', { method: 'POST', body: formData });
+                                  if (uploadRes.ok) {
+                                    const resData = await uploadRes.json();
+                                    if (resData.message?.content) {
+                                      finalAudioUrl = resData.message.content;
+                                      storagePath = resData.storagePath || '';
+                                    }
+                                  }
+                                } catch (uploadErr) {
+                                  console.warn('Fallback multipart voice upload failed:', uploadErr);
                                 }
                               }
 
