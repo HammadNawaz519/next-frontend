@@ -1110,15 +1110,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
   const isAI = msg.senderId === 'ai';
   const isSent = !isAI && String(msg.senderId) === String(currentUserId);
 
-  // Swipe-to-reply gesture state
-  const [swipeOffset, setSwipeOffset] = useState(0);
-  const [isSwiping, setIsSwiping] = useState(false);
-  const touchStartX = useRef<number>(0);
-  const touchStartY = useRef<number>(0);
-  const isSwipingHorizontally = useRef<boolean | null>(null);
-  const effectiveSwipeOffset = swipeOffset > 0 ? swipeOffset : (chatSwipeOffset || 0);
-
-  // Long-press
+  // Long-press detection
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
   const isMoving = useRef(false);
   const bubbleRef = useRef<HTMLDivElement>(null);
@@ -1140,7 +1132,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
     onShowIGMenu({ msg, bubbleRect: rect, isSent });
   };
 
-  const handlePointerDown = (e: any) => {
+  const handlePointerDown = () => {
     if (isInSelectionMode) return;
     isMoving.current = false;
     longPressTimeout.current = setTimeout(() => {
@@ -1155,105 +1147,6 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
   const handlePointerMove = () => {
     isMoving.current = true;
     if (longPressTimeout.current) { clearTimeout(longPressTimeout.current); longPressTimeout.current = null; }
-  };
-
-  const mouseStartX = useRef(0);
-  const mouseStartY = useRef(0);
-  const isDraggingMouse = useRef(false);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (isInSelectionMode || e.button !== 0) return;
-    handlePointerDown(e);
-    isDraggingMouse.current = true;
-    mouseStartX.current = e.clientX;
-    mouseStartY.current = e.clientY;
-
-    const handleMouseMoveWindow = (moveEv: MouseEvent) => {
-      handlePointerMove();
-      if (!isDraggingMouse.current) return;
-      const diffX = moveEv.clientX - mouseStartX.current;
-      const diffY = moveEv.clientY - mouseStartY.current;
-
-      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 6) {
-        setIsSwiping(true);
-        if (diffX > 0) {
-          const clampedOffset = Math.min(diffX * 0.6, 85);
-          setSwipeOffset(clampedOffset);
-        } else {
-          const clampedOffset = Math.max(diffX * 0.75, -85);
-          if (onContainerSwipeOffset) onContainerSwipeOffset(clampedOffset);
-        }
-      }
-    };
-
-    const handleMouseUpWindow = () => {
-      isDraggingMouse.current = false;
-      window.removeEventListener('mousemove', handleMouseMoveWindow);
-      window.removeEventListener('mouseup', handleMouseUpWindow);
-      handlePointerUp();
-      if (onContainerSwipeOffset) onContainerSwipeOffset(0);
-      setSwipeOffset(prev => {
-        if (prev > 40) {
-          if (navigator.vibrate) navigator.vibrate(30);
-          onReply(msg);
-        }
-        return 0;
-      });
-      setIsSwiping(false);
-    };
-
-    window.addEventListener('mousemove', handleMouseMoveWindow);
-    window.addEventListener('mouseup', handleMouseUpWindow);
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-    isSwipingHorizontally.current = null;
-    handlePointerDown(e);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    handlePointerMove();
-    const currentX = e.touches[0].clientX;
-    const currentY = e.touches[0].clientY;
-    const diffX = currentX - touchStartX.current;
-    const diffY = currentY - touchStartY.current;
-
-    if (isSwipingHorizontally.current === null) {
-      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 8) {
-        isSwipingHorizontally.current = true;
-      } else if (Math.abs(diffY) > Math.abs(diffX) && Math.abs(diffY) > 8) {
-        isSwipingHorizontally.current = false;
-      }
-    }
-
-    if (isSwipingHorizontally.current) {
-      if (diffX > 0) {
-        setIsSwiping(true);
-        const clampedOffset = Math.min(diffX * 0.6, 85);
-        setSwipeOffset(clampedOffset);
-        if (clampedOffset > 40 && (e.currentTarget as any)._hapticsTriggered !== true) {
-          if (navigator.vibrate) navigator.vibrate(30);
-          (e.currentTarget as any)._hapticsTriggered = true;
-        }
-      } else if (diffX < 0) {
-        setIsSwiping(true);
-        const clampedOffset = Math.max(diffX * 0.75, -85);
-        if (onContainerSwipeOffset) onContainerSwipeOffset(clampedOffset);
-      }
-    }
-  };
-
-  const handleTouchEnd = () => {
-    handlePointerUp();
-    if (onContainerSwipeOffset) onContainerSwipeOffset(0);
-    if (swipeOffset > 40) {
-      if (navigator.vibrate) navigator.vibrate(30);
-      onReply(msg);
-    }
-    setIsSwiping(false);
-    setSwipeOffset(0);
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -1278,18 +1171,16 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
   const hasReactions = Object.keys(reactionCounts).length > 0;
 
-  // Compute swipe-reveal time label once
-  const swipeTimeLabel = formatChatDotTime(msg.createdAt);
-  const swipeOpacity = effectiveSwipeOffset < -6 ? Math.min(1, Math.abs(effectiveSwipeOffset) / 30) : 0;
-
   return (
     <div
       className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${isSelected ? 'selected-item' : ''} animate-in slide-in-from-bottom-2 duration-300 relative`}
       onClick={handleMessageClick}
-      onMouseDown={handleMouseDown}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      onMouseDown={handlePointerDown}
+      onMouseUp={handlePointerUp}
+      onMouseMove={handlePointerMove}
+      onTouchStart={handlePointerDown}
+      onTouchEnd={handlePointerUp}
+      onTouchMove={handlePointerMove}
       onContextMenu={handleContextMenu}
       style={{
         display: 'flex',
@@ -1301,37 +1192,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         padding: '0',
         userSelect: 'none',
         position: 'relative',
-        marginTop: hasPrevReactions ? '14px' : (isPrevSameSender ? '1px' : '4px'),
-        marginBottom: hasReactions ? '16px' : (isNextSameSender ? '1px' : '4px'),
-        transition: isSwiping
-          ? 'none'
-          : 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)',
-        transform: effectiveSwipeOffset !== 0
-          ? `translateX(${effectiveSwipeOffset}px)`
-          : 'translateX(0px)',
+        marginTop: hasPrevReactions ? '8px' : (isPrevSameSender ? '1px' : '3px'),
+        marginBottom: hasReactions ? '8px' : (isNextSameSender ? '1px' : '3px'),
       }}
     >
-      {/* Revealed Timestamp on Swipe Left — pinned to the right edge of visible area */}
-      <div
-        style={{
-          position: 'absolute',
-          right: 0,
-          top: '50%',
-          transform: `translateY(-50%) translateX(calc(100% + 10px))`,
-          opacity: swipeOpacity,
-          transition: isSwiping ? 'opacity 0.05s' : 'opacity 0.22s ease',
-          pointerEvents: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          fontSize: '11px',
-          fontWeight: 500,
-          color: 'rgba(120,120,120,0.85)',
-          whiteSpace: 'nowrap',
-          letterSpacing: '0',
-        }}
-      >
-        {swipeTimeLabel}
-      </div>
 
       {/* Consecutive Grouping Tail Logic — column wrapper keeps bubble + time stacked */}
       <div style={{
@@ -1365,10 +1229,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
-        // Classic pill bubble shape — uniform rounded corners on all sides
+        // Balanced, comfortable rounded pill bubbles with light/normal font and proper padding
         const bubbleClasses = isSent
-          ? `bg-zinc-100 text-zinc-900 px-4.5 py-3 !rounded-[28px] max-w-[80%] self-end text-[13.5px] font-normal leading-relaxed ${isPrevSameSender ? '-mt-2' : ''}`
-          : `bg-[#FEF5D1] text-zinc-900 px-4.5 py-3 !rounded-[28px] max-w-[80%] self-start text-[13.5px] font-normal leading-relaxed ${isPrevSameSender ? '-mt-2' : ''}`;
+          ? `bg-zinc-100 text-zinc-900 px-4.5 py-2.5 !rounded-[24px] max-w-[78%] self-end text-[13px] font-normal leading-snug shadow-2xs ${isPrevSameSender ? '-mt-2' : ''}`
+          : `bg-[#FEF5D1] text-zinc-900 px-4.5 py-2.5 !rounded-[24px] max-w-[78%] self-start text-[13px] font-normal leading-snug shadow-2xs ${isPrevSameSender ? '-mt-2' : ''}`;
 
         return (
           <div
@@ -1376,7 +1240,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
             className={`msg ${bubbleClasses} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''} ${isMedia ? '!p-0 !bg-transparent !border-0 !shadow-none' : ''}`}
             style={{
               position: 'relative',
-              borderRadius: '28px',
+              borderRadius: '24px',
               transition: isSelected ? 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28)' : 'none',
               transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
             }}
@@ -1618,7 +1482,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                   </div>
                 )}
                 {msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
-                  <div style={{ fontSize: '1.01rem', lineHeight: '1.44', letterSpacing: '-0.01em', wordBreak: 'break-word' }}>
+                  <div style={{ fontSize: '0.885rem', lineHeight: '1.45', letterSpacing: '-0.005em', wordBreak: 'break-word', minWidth: '24px' }}>
                     <span>{msg.content}</span>
                   </div>
                 ) : null}
@@ -5088,8 +4952,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto my-1.5 shrink-0" />
               )}
 
-              {/* Header Row */}
-              {!isSearchFocused && (
+              {/* Header Row when not searching and no chat selected */}
+              {!isSearchFocused && !selectedChatForOptions && (
                 <div className="flex justify-between items-center mt-3 mb-3 px-1 shrink-0">
                   <h2 className="text-[22px] font-bold text-black tracking-tight">
                     {isArchivedView ? 'Archived Chats' : (searchQuery.trim() ? 'Search Results' : 'Recent Chat')}
@@ -5113,9 +4977,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
               )}
 
-              {/* Top Long-Press Action Bar (Pin, Archive, Delete) */}
+              {/* Top Long-Press Action Bar (Delete SVG, Pin SVG, Archive SVG, and Deselect) */}
               {selectedChatForOptions && (
-                <div className="mb-2.5 p-2.5 rounded-2xl bg-[#141111] text-white border border-zinc-800 flex items-center justify-between shadow-lg animate-in fade-in slide-in-from-top-2 duration-200 shrink-0">
+                <div className="mt-2 mb-3 p-2 rounded-2xl bg-[#141111] text-white border border-zinc-800 flex items-center justify-between shadow-lg animate-in fade-in slide-in-from-top-2 duration-200 shrink-0">
                   <div className="flex items-center gap-2 min-w-0 flex-1 pl-1">
                     <button
                       onClick={() => {
@@ -5134,71 +4998,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </div>
                   </div>
 
-                  {/* 3 Action Buttons: Pin, Archive, Delete */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {/* 1. Pin / Unpin */}
-                    <button
-                      onClick={() => {
-                        triggerHaptic('medium');
-                        const targetId = selectedChatForOptions.id;
-                        const isCurrentlyPinned = pinnedChats.has(targetId);
-                        setPinnedChats(prev => {
-                          const next = new Set(prev);
-                          if (isCurrentlyPinned) {
-                            next.delete(targetId);
-                          } else {
-                            next.add(targetId);
-                          }
-                          if (typeof window !== 'undefined') {
-                            localStorage.setItem('social_pinned_chats', JSON.stringify(Array.from(next)));
-                          }
-                          return next;
-                        });
-                        setSelectedChatForOptions(null);
-                      }}
-                      className={`px-2.5 py-1.5 rounded-xl text-[12px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
-                        pinnedChats.has(selectedChatForOptions.id)
-                          ? 'bg-[#9D4EDD] text-white'
-                          : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
-                      }`}
-                      title={pinnedChats.has(selectedChatForOptions.id) ? 'Unpin Chat' : 'Pin to Top'}
-                    >
-                      <Pin className="w-3.5 h-3.5" strokeWidth={2} />
-                      <span>{pinnedChats.has(selectedChatForOptions.id) ? 'Unpin' : 'Pin'}</span>
-                    </button>
-
-                    {/* 2. Archive / Unarchive */}
-                    <button
-                      onClick={() => {
-                        triggerHaptic('medium');
-                        const targetId = selectedChatForOptions.id;
-                        const isCurrentlyArchived = archivedChatIds.has(targetId);
-                        setArchivedChatIds(prev => {
-                          const next = new Set(prev);
-                          if (isCurrentlyArchived) {
-                            next.delete(targetId);
-                          } else {
-                            next.add(targetId);
-                          }
-                          if (typeof window !== 'undefined') {
-                            localStorage.setItem('social_archived_chats', JSON.stringify(Array.from(next)));
-                          }
-                          return next;
-                        });
-                        setSelectedChatForOptions(null);
-                      }}
-                      className={`px-2.5 py-1.5 rounded-xl text-[12px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
-                        archivedChatIds.has(selectedChatForOptions.id)
-                          ? 'bg-[#FFF3CD] text-zinc-900'
-                          : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
-                      }`}
-                      title={archivedChatIds.has(selectedChatForOptions.id) ? 'Move to Inbox' : 'Archive Chat'}
-                    >
-                      <Archive className="w-3.5 h-3.5" strokeWidth={2} />
-                      <span>{archivedChatIds.has(selectedChatForOptions.id) ? 'Unarchive' : 'Archive'}</span>
-                    </button>
-
-                    {/* 3. Delete */}
+                  {/* 3 Action SVG Buttons: 1. Delete, 2. Pin, 3. Archive */}
+                  <div className="flex items-center gap-2 shrink-0 pr-1">
+                    {/* 1. Delete SVG */}
                     <button
                       onClick={async () => {
                         triggerHaptic('heavy');
@@ -5220,11 +5022,70 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         }
                         setSelectedChatForOptions(null);
                       }}
-                      className="px-2.5 py-1.5 rounded-xl text-[12px] font-semibold flex items-center gap-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 transition-all cursor-pointer active:scale-95"
-                      title="Delete Chat"
+                      className="w-8 h-8 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 flex items-center justify-center cursor-pointer transition-all active:scale-95"
+                      title="Delete Chat & Messages"
                     >
-                      <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
-                      <span>Delete</span>
+                      <Trash2 className="w-4 h-4" strokeWidth={2} />
+                    </button>
+
+                    {/* 2. Pin SVG */}
+                    <button
+                      onClick={() => {
+                        triggerHaptic('medium');
+                        const targetId = selectedChatForOptions.id;
+                        const isCurrentlyPinned = pinnedChats.has(targetId);
+                        setPinnedChats(prev => {
+                          const next = new Set(prev);
+                          if (isCurrentlyPinned) {
+                            next.delete(targetId);
+                          } else {
+                            next.add(targetId);
+                          }
+                          if (typeof window !== 'undefined') {
+                            localStorage.setItem('social_pinned_chats', JSON.stringify(Array.from(next)));
+                          }
+                          return next;
+                        });
+                        setSelectedChatForOptions(null);
+                      }}
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+                        pinnedChats.has(selectedChatForOptions.id)
+                          ? 'bg-[#9D4EDD] text-white'
+                          : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
+                      }`}
+                      title={pinnedChats.has(selectedChatForOptions.id) ? 'Unpin Chat' : 'Pin to Top'}
+                    >
+                      <Pin className="w-4 h-4" strokeWidth={2} />
+                    </button>
+
+                    {/* 3. Archive SVG */}
+                    <button
+                      onClick={() => {
+                        triggerHaptic('medium');
+                        const targetId = selectedChatForOptions.id;
+                        const isCurrentlyArchived = archivedChatIds.has(targetId);
+                        setArchivedChatIds(prev => {
+                          const next = new Set(prev);
+                          if (isCurrentlyArchived) {
+                            next.delete(targetId);
+                          } else {
+                            next.add(targetId);
+                          }
+                          if (typeof window !== 'undefined') {
+                            localStorage.setItem('social_archived_chats', JSON.stringify(Array.from(next)));
+                          }
+                          return next;
+                        });
+                        setSelectedChatForOptions(null);
+                      }}
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+                        archivedChatIds.has(selectedChatForOptions.id)
+                          ? 'bg-[#FFF3CD] text-zinc-900'
+                          : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
+                      }`}
+                      title={archivedChatIds.has(selectedChatForOptions.id) ? 'Move to Inbox' : 'Archive Chat'}
+                    >
+                      <Archive className="w-4 h-4" strokeWidth={2} />
                     </button>
                   </div>
                 </div>
@@ -5443,15 +5304,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 {/* ── SCREEN 1: LIGHT MESSAGES SHEET (Smooth rounded-t-[36px]) ── */}
                 <div className="w-full flex-1 bg-white rounded-t-[36px] px-4 pt-3 pb-20 flex flex-col relative shadow-[0_-12px_32px_rgba(0,0,0,0.25)] overflow-hidden z-10 min-h-0">
 
-                  {/* Messages Scroll Area */}
+                  {/* Messages Scroll Area - Clean padding above input bar */}
                   <div
                     ref={messagesContainerRef}
                     onScroll={handleMessagesScroll}
-                    onTouchStart={handleContainerTouchStart}
-                    onTouchMove={handleContainerTouchMove}
-                    onTouchEnd={handleContainerTouchEnd}
-                    onMouseDown={handleContainerMouseDown}
-                    className="flex flex-col gap-4 overflow-y-auto flex-1 no-scrollbar pr-0.5 pb-24"
+                    className="flex flex-col gap-2.5 overflow-y-auto overflow-x-hidden flex-1 no-scrollbar pr-0.5 pb-16"
                   >
                     {isLoadingMessages && messages.length === 0 && (
                       <div className="chat-skeleton-container">
