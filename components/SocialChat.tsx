@@ -1069,7 +1069,7 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup, partnerLastSee
         gap: '4px',
         fontSize: '0.68rem',
         fontWeight: 600,
-        color: isDark ? '#e4e4e7' : '#18181b',
+        color: isDark ? '#a1a1aa' : '#52525b',
         marginTop: '3px',
         userSelect: 'none',
         pointerEvents: 'none',

@@ -348,18 +348,18 @@ export default function ChatInput({
           />
         )}
 
-        {/* ── RIGHT: Send Button / Mic Button ── */}
+        {/* ── RIGHT: Dynamic Action Button (Mic on Empty -> Send when Typed) ── */}
         {hasText ? (
           <button
             type="button"
             onClick={handleSend}
             disabled={disabled}
-            className="w-10 h-10 rounded-full bg-[#9D4EDD] hover:bg-[#8A38CC] active:scale-90 flex items-center justify-center text-white transition-all cursor-pointer outline-none shadow-md shrink-0"
+            className="w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs"
             title="Send Message"
           >
-            <svg className="w-4 h-4 text-white translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
-              <path d="M22 2L11 13" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M22 2L15 22L11 13L2 9L22 2Z" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg className="w-5 h-5 text-zinc-700" viewBox="-0.5 0 25 25" fill="none" stroke="currentColor">
+              <path d="M2.33045 8.38999C0.250452 11.82 9.42048 14.9 9.42048 14.9C9.42048 14.9 12.5005 24.07 15.9305 21.99C19.5705 19.77 23.9305 6.13 21.0505 3.27C18.1705 0.409998 4.55045 4.74999 2.33045 8.38999Z" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M15.1999 9.12L9.41992 14.9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
         ) : isSpeechToTextEnabled ? (
@@ -367,18 +367,16 @@ export default function ChatInput({
             type="button"
             onClick={toggleSpeechToText}
             disabled={disabled}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer outline-none shrink-0 ${
+            className={`w-11 h-11 rounded-full flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs ${
               isListeningSpeech
                 ? 'bg-[#9D4EDD] text-white animate-pulse shadow-md'
-                : 'bg-zinc-100/90 hover:bg-zinc-200/80 active:scale-90 text-zinc-700'
+                : 'bg-zinc-100 hover:bg-zinc-200 active:scale-90'
             }`}
             title={isListeningSpeech ? 'Tap to stop listening' : 'Tap to speak (Voice Typing)'}
           >
-            {isListeningSpeech ? (
-              <Square className="w-4 h-4 fill-current text-white" />
-            ) : (
-              <Mic className="w-5 h-5 text-zinc-700" strokeWidth={2.2} />
-            )}
+            <svg className={`w-5 h-5 ${isListeningSpeech ? 'text-white' : 'text-zinc-700'}`} viewBox="0 0 1920 1920" fill="currentColor">
+              <path d="M425.818 709.983V943.41c0 293.551 238.946 532.497 532.497 532.497 293.55 0 532.496-238.946 532.496-532.497V709.983h96.818V943.41c0 330.707-256.438 602.668-580.9 627.471l-.006 252.301h242.044V1920H667.862v-96.818h242.043l-.004-252.3C585.438 1546.077 329 1274.116 329 943.41V709.983h96.818ZM958.315 0c240.204 0 435.679 195.475 435.679 435.68v484.087c0 240.205-195.475 435.68-435.68 435.68-240.204 0-435.679-195.475-435.679-435.68V435.68C522.635 195.475 718.11 0 958.315 0Z" fillRule="evenodd"/>
+            </svg>
           </button>
         ) : (
           <button
@@ -388,14 +386,14 @@ export default function ChatInput({
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
             disabled={disabled}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer outline-none shrink-0 ${
-              isRecording
-                ? 'bg-rose-500 text-white scale-110 shadow-lg'
-                : 'bg-zinc-100/90 hover:bg-zinc-200/80 active:scale-90 text-zinc-600'
+            className={`w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 touch-none shadow-2xs ${
+              isRecording ? 'ring-4 ring-zinc-200 animate-pulse bg-zinc-200' : ''
             }`}
             title="Hold to Record Voice Message"
           >
-            <Mic className="w-5 h-5 text-zinc-700" strokeWidth={2.2} />
+            <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 1920 1920" fill="currentColor">
+              <path d="M425.818 709.983V943.41c0 293.551 238.946 532.497 532.497 532.497 293.55 0 532.496-238.946 532.496-532.497V709.983h96.818V943.41c0 330.707-256.438 602.668-580.9 627.471l-.006 252.301h242.044V1920H667.862v-96.818h242.043l-.004-252.3C585.438 1546.077 329 1274.116 329 943.41V709.983h96.818ZM958.315 0c240.204 0 435.679 195.475 435.679 435.68v484.087c0 240.205-195.475 435.68-435.68 435.68-240.204 0-435.679-195.475-435.679-435.68V435.68C522.635 195.475 718.11 0 958.315 0Z" fillRule="evenodd"/>
+            </svg>
           </button>
         )}
 
