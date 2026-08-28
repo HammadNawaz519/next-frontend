@@ -506,12 +506,6 @@ export default function DashboardPage() {
           fullUser={selectedProfileUser || fullUser}
           targetUser={selectedProfileUser}
           isDark={isDark}
-          onEditName={() => {
-            setUsernameInput(fullUser?.name || '');
-            setEditingUsername(true);
-            setUsernameError('');
-          }}
-          onInstall={handleInstallApp}
           refreshProfile={refreshProfile}
           onToggleFollow={handleToggleFollow}
           onOpenChat={(targetUser) => {
@@ -526,7 +520,6 @@ export default function DashboardPage() {
               setActiveView('chat');
             }, x, y, false);
           }}
-          onAccountSheetChange={setIsAccountSheetOpen}
         />
       </div>
 

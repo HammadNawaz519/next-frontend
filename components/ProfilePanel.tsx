@@ -21,15 +21,20 @@ import { optimizeImageClient } from '@/lib/media-optimizer';
 
 interface Props {
   isOpen: boolean;
-  isClosing: boolean;
-  onClose: () => void;
+  isClosing?: boolean;
+  onClose: (e?: any) => void;
   session: any;
   fullUser: any;
   targetUser?: any;
   isDark?: boolean;
+  onEditName?: () => void;
+  onInstall?: () => void;
+  hasUnreadNotifications?: boolean;
   refreshProfile?: () => void;
   onToggleFollow?: (targetUserId: string) => void;
   onOpenChat?: (user: any) => void;
+  onAccountSheetChange?: (isOpen: boolean) => void;
+  onOpenUpload?: (type: 'single_image' | 'reel') => void;
 }
 
 export default function ProfilePanel({
