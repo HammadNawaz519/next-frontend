@@ -1133,6 +1133,74 @@ export async function toggleFollowUser(targetUserId: string) {
   return { success: true, isFollowing: true, hasSentRequest: false };
 }
 
+export async function getFollowNotificationsAction() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { success: false, notifications: [], unreadCount: 0 };
+
+  const currentUser = await (prisma.user as any).findUnique({
+    where: { email: session.user.email },
+    include: {
+      followers: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          image: true
+        }
+      },
+      receivedFollowRequests: {
+        include: {
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              image: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }
+    }
+  });
+
+  if (!currentUser) return { success: false, notifications: [], unreadCount: 0 };
+
+  const notifications: { id: string; title: string; desc: string; time: string; unread: boolean; icon?: string }[] = [];
+
+  // Add received follow requests
+  (currentUser.receivedFollowRequests || []).forEach((req: any) => {
+    const senderName = req.sender?.name || req.sender?.username || 'Someone';
+    notifications.push({
+      id: req.id,
+      title: `${senderName} requested to follow you`,
+      desc: 'Follow request',
+      time: 'Recently',
+      unread: true,
+      icon: '👋'
+    });
+  });
+
+  // Add followers
+  (currentUser.followers || []).forEach((f: any) => {
+    const fName = f.name || f.username || 'Someone';
+    notifications.push({
+      id: `f-${f.id}`,
+      title: `${fName} started following you`,
+      desc: 'New follower',
+      time: 'Recently',
+      unread: false,
+      icon: '✨'
+    });
+  });
+
+  return {
+    success: true,
+    notifications,
+    unreadCount: (currentUser.receivedFollowRequests || []).length
+  };
+}
+
 export async function createStoryAction(imageUrl: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return { error: 'Not authenticated' };

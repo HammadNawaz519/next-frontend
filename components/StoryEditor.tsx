@@ -14,8 +14,6 @@ import {
   Loader2,
   Undo2,
   Redo2,
-  ShieldAlert,
-  HelpCircle,
   Video,
   Sparkles
 } from 'lucide-react';
@@ -148,7 +146,7 @@ export default function StoryEditor({
 
       setHistory((prev) => {
         const sliced = prev.slice(0, historyIndex + 1);
-        return [...sliced, currentState].slice(-25); // Cap to 25 history entries
+        return [...sliced, currentState].slice(-25);
       });
       setHistoryIndex((prev) => prev + 1);
     },
@@ -208,7 +206,6 @@ export default function StoryEditor({
         }
       } catch (e) {}
 
-      // Fresh state initialization
       resetEditorState();
     } else {
       cleanupResources();
@@ -310,7 +307,6 @@ export default function StoryEditor({
     draftKey
   ]);
 
-  // Clean memory / Object URLs
   const cleanupResources = () => {
     if (selectedMediaUrl && selectedMediaUrl.startsWith('blob:')) {
       URL.revokeObjectURL(selectedMediaUrl);
@@ -326,7 +322,6 @@ export default function StoryEditor({
         return;
       }
 
-      // Undo / Redo
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         if (e.shiftKey) handleRedo();
         else handleUndo();
@@ -352,7 +347,7 @@ export default function StoryEditor({
     const newLayer: StoryTextLayer = {
       id: 'text-' + Date.now() + Math.random().toString(36).substring(7),
       type: 'text',
-      text: 'Good vibes',
+      text: 'Type text...',
       x: 50,
       y: 45 + (textLayers.length * 8) % 30,
       scale: 1,
@@ -530,7 +525,6 @@ export default function StoryEditor({
       ctx.fillStyle = bg.color || '#181515';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Subtle decorative ambient background glow
       ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
       ctx.beginPath();
       ctx.arc(540, 960, 480, 0, Math.PI * 2);
@@ -549,7 +543,6 @@ export default function StoryEditor({
       ctx.rotate((transform.rotation * Math.PI) / 180);
       ctx.scale(transform.zoom, transform.zoom);
 
-      // Draw image to cover 1080x1920
       const imgAspect = img.width / img.height;
       const canvasAspect = 1080 / 1920;
       let drawW = 1080;
@@ -582,7 +575,7 @@ export default function StoryEditor({
       if (!stroke.points || stroke.points.length < 2) return;
       ctx.beginPath();
       ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = stroke.size * 2.8; // Scale to 1080p
+      ctx.lineWidth = stroke.size * 2.8;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.globalAlpha = stroke.mode === 'marker' ? 0.6 : 1.0;
@@ -623,7 +616,6 @@ export default function StoryEditor({
       const boxH = scaledFontSize + padY * 2;
       const boxW = textWidth + padX * 2;
 
-      // Draw text background pill
       if (layer.background === 'pill' || layer.background === 'solid') {
         ctx.fillStyle = layer.background === 'solid' ? '#9D4EDD' : 'rgba(0, 0, 0, 0.75)';
         ctx.beginPath();
@@ -639,7 +631,6 @@ export default function StoryEditor({
         ctx.fill();
       }
 
-      // Draw shadow
       if (layer.shadow) {
         ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
         ctx.shadowBlur = 12;
@@ -679,10 +670,7 @@ export default function StoryEditor({
     triggerHaptic('medium');
 
     try {
-      // 1. Preparing
       setPostStage('preparing');
-
-      // 2. Rendering
       setPostStage('rendering');
       let finalPayloadUrl = selectedMediaUrl;
 
@@ -696,7 +684,6 @@ export default function StoryEditor({
         return;
       }
 
-      // 3. Uploading & Publishing
       setPostStage('uploading');
       setPostStage('publishing');
 
@@ -706,12 +693,10 @@ export default function StoryEditor({
         setPostStage('success');
         triggerHaptic('heavy');
 
-        // Clear local draft upon success
         try {
           localStorage.removeItem(draftKey);
         } catch (e) {}
 
-        // Notify parent and close
         setTimeout(() => {
           onStoryPosted(res.story);
           onClose();
@@ -751,10 +736,10 @@ export default function StoryEditor({
         onChange={handleFileSelect}
       />
 
-      {/* ── 1. TOP SAFE-AREA NAVIGATION BAR (MOVED DOWN & SIZED TO APP UI) ── */}
-      <div className="w-full pt-12 sm:pt-8 px-5 pb-3.5 flex items-center justify-between shrink-0 bg-[#141111] border-b border-zinc-800/80 z-20">
+      {/* ── 1. TOP SPACIOUS, UNCLUTTERED NAVIGATION BAR ── */}
+      <div className="w-full pt-14 pb-4 px-6 flex items-center justify-between shrink-0 bg-[#141111] z-20">
         
-        {/* Left: Back/Cancel Button */}
+        {/* Left: Clean Back Button */}
         <button
           onClick={() => {
             triggerHaptic('light');
@@ -762,104 +747,99 @@ export default function StoryEditor({
           }}
           disabled={postStage !== 'idle' && postStage !== 'error'}
           className="w-11 h-11 rounded-full bg-[#181515] border border-zinc-800 flex items-center justify-center text-white cursor-pointer active:scale-90 transition-all hover:bg-zinc-800 disabled:opacity-50"
-          title="Close Editor"
+          title="Close"
         >
           <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
         </button>
 
         {/* Center: Title */}
-        <div className="flex flex-col items-center">
-          <h2 className="text-[17px] font-black text-white tracking-tight leading-tight">
-            {mode === 'text' ? 'Text Story' : 'Story Creator'}
-          </h2>
-          <span className="text-[12px] text-zinc-400 font-medium">Connect Stories</span>
-        </div>
+        <h2 className="text-[17px] font-bold text-white tracking-tight">
+          {mode === 'text' ? 'Text Story' : 'Story Creator'}
+        </h2>
 
-        {/* Right: Undo, Redo, & Post Actions */}
-        <div className="flex items-center gap-2">
-          {/* Undo */}
-          <button
-            onClick={handleUndo}
-            disabled={historyIndex <= 0 || postStage !== 'idle'}
-            className="w-10 h-10 rounded-full bg-[#181515] border border-zinc-800 flex items-center justify-center text-zinc-300 hover:text-white disabled:opacity-40 transition-all cursor-pointer active:scale-90"
-            title="Undo (Ctrl+Z)"
-          >
-            <Undo2 className="w-4 h-4" />
-          </button>
-
-          {/* Redo */}
-          <button
-            onClick={handleRedo}
-            disabled={historyIndex >= history.length - 1 || postStage !== 'idle'}
-            className="w-10 h-10 rounded-full bg-[#181515] border border-zinc-800 flex items-center justify-center text-zinc-300 hover:text-white disabled:opacity-40 transition-all cursor-pointer active:scale-90"
-            title="Redo (Ctrl+Shift+Z)"
-          >
-            <Redo2 className="w-4 h-4" />
-          </button>
-
-          {/* Post Button */}
-          <button
-            onClick={handlePostStory}
-            disabled={!canPost || (postStage !== 'idle' && postStage !== 'error')}
-            className={`ml-1 h-11 px-5 rounded-full font-bold text-[14px] transition-all flex items-center gap-2 active:scale-95 ${
-              canPost && (postStage === 'idle' || postStage === 'error')
-                ? 'bg-[#9D4EDD] hover:bg-[#8A38CC] text-white shadow-md cursor-pointer'
-                : 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-70'
-            }`}
-          >
-            {postStage === 'preparing' && (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span>Preparing...</span>
-              </>
-            )}
-            {postStage === 'rendering' && (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span>Rendering...</span>
-              </>
-            )}
-            {(postStage === 'uploading' || postStage === 'publishing') && (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span>Publishing...</span>
-              </>
-            )}
-            {postStage === 'success' && (
-              <>
-                <Check className="w-4 h-4 text-white" />
-                <span>Posted!</span>
-              </>
-            )}
-            {(postStage === 'idle' || postStage === 'error') && (
-              <>
-                <Send className="w-4 h-4" strokeWidth={2.2} />
-                <span>Post</span>
-              </>
-            )}
-          </button>
-        </div>
+        {/* Right: Post Button */}
+        <button
+          onClick={handlePostStory}
+          disabled={!canPost || (postStage !== 'idle' && postStage !== 'error')}
+          className={`h-11 px-6 rounded-full font-bold text-[14px] transition-all flex items-center gap-2 active:scale-95 ${
+            canPost && (postStage === 'idle' || postStage === 'error')
+              ? 'bg-[#9D4EDD] hover:bg-[#8A38CC] text-white shadow-md cursor-pointer'
+              : 'bg-zinc-900 text-zinc-600 cursor-not-allowed border border-zinc-800'
+          }`}
+        >
+          {postStage === 'preparing' && (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <span>Preparing...</span>
+            </>
+          )}
+          {postStage === 'rendering' && (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <span>Rendering...</span>
+            </>
+          )}
+          {(postStage === 'uploading' || postStage === 'publishing') && (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <span>Posting...</span>
+            </>
+          )}
+          {postStage === 'success' && (
+            <>
+              <Check className="w-4 h-4 text-white" />
+              <span>Posted!</span>
+            </>
+          )}
+          {(postStage === 'idle' || postStage === 'error') && (
+            <>
+              <span>Post</span>
+              <Send className="w-4 h-4" strokeWidth={2.2} />
+            </>
+          )}
+        </button>
 
       </div>
 
       {/* Error Alert Bar */}
       {errorMsg && (
-        <div className="mx-4 mt-2 p-2.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 text-xs font-medium text-center flex items-center justify-between px-4 animate-in fade-in duration-150 shrink-0">
+        <div className="mx-6 mb-2 py-2.5 px-4 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs font-medium text-center flex items-center justify-between animate-in fade-in duration-150 shrink-0">
           <span>{errorMsg}</span>
           <button
             onClick={() => {
               setErrorMsg(null);
               setPostStage('idle');
             }}
-            className="text-white hover:text-red-200 text-xs font-bold underline cursor-pointer"
+            className="text-white hover:text-zinc-400 text-xs font-bold underline cursor-pointer ml-3"
           >
             Dismiss
           </button>
         </div>
       )}
 
-      {/* ── 2. CENTRAL 9:16 STORY CANVAS ── */}
-      <div className="flex-1 flex flex-col justify-center items-center relative overflow-hidden p-3 min-h-0">
+      {/* ── 2. CENTRAL 9:16 STORY CANVAS (WITH FLOATING UNDO/REDO) ── */}
+      <div className="flex-1 flex flex-col justify-center items-center relative overflow-hidden px-4 py-1 min-h-0">
+        
+        {/* Floating Subtle Undo / Redo / Safe-Area Controls */}
+        <div className="absolute top-2 right-6 z-30 flex items-center gap-1.5 bg-[#181515]/90 backdrop-blur-md p-1 rounded-full border border-zinc-800/80 shadow-md">
+          <button
+            onClick={handleUndo}
+            disabled={historyIndex <= 0 || postStage !== 'idle'}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-300 hover:text-white disabled:opacity-30 transition-all cursor-pointer active:scale-90"
+            title="Undo"
+          >
+            <Undo2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleRedo}
+            disabled={historyIndex >= history.length - 1 || postStage !== 'idle'}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-300 hover:text-white disabled:opacity-30 transition-all cursor-pointer active:scale-90"
+            title="Redo"
+          >
+            <Redo2 className="w-4 h-4" />
+          </button>
+        </div>
+
         <StoryCanvas
           mode={mode}
           mediaUrl={selectedMediaUrl}
@@ -886,10 +866,8 @@ export default function StoryEditor({
         />
       </div>
 
-      {/* ── 3. CONTEXTUAL BOTTOM TOOLBAR & MODE SELECTOR ── */}
-      <div className="w-full px-4 pb-[env(safe-area-inset-bottom,20px)] pt-2 bg-[#141111] flex flex-col gap-2.5 shrink-0 border-t border-zinc-800/80 z-20">
-        
-        {/* Contextual Toolbar */}
+      {/* ── 3. SINGLE CLEAN UNIFIED BOTTOM TOOLBAR ── */}
+      <div className="w-full px-6 pb-8 pt-3 bg-[#141111] flex flex-col gap-2 shrink-0 z-20">
         <StoryToolbar
           mode={mode}
           selectedLayer={selectedLayer}
@@ -920,47 +898,6 @@ export default function StoryEditor({
           activeSubTool={activeSubTool}
           setActiveSubTool={setActiveSubTool}
         />
-
-        {/* Mode Selector Pill (Photo/Video vs Text) */}
-        {!isDrawingMode && !selectedLayer && activeSubTool === 'none' && (
-          <div className="w-full max-w-[260px] mx-auto flex items-center bg-zinc-900/90 p-1 rounded-full border border-zinc-800 shadow-xs">
-            <button
-              onClick={() => {
-                triggerHaptic('light');
-                setMode('photo');
-                if (!selectedMediaUrl) {
-                  fileInputRef.current?.click();
-                }
-              }}
-              className={`flex-1 py-1.5 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                mode === 'photo'
-                  ? 'bg-zinc-800 text-white shadow-xs'
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-            >
-              <ImageIcon className="w-3.5 h-3.5" strokeWidth={2.2} />
-              <span>Media</span>
-            </button>
-
-            <button
-              onClick={() => {
-                triggerHaptic('light');
-                setMode('text');
-                if (textLayers.length === 0) {
-                  handleAddTextLayer();
-                }
-              }}
-              className={`flex-1 py-1.5 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                mode === 'text'
-                  ? 'bg-[#9D4EDD] text-white shadow-xs'
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-            >
-              <Type className="w-3.5 h-3.5" strokeWidth={2.2} />
-              <span>Text</span>
-            </button>
-          </div>
-        )}
       </div>
 
       {/* ── 4. STICKER PICKER MODAL SHEET ── */}
@@ -970,19 +907,14 @@ export default function StoryEditor({
         onSelectSticker={handleAddStickerLayer}
       />
 
-      {/* ── 5. CLOSE CONFIRMATION MODAL ── */}
+      {/* ── 5. SIMPLE SAVE DRAFT MODAL (CLEAN CONNECT STYLE) ── */}
       {showCloseConfirm && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-[#181515] border border-zinc-800 rounded-3xl p-5 flex flex-col items-center text-center gap-3 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-[#D8B4E2]">
-              <HelpCircle className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-white">Save Draft?</h3>
-              <p className="text-xs text-zinc-400 mt-1">
-                You have unsaved story edits. Would you like to save your draft or discard it?
-              </p>
-            </div>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-5 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-[340px] bg-[#181515] border border-zinc-800 rounded-3xl p-6 flex flex-col text-center gap-3.5 shadow-2xl">
+            <h3 className="text-base font-bold text-white">Save draft?</h3>
+            <p className="text-xs text-zinc-400 -mt-1 leading-relaxed">
+              Save your unfinished story to finish later, or discard your edits.
+            </p>
             <div className="flex flex-col w-full gap-2 mt-2">
               <button
                 onClick={() => {
@@ -990,9 +922,9 @@ export default function StoryEditor({
                   setShowCloseConfirm(false);
                   onClose();
                 }}
-                className="w-full py-2.5 rounded-full bg-[#9D4EDD] text-white font-bold text-xs hover:brightness-110 transition-all cursor-pointer"
+                className="w-full py-3 rounded-full bg-[#9D4EDD] text-white font-bold text-xs hover:bg-[#8A38CC] transition-all cursor-pointer"
               >
-                Save Draft & Exit
+                Save Draft
               </button>
               <button
                 onClick={() => {
@@ -1003,46 +935,41 @@ export default function StoryEditor({
                   setShowCloseConfirm(false);
                   onClose();
                 }}
-                className="w-full py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-red-400 font-semibold text-xs transition-all cursor-pointer"
+                className="w-full py-3 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white font-semibold text-xs transition-all cursor-pointer"
               >
-                Discard Edits
+                Discard
               </button>
               <button
                 onClick={() => setShowCloseConfirm(false)}
-                className="w-full py-2 text-zinc-500 hover:text-zinc-300 font-medium text-xs transition-all cursor-pointer"
+                className="w-full py-1.5 text-zinc-500 hover:text-zinc-300 font-medium text-xs transition-all cursor-pointer mt-1"
               >
-                Continue Editing
+                Cancel
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── 6. DRAFT RECOVERY PROMPT ── */}
+      {/* ── 6. SIMPLE DRAFT RECOVERY PROMPT (CLEAN CONNECT STYLE) ── */}
       {showDraftPrompt && recoveredDraft && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-[#181515] border border-zinc-800 rounded-3xl p-5 flex flex-col items-center text-center gap-3 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-full bg-[#9D4EDD]/20 border border-[#9D4EDD]/40 flex items-center justify-center text-[#D8B4E2]">
-              <Sparkles className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-white">Continue Unfinished Story?</h3>
-              <p className="text-xs text-zinc-400 mt-1">
-                We found an unsaved draft from your previous session.
-              </p>
-            </div>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-5 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-[340px] bg-[#181515] border border-zinc-800 rounded-3xl p-6 flex flex-col text-center gap-3.5 shadow-2xl">
+            <h3 className="text-base font-bold text-white">Continue story?</h3>
+            <p className="text-xs text-zinc-400 -mt-1 leading-relaxed">
+              We found an unsaved story draft from your previous session.
+            </p>
             <div className="flex flex-col w-full gap-2 mt-2">
               <button
                 onClick={() => applyDraft(recoveredDraft)}
-                className="w-full py-2.5 rounded-full bg-gradient-to-r from-[#9D4EDD] to-[#7B2CBF] text-white font-bold text-xs hover:brightness-110 transition-all cursor-pointer shadow-md"
+                className="w-full py-3 rounded-full bg-[#9D4EDD] text-white font-bold text-xs hover:bg-[#8A38CC] transition-all cursor-pointer shadow-sm"
               >
-                Continue Draft
+                Continue
               </button>
               <button
                 onClick={discardDraft}
-                className="w-full py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white font-semibold text-xs transition-all cursor-pointer"
+                className="w-full py-3 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white font-semibold text-xs transition-all cursor-pointer"
               >
-                Start New Story
+                Start Fresh
               </button>
             </div>
           </div>

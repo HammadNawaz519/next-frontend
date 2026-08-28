@@ -19,6 +19,7 @@ import {
   toggleShowActivityStatus,
   getActiveStoriesAction,
   deleteStoryAction,
+  getFollowNotificationsAction,
 } from '@/app/dashboard/actions';
 import {
   optimizeImageClient,
@@ -1931,6 +1932,23 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
       }
     }).catch(err => console.warn('Could not load stories:', err));
+
+    // Realtime Follow Notifications sync
+    const fetchNotifications = async () => {
+      try {
+        const res = await getFollowNotificationsAction();
+        if (res && res.success && Array.isArray(res.notifications)) {
+          setNotificationsList(res.notifications);
+          setUnreadNotifications(res.unreadCount || 0);
+        }
+      } catch (err) {
+        console.warn('Could not load follow notifications:', err);
+      }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 10000); // 10s poll
+    return () => clearInterval(interval);
   }, [session]);
 
   const handleStoryPosted = (newStory: any) => {
@@ -4827,9 +4845,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     <button
                       onClick={() => {
                         triggerHaptic('light');
-                        setShowNotificationsDrawer(prev => !prev);
+                        setShowNotificationsDrawer(prev => {
+                          if (!prev) setUnreadNotifications(0);
+                          return !prev;
+                        });
                       }}
-                      className="p-2 text-white hover:text-zinc-300 active:scale-95 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent relative"
+                      className="p-2 text-white hover:text-zinc-300 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent relative"
                       title="Notifications"
                     >
                       <Bell className="w-6 h-6 text-white" strokeWidth={2} />
