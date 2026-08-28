@@ -477,44 +477,35 @@ export default function CallsView({
                         {call.contactName}
                       </span>
 
-                      {/* Status Line */}
-                      <div className="flex items-center gap-1.5 text-[12px] font-medium">
-                        {call.status === 'received' && (
-                          <>
-                            <PhoneIncoming className="w-[13px] h-[13px] text-emerald-500" strokeWidth={2.5} />
-                            <span className="text-zinc-500">
-                              Received • {formatDuration(call.duration)}
-                            </span>
-                          </>
-                        )}
-                        {call.status === 'sent' && (
-                          <>
-                            <PhoneOutgoing className="w-[13px] h-[13px] text-indigo-500" strokeWidth={2.5} />
-                            <span className="text-zinc-500">
-                              Sent • {formatDuration(call.duration)}
-                            </span>
-                          </>
-                        )}
-                        {call.status === 'missed' && (
-                          <>
-                            <PhoneMissed className="w-[13px] h-[13px] text-zinc-400" strokeWidth={2.5} />
-                            <span className="text-zinc-500 font-medium">Missed call</span>
-                          </>
+                      {/* Status Line: Plain text without small SVG icons */}
+                      <div className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-500">
+                        {call.status === 'missed' ? (
+                          <span className="text-zinc-500 font-medium">
+                            Missed {call.type === 'video' ? 'Video' : 'Voice'} Call
+                          </span>
+                        ) : call.status === 'received' ? (
+                          <span>
+                            Incoming {call.type === 'video' ? 'Video' : 'Voice'} Call • {formatDuration(call.duration)}
+                          </span>
+                        ) : (
+                          <span>
+                            Outgoing {call.type === 'video' ? 'Video' : 'Voice'} Call • {formatDuration(call.duration)}
+                          </span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Right Section (Timestamp & Media Tag) */}
+                  {/* Right Section (Timestamp & Simple Grey Media Icon with No Outline / Box) */}
                   <div className="flex flex-col items-end gap-1.5 shrink-0 ml-2">
                     <span className="text-[11px] font-medium text-zinc-400 text-right">
                       {formatTimeAgo(call.createdAt)}
                     </span>
-                    <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center">
+                    <div className="flex items-center justify-center p-0.5">
                       {call.type === 'video' ? (
-                        <Video className="w-3.5 h-3.5 text-[#9D4EDD]" strokeWidth={2} />
+                        <Video className="w-4 h-4 text-zinc-400" strokeWidth={1.8} />
                       ) : (
-                        <Phone className="w-3.5 h-3.5 text-zinc-500" strokeWidth={2} />
+                        <Phone className="w-4 h-4 text-zinc-400" strokeWidth={1.8} />
                       )}
                     </div>
                   </div>

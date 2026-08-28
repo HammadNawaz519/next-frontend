@@ -1082,14 +1082,14 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
       return (
         <div className="w-full flex justify-center my-2 text-center px-4 animate-in fade-in duration-300 pointer-events-none">
-          <span className="text-[11px] font-semibold text-[var(--dm-text-primary)] pointer-events-auto">
-            {baseText}.{' '}
+          <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#141111] text-[#D8B4E2] text-[11px] font-semibold shadow-xs border border-white/10 pointer-events-auto">
+            <span>{baseText}.</span>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 if (onOpenThemePicker) onOpenThemePicker();
               }}
-              className="font-bold underline hover:opacity-80 cursor-pointer text-[var(--dm-text-primary)] ml-1 transition-colors"
+              className="font-bold underline hover:opacity-80 cursor-pointer text-white ml-0.5 transition-colors"
             >
               Customize chat
             </button>
@@ -1100,7 +1100,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
     return (
       <div className="w-full flex justify-center my-2 text-center px-4 animate-in fade-in duration-300 pointer-events-none">
-        <span className="text-[11px] font-medium text-[var(--dm-text-muted)]">
+        <span className="inline-flex items-center px-3.5 py-1 rounded-full bg-[#141111] text-[#D8B4E2] text-[11px] font-semibold shadow-xs border border-white/10">
           {msg.content}
         </span>
       </div>
@@ -1212,8 +1212,8 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
         // Continuous high-radius capsule shape on all 4 corners, soft colors, generous horizontal & compact vertical padding
         const bubbleClasses = isSent
-          ? `bg-[#F4F4F5] text-zinc-900 px-6 py-2.5 !rounded-[24px] w-fit max-w-full text-[14px] font-normal leading-[1.4] shadow-2xs flex items-center justify-center ${isPrevSameSender ? '-mt-1' : ''}`
-          : `bg-[#FFF3CD] text-zinc-900 px-6 py-2.5 !rounded-[24px] w-fit max-w-full text-[14px] font-normal leading-[1.4] shadow-2xs flex items-center justify-center ${isPrevSameSender ? '-mt-1' : ''}`;
+          ? `bg-[#F4F4F5] text-zinc-900 px-6 py-2.5 !rounded-[24px] w-fit max-w-full text-[14px] font-normal leading-[1.4] shadow-2xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`
+          : `bg-[#FFF3CD] text-zinc-900 px-6 py-2.5 !rounded-[24px] w-fit max-w-full text-[14px] font-normal leading-[1.4] shadow-2xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`;
 
         return (
           <div
@@ -1227,7 +1227,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
             }}
           >
             {msg.replyTo && (
-              <div className={`mb-2 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden ${isSent ? 'border-zinc-400 bg-black/5 text-black' : 'border-zinc-400 bg-black/5'}`}>
+              <div className={`w-full mb-1.5 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden text-left ${isSent ? 'border-zinc-400 bg-black/5 text-zinc-900' : 'border-amber-400 bg-black/5 text-zinc-900'}`}>
                 <span className="font-bold text-[11px] opacity-90">{msg.replyTo.senderName || 'Quoted Message'}</span>
                 <span className="truncate text-[11px] opacity-85">{msg.replyTo.content}</span>
               </div>
@@ -5197,13 +5197,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             ) : (
                               <span>{pastel.emoji}</span>
                             )}
-                            {(() => {
-                              const userEmail = (selectedUser.email || '').toLowerCase().trim();
-                              const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
-                              return isOnline ? (
-                                <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#141111] absolute bottom-0 right-0" />
-                              ) : null;
-                            })()}
                           </div>
                         );
                       })()}
@@ -5510,13 +5503,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             <span className="text-zinc-300 font-bold">{selectedUser.name?.charAt(0) || 'U'}</span>
                           )}
                         </div>
-                        {(() => {
-                          const userEmail = (selectedUser.email || '').toLowerCase().trim();
-                          const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
-                          return isOnline ? (
-                            <span className="w-4 h-4 bg-emerald-500 rounded-full ring-4 ring-[#141111] absolute bottom-1 right-1" />
-                          ) : null;
-                        })()}
                       </div>
 
                       <h2 className="text-[22px] font-bold text-white mt-4 tracking-tight text-center">
