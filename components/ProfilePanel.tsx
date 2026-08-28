@@ -13,11 +13,8 @@ import {
   UserCheck,
   MessageCircle,
   Globe,
-  X,
-  Loader2,
 } from 'lucide-react';
 import {
-  updateProfileDetails,
   updateProfileImageAction,
   toggleFollowUser,
 } from '@/app/dashboard/actions';
@@ -56,15 +53,6 @@ export default function ProfilePanel({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Edit Profile State
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editUsername, setEditUsername] = useState('');
-  const [editBio, setEditBio] = useState('');
-  const [editWebsite, setEditWebsite] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [editError, setEditError] = useState('');
-
   // Follow State for Other User
   const [isFollowing, setIsFollowing] = useState(false);
   const [hasSentRequest, setHasSentRequest] = useState(false);
@@ -87,11 +75,6 @@ export default function ProfilePanel({
   // Sync state on user change
   useEffect(() => {
     if (activeUserData) {
-      setEditName(activeUserData.name || session?.user?.name || '');
-      setEditUsername(activeUserData.username || (session?.user as any)?.username || '');
-      setEditBio(activeUserData.bio || '');
-      setEditWebsite(activeUserData.website || '');
-
       const followers = activeUserData.followers || [];
       const following = activeUserData.following || [];
       setFollowerCount(followers.length);
@@ -135,71 +118,6 @@ export default function ProfilePanel({
       console.error(err);
       setIsUploadingAvatar(false);
       showToast('Error uploading image');
-    }
-  };
-
-  const handleOpenEdit = () => {
-    triggerHaptic('light');
-    setEditName(curName);
-    setEditUsername(curUsername.replace(/^@+/, ''));
-    setEditBio(curBio);
-    setEditWebsite(curWebsite);
-    setEditError('');
-    setIsEditing(true);
-  };
-
-  const handleSaveProfile = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const cleanName = editName.trim();
-    const cleanUsername = editUsername.trim().toLowerCase().replace(/^@+/, '').replace(/\s+/g, '');
-
-    if (!cleanName || cleanName.length < 2) {
-      setEditError('Display name must be at least 2 characters');
-      return;
-    }
-    if (cleanName.length > 50) {
-      setEditError('Display name cannot exceed 50 characters');
-      return;
-    }
-
-    if (cleanUsername) {
-      if (cleanUsername.length < 3) {
-        setEditError('Username must be at least 3 characters');
-        return;
-      }
-      if (cleanUsername.length > 30) {
-        setEditError('Username cannot exceed 30 characters');
-        return;
-      }
-      if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
-        setEditError('Username can only contain letters, numbers, and underscores');
-        return;
-      }
-    }
-
-    setEditError('');
-    setIsSaving(true);
-    triggerHaptic('medium');
-
-    try {
-      const res = await updateProfileDetails({
-        name: cleanName,
-        username: cleanUsername || undefined,
-        bio: editBio.trim(),
-        website: editWebsite.trim(),
-      });
-
-      if (res.success) {
-        showToast('Profile updated!');
-        setIsEditing(false);
-        refreshProfile?.();
-      } else {
-        setEditError(res.error || 'Failed to update profile');
-      }
-    } catch (err: any) {
-      setEditError(err?.message || 'Server error saving profile');
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -275,17 +193,12 @@ export default function ProfilePanel({
             </h1>
           </div>
 
-          {/* Right side: Clickable Edit Profile Button for Own Profile */}
+          {/* Right side: Top Edit icon for self */}
           <div className="flex items-center">
             {isSelf && (
-              <button
-                onClick={handleOpenEdit}
-                className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer outline-none border-0 flex items-center justify-center"
-                aria-label="Edit Profile"
-                title="Edit Profile"
-              >
+              <div className="p-2 text-white/80 flex items-center justify-center">
                 <Edit3 className="w-5 h-5 text-white" strokeWidth={2} />
-              </button>
+              </div>
             )}
           </div>
         </div>
@@ -357,7 +270,7 @@ export default function ProfilePanel({
         {/* Sheet Drag Handle */}
         <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-1 mb-1 shrink-0" />
 
-        {/* ── Followers & Following Capsules ── */}
+        {/* ── Followers & Following Capsules (Clean & Round) ── */}
         <div className="flex items-center justify-center gap-4 w-full">
           <div className="flex-1 py-4 px-6 rounded-full bg-zinc-50 border border-zinc-100 flex flex-col items-center justify-center shadow-xs">
             <span className="text-[22px] font-black text-zinc-900 leading-tight">
@@ -373,20 +286,6 @@ export default function ProfilePanel({
             <span className="text-[12px] text-zinc-500 font-medium mt-0.5">Following</span>
           </div>
         </div>
-
-        {/* ── Own Profile Actions ── */}
-        {isSelf && (
-          <div className="w-full flex flex-col gap-3">
-            <button
-              onClick={handleOpenEdit}
-              className="w-full py-3.5 px-6 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-[13.5px] flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] cursor-pointer outline-none border-0"
-              aria-label="Edit Profile Details"
-            >
-              <Edit3 className="w-4 h-4 text-white" />
-              <span>Edit Profile</span>
-            </button>
-          </div>
-        )}
 
         {/* ── Other User Actions (Follow & Message) ── */}
         {!isSelf && (
@@ -444,200 +343,6 @@ export default function ProfilePanel({
           </div>
         )}
       </div>
-
-      {/* ── 3. Edit Profile Bottom Sheet (Mobile-Native Modal) ── */}
-      {isEditing && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200 select-none">
-          <div
-            className="w-full max-w-md bg-white rounded-t-[36px] sm:rounded-[32px] p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl text-zinc-900 animate-in slide-in-from-bottom duration-300"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="edit-profile-title"
-          >
-            {/* Sheet Handle */}
-            <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-1 mb-1 shrink-0 sm:hidden" />
-
-            {/* Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
-              <h2 id="edit-profile-title" className="text-[17px] font-bold text-zinc-900 tracking-tight">
-                Edit Profile
-              </h2>
-              <button
-                onClick={() => setIsEditing(false)}
-                className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors cursor-pointer outline-none border-0"
-                aria-label="Close Edit Profile"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Avatar Preview & Quick Change */}
-            <div className="flex flex-col items-center justify-center my-1 gap-2">
-              <div className="relative">
-                <div className="w-20 h-20 rounded-full overflow-hidden bg-zinc-100 ring-2 ring-zinc-200 flex items-center justify-center shadow-sm">
-                  {curImage ? (
-                    <img src={curImage} alt={curName} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-2xl font-black text-zinc-800">{curName.charAt(0)}</span>
-                  )}
-                  {isUploadingAvatar && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    </div>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-zinc-900 text-white flex items-center justify-center shadow-md cursor-pointer hover:bg-zinc-800 active:scale-90 transition-all border-2 border-white"
-                  title="Change Photo"
-                  aria-label="Change Avatar Photo"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="text-[12.5px] font-semibold text-zinc-600 hover:text-zinc-900 cursor-pointer outline-none transition-colors"
-              >
-                Change profile photo
-              </button>
-            </div>
-
-            {/* Error Banner */}
-            {editError && (
-              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-                <span>{editError}</span>
-              </div>
-            )}
-
-            {/* Form Fields */}
-            <form onSubmit={handleSaveProfile} className="flex flex-col gap-3.5">
-              {/* Display Name */}
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-center px-1">
-                  <label htmlFor="edit-name-input" className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                    Name
-                  </label>
-                  <span className="text-[10.5px] text-zinc-400 font-medium">
-                    {editName.length}/50
-                  </span>
-                </div>
-                <input
-                  id="edit-name-input"
-                  type="text"
-                  value={editName}
-                  onChange={(e) => {
-                    setEditName(e.target.value);
-                    if (editError) setEditError('');
-                  }}
-                  maxLength={50}
-                  placeholder="Your display name"
-                  className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 rounded-2xl px-4 py-3 text-[14px] font-medium focus:border-zinc-900 focus:bg-white focus:outline-none transition-all placeholder:text-zinc-400"
-                />
-              </div>
-
-              {/* Username */}
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-center px-1">
-                  <label htmlFor="edit-username-input" className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                    Username
-                  </label>
-                  <span className="text-[10.5px] text-zinc-400 font-medium">
-                    {editUsername.length}/30
-                  </span>
-                </div>
-                <div className="flex items-center rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 focus-within:border-zinc-900 focus-within:bg-white transition-all">
-                  <span className="text-[14px] font-semibold text-zinc-400 mr-0.5 select-none">@</span>
-                  <input
-                    id="edit-username-input"
-                    type="text"
-                    value={editUsername}
-                    onChange={(e) => {
-                      const sanitized = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
-                      setEditUsername(sanitized);
-                      if (editError) setEditError('');
-                    }}
-                    maxLength={30}
-                    placeholder="username"
-                    className="w-full bg-transparent text-[14px] font-medium text-zinc-900 focus:outline-none placeholder:text-zinc-400"
-                  />
-                </div>
-              </div>
-
-              {/* Bio */}
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-center px-1">
-                  <label htmlFor="edit-bio-input" className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                    Bio
-                  </label>
-                  <span className="text-[10.5px] text-zinc-400 font-medium">
-                    {editBio.length}/150
-                  </span>
-                </div>
-                <textarea
-                  id="edit-bio-input"
-                  rows={2}
-                  value={editBio}
-                  onChange={(e) => {
-                    setEditBio(e.target.value);
-                    if (editError) setEditError('');
-                  }}
-                  maxLength={150}
-                  placeholder="A short bio about yourself..."
-                  className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 rounded-2xl px-4 py-3 text-[13.5px] font-medium focus:border-zinc-900 focus:bg-white focus:outline-none transition-all placeholder:text-zinc-400 resize-none"
-                />
-              </div>
-
-              {/* Website */}
-              <div className="flex flex-col gap-1">
-                <label htmlFor="edit-website-input" className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 px-1">
-                  Website
-                </label>
-                <input
-                  id="edit-website-input"
-                  type="url"
-                  value={editWebsite}
-                  onChange={(e) => {
-                    setEditWebsite(e.target.value);
-                    if (editError) setEditError('');
-                  }}
-                  maxLength={100}
-                  placeholder="https://yourwebsite.com"
-                  className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 rounded-2xl px-4 py-3 text-[14px] font-medium focus:border-zinc-900 focus:bg-white focus:outline-none transition-all placeholder:text-zinc-400"
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-col gap-2 pt-2">
-                <button
-                  type="submit"
-                  disabled={isSaving || !editName.trim()}
-                  className="w-full py-3.5 px-6 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full text-[13.5px] font-semibold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer outline-none border-0"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Saving Changes...</span>
-                    </>
-                  ) : (
-                    <span>Save Changes</span>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="w-full py-2.5 text-zinc-500 hover:text-zinc-900 text-[13px] font-semibold transition-colors cursor-pointer outline-none border-0 bg-transparent"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
