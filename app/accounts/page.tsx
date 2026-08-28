@@ -65,26 +65,7 @@ export default function AccountsPage() {
       return;
     }
 
-    // Try auto-switching if credentials available
-    const credentials = await DeviceAccountStore.getCredentials(acc.userId);
-    if (credentials?.password) {
-      setPromptLoading(true);
-      try {
-        const res = await signIn('credentials', {
-          redirect: false,
-          email: acc.email,
-          password: credentials.password,
-        });
-        if (res?.ok) {
-          await DeviceAccountStore.setActiveAccount(acc.userId);
-          router.push('/dashboard');
-          return;
-        }
-      } catch (e) {}
-      setPromptLoading(false);
-    }
-
-    // If no saved password or auto-login failed, show password prompt
+    // Show password prompt to authenticate
     setSelectedAccount(acc);
     setPasswordPrompt('');
     setPromptError('');
@@ -105,8 +86,7 @@ export default function AccountsPage() {
       });
 
       if (res?.ok) {
-        await DeviceAccountStore.saveCredentials(selectedAccount.userId, selectedAccount.email, passwordPrompt);
-        await DeviceAccountStore.setActiveAccount(selectedAccount.userId);
+        DeviceAccountStore.setCurrentAccountId(selectedAccount.userId);
         router.push('/dashboard');
       } else {
         setPromptError('Invalid password. Please try again.');
@@ -145,7 +125,7 @@ export default function AccountsPage() {
             profilePicture: '',
             provider: 'credentials',
           }, true);
-          await DeviceAccountStore.saveCredentials(`pending_${cleanEmail}`, cleanEmail, password);
+          DeviceAccountStore.setCurrentAccountId(`pending_${cleanEmail}`);
           setShowAddAccountModal(false);
           router.push('/dashboard');
         } else {

@@ -1127,6 +1127,12 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
     return counts;
   }, [msg.reactions]);
 
+  const [swipeOffset, setSwipeOffset] = useState<number>(0);
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
+  const isSwiping = useRef<boolean>(false);
+  const hasTriggeredReply = useRef<boolean>(false);
+
   const triggerIGMenu = () => {
     if (!bubbleRef.current) return;
     const rect = bubbleRef.current.getBoundingClientRect();
@@ -1134,21 +1140,56 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
     onShowIGMenu({ msg, bubbleRect: rect, isSent });
   };
 
-  const handlePointerDown = () => {
+  const handlePointerDown = (e: any) => {
     if (isInSelectionMode) return;
     isMoving.current = false;
+    isSwiping.current = false;
+    hasTriggeredReply.current = false;
+    const clientX = e.touches ? e.touches[0]?.clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0]?.clientY : e.clientY;
+    touchStartX.current = clientX || 0;
+    touchStartY.current = clientY || 0;
+
     longPressTimeout.current = setTimeout(() => {
-      if (!isMoving.current) triggerIGMenu();
+      if (!isMoving.current && !isSwiping.current) triggerIGMenu();
     }, 450);
   };
 
   const handlePointerUp = () => {
     if (longPressTimeout.current) { clearTimeout(longPressTimeout.current); longPressTimeout.current = null; }
+    setSwipeOffset(0);
+    isSwiping.current = false;
+    hasTriggeredReply.current = false;
   };
 
-  const handlePointerMove = () => {
-    isMoving.current = true;
-    if (longPressTimeout.current) { clearTimeout(longPressTimeout.current); longPressTimeout.current = null; }
+  const handlePointerMove = (e: any) => {
+    if (isInSelectionMode) return;
+    const clientX = e.touches ? e.touches[0]?.clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0]?.clientY : e.clientY;
+    if (!clientX || !clientY) return;
+
+    const diffX = clientX - touchStartX.current;
+    const diffY = clientY - touchStartY.current;
+
+    if (Math.abs(diffX) > 8 || Math.abs(diffY) > 8) {
+      isMoving.current = true;
+      if (longPressTimeout.current) { clearTimeout(longPressTimeout.current); longPressTimeout.current = null; }
+    }
+
+    // Swipe to reply: smooth translation and trigger onReply when crossing threshold
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 12) {
+      isSwiping.current = true;
+      // Allow swiping right on received or swiping left on sent
+      const direction = isSent ? -1 : 1;
+      const progress = Math.max(0, Math.min(65, diffX * direction));
+      setSwipeOffset(progress * direction);
+
+      if (progress >= 45 && !hasTriggeredReply.current) {
+        hasTriggeredReply.current = true;
+        if (navigator.vibrate) navigator.vibrate(30);
+        onReply(msg);
+      }
+    }
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -1194,14 +1235,14 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         padding: '0',
         userSelect: 'none',
         position: 'relative',
-        marginTop: hasPrevReactions ? '8px' : (isPrevSameSender ? '1px' : '3px'),
-        marginBottom: hasReactions ? '8px' : (isNextSameSender ? '1px' : '3px'),
+        marginTop: hasPrevReactions ? '8px' : (isPrevSameSender ? '2px' : '5px'),
+        marginBottom: hasReactions ? '8px' : (isNextSameSender ? '2px' : '5px'),
       }}
     >
 
-      {/* Column wrapper keeps bubble + time stacked, w-fit max-w-[76%] */}
+      {/* Column wrapper keeps bubble + time stacked, w-fit max-w-[82%] */}
       <div 
-        className={`flex flex-col w-fit max-w-[76%] ${isSent ? 'items-end' : 'items-start'}`}
+        className={`flex flex-col w-fit max-w-[82%] ${isSent ? 'items-end' : 'items-start'}`}
         style={{
           order: isSent ? 2 : 1,
           minWidth: 0,
@@ -1212,10 +1253,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
-        // Continuous high-radius capsule shape on all 4 corners, soft colors, generous horizontal & compact vertical padding
+        // Continuous high-radius capsule shape on all 4 corners, generous padding and height
         const bubbleClasses = isSent
-          ? `bg-[#F4F4F5] text-zinc-900 px-6 py-2.5 !rounded-[24px] w-fit max-w-full text-[14px] font-normal leading-[1.4] shadow-2xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`
-          : `bg-[#FFF3CD] text-zinc-900 px-6 py-2.5 !rounded-[24px] w-fit max-w-full text-[14px] font-normal leading-[1.4] shadow-2xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`;
+          ? `bg-[#F4F4F5] text-zinc-900 px-6 py-3.5 !rounded-[26px] min-h-[44px] w-fit max-w-full text-[14.5px] font-normal leading-[1.45] shadow-2xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`
+          : `bg-[#FFF3CD] text-zinc-900 px-6 py-3.5 !rounded-[26px] min-h-[44px] w-fit max-w-full text-[14.5px] font-normal leading-[1.45] shadow-2xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`;
 
         return (
           <div
@@ -1223,9 +1264,9 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
             className={`msg ${bubbleClasses} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''} ${isMedia ? '!p-0 !bg-transparent !border-0 !shadow-none' : ''}`}
             style={{
               position: 'relative',
-              borderRadius: '24px',
-              transition: isSelected ? 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28)' : 'none',
-              transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
+              borderRadius: '26px',
+              transition: isSwiping.current ? 'none' : 'transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
+              transform: `translateX(${swipeOffset}px)` + (isSelected ? ' scale(0.965)' : ''),
             }}
           >
             {msg.replyTo && (
@@ -5335,19 +5376,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     <div ref={messagesEndRef} />
                   </div>
 
-                  {/* Reply bar if replying */}
-                  {replyToMessage && (
-                    <div className="mx-2 mb-2 p-2.5 rounded-2xl bg-zinc-100 border border-zinc-200/70 flex items-center justify-between shadow-2xs">
-                      <div className="flex flex-col min-w-0 pr-2">
-                        <span className="text-[11px] font-bold text-[#9D4EDD]">
-                          Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : selectedUser?.name}
-                        </span>
-                        <span className="text-xs text-zinc-600 truncate">{replyToMessage.content}</span>
-                      </div>
-                      <button onClick={() => setReplyToMessage(null)} className="text-xs text-zinc-400 hover:text-black p-1 cursor-pointer">✕</button>
-                    </div>
-                  )}
-
                   {/* Hidden File Picker for Gallery Button */}
                   <input
                     type="file"
@@ -5359,7 +5387,28 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   />
 
                   {/* ── INTERACTIVE CHAT INPUT PILL (95% width, positioned down) ── */}
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[95%] max-w-[460px] z-30 flex justify-center pointer-events-none">
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[95%] max-w-[460px] z-30 flex flex-col items-center pointer-events-none gap-1">
+                    {/* Seamless floating reply indicator above type box: no bg, round, matching font */}
+                    {replyToMessage && (
+                      <div className="w-full flex items-center justify-between px-3 py-1 rounded-full pointer-events-auto text-zinc-900 border-none bg-transparent">
+                        <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                          <span className="text-[12px] font-bold text-zinc-900 shrink-0">
+                            Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : (nicknames[selectedUser.id] || selectedUser?.name)}:
+                          </span>
+                          <span className="text-[12px] text-zinc-600 truncate font-normal">
+                            {replyToMessage.content}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => setReplyToMessage(null)} 
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-900 text-[13px] font-bold cursor-pointer outline-none shrink-0"
+                          title="Cancel Reply"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+
                     <div className="w-full pointer-events-auto">
                       <ChatInput
                         onSendMessage={(text) => handleSendMessage(undefined, text)}
