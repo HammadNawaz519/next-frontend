@@ -751,8 +751,8 @@ export default function StoryEditor({
         onChange={handleFileSelect}
       />
 
-      {/* ── 1. TOP SAFE-AREA NAVIGATION BAR ── */}
-      <div className="w-full pt-[env(safe-area-inset-top,14px)] sm:pt-6 px-4 pb-3 flex items-center justify-between shrink-0 bg-[#141111] border-b border-zinc-800/80 z-20">
+      {/* ── 1. TOP SAFE-AREA NAVIGATION BAR (MOVED DOWN & SIZED TO APP UI) ── */}
+      <div className="w-full pt-12 sm:pt-8 px-5 pb-3.5 flex items-center justify-between shrink-0 bg-[#141111] border-b border-zinc-800/80 z-20">
         
         {/* Left: Back/Cancel Button */}
         <button
@@ -761,44 +761,27 @@ export default function StoryEditor({
             handleRequestClose();
           }}
           disabled={postStage !== 'idle' && postStage !== 'error'}
-          className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-white cursor-pointer active:scale-95 transition-all hover:bg-zinc-800 disabled:opacity-50"
+          className="w-11 h-11 rounded-full bg-[#181515] border border-zinc-800 flex items-center justify-center text-white cursor-pointer active:scale-90 transition-all hover:bg-zinc-800 disabled:opacity-50"
           title="Close Editor"
         >
-          <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2.2} />
+          <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
         </button>
 
-        {/* Center: Title & Safe Area Guide Toggle */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-col items-center">
-            <h2 className="text-[16.5px] font-bold text-white tracking-tight leading-tight">
-              {mode === 'text' ? 'Text Story' : 'Story Creator'}
-            </h2>
-            <span className="text-[11px] text-zinc-400 font-medium">Connect Stories</span>
-          </div>
-
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              setShowSafeArea(!showSafeArea);
-            }}
-            className={`p-1.5 rounded-full border transition-all ${
-              showSafeArea
-                ? 'bg-[#9D4EDD] border-[#9D4EDD] text-white'
-                : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
-            }`}
-            title="Toggle Safe Area Guides"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-          </button>
+        {/* Center: Title */}
+        <div className="flex flex-col items-center">
+          <h2 className="text-[17px] font-black text-white tracking-tight leading-tight">
+            {mode === 'text' ? 'Text Story' : 'Story Creator'}
+          </h2>
+          <span className="text-[12px] text-zinc-400 font-medium">Connect Stories</span>
         </div>
 
         {/* Right: Undo, Redo, & Post Actions */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {/* Undo */}
           <button
             onClick={handleUndo}
             disabled={historyIndex <= 0 || postStage !== 'idle'}
-            className="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300 hover:text-white disabled:opacity-40 transition-all cursor-pointer"
+            className="w-10 h-10 rounded-full bg-[#181515] border border-zinc-800 flex items-center justify-center text-zinc-300 hover:text-white disabled:opacity-40 transition-all cursor-pointer active:scale-90"
             title="Undo (Ctrl+Z)"
           >
             <Undo2 className="w-4 h-4" />
@@ -808,7 +791,7 @@ export default function StoryEditor({
           <button
             onClick={handleRedo}
             disabled={historyIndex >= history.length - 1 || postStage !== 'idle'}
-            className="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300 hover:text-white disabled:opacity-40 transition-all cursor-pointer"
+            className="w-10 h-10 rounded-full bg-[#181515] border border-zinc-800 flex items-center justify-center text-zinc-300 hover:text-white disabled:opacity-40 transition-all cursor-pointer active:scale-90"
             title="Redo (Ctrl+Shift+Z)"
           >
             <Redo2 className="w-4 h-4" />
@@ -818,39 +801,39 @@ export default function StoryEditor({
           <button
             onClick={handlePostStory}
             disabled={!canPost || (postStage !== 'idle' && postStage !== 'error')}
-            className={`ml-1 px-4.5 py-2 rounded-full font-semibold text-[13.5px] transition-all flex items-center gap-1.5 active:scale-95 ${
+            className={`ml-1 h-11 px-5 rounded-full font-bold text-[14px] transition-all flex items-center gap-2 active:scale-95 ${
               canPost && (postStage === 'idle' || postStage === 'error')
-                ? 'bg-gradient-to-r from-[#9D4EDD] to-[#7B2CBF] text-white shadow-[0_4px_16px_rgba(157,78,221,0.4)] cursor-pointer hover:brightness-110'
+                ? 'bg-[#9D4EDD] hover:bg-[#8A38CC] text-white shadow-md cursor-pointer'
                 : 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-70'
             }`}
           >
             {postStage === 'preparing' && (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
                 <span>Preparing...</span>
               </>
             )}
             {postStage === 'rendering' && (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
                 <span>Rendering...</span>
               </>
             )}
             {(postStage === 'uploading' || postStage === 'publishing') && (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
                 <span>Publishing...</span>
               </>
             )}
             {postStage === 'success' && (
               <>
-                <Check className="w-3.5 h-3.5 text-white" />
+                <Check className="w-4 h-4 text-white" />
                 <span>Posted!</span>
               </>
             )}
             {(postStage === 'idle' || postStage === 'error') && (
               <>
-                <Send className="w-3.5 h-3.5" strokeWidth={2.2} />
+                <Send className="w-4 h-4" strokeWidth={2.2} />
                 <span>Post</span>
               </>
             )}

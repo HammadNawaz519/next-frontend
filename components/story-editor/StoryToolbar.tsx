@@ -596,17 +596,17 @@ export default function StoryToolbar({
 
   // ── 8. PRIMARY CONTEXTUAL TOOLBAR (DEFAULT IDLE STATE) ──
   return (
-    <div className="w-full max-w-md mx-auto bg-[#181515]/95 backdrop-blur-md border border-zinc-800/80 rounded-full p-1.5 px-3 flex items-center justify-between shadow-2xl">
+    <div className="w-full max-w-[420px] mx-auto h-14 bg-[#181515] border border-zinc-800/90 rounded-full px-4 flex items-center justify-around shadow-xl">
       {/* Add Text */}
       <button
         onClick={() => {
           triggerHaptic('light');
           onAddTextLayer();
         }}
-        className="p-2.5 rounded-full text-zinc-300 hover:text-white hover:bg-zinc-800/80 active:scale-95 transition-all flex flex-col items-center gap-0.5"
+        className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-zinc-800/80 active:scale-90 transition-all cursor-pointer"
         title="Add Text"
       >
-        <Type className="w-5 h-5 text-white" strokeWidth={2.2} />
+        <Type className="w-5 h-5 text-white" strokeWidth={2.4} />
       </button>
 
       {/* Add Sticker */}
@@ -615,10 +615,10 @@ export default function StoryToolbar({
           triggerHaptic('light');
           onOpenStickerPicker();
         }}
-        className="p-2.5 rounded-full text-zinc-300 hover:text-white hover:bg-zinc-800/80 active:scale-95 transition-all flex flex-col items-center gap-0.5"
+        className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-zinc-800/80 active:scale-90 transition-all cursor-pointer"
         title="Stickers"
       >
-        <Smile className="w-5 h-5 text-[#D8B4E2]" strokeWidth={2.2} />
+        <Smile className="w-5 h-5 text-[#D8B4E2]" strokeWidth={2.4} />
       </button>
 
       {/* Freehand Draw */}
@@ -627,10 +627,10 @@ export default function StoryToolbar({
           triggerHaptic('light');
           onToggleDrawingMode(true);
         }}
-        className="p-2.5 rounded-full text-zinc-300 hover:text-white hover:bg-zinc-800/80 active:scale-95 transition-all flex flex-col items-center gap-0.5"
+        className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-zinc-800/80 active:scale-90 transition-all cursor-pointer"
         title="Draw"
       >
-        <Brush className="w-5 h-5 text-zinc-200" strokeWidth={2.2} />
+        <Brush className="w-5 h-5 text-zinc-200" strokeWidth={2.4} />
       </button>
 
       {/* Filters (Media Mode) */}
@@ -640,10 +640,10 @@ export default function StoryToolbar({
             triggerHaptic('light');
             setActiveSubTool('filters');
           }}
-          className="p-2.5 rounded-full active:scale-95 transition-all flex flex-col items-center gap-0.5 text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer"
+          className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-zinc-800/80 active:scale-90 transition-all cursor-pointer"
           title="Filters"
         >
-          <Sparkles className="w-5 h-5" strokeWidth={2.2} />
+          <Sparkles className="w-5 h-5 text-[#9D4EDD]" strokeWidth={2.4} />
         </button>
       )}
 
@@ -654,10 +654,10 @@ export default function StoryToolbar({
             triggerHaptic('light');
             setActiveSubTool('adjust');
           }}
-          className="p-2.5 rounded-full active:scale-95 transition-all flex flex-col items-center gap-0.5 text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer"
+          className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-zinc-800/80 active:scale-90 transition-all cursor-pointer"
           title="Adjustments"
         >
-          <SlidersHorizontal className="w-5 h-5" strokeWidth={2.2} />
+          <SlidersHorizontal className="w-5 h-5 text-zinc-200" strokeWidth={2.4} />
         </button>
       )}
 
@@ -668,10 +668,10 @@ export default function StoryToolbar({
             triggerHaptic('light');
             setActiveSubTool('transform');
           }}
-          className="p-2.5 rounded-full active:scale-95 transition-all flex flex-col items-center gap-0.5 text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer"
+          className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-zinc-800/80 active:scale-90 transition-all cursor-pointer"
           title="Crop & Rotate"
         >
-          <Crop className="w-5 h-5" strokeWidth={2.2} />
+          <Crop className="w-5 h-5 text-zinc-200" strokeWidth={2.4} />
         </button>
       )}
 
@@ -682,10 +682,10 @@ export default function StoryToolbar({
             triggerHaptic('light');
             setActiveSubTool('background');
           }}
-          className="p-2.5 rounded-full active:scale-95 transition-all flex flex-col items-center gap-0.5 text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer"
+          className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-zinc-800/80 active:scale-90 transition-all cursor-pointer"
           title="Background Style"
         >
-          <Palette className="w-5 h-5 text-[#9D4EDD]" strokeWidth={2.2} />
+          <Palette className="w-5 h-5 text-[#9D4EDD]" strokeWidth={2.4} />
         </button>
       )}
     </div>
