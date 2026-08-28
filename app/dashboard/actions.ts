@@ -337,33 +337,51 @@ export async function hideSocialChat(hiddenUserId: string) {
 
   if (!currentUser) return null;
 
-  // 1. Mark chat as hidden in HiddenSocialChat table
-  await prisma.hiddenSocialChat.upsert({
-    where: {
-      userId_hiddenUserId: {
+  try {
+    // 1. Find all messages between currentUser and hiddenUserId
+    const msgs = await prisma.socialMessage.findMany({
+      where: {
+        OR: [
+          { senderId: currentUser.id, receiverId: hiddenUserId },
+          { senderId: hiddenUserId, receiverId: currentUser.id }
+        ]
+      },
+      select: { id: true }
+    });
+    const msgIds = msgs.map(m => m.id);
+
+    if (msgIds.length > 0) {
+      // 2. Delete all reactions on these messages
+      await prisma.socialReaction.deleteMany({
+        where: { messageId: { in: msgIds } }
+      }).catch(() => {});
+
+      // 3. Permanently delete all messages from DB
+      await prisma.socialMessage.deleteMany({
+        where: { id: { in: msgIds } }
+      });
+    }
+
+    // 4. Also track in HiddenSocialChat table
+    await prisma.hiddenSocialChat.upsert({
+      where: {
+        userId_hiddenUserId: {
+          userId: currentUser.id,
+          hiddenUserId
+        }
+      },
+      create: {
         userId: currentUser.id,
         hiddenUserId
-      }
-    },
-    create: {
-      userId: currentUser.id,
-      hiddenUserId
-    },
-    update: {}
-  });
+      },
+      update: {}
+    }).catch(() => {});
 
-  // 2. Mark messages as deleted for currentUser in database
-  await prisma.socialMessage.updateMany({
-    where: { senderId: currentUser.id, receiverId: hiddenUserId },
-    data: { deletedBySender: true }
-  });
-
-  await prisma.socialMessage.updateMany({
-    where: { senderId: hiddenUserId, receiverId: currentUser.id },
-    data: { deletedByReceiver: true }
-  });
-
-  return { success: true };
+    return { success: true };
+  } catch (err) {
+    console.error('Failed to permanently delete chat messages from DB:', err);
+    return { success: false, error: 'Database delete failed' };
+  }
 }
 
 export async function deleteSocialMessage(messageId: string, deleteFor: 'me' | 'everyone') {

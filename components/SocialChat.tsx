@@ -1204,7 +1204,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         alignItems: isSent ? 'flex-end' : 'flex-start',
         order: isSent ? 2 : 1,
         minWidth: 0,
-        maxWidth: '88%',
+        maxWidth: '92%',
         width: 'fit-content',
       }}>
       {(() => {
@@ -1229,10 +1229,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
-        // Open, comfortable rounded bubbles with extra width, height, and generous balanced padding
+        // Extra spacious, comfortable rounded bubbles with extra width, height, and generous padding
         const bubbleClasses = isSent
-          ? `bg-zinc-100 text-zinc-900 px-6 py-3.5 !rounded-[24px] max-w-full self-end text-[13.5px] font-normal leading-snug shadow-2xs min-h-[46px] flex items-center justify-center ${isPrevSameSender ? '-mt-1.5' : ''}`
-          : `bg-[#FEF5D1] text-zinc-900 px-6 py-3.5 !rounded-[24px] max-w-full self-start text-[13.5px] font-normal leading-snug shadow-2xs min-h-[46px] flex items-center justify-center ${isPrevSameSender ? '-mt-1.5' : ''}`;
+          ? `bg-zinc-100 text-zinc-900 px-7 py-4 !rounded-[26px] max-w-full self-end text-[14px] font-normal leading-snug shadow-2xs min-h-[50px] flex items-center justify-center ${isPrevSameSender ? '-mt-1.5' : ''}`
+          : `bg-[#FEF5D1] text-zinc-900 px-7 py-4 !rounded-[26px] max-w-full self-start text-[14px] font-normal leading-snug shadow-2xs min-h-[50px] flex items-center justify-center ${isPrevSameSender ? '-mt-1.5' : ''}`;
 
         return (
           <div
@@ -1482,7 +1482,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                   </div>
                 )}
                 {msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
-                  <div style={{ fontSize: '0.885rem', lineHeight: '1.45', letterSpacing: '-0.005em', wordBreak: 'break-word', minWidth: '36px', textAlign: 'center', width: '100%' }}>
+                  <div style={{ fontSize: '0.90rem', lineHeight: '1.45', letterSpacing: '-0.005em', wordBreak: 'break-word', minWidth: '48px', textAlign: 'center', width: '100%' }}>
                     <span>{msg.content}</span>
                   </div>
                 ) : null}
@@ -4733,248 +4733,251 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         <div className="main-wrap">
           <aside className={`sidebar ${selectedUser ? 'hide-on-mobile' : 'show-on-mobile'} !bg-[#141111] flex flex-col h-full overflow-hidden border-r border-zinc-800/80 select-none`}>
             
-            {/* 1. Header Layout (Strict 2-Row Dark Section with smooth search collapse) */}
-            <div className={`w-full bg-[#141111] px-6 transition-all duration-300 ease-out select-none flex-shrink-0 ${
-              isSearchFocused ? 'max-h-0 opacity-0 pt-0 pb-0 overflow-hidden pointer-events-none' : 'pt-14 pb-4 max-h-[300px] opacity-100 flex flex-col gap-6'
-            }`}>
-              
-              {/* Row 1 (App Header) */}
-              <div className="flex justify-between items-center w-full">
-                {/* Left Column: Greeting & Brand */}
-                <div className="flex flex-col">
-                  <span className="text-[12.5px] text-zinc-400 font-medium tracking-wide">
-                    Welcome {session?.user?.name ? session.user.name.split(' ')[0] : 'User'} 👋
-                  </span>
-                  <h1 className="text-[28px] font-black text-white tracking-tight leading-tight bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text">
-                    Connect
-                  </h1>
+            {/* 1. Header Layout (Black Top Header: Normal vs Search Bar Header) */}
+            {isSearchFocused ? (
+              <div className="w-full bg-[#141111] pt-14 pb-5 px-5 flex items-center gap-3 shrink-0 select-none animate-in fade-in duration-200">
+                <button
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setSearchQuery('');
+                    setIsSearchFocused(false);
+                  }}
+                  className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 text-white flex items-center justify-center cursor-pointer active:scale-90 transition-all shrink-0 hover:bg-zinc-800"
+                  title="Back to conversation list"
+                >
+                  <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2.4} />
+                </button>
+                <div className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-zinc-900 border border-zinc-800 focus-within:border-[#9D4EDD] focus-within:ring-2 focus-within:ring-[#9D4EDD]/20 transition-all text-white">
+                  <Search className="w-4 h-4 text-[#9D4EDD] flex-shrink-0" strokeWidth={2.2} />
+                  <input 
+                    type="text" 
+                    autoFocus
+                    placeholder="Search people & conversations..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-transparent text-[13.5px] text-white placeholder:text-zinc-500 outline-none font-medium"
+                  />
+                  {searchQuery && (
+                    <button 
+                      onClick={() => setSearchQuery('')} 
+                      className="w-5 h-5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs flex items-center justify-center cursor-pointer transition-colors"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="w-full bg-[#141111] px-6 pt-14 pb-4 flex flex-col gap-6 select-none flex-shrink-0">
+                {/* Row 1 (App Header) */}
+                <div className="flex justify-between items-center w-full">
+                  {/* Left Column: Greeting & Brand */}
+                  <div className="flex flex-col">
+                    <span className="text-[12.5px] text-zinc-400 font-medium tracking-wide">
+                      Welcome {session?.user?.name ? session.user.name.split(' ')[0] : 'User'} 👋
+                    </span>
+                    <h1 className="text-[28px] font-black text-white tracking-tight leading-tight bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text">
+                      Connect
+                    </h1>
+                  </div>
+
+                  {/* Right: ONLY the Notification Bell button */}
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setShowNotificationsDrawer(prev => !prev);
+                      }}
+                      className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center relative cursor-pointer active:scale-95 transition-all shadow-xs hover:bg-zinc-800"
+                      title="Notifications"
+                    >
+                      <Bell className="w-5 h-5 text-white" strokeWidth={2} />
+                      {unreadNotifications > 0 && (
+                        <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full absolute top-2 right-2 ring-2 ring-[#141111]" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Right: ONLY the Notification Bell button */}
-                <div className="relative">
-                  <button
+                {/* Row 2 (Story Section Title & Search Trigger) */}
+                <div className="flex justify-between items-center w-full mt-2">
+                  <span className="text-[18px] font-bold text-white tracking-tight">Story</span>
+                  <button 
                     onClick={() => {
                       triggerHaptic('light');
-                      setShowNotificationsDrawer(prev => !prev);
+                      setIsSearchFocused(true);
                     }}
-                    className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center relative cursor-pointer active:scale-95 transition-all shadow-xs hover:bg-zinc-800"
-                    title="Notifications"
+                    className="flex items-center gap-1.5 text-[13px] text-zinc-400 hover:text-white transition-colors font-medium px-2 py-1 rounded-lg hover:bg-white/5 cursor-pointer"
                   >
-                    <Bell className="w-5 h-5 text-white" strokeWidth={2} />
-                    {unreadNotifications > 0 && (
-                      <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full absolute top-2 right-2 ring-2 ring-[#141111]" />
-                    )}
+                    <Search className="w-3.5 h-3.5" strokeWidth={2.2} />
+                    <span>Search</span>
                   </button>
                 </div>
-              </div>
 
-              {/* Row 2 (Story Section Title & Search Trigger) */}
-              <div className="flex justify-between items-center w-full mt-2">
-                <span className="text-[18px] font-bold text-white tracking-tight">Story</span>
-                <button 
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setIsSearchFocused(true);
-                  }}
-                  className="flex items-center gap-1.5 text-[13px] text-zinc-400 hover:text-white transition-colors font-medium px-2 py-1 rounded-lg hover:bg-white/5 cursor-pointer"
-                >
-                  <Search className="w-3.5 h-3.5" strokeWidth={2.2} />
-                  <span>Search</span>
-                </button>
-              </div>
-
-              {/* 2. Story Carousel */}
-              <div className="flex flex-row items-start gap-4 overflow-x-auto pt-1 pb-3 no-scrollbar w-full">
-                {/* Item 1 (Add Story Button - Opens Real Story Editor) */}
-                <div
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowStoryEditor(true);
-                  }}
-                  className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
-                >
-                  <div className="w-[64px] h-[64px] rounded-full border-2 border-dashed border-zinc-700 bg-zinc-900/80 flex items-center justify-center transition-all group-hover:border-[#9D4EDD] active:scale-95 shadow-xs">
-                    <Plus className="w-6 h-6 text-zinc-300 group-hover:text-white transition-colors" strokeWidth={2.2} />
-                  </div>
-                  <span className="text-[12px] text-zinc-400 group-hover:text-white transition-colors font-medium">
-                    Add Story
-                  </span>
-                </div>
-
-                {/* Active User Uploaded Story (If any) */}
-                {userStory && (
+                {/* 2. Story Carousel */}
+                <div className="flex flex-row items-start gap-4 overflow-x-auto pt-1 pb-3 no-scrollbar w-full">
+                  {/* Item 1 (Add Story Button - Opens Real Story Editor) */}
                   <div
                     onClick={() => {
                       triggerHaptic('light');
-                      setViewStory({
-                        id: userStory.id,
-                        name: 'Your Story',
-                        media: userStory.media,
-                        time: userStory.time,
-                        isMe: true,
-                        avatar: session?.user?.image || undefined
-                      });
+                      setShowStoryEditor(true);
                     }}
                     className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
                   >
-                    <div className="w-[64px] h-[64px] rounded-full ring-2 ring-[#9D4EDD] ring-offset-2 ring-offset-[#141111] overflow-hidden flex items-center justify-center bg-[#FEF5D1] shadow-sm active:scale-95 transition-all">
-                      {session?.user?.image ? (
-                        <img src={session.user.image} alt="You" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        <span className="text-2xl">👨🏻</span>
-                      )}
+                    <div className="w-[64px] h-[64px] rounded-full border-2 border-dashed border-zinc-700 bg-zinc-900/80 flex items-center justify-center transition-all group-hover:border-[#9D4EDD] active:scale-95 shadow-xs">
+                      <Plus className="w-6 h-6 text-zinc-300 group-hover:text-white transition-colors" strokeWidth={2.2} />
                     </div>
-                    <span className="text-[12px] text-zinc-300 font-medium group-hover:text-white transition-colors">
-                      Your Story
+                    <span className="text-[12px] text-zinc-400 group-hover:text-white transition-colors font-medium">
+                      Add Story
                     </span>
                   </div>
-                )}
 
-                {/* Followed / Connected Users Active Stories */}
-                {activeStories
-                  .filter(s => s.userId !== (session?.user as any)?.id)
-                  .map(story => {
-                    const pastel = getPastelForUser(story.user?.id || story.user?.name);
-                    return (
-                      <div
-                        key={story.id}
-                        onClick={() => {
-                          triggerHaptic('light');
-                          setViewStory({
-                            id: story.id,
-                            name: story.user?.name || 'Contact',
-                            media: story.imageUrl,
-                            time: formatChatTime(story.createdAt),
-                            isMe: false,
-                            avatar: story.user?.image || undefined,
-                            emoji: pastel.emoji
-                          });
-                        }}
-                        className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
-                      >
-                        <div 
-                          className="w-[64px] h-[64px] rounded-full ring-2 ring-[#9D4EDD] ring-offset-2 ring-offset-[#141111] overflow-hidden flex items-center justify-center shadow-sm active:scale-95 transition-all"
-                          style={{ background: pastel.bg, color: pastel.text }}
-                        >
-                          {story.user?.image ? (
-                            <img src={story.user.image} alt={story.user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          ) : (
-                            <span className="text-2xl">{pastel.emoji}</span>
-                          )}
-                        </div>
-                        <span className="text-[12px] text-zinc-300 font-medium group-hover:text-white transition-colors truncate max-w-[64px] text-center">
-                          {story.user?.name ? story.user.name.split(' ')[0] : 'Story'}
-                        </span>
+                  {/* Active User Uploaded Story (If any) */}
+                  {userStory && (
+                    <div
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setViewStory({
+                          id: userStory.id,
+                          name: 'Your Story',
+                          media: userStory.media,
+                          time: userStory.time,
+                          isMe: true,
+                          avatar: session?.user?.image || undefined
+                        });
+                      }}
+                      className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
+                    >
+                      <div className="w-[64px] h-[64px] rounded-full ring-2 ring-[#9D4EDD] ring-offset-2 ring-offset-[#141111] overflow-hidden flex items-center justify-center bg-[#FEF5D1] shadow-sm active:scale-95 transition-all">
+                        {session?.user?.image ? (
+                          <img src={session.user.image} alt="You" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          <span className="text-2xl">👨🏻</span>
+                        )}
                       </div>
-                    );
-                  })}
-              </div>
-
-              {/* Notification Modal Drawer */}
-              {showNotificationsDrawer && (
-                <div className="absolute top-28 right-4 left-4 z-50 bg-[#181515] border border-zinc-800/90 rounded-3xl p-5 shadow-[0_20px_60px_rgba(0,0,0,0.8)] animate-in fade-in slide-in-from-top-3 duration-200 text-white backdrop-blur-xl">
-                  {/* Drawer Header */}
-                  <div className="flex items-center justify-between pb-3.5 border-b border-zinc-800/80">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-full bg-[#9D4EDD]/15 text-[#9D4EDD] flex items-center justify-center text-sm font-bold">
-                        <Bell className="w-4 h-4 text-[#9D4EDD]" strokeWidth={2.2} />
-                      </div>
-                      <div>
-                        <h3 className="text-[15px] font-bold text-white leading-tight">Notifications</h3>
-                        <span className="text-[11px] text-zinc-400 font-medium">
-                          {unreadNotifications > 0 ? `${unreadNotifications} unread alerts` : 'All caught up'}
-                        </span>
-                      </div>
+                      <span className="text-[12px] text-zinc-300 font-medium group-hover:text-white transition-colors">
+                        Your Story
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {notificationsList.length > 0 && (
-                        <button 
+                  )}
+
+                  {/* Followed / Connected Users Active Stories */}
+                  {activeStories
+                    .filter(s => s.userId !== (session?.user as any)?.id)
+                    .map(story => {
+                      const pastel = getPastelForUser(story.user?.id || story.user?.name);
+                      return (
+                        <div
+                          key={story.id}
                           onClick={() => {
-                            setNotificationsList([]);
-                            setUnreadNotifications(0);
+                            triggerHaptic('light');
+                            setViewStory({
+                              id: story.id,
+                              name: story.user?.name || 'Contact',
+                              media: story.imageUrl,
+                              time: formatChatTime(story.createdAt),
+                              isMe: false,
+                              avatar: story.user?.image || undefined,
+                              emoji: pastel.emoji
+                            });
                           }}
-                          className="text-[11px] text-[#D8B4E2] hover:text-white font-semibold cursor-pointer transition-colors px-2 py-1 rounded-lg hover:bg-white/5"
+                          className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
                         >
-                          Clear All
-                        </button>
-                      )}
+                          <div 
+                            className="w-[64px] h-[64px] rounded-full ring-2 ring-[#9D4EDD] ring-offset-2 ring-offset-[#141111] overflow-hidden flex items-center justify-center shadow-sm active:scale-95 transition-all"
+                            style={{ background: pastel.bg, color: pastel.text }}
+                          >
+                            {story.user?.image ? (
+                              <img src={story.user.image} alt={story.user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            ) : (
+                              <span className="text-2xl">{pastel.emoji}</span>
+                            )}
+                          </div>
+                          <span className="text-[12px] text-zinc-300 font-medium group-hover:text-white transition-colors truncate max-w-[64px] text-center">
+                            {story.user?.name ? story.user.name.split(' ')[0] : 'Story'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                {/* Notification Modal Drawer */}
+                {showNotificationsDrawer && (
+                  <div className="absolute top-28 right-4 left-4 z-50 bg-[#181515] border border-zinc-800/90 rounded-3xl p-5 shadow-[0_20px_60px_rgba(0,0,0,0.8)] animate-in fade-in slide-in-from-top-3 duration-200 text-white backdrop-blur-xl">
+                    {/* Drawer Header */}
+                    <div className="flex items-center justify-between pb-3.5 border-b border-zinc-800/80">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-full bg-[#9D4EDD]/15 text-[#9D4EDD] flex items-center justify-center text-sm font-bold">
+                          <Bell className="w-4 h-4 text-[#9D4EDD]" strokeWidth={2.2} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-white leading-tight">Notifications</span>
+                          <span className="text-[11px] text-zinc-400">Recent activity & alerts</span>
+                        </div>
+                      </div>
                       <button
                         onClick={() => setShowNotificationsDrawer(false)}
-                        className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+                        className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        ✕
                       </button>
                     </div>
-                  </div>
 
-                  {/* Notifications List (Clean minimal text, no svgs, no emojis) */}
-                  <div className="py-2.5 space-y-2 max-h-64 overflow-y-auto no-scrollbar">
-                    {notificationsList.length === 0 ? (
-                      <div className="py-8 flex flex-col items-center justify-center text-center">
-                        <p className="text-xs text-zinc-400 font-medium">No new notifications</p>
-                      </div>
-                    ) : (
-                      notificationsList.map(item => (
-                        <div
-                          key={item.id}
-                          onClick={() => {
-                            setNotificationsList(prev => prev.map(n => n.id === item.id ? { ...n, unread: false } : n));
-                            setUnreadNotifications(prev => Math.max(0, prev - 1));
-                          }}
-                          className={`p-3 rounded-2xl transition-colors flex items-center justify-between gap-3 cursor-pointer ${
-                            item.unread ? 'bg-zinc-900 border border-zinc-800 text-white' : 'bg-zinc-900/50 text-zinc-400 opacity-80'
-                          }`}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <h4 className="text-[13px] font-semibold text-zinc-100 truncate">{item.title}</h4>
-                              <span className="text-[10px] text-zinc-500 font-medium shrink-0">{item.time}</span>
-                            </div>
-                            <p className="text-[12px] text-zinc-400 mt-0.5 line-clamp-1">{item.desc}</p>
-                          </div>
-                          {item.unread && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                          )}
+                    {/* Drawer Body - Simple Clean Notifications */}
+                    <div className="flex flex-col gap-2.5 mt-3.5 max-h-[300px] overflow-y-auto no-scrollbar pr-0.5">
+                      {notificationsList.length === 0 ? (
+                        <div className="py-8 text-center text-zinc-500 text-xs">
+                          No new notifications
                         </div>
-                      ))
-                    )}
+                      ) : (
+                        notificationsList.map(item => (
+                          <div key={item.id} className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800/50 flex items-start gap-3 transition-colors hover:bg-zinc-900/90">
+                            <span className="text-xl shrink-0 mt-0.5">{item.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <h4 className="text-[13px] font-semibold text-zinc-100 truncate">{item.title}</h4>
+                                <span className="text-[10px] text-zinc-500 font-medium shrink-0">{item.time}</span>
+                              </div>
+                              <p className="text-[12px] text-zinc-400 mt-0.5 line-clamp-1">{item.desc}</p>
+                            </div>
+                            {item.unread && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* 3. Light Bottom Sheet (Chat List & People Search with smooth upward expansion) */}
-            <div className={`w-full flex-1 bg-white relative overflow-hidden min-h-0 shadow-[0_-10px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-out flex flex-col ${
-              isSearchFocused ? 'rounded-t-none sm:rounded-t-[32px] px-3.5 sm:px-4 pt-12 sm:pt-4 pb-12' : 'rounded-t-[32px] px-3.5 sm:px-4 pt-3 pb-28'
-            }`}>
-              {/* Drag Handle (Hidden in search mode) */}
-              {!isSearchFocused && (
-                <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto my-1.5 shrink-0" />
-              )}
+            <div className="w-full flex-1 bg-white rounded-t-[36px] px-3.5 sm:px-4 pt-3 pb-28 relative overflow-hidden min-h-0 shadow-[0_-10px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-out flex flex-col">
+              {/* Drag Handle */}
+              <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto my-1.5 shrink-0" />
 
-              {/* Top Long-Press Action Bar (Delete SVG, Pin SVG, Archive SVG, and Deselect) - Appears above Recent Chat row */}
-              {selectedChatForOptions && (
-                <div className="mt-1 mb-2.5 p-2 rounded-2xl bg-[#141111] text-white border border-zinc-800 flex items-center justify-between shadow-lg animate-in slide-in-from-top-2 duration-300 shrink-0">
-                  <div className="flex items-center gap-2 min-w-0 flex-1 pl-1">
+              {/* Pure SVG Long-Press Action Bar (NO black box!) - Slides in cleanly */}
+              {!isSearchFocused && selectedChatForOptions && (
+                <div className="flex items-center justify-between px-2 pt-1 pb-1.5 mb-1 animate-in fade-in slide-in-from-top-1 duration-200 shrink-0">
+                  <div className="flex items-center gap-2 min-w-0">
                     <button
                       onClick={() => {
                         triggerHaptic('light');
                         setSelectedChatForOptions(null);
                       }}
-                      className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                      className="w-7 h-7 rounded-full hover:bg-zinc-100 text-zinc-400 hover:text-zinc-800 flex items-center justify-center cursor-pointer transition-colors shrink-0"
                       title="Deselect"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
-                    <div className="truncate min-w-0">
-                      <span className="text-[13px] font-bold text-white truncate block">
-                        {nicknames[selectedChatForOptions.id] || selectedChatForOptions.name}
-                      </span>
-                    </div>
+                    <span className="text-[13px] font-bold text-zinc-800 truncate">
+                      {nicknames[selectedChatForOptions.id] || selectedChatForOptions.name}
+                    </span>
                   </div>
 
-                  {/* 3 Action SVG Buttons: 1. Delete, 2. Pin, 3. Archive */}
-                  <div className="flex items-center gap-2 shrink-0 pr-1">
+                  {/* 3 Pure SVG Action Buttons (Delete, Pin, Archive) */}
+                  <div className="flex items-center gap-3 shrink-0 pr-1">
                     {/* 1. Delete SVG */}
                     <button
                       onClick={async () => {
@@ -4993,11 +4996,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         try {
                           await hideSocialChat(targetId);
                         } catch (err) {
-                          console.warn('Failed to hide chat on server:', err);
+                          console.warn('Failed to delete chat on server:', err);
                         }
                         setSelectedChatForOptions(null);
                       }}
-                      className="w-8 h-8 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 flex items-center justify-center cursor-pointer transition-all active:scale-95"
+                      className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-all cursor-pointer active:scale-90"
                       title="Delete Chat & Messages"
                     >
                       <Trash2 className="w-4 h-4" strokeWidth={2} />
@@ -5011,11 +5014,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         const isCurrentlyPinned = pinnedChats.has(targetId);
                         setPinnedChats(prev => {
                           const next = new Set(prev);
-                          if (isCurrentlyPinned) {
-                            next.delete(targetId);
-                          } else {
-                            next.add(targetId);
-                          }
+                          if (isCurrentlyPinned) next.delete(targetId);
+                          else next.add(targetId);
                           if (typeof window !== 'undefined') {
                             localStorage.setItem('social_pinned_chats', JSON.stringify(Array.from(next)));
                           }
@@ -5023,10 +5023,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         });
                         setSelectedChatForOptions(null);
                       }}
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+                      className={`p-1.5 rounded-full transition-all cursor-pointer active:scale-90 ${
                         pinnedChats.has(selectedChatForOptions.id)
-                          ? 'bg-[#9D4EDD] text-white'
-                          : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
+                          ? 'text-[#9D4EDD] bg-[#9D4EDD]/15'
+                          : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
                       }`}
                       title={pinnedChats.has(selectedChatForOptions.id) ? 'Unpin Chat' : 'Pin to Top'}
                     >
@@ -5041,11 +5041,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         const isCurrentlyArchived = archivedChatIds.has(targetId);
                         setArchivedChatIds(prev => {
                           const next = new Set(prev);
-                          if (isCurrentlyArchived) {
-                            next.delete(targetId);
-                          } else {
-                            next.add(targetId);
-                          }
+                          if (isCurrentlyArchived) next.delete(targetId);
+                          else next.add(targetId);
                           if (typeof window !== 'undefined') {
                             localStorage.setItem('social_archived_chats', JSON.stringify(Array.from(next)));
                           }
@@ -5053,10 +5050,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         });
                         setSelectedChatForOptions(null);
                       }}
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+                      className={`p-1.5 rounded-full transition-all cursor-pointer active:scale-90 ${
                         archivedChatIds.has(selectedChatForOptions.id)
-                          ? 'bg-[#FFF3CD] text-zinc-900'
-                          : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
+                          ? 'text-amber-600 bg-amber-100'
+                          : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
                       }`}
                       title={archivedChatIds.has(selectedChatForOptions.id) ? 'Move to Inbox' : 'Archive Chat'}
                     >
@@ -5066,14 +5063,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
               )}
 
-              {/* Header Row - Always visible and moves down when action bar opens */}
-              {!isSearchFocused && (
-                <div className="flex justify-between items-center mt-2 mb-3 px-1 shrink-0 transition-all duration-300">
-                  <h2 className="text-[22px] font-bold text-black tracking-tight">
-                    {isArchivedView ? 'Archived Chats' : (searchQuery.trim() ? 'Search Results' : 'Recent Chat')}
-                  </h2>
+              {/* Header Row - Always visible and moves smoothly down below the pure SVG buttons */}
+              <div className="flex justify-between items-center mt-2 mb-3 px-1 shrink-0 transition-all duration-300">
+                <h2 className="text-[22px] font-bold text-black tracking-tight">
+                  {isSearchFocused 
+                    ? (searchQuery.trim() ? 'Search Results' : 'Recent People') 
+                    : (isArchivedView ? 'Archived Chats' : 'Recent Chat')}
+                </h2>
 
-                  {/* Archive Button */}
+                {/* Archive Button (Only in normal view) */}
+                {!isSearchFocused && (
                   <button 
                     onClick={() => {
                       triggerHaptic('light');
@@ -5088,87 +5087,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     <Archive className="w-3.5 h-3.5" strokeWidth={2} />
                     <span>{isArchivedView ? 'Inbox' : 'Archive'}</span>
                   </button>
-                </div>
-              )}
-
-              {/* ── CREATIVE & MODERN SEARCH UI OVERHAUL ── */}
-              {isSearchFocused && (
-                <div className="pt-2 pb-3 px-1 flex flex-col gap-3 flex-shrink-0 animate-in fade-in slide-in-from-top-3 duration-300">
-                  {/* Top Bar: Back & Pill Search Input */}
-                  <div className="flex items-center gap-2.5">
-                    <button
-                      onClick={() => {
-                        triggerHaptic('light');
-                        setSearchQuery('');
-                        setIsSearchFocused(false);
-                      }}
-                      className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 flex items-center justify-center cursor-pointer active:scale-90 transition-all shrink-0 shadow-2xs"
-                      title="Back to conversation list"
-                    >
-                      <ChevronLeft className="w-5 h-5 text-zinc-800" strokeWidth={2.4} />
-                    </button>
-                    
-                    <div className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-zinc-100/90 border border-zinc-200/60 focus-within:border-[#9D4EDD]/50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#9D4EDD]/15 transition-all shadow-2xs">
-                      <Search className="w-4 h-4 text-[#9D4EDD] flex-shrink-0" strokeWidth={2.2} />
-                      <input 
-                        type="text" 
-                        autoFocus
-                        placeholder="Search people & conversations..." 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-transparent text-[13.5px] text-zinc-900 placeholder:text-zinc-400 outline-none font-medium"
-                      />
-                      {searchQuery && (
-                        <button 
-                          onClick={() => setSearchQuery('')} 
-                          className="w-5 h-5 rounded-full bg-zinc-200 hover:bg-zinc-300 text-zinc-600 text-xs flex items-center justify-center cursor-pointer transition-colors"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Suggested Contacts Row (When Search Query is Empty) */}
-                  {!searchQuery.trim() && users.length > 0 && (
-                    <div className="flex flex-col gap-2 pt-1 pb-1 animate-in fade-in duration-200">
-                      <span className="text-[12px] font-bold text-zinc-400 tracking-wide uppercase px-1">
-                        Recent People
-                      </span>
-                      <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1 px-1">
-                        {users.slice(0, 8).map(u => {
-                          const p = getPastelForUser(u.id || u.name);
-                          return (
-                            <div 
-                              key={u.id}
-                              onClick={() => {
-                                handleSelectUser(u);
-                                setIsSearchFocused(false);
-                                setSearchQuery('');
-                              }}
-                              className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group active:scale-95 transition-transform"
-                            >
-                              <div 
-                                className="w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-xs group-hover:scale-105 transition-transform"
-                                style={{ background: p.bg, color: p.text }}
-                              >
-                                {u.image && u.image.length > 5 ? (
-                                  <img src={u.image} alt={u.name} className="w-full h-full object-cover rounded-full" />
-                                ) : (
-                                  <span>{p.emoji}</span>
-                                )}
-                              </div>
-                              <span className="text-[11px] font-medium text-zinc-700 max-w-[56px] truncate text-center">
-                                {u.name.split(' ')[0]}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Chat & People List Feed */}
               <div className="flex flex-col gap-1 overflow-y-auto flex-1 pr-0.5 no-scrollbar">
