@@ -362,6 +362,24 @@ export default function ChatInput({
               <path d="M22 2L15 22L11 13L2 9L22 2Z" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
+        ) : isSpeechToTextEnabled ? (
+          <button
+            type="button"
+            onClick={toggleSpeechToText}
+            disabled={disabled}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer outline-none shrink-0 ${
+              isListeningSpeech
+                ? 'bg-[#9D4EDD] text-white animate-pulse shadow-md'
+                : 'bg-zinc-100/90 hover:bg-zinc-200/80 active:scale-90 text-zinc-700'
+            }`}
+            title={isListeningSpeech ? 'Tap to stop listening' : 'Tap to speak (Voice Typing)'}
+          >
+            {isListeningSpeech ? (
+              <Square className="w-4 h-4 fill-current text-white" />
+            ) : (
+              <Mic className="w-5 h-5 text-zinc-700" strokeWidth={2.2} />
+            )}
+          </button>
         ) : (
           <button
             type="button"
@@ -371,19 +389,13 @@ export default function ChatInput({
             onPointerCancel={handlePointerCancel}
             disabled={disabled}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer outline-none shrink-0 ${
-              isListeningSpeech
-                ? 'bg-[#9D4EDD] text-white animate-pulse'
-                : isRecording
+              isRecording
                 ? 'bg-rose-500 text-white scale-110 shadow-lg'
                 : 'bg-zinc-100/90 hover:bg-zinc-200/80 active:scale-90 text-zinc-600'
             }`}
-            title={isSpeechToTextEnabled ? 'Voice Typing (Tap to speak)' : 'Hold to Record Voice Message'}
+            title="Hold to Record Voice Message"
           >
-            {isListeningSpeech ? (
-              <Square className="w-4 h-4 fill-current" />
-            ) : (
-              <Mic className="w-5 h-5 text-zinc-700" strokeWidth={2.2} />
-            )}
+            <Mic className="w-5 h-5 text-zinc-700" strokeWidth={2.2} />
           </button>
         )}
 

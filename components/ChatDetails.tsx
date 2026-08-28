@@ -3,16 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   ChevronLeft,
-  Phone,
-  Video,
   Search,
   ImageIcon,
   FileText,
-  Mic as LucideMic,
-  Volume2,
-  VolumeX,
-  Trash2,
-  Ban
+  Mic as LucideMic
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 
@@ -74,15 +68,6 @@ export default function ChatDetails({
 
   if (!isOpen || !selectedUser) return null;
 
-  const userEmail = (selectedUser.email || '').toLowerCase().trim();
-  const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
-  const lastSeenVal =
-    (userEmail && lastSeenMap[userEmail]) ||
-    lastSeenMap[selectedUser.id] ||
-    (selectedUser as any).lastSeen ||
-    (selectedUser as any).lastHeartbeat;
-  const lastSeenText = formatLastSeenAgo ? formatLastSeenAgo(lastSeenVal) : '';
-
   const handleToggleVoiceTyping = () => {
     triggerHaptic('light');
     const nextVal = !speechToText;
@@ -94,10 +79,12 @@ export default function ChatDetails({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-[#141111] animate-in slide-in-from-right-full duration-300 overflow-y-auto no-scrollbar font-sans select-none">
+    <div className="absolute inset-0 z-50 flex flex-col bg-[#141111] animate-in slide-in-from-right-full duration-300 overflow-hidden font-sans select-none">
       
-      {/* ── TOP DARK BAR (HEADER & HERO) ── */}
-      <div className="pt-14 pb-5 px-5 flex items-center justify-between shrink-0 bg-[#141111] sticky top-0 z-20">
+      {/* ── 1. TOP BAR (BACK BUTTON, NAME & SEARCH BUTTON ON TOP RIGHT) ── */}
+      <div className="pt-14 pb-4 px-5 flex items-center justify-between shrink-0 bg-[#141111] z-20">
+        
+        {/* Left: Back button matching chat UI */}
         <button
           onClick={() => {
             setEditingNickname(false);
@@ -108,95 +95,36 @@ export default function ChatDetails({
         >
           <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2.4} />
         </button>
-        <span className="text-[16px] font-bold text-white tracking-tight">Details</span>
-        <div className="w-10" />
-      </div>
 
-      {/* Hero Avatar, Name & Quick Call Actions */}
-      <div className="flex flex-col items-center px-6 pb-6 select-none">
-        <div className="w-22 h-22 rounded-full overflow-hidden flex items-center justify-center bg-zinc-900 border-2 border-zinc-800 text-3xl shadow-xl">
-          {selectedUser.image && selectedUser.image.length > 5 ? (
-            <img
-              src={selectedUser.image}
-              alt={selectedUser.name}
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <span className="text-white font-bold">{selectedUser.name?.charAt(0) || 'U'}</span>
-          )}
-        </div>
-
-        {/* User Name (No @username) */}
-        <h2 className="text-[20px] font-bold text-white mt-3 tracking-tight text-center">
+        {/* Center: Contact Name (No Details heading, No activity status) */}
+        <h2 className="text-[17px] font-bold text-white tracking-tight truncate max-w-[200px] text-center">
           {nicknames[selectedUser.id] || selectedUser.name}
         </h2>
-        <span className="text-[12px] text-zinc-400 mt-0.5 font-medium">
-          {isOnline ? 'Online' : lastSeenText ? `Active ${lastSeenText}` : 'Offline'}
-        </span>
 
-        {/* Quick Action Buttons Row */}
-        <div className="grid grid-cols-3 gap-3 w-full max-w-[280px] mt-5">
-          {/* Voice Call */}
-          <button
-            onClick={() => {
-              onClose();
-              onStartCall('audio');
-            }}
-            className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group outline-none"
-          >
-            <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-colors shadow-xs">
-              <Phone className="w-5 h-5 text-zinc-200" strokeWidth={2} />
-            </div>
-            <span className="text-[11px] font-semibold text-zinc-300">Audio</span>
-          </button>
-
-          {/* Video Call */}
-          <button
-            onClick={() => {
-              onClose();
-              onStartCall('video');
-            }}
-            className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group outline-none"
-          >
-            <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-colors shadow-xs">
-              <Video className="w-5 h-5 text-zinc-200" strokeWidth={2} />
-            </div>
-            <span className="text-[11px] font-semibold text-zinc-300">Video</span>
-          </button>
-
-          {/* Search in Chat */}
-          <button
-            onClick={() => {
-              onClose();
-              onOpenSearch();
-            }}
-            className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group outline-none"
-          >
-            <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-colors shadow-xs">
-              <Search className="w-5 h-5 text-zinc-200" strokeWidth={2} />
-            </div>
-            <span className="text-[11px] font-semibold text-zinc-300">Search</span>
-          </button>
-        </div>
+        {/* Right: Search button with border */}
+        <button
+          onClick={() => {
+            onClose();
+            onOpenSearch();
+          }}
+          className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-all cursor-pointer active:scale-90 shadow-xs"
+          title="Search in chat"
+        >
+          <Search className="w-4 h-4 text-white" strokeWidth={2.2} />
+        </button>
       </div>
 
-      {/* ── BOTTOM LIGHT SHEET (MATCHING CHAT UI DESIGN LANGUAGE) ── */}
-      <div className="flex-1 bg-white rounded-t-[32px] px-5 pt-6 pb-24 flex flex-col gap-6 text-zinc-900 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
+      {/* ── 2. WHITE CONTAINER (MOVED FULL UP DIRECTLY UNDER TOP BAR) ── */}
+      <div className="flex-1 bg-white rounded-t-[32px] px-5 pt-6 pb-24 flex flex-col gap-6 text-zinc-900 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] overflow-y-auto no-scrollbar">
         
         {/* Section 1: Preferences */}
         <div className="flex flex-col gap-2">
           <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">Preferences</span>
           <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-2 divide-y divide-zinc-100">
             
-            {/* Voice Typing (Speech to Text) Toggle */}
-            <div className="flex items-center justify-between py-3 px-2">
-              <div className="flex flex-col pr-2">
-                <span className="text-[14px] font-semibold text-zinc-800">Voice Typing (Speech to Text)</span>
-                <span className="text-[12px] text-zinc-500 mt-0.5">
-                  Speak in English, Urdu, or other languages to type
-                </span>
-              </div>
+            {/* Voice Typing (Speech to Text) Toggle (No description) */}
+            <div className="flex items-center justify-between py-3.5 px-2">
+              <span className="text-[14px] font-semibold text-zinc-800">Voice Typing (Speech to Text)</span>
               <button
                 type="button"
                 onClick={handleToggleVoiceTyping}
@@ -210,18 +138,6 @@ export default function ChatDetails({
                   }`}
                 />
               </button>
-            </div>
-
-            {/* Notifications Mute Row */}
-            <div
-              onClick={onToggleMute}
-              className="flex items-center justify-between py-3 px-2 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors"
-            >
-              <div className="flex items-center gap-2.5">
-                {isChatMuted ? <VolumeX className="w-4 h-4 text-zinc-500" /> : <Volume2 className="w-4 h-4 text-zinc-700" />}
-                <span className="text-[14px] font-semibold text-zinc-800">Notifications</span>
-              </div>
-              <span className="text-[13px] font-medium text-zinc-500">{isChatMuted ? 'Muted' : 'Sound & Banners'}</span>
             </div>
 
             {/* Nickname Row */}
@@ -283,17 +199,12 @@ export default function ChatDetails({
           </div>
         </div>
 
-        {/* Section 2: Shared Content */}
+        {/* Section 2: Shared Content (No counts in title or tabs) */}
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider">Shared Content</span>
-            <span className="text-[11px] text-zinc-400 font-medium">
-              {sharedMedia.picsAndVideos.length + sharedMedia.files.length} items
-            </span>
-          </div>
+          <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">Shared Content</span>
 
           <div className="flex flex-col gap-3">
-            {/* Pill Tab Switcher */}
+            {/* Pill Tab Switcher: Plain Text without counts */}
             <div className="flex items-center bg-zinc-100 p-1 rounded-full border border-zinc-200/60 max-w-sm">
               <button
                 onClick={() => setDetailsTab('media')}
@@ -303,7 +214,7 @@ export default function ChatDetails({
                     : 'text-zinc-500 hover:text-zinc-800'
                 }`}
               >
-                Media ({sharedMedia.picsAndVideos.length})
+                Media
               </button>
               <button
                 onClick={() => setDetailsTab('files')}
@@ -313,7 +224,7 @@ export default function ChatDetails({
                     : 'text-zinc-500 hover:text-zinc-800'
                 }`}
               >
-                Files & Voice ({sharedMedia.files.length})
+                Files & Voice
               </button>
             </div>
 

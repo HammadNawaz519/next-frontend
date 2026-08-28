@@ -4006,30 +4006,46 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       currentContent.toLowerCase().startsWith('@grok ')
     ) {
       const prompt = currentContent.replace(/^(\/ai|@ai|@grok)\s*/i, '');
+      const userTempId = 'ai-user-' + Date.now();
       const userMsg: any = {
-        id: 'ai-user-' + Date.now(),
+        id: userTempId,
         content: currentContent,
         senderId,
+        receiverId: selectedUser.id,
         createdAt: new Date(),
         type: 'text'
       };
       setMessages(prev => [...prev, userMsg]);
 
+      // Save user prompt to DB
+      saveSocialMessage(selectedUser.id, currentContent, 'text').catch(err =>
+        console.error('Failed to save AI user query:', err)
+      );
+
       try {
         const aiResponse = await askAI(prompt);
+        const aiFormatted = `🤖 Grok AI: ${aiResponse || "I couldn't find an answer to that."}`;
+        const aiTempId = 'ai-resp-' + Date.now();
         const aiMsg: any = {
-          id: 'ai-resp-' + Date.now(),
-          content: aiResponse || "I couldn't find an answer to that.",
-          senderId: 'ai',
+          id: aiTempId,
+          content: aiFormatted,
+          senderId,
+          receiverId: selectedUser.id,
           createdAt: new Date(),
           type: 'text'
         };
         setMessages(prev => [...prev, aiMsg]);
+
+        // Save AI response to DB
+        saveSocialMessage(selectedUser.id, aiFormatted, 'text').catch(err =>
+          console.error('Failed to save AI response:', err)
+        );
       } catch (e) {
         const errAiMsg: any = {
           id: 'ai-err-' + Date.now(),
-          content: "Sorry, I couldn't process your request right now.",
-          senderId: 'ai',
+          content: "🤖 Grok AI: Sorry, I couldn't process your request right now.",
+          senderId,
+          receiverId: selectedUser.id,
           createdAt: new Date(),
           type: 'text'
         };
