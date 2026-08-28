@@ -1117,7 +1117,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
     );
   }
 
-  const isAI = msg.senderId === 'ai' || (msg as any).isAi || (typeof msg.content === 'string' && (msg.content.startsWith('🤖') || msg.content.startsWith('Grok AI:')));
+  const isAI = msg.type === 'ai' || msg.senderId === 'ai' || (msg as any).isAi === true || (typeof msg.content === 'string' && (msg.content.startsWith('🤖') || msg.content.startsWith('Grok AI:')));
   const isSent = !isAI && String(msg.senderId) === String(currentUserId);
   const cleanMsgContent = typeof msg.content === 'string' ? msg.content.replace(/^(🤖\s*)?Grok AI:\s*/i, '') : msg.content;
 
@@ -1225,7 +1225,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
   return (
     <div
-      className={`msg-wrapper ${isSent ? 'sent' : isAI ? 'ai' : 'received'} ${isSelected ? 'selected-item' : ''} animate-in slide-in-from-bottom-2 duration-300 relative`}
+      className={`msg-wrapper ${isSent ? 'sent' : 'received'} ${isSelected ? 'selected-item' : ''} animate-in slide-in-from-bottom-2 duration-300 relative`}
       onClick={handleMessageClick}
       onMouseDown={handlePointerDown}
       onMouseUp={handlePointerUp}
@@ -1728,7 +1728,12 @@ const triggerStunningNotification = async (
  *  Works for messages coming from getSocialMessages (Prisma) as well as
  *  the return value of saveSocialMessage. */
 const normalizeMsg = (m: any): any => {
-  const res = { ...m, status: undefined };
+  const isAiMsg = m.type === 'ai' || m.senderId === 'ai' || m.isAi;
+  const res = {
+    ...m,
+    status: undefined,
+    ...(isAiMsg ? { isAi: true, type: 'ai' } : {})
+  };
   if (m.replyToId && !m.replyTo) {
     return {
       ...res,
