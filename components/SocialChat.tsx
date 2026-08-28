@@ -1866,7 +1866,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
   const [showNotificationsDrawer, setShowNotificationsDrawer] = useState<boolean>(false);
   const [notificationsList, setNotificationsList] = useState<
-    { id: string; title: string; desc: string; time: string; unread: boolean }[]
+    { id: string; title: string; desc: string; time: string; unread: boolean; icon?: string }[]
   >([]);
 
   const [isArchivedView, setIsArchivedView] = useState<boolean>(false);
@@ -4932,7 +4932,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       ) : (
                         notificationsList.map(item => (
                           <div key={item.id} className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800/50 flex items-start gap-3 transition-colors hover:bg-zinc-900/90">
-                            <span className="text-xl shrink-0 mt-0.5">{item.icon}</span>
+                            <span className="text-xl shrink-0 mt-0.5">{item.icon || '🔔'}</span>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-1">
                                 <h4 className="text-[13px] font-semibold text-zinc-100 truncate">{item.title}</h4>
