@@ -737,22 +737,44 @@ export async function updateProfileDetails(data: { name?: string; username?: str
   if (!session?.user?.email) return { error: 'Not authenticated' };
 
   const updateData: any = {};
-  if (data.name !== undefined) updateData.name = data.name.trim();
-  if (data.bio !== undefined) updateData.bio = data.bio;
-  if (data.website !== undefined) updateData.website = data.website.trim();
-  if (data.image !== undefined) updateData.image = data.image;
+  if (data.name !== undefined) {
+    const trimmedName = data.name.trim();
+    if (trimmedName.length < 2) return { error: 'Display name must be at least 2 characters' };
+    if (trimmedName.length > 50) return { error: 'Display name cannot exceed 50 characters' };
+    updateData.name = trimmedName;
+  }
+
+  if (data.bio !== undefined) {
+    updateData.bio = data.bio.trim().slice(0, 150);
+  }
+
+  if (data.website !== undefined) {
+    updateData.website = data.website.trim().slice(0, 100);
+  }
+
+  if (data.image !== undefined) {
+    updateData.image = data.image;
+  }
 
   if (data.username !== undefined) {
-    const trimmed = data.username.trim().toLowerCase().replace(/\s+/g, '');
-    if (trimmed) {
-      const existing = await prisma.user.findFirst({
-        where: { username: trimmed, NOT: { email: session.user.email } }
-      });
-      if (existing) {
-        return { error: 'Username already taken' };
-      }
-      updateData.username = trimmed;
+    const trimmedUser = data.username.trim().toLowerCase().replace(/^@+/, '').replace(/\s+/g, '');
+    if (trimmedUser.length < 3) return { error: 'Username must be at least 3 characters' };
+    if (trimmedUser.length > 30) return { error: 'Username cannot exceed 30 characters' };
+    if (!/^[a-zA-Z0-9_]+$/.test(trimmedUser)) {
+      return { error: 'Username can only contain letters, numbers, and underscores' };
     }
+
+    const existing = await prisma.user.findFirst({
+      where: {
+        username: { equals: trimmedUser, mode: 'insensitive' },
+        NOT: { email: session.user.email }
+      }
+    });
+
+    if (existing) {
+      return { error: 'Username is already taken' };
+    }
+    updateData.username = trimmedUser;
   }
 
   const updated = await prisma.user.update({
