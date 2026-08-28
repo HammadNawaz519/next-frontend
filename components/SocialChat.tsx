@@ -1200,42 +1200,23 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
       }}
     >
 
-      {/* Consecutive Grouping Tail Logic — column wrapper keeps bubble + time stacked, wraps at ~half width */}
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: isSent ? 'flex-end' : 'flex-start',
-        order: isSent ? 2 : 1,
-        minWidth: 0,
-        maxWidth: '60%',
-        width: 'fit-content',
-      }}>
+      {/* Column wrapper keeps bubble + time stacked, w-fit max-w-[76%] */}
+      <div 
+        className={`flex flex-col w-fit max-w-[76%] ${isSent ? 'items-end' : 'items-start'}`}
+        style={{
+          order: isSent ? 2 : 1,
+          minWidth: 0,
+        }}
+      >
       {(() => {
-        const isMiddleInGroup = isPrevSameSender && isNextSameSender;
-        const isFirstInGroup = !isPrevSameSender && isNextSameSender;
-        const isLastInGroup = isPrevSameSender && !isNextSameSender;
-
-        let bubbleBorderRadius = '18px 18px 4px 18px';
-        if (isSent) {
-          if (isFirstInGroup) bubbleBorderRadius = '18px 18px 4px 18px';
-          else if (isMiddleInGroup) bubbleBorderRadius = '18px 4px 4px 18px';
-          else if (isLastInGroup) bubbleBorderRadius = '18px 4px 18px 18px';
-          else bubbleBorderRadius = '18px 18px 4px 18px';
-        } else {
-          if (isFirstInGroup) bubbleBorderRadius = '18px 18px 18px 4px';
-          else if (isMiddleInGroup) bubbleBorderRadius = '4px 18px 18px 4px';
-          else if (isLastInGroup) bubbleBorderRadius = '4px 18px 18px 18px';
-          else bubbleBorderRadius = '18px 18px 18px 4px';
-        }
-
         const isMedia = msg.type === 'image' || msg.type === 'video' || msg.type === 'media_album';
         const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
-        // Proportional rounded bubbles wrapping cleanly at half width
+        // Continuous high-radius capsule shape on all 4 corners, soft colors, generous horizontal & compact vertical padding
         const bubbleClasses = isSent
-          ? `bg-zinc-100 text-zinc-900 px-5 py-3 !rounded-[22px] max-w-full self-end text-[13.5px] font-normal leading-snug shadow-2xs min-h-[44px] flex items-center justify-center ${isPrevSameSender ? '-mt-1.5' : ''}`
-          : `bg-[#FEF5D1] text-zinc-900 px-5 py-3 !rounded-[22px] max-w-full self-start text-[13.5px] font-normal leading-snug shadow-2xs min-h-[44px] flex items-center justify-center ${isPrevSameSender ? '-mt-1.5' : ''}`;
+          ? `bg-[#F4F4F5] text-zinc-900 px-6 py-2.5 !rounded-[24px] w-fit max-w-full text-[14px] font-normal leading-[1.4] shadow-2xs flex items-center justify-center ${isPrevSameSender ? '-mt-1' : ''}`
+          : `bg-[#FFF3CD] text-zinc-900 px-6 py-2.5 !rounded-[24px] w-fit max-w-full text-[14px] font-normal leading-[1.4] shadow-2xs flex items-center justify-center ${isPrevSameSender ? '-mt-1' : ''}`;
 
         return (
           <div
@@ -1485,7 +1466,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                   </div>
                 )}
                 {msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
-                  <div style={{ fontSize: '0.885rem', lineHeight: '1.4', wordBreak: 'break-word', whiteSpace: 'pre-wrap', minWidth: '32px', textAlign: 'center', width: '100%' }}>
+                  <div style={{ fontSize: '14px', lineHeight: '1.4', wordBreak: 'break-word', whiteSpace: 'pre-wrap', textAlign: 'center', width: '100%' }}>
                     <span>{msg.content}</span>
                   </div>
                 ) : null}
@@ -1549,7 +1530,12 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         );
       })()}
 
-      {/* Status indicator row under the last sent message — no timestamp shown below bubble */}
+      {/* Timestamp directly below the bubble: Left-aligned for incoming, Right-aligned for outgoing */}
+      <span className={`text-[11px] font-normal text-zinc-400 mt-1 px-2 select-none ${isSent ? 'self-end' : 'self-start'}`}>
+        {formatChatTime(msg.createdAt)}
+      </span>
+
+      {/* Status indicator row under the last sent message */}
       {isSent && (
         <SentMessageStatus msg={msg} isDark={isDark} isLastSentInGroup={isLastSentInGroup} partnerLastSeen={partnerLastSeen} />
       )}
@@ -4981,7 +4967,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                   {/* 3 Pure SVG Action Buttons (Delete, Pin, Archive) */}
                   <div className="flex items-center gap-3 shrink-0 pr-1">
-                    {/* 1. Delete SVG */}
+                    {/* 1. Delete SVG (clean slate/charcoal icon) */}
                     <button
                       onClick={async () => {
                         triggerHaptic('heavy');
@@ -5003,7 +4989,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         }
                         setSelectedChatForOptions(null);
                       }}
-                      className="p-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-full transition-all cursor-pointer active:scale-90 outline-none border-0 ring-0 focus:outline-none"
+                      className="p-1.5 text-zinc-700 hover:text-black hover:bg-zinc-100 rounded-full transition-all cursor-pointer active:scale-90 outline-none border-0 ring-0 focus:outline-none"
                       title="Delete Chat & Messages"
                     >
                       <Trash2 className="w-4 h-4" strokeWidth={2} />
@@ -5066,7 +5052,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
               )}
 
-              {/* Header Row - Always visible and moves smoothly down below the pure SVG buttons */}
+              {/* Header Row - Always visible; Big Archive button is disabled/hidden during long press */}
               <div className="flex justify-between items-center mt-2 mb-3 px-1 shrink-0 transition-all duration-300">
                 <h2 className="text-[22px] font-bold text-black tracking-tight">
                   {isSearchFocused 
@@ -5074,8 +5060,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     : (isArchivedView ? 'Archived Chats' : 'Recent Chat')}
                 </h2>
 
-                {/* Archive Button (Only in normal view - no outlines) */}
-                {!isSearchFocused && (
+                {/* Archive Button (Hidden during long-press so upper SVG action bar button is used) */}
+                {!isSearchFocused && !selectedChatForOptions && (
                   <button 
                     onClick={() => {
                       triggerHaptic('light');
