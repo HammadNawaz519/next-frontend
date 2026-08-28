@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ChevronLeft,
   Phone,
@@ -9,7 +9,15 @@ import {
   ImageIcon,
   FileText,
   Mic as LucideMic,
+  Volume2,
+  VolumeX,
+  Sparkles,
+  Shield,
+  Trash2,
+  Ban,
+  Check
 } from 'lucide-react';
+import { triggerHaptic } from '@/lib/haptics';
 
 interface ChatDetailsProps {
   isOpen: boolean;
@@ -31,6 +39,8 @@ interface ChatDetailsProps {
   isUserBlocked: boolean;
   onToggleBlock: () => void;
   formatLastSeenAgo?: (timestamp?: string) => string;
+  isSpeechToTextEnabled?: boolean;
+  onToggleSpeechToText?: (enabled: boolean) => void;
 }
 
 export default function ChatDetails({
@@ -53,11 +63,17 @@ export default function ChatDetails({
   isUserBlocked,
   onToggleBlock,
   formatLastSeenAgo,
+  isSpeechToTextEnabled = false,
+  onToggleSpeechToText
 }: ChatDetailsProps) {
   const [editingNickname, setEditingNickname] = useState(false);
   const [nicknameInput, setNicknameInput] = useState('');
   const [detailsTab, setDetailsTab] = useState<'media' | 'files'>('media');
-  const mediaDisplayLimit = 30;
+  const [speechToText, setSpeechToText] = useState(isSpeechToTextEnabled);
+
+  useEffect(() => {
+    setSpeechToText(isSpeechToTextEnabled);
+  }, [isSpeechToTextEnabled]);
 
   if (!isOpen || !selectedUser) return null;
 
@@ -68,47 +84,53 @@ export default function ChatDetails({
     lastSeenMap[selectedUser.id] ||
     (selectedUser as any).lastSeen ||
     (selectedUser as any).lastHeartbeat;
-  const lastSeenText = formatLastSeenAgo
-    ? formatLastSeenAgo(lastSeenVal)
-    : '';
+  const lastSeenText = formatLastSeenAgo ? formatLastSeenAgo(lastSeenVal) : '';
+
+  const handleToggleVoiceTyping = () => {
+    triggerHaptic('light');
+    const nextVal = !speechToText;
+    setSpeechToText(nextVal);
+    onToggleSpeechToText?.(nextVal);
+    try {
+      localStorage.setItem('connect_speech_to_text_enabled', String(nextVal));
+    } catch (e) {}
+  };
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-[#141111] animate-in slide-in-from-right-full duration-300 overflow-y-auto no-scrollbar font-sans select-none">
-      {/* Top Header Bar */}
-      <div className="pt-14 pb-4 px-5 flex items-center justify-between select-none flex-shrink-0 bg-[#141111] sticky top-0 z-20">
+    <div className="absolute inset-0 z-50 flex flex-col bg-[#141111] animate-in slide-in-from-right-full duration-300 overflow-y-auto no-scrollbar font-sans select-none text-white">
+      
+      {/* ── 1. TOP HEADER BAR ── */}
+      <div className="pt-14 pb-4 px-5 flex items-center justify-between shrink-0 bg-[#141111] sticky top-0 z-20 border-b border-zinc-800/60">
         <button
           onClick={() => {
             setEditingNickname(false);
             onClose();
           }}
-          className="w-10 h-10 rounded-full bg-zinc-800/80 border border-zinc-700/50 flex items-center justify-center cursor-pointer hover:bg-zinc-700 active:scale-95 transition-all text-white outline-none"
+          className="w-11 h-11 rounded-full bg-[#181515] border border-zinc-800 flex items-center justify-center cursor-pointer hover:bg-zinc-800 active:scale-90 transition-all text-white outline-none"
           title="Back to conversation"
-          aria-label="Back"
         >
-          <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2.2} />
+          <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
         </button>
-        <span className="text-[15px] font-bold text-white tracking-tight">Conversation Info</span>
-        <div className="w-10" />
+        <span className="text-[17px] font-bold text-white tracking-tight">Details</span>
+        <div className="w-11" />
       </div>
 
-      {/* Hero Profile Card */}
-      <div className="flex flex-col items-center px-6 pt-4 pb-8 select-none">
-        <div className="relative">
-          <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-zinc-800 border-2 border-zinc-700 text-3xl shadow-xl">
-            {selectedUser.image && selectedUser.image.length > 5 ? (
-              <img
-                src={selectedUser.image}
-                alt={selectedUser.name}
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <span className="text-zinc-300 font-bold">{selectedUser.name?.charAt(0) || 'U'}</span>
-            )}
-          </div>
+      {/* ── 2. HERO PROFILE SECTION ── */}
+      <div className="flex flex-col items-center px-6 pt-5 pb-6">
+        <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-[#181515] border-2 border-zinc-800 text-3xl shadow-xl">
+          {selectedUser.image && selectedUser.image.length > 5 ? (
+            <img
+              src={selectedUser.image}
+              alt={selectedUser.name}
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <span className="text-white font-bold">{selectedUser.name?.charAt(0) || 'U'}</span>
+          )}
         </div>
 
-        <h2 className="text-[22px] font-bold text-white mt-4 tracking-tight text-center">
+        <h2 className="text-[20px] font-bold text-white mt-3.5 tracking-tight text-center">
           {nicknames[selectedUser.id] || selectedUser.name}
         </h2>
         <span className="text-[13px] text-[#D8B4E2] font-medium mt-0.5">
@@ -118,110 +140,119 @@ export default function ChatDetails({
           {isOnline ? 'Online' : lastSeenText ? `Active ${lastSeenText}` : 'Offline'}
         </span>
 
-        {/* Quick Action Buttons Row */}
-        <div className="grid grid-cols-4 gap-3 w-full max-w-sm mt-6">
-          {/* 1. Message */}
-          <button
-            onClick={onClose}
-            className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group outline-none"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-colors shadow-xs">
-              <svg className="w-5 h-5 text-zinc-300" viewBox="-0.5 0 25 25" fill="none" stroke="currentColor">
-                <path
-                  d="M2.33045 8.38999C0.250452 11.82 9.42048 14.9 9.42048 14.9C9.42048 14.9 12.5005 24.07 15.9305 21.99C19.5705 19.77 23.9305 6.13 21.0505 3.27C18.1705 0.409998 4.55045 4.74999 2.33045 8.38999Z"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path d="M15.1999 9.12L9.41992 14.9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <span className="text-[11px] font-medium text-zinc-300">Message</span>
-          </button>
-
-          {/* 2. Voice Call */}
+        {/* Action Buttons Row */}
+        <div className="flex items-center justify-center gap-4 w-full max-w-xs mt-5">
+          {/* Audio Call */}
           <button
             onClick={() => {
               onClose();
               onStartCall('audio');
             }}
-            className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group outline-none"
+            className="flex-1 h-12 rounded-full bg-[#181515] border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center gap-2 text-white transition-all cursor-pointer active:scale-95 shadow-sm"
           >
-            <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-colors shadow-xs">
-              <Phone className="w-5 h-5 text-zinc-300" strokeWidth={2} />
-            </div>
-            <span className="text-[11px] font-medium text-zinc-300">Audio</span>
+            <Phone className="w-4 h-4 text-white" strokeWidth={2.2} />
+            <span className="text-[13px] font-bold">Audio</span>
           </button>
 
-          {/* 3. Video Call */}
+          {/* Video Call */}
           <button
             onClick={() => {
               onClose();
               onStartCall('video');
             }}
-            className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group outline-none"
+            className="flex-1 h-12 rounded-full bg-[#181515] border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center gap-2 text-white transition-all cursor-pointer active:scale-95 shadow-sm"
           >
-            <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-colors shadow-xs">
-              <Video className="w-5 h-5 text-zinc-300" strokeWidth={2} />
-            </div>
-            <span className="text-[11px] font-medium text-zinc-300">Video</span>
+            <Video className="w-4 h-4 text-white" strokeWidth={2.2} />
+            <span className="text-[13px] font-bold">Video</span>
           </button>
 
-          {/* 4. Search in Chat */}
+          {/* Search */}
           <button
             onClick={() => {
               onClose();
               onOpenSearch();
             }}
-            className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform group outline-none"
+            className="w-12 h-12 rounded-full bg-[#181515] border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-all cursor-pointer active:scale-95 shadow-sm shrink-0"
+            title="Search in chat"
           >
-            <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center text-white transition-colors shadow-xs">
-              <Search className="w-5 h-5 text-zinc-300" strokeWidth={2} />
-            </div>
-            <span className="text-[11px] font-medium text-zinc-300">Search</span>
+            <Search className="w-4 h-4 text-white" strokeWidth={2.2} />
           </button>
         </div>
       </div>
 
-      {/* Light Mode Information & Settings Bottom Sheet */}
-      <div className="flex-1 bg-white rounded-t-[36px] px-6 pt-7 pb-24 flex flex-col gap-6 text-zinc-900 shadow-[0_-10px_40px_rgba(0,0,0,0.15)]">
-        {/* Section 1: Preferences */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">Preferences</span>
-          <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-2 divide-y divide-zinc-100">
+      {/* ── 3. PREFERENCES & SETTINGS (CLEAN CONNECT DARK ROUND CARDS) ── */}
+      <div className="px-5 pb-16 flex flex-col gap-5">
+        
+        {/* Section: Preferences */}
+        <div className="flex flex-col gap-2">
+          <span className="text-[12px] font-bold text-zinc-500 uppercase tracking-wider px-2">Preferences</span>
+          <div className="bg-[#181515] border border-zinc-800/90 rounded-3xl p-2 divide-y divide-zinc-800/60 shadow-lg">
+            
+            {/* Voice Typing (Speech to Text) Toggle */}
+            <div className="flex items-center justify-between py-3 px-3.5">
+              <div className="flex flex-col pr-2">
+                <span className="text-[14px] font-bold text-white">Voice Typing (Speech to Text)</span>
+                <span className="text-[12px] text-zinc-400 mt-0.5">
+                  Speak in English, Urdu, or any language to type automatically
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleVoiceTyping}
+                className={`w-12 h-7 rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                  speechToText ? 'bg-[#9D4EDD]' : 'bg-zinc-800'
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                    speechToText ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
             {/* Notifications Mute Row */}
             <div
               onClick={onToggleMute}
-              className="flex items-center justify-between py-3 px-2 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors"
+              className="flex items-center justify-between py-3 px-3.5 cursor-pointer hover:bg-zinc-800/40 rounded-2xl transition-colors"
             >
-              <span className="text-[14px] font-semibold text-zinc-800">Notifications</span>
-              <span className="text-[13px] font-medium text-zinc-500">{isChatMuted ? 'Muted' : 'Sound & Banners'}</span>
+              <div className="flex items-center gap-3">
+                {isChatMuted ? (
+                  <VolumeX className="w-4 h-4 text-zinc-400" />
+                ) : (
+                  <Volume2 className="w-4 h-4 text-zinc-300" />
+                )}
+                <span className="text-[14px] font-bold text-white">Notifications</span>
+              </div>
+              <span className="text-[13px] font-semibold text-zinc-400">
+                {isChatMuted ? 'Muted' : 'Enabled'}
+              </span>
             </div>
 
             {/* Nickname Row */}
-            <div className="py-3 px-2">
+            <div className="py-3 px-3.5">
               <div className="flex items-center justify-between">
-                <span className="text-[14px] font-semibold text-zinc-800">Nickname</span>
+                <span className="text-[14px] font-bold text-white">Nickname</span>
                 {!editingNickname ? (
                   <button
                     onClick={() => {
                       setNicknameInput(nicknames[selectedUser.id] || '');
                       setEditingNickname(true);
                     }}
-                    className="text-[13px] font-medium text-[#9D4EDD] hover:underline cursor-pointer outline-none"
+                    className="text-[13px] font-bold text-[#9D4EDD] hover:underline cursor-pointer outline-none"
                   >
                     {nicknames[selectedUser.id] || 'Set Nickname'}
                   </button>
                 ) : null}
               </div>
               {editingNickname && (
-                <div className="flex items-center gap-2 mt-3 pt-2">
+                <div className="flex items-center gap-2 mt-3 pt-1">
                   <input
                     type="text"
                     placeholder="Enter nickname..."
                     value={nicknameInput}
                     onChange={(e) => setNicknameInput(e.target.value)}
-                    className="flex-1 px-3 py-2 text-xs bg-white border border-zinc-200 rounded-xl outline-none text-zinc-900"
+                    className="flex-1 px-4 py-2 text-xs bg-zinc-900 border border-zinc-700 rounded-full outline-none text-white focus:border-[#9D4EDD]"
                     autoFocus
                   />
                   <button
@@ -229,13 +260,13 @@ export default function ChatDetails({
                       onUpdateNickname(selectedUser.id, nicknameInput.trim());
                       setEditingNickname(false);
                     }}
-                    className="px-3 py-2 bg-[#9D4EDD] text-white rounded-xl text-xs font-bold cursor-pointer outline-none"
+                    className="px-4 py-2 bg-[#9D4EDD] text-white rounded-full text-xs font-bold cursor-pointer outline-none hover:bg-[#8A38CC]"
                   >
                     Save
                   </button>
                   <button
                     onClick={() => setEditingNickname(false)}
-                    className="px-3 py-2 bg-zinc-200 text-zinc-700 rounded-xl text-xs font-medium cursor-pointer outline-none"
+                    className="px-4 py-2 bg-zinc-800 text-zinc-400 hover:text-white rounded-full text-xs font-medium cursor-pointer outline-none"
                   >
                     Cancel
                   </button>
@@ -246,64 +277,63 @@ export default function ChatDetails({
             {/* Theme Row */}
             <div
               onClick={onOpenThemePicker}
-              className="flex items-center justify-between py-3 px-2 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors"
+              className="flex items-center justify-between py-3 px-3.5 cursor-pointer hover:bg-zinc-800/40 rounded-2xl transition-colors"
             >
-              <span className="text-[14px] font-semibold text-zinc-800">Chat Theme</span>
+              <span className="text-[14px] font-bold text-white">Chat Theme</span>
               <div className="flex items-center gap-1.5">
-                <span className="text-[13px] font-medium text-zinc-500">{activeTheme.name}</span>
-                <span className="text-zinc-400 font-bold">›</span>
+                <span className="text-[13px] font-semibold text-zinc-400">{activeTheme.name}</span>
+                <span className="text-zinc-500 font-bold">›</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Shared Content Tabs (Media, Files, Voice) */}
+        {/* Section: Shared Content */}
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider">Shared Content</span>
-            <span className="text-[11px] text-zinc-400 font-medium">
+          <div className="flex items-center justify-between px-2">
+            <span className="text-[12px] font-bold text-zinc-500 uppercase tracking-wider">Shared Content</span>
+            <span className="text-[11px] text-zinc-500 font-medium">
               {sharedMedia.picsAndVideos.length + sharedMedia.files.length} items
             </span>
           </div>
 
-          {/* Tab switcher */}
-          <div className="flex border-b border-zinc-100 gap-6 px-1">
-            <button
-              onClick={() => setDetailsTab('media')}
-              className={`pb-2.5 cursor-pointer text-[13px] font-semibold transition-all outline-none ${
-                detailsTab === 'media'
-                  ? 'text-zinc-950 font-bold border-b-2 border-zinc-950'
-                  : 'text-zinc-400 hover:text-zinc-600 font-medium'
-              }`}
-            >
-              Media ({sharedMedia.picsAndVideos.length})
-            </button>
-            <button
-              onClick={() => setDetailsTab('files')}
-              className={`pb-2.5 cursor-pointer text-[13px] font-semibold transition-all outline-none ${
-                detailsTab === 'files'
-                  ? 'text-zinc-950 font-bold border-b-2 border-zinc-950'
-                  : 'text-zinc-400 hover:text-zinc-600 font-medium'
-              }`}
-            >
-              Files & Voice ({sharedMedia.files.length})
-            </button>
-          </div>
+          <div className="bg-[#181515] border border-zinc-800/90 rounded-3xl p-4 shadow-lg flex flex-col gap-3">
+            {/* Tab switch */}
+            <div className="flex items-center bg-zinc-900/90 p-1 rounded-full border border-zinc-800">
+              <button
+                onClick={() => setDetailsTab('media')}
+                className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  detailsTab === 'media'
+                    ? 'bg-[#9D4EDD] text-white shadow-xs'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Media ({sharedMedia.picsAndVideos.length})
+              </button>
+              <button
+                onClick={() => setDetailsTab('files')}
+                className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  detailsTab === 'files'
+                    ? 'bg-[#9D4EDD] text-white shadow-xs'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Files & Voice ({sharedMedia.files.length})
+              </button>
+            </div>
 
-          {/* Content list */}
-          <div className="pt-2">
-            {detailsTab === 'media' &&
-              (sharedMedia.picsAndVideos.length === 0 ? (
-                <div className="bg-zinc-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center text-zinc-400">
-                  <ImageIcon className="w-8 h-8 mb-2 text-zinc-300" strokeWidth={1.5} />
-                  <span className="text-[13px] font-medium">No photos or videos shared yet</span>
+            {/* Media list */}
+            {detailsTab === 'media' && (
+              sharedMedia.picsAndVideos.length === 0 ? (
+                <div className="py-8 text-center text-zinc-500 text-xs">
+                  No photos or videos shared yet
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {sharedMedia.picsAndVideos.slice(0, mediaDisplayLimit).map((m) => (
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  {sharedMedia.picsAndVideos.slice(0, 30).map((m) => (
                     <div
                       key={m.id}
-                      className="aspect-square rounded-2xl overflow-hidden bg-black/10 cursor-pointer group relative shadow-xs"
+                      className="aspect-square rounded-2xl overflow-hidden bg-zinc-900 cursor-pointer relative border border-zinc-800"
                       onClick={() => onPreviewMedia(m.content, m.type === 'video' ? 'video' : 'image')}
                     >
                       {m.type === 'video' ? (
@@ -314,26 +344,27 @@ export default function ChatDetails({
                     </div>
                   ))}
                 </div>
-              ))}
+              )
+            )}
 
-            {detailsTab === 'files' &&
-              (sharedMedia.files.length === 0 ? (
-                <div className="bg-zinc-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center text-zinc-400">
-                  <FileText className="w-8 h-8 mb-2 text-zinc-300" strokeWidth={1.5} />
-                  <span className="text-[13px] font-medium">No files or voice notes shared yet</span>
+            {/* Files list */}
+            {detailsTab === 'files' && (
+              sharedMedia.files.length === 0 ? (
+                <div className="py-8 text-center text-zinc-500 text-xs">
+                  No files or voice notes shared yet
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 pt-1">
                   {sharedMedia.files.map((m) => (
                     <div
                       key={m.id}
-                      className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-between gap-3"
+                      className="p-3 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-purple-100 text-[#9D4EDD] flex items-center justify-center text-sm font-bold shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-[#9D4EDD]/20 text-[#D8B4E2] flex items-center justify-center text-sm font-bold shrink-0">
                           {m.type === 'voice' ? <LucideMic className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
                         </div>
-                        <span className="text-xs font-semibold text-zinc-800 truncate">
+                        <span className="text-xs font-semibold text-white truncate">
                           {m.type === 'voice' ? 'Voice Message' : m.content}
                         </span>
                       </div>
@@ -352,35 +383,51 @@ export default function ChatDetails({
                     </div>
                   ))}
                 </div>
-              ))}
+              )
+            )}
           </div>
         </div>
 
-        {/* Section 3: Privacy & Security */}
-        <div className="flex flex-col gap-1.5 pt-2">
-          <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">Privacy & Security</span>
-          <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-2 divide-y divide-zinc-100">
+        {/* Section: Privacy & Security */}
+        <div className="flex flex-col gap-2">
+          <span className="text-[12px] font-bold text-zinc-500 uppercase tracking-wider px-2">Privacy & Security</span>
+          <div className="bg-[#181515] border border-zinc-800/90 rounded-3xl p-2 divide-y divide-zinc-800/60 shadow-lg">
+            
+            {/* Clear Chat History */}
             <div
               onClick={onOpenClearConfirm}
-              className="flex items-center justify-between py-3 px-2 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors group"
+              className="flex items-center justify-between py-3.5 px-3.5 cursor-pointer hover:bg-zinc-800/40 rounded-2xl transition-colors group"
             >
-              <span className="text-[14px] font-semibold text-zinc-800 group-hover:text-red-500 transition-colors">
-                Clear Chat History
-              </span>
-              <span className="text-xs text-zinc-400 font-medium">Delete messages</span>
+              <div className="flex flex-col">
+                <span className="text-[14px] font-bold text-white group-hover:text-red-400 transition-colors">
+                  Clear Chat History
+                </span>
+                <span className="text-[12px] text-zinc-400 mt-0.5">
+                  Clear messages from your conversation
+                </span>
+              </div>
+              <Trash2 className="w-4 h-4 text-zinc-500 group-hover:text-red-400 transition-colors" />
             </div>
 
+            {/* Block / Unblock Contact */}
             <div
               onClick={onToggleBlock}
-              className="flex items-center justify-between py-3 px-2 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors group"
+              className="flex items-center justify-between py-3.5 px-3.5 cursor-pointer hover:bg-zinc-800/40 rounded-2xl transition-colors group"
             >
-              <span className="text-[14px] font-semibold text-zinc-800 group-hover:text-red-500 transition-colors">
-                {isUserBlocked ? 'Unblock Contact' : 'Block Contact'}
-              </span>
-              <span className="text-xs text-zinc-400 font-medium">{isUserBlocked ? 'Blocked' : 'Active'}</span>
+              <div className="flex flex-col">
+                <span className="text-[14px] font-bold text-white group-hover:text-red-400 transition-colors">
+                  {isUserBlocked ? 'Unblock Contact' : 'Block Contact'}
+                </span>
+                <span className="text-[12px] text-zinc-400 mt-0.5">
+                  {isUserBlocked ? 'User is currently blocked' : 'Stop receiving calls and messages'}
+                </span>
+              </div>
+              <Ban className="w-4 h-4 text-zinc-500 group-hover:text-red-400 transition-colors" />
             </div>
+
           </div>
         </div>
+
       </div>
     </div>
   );

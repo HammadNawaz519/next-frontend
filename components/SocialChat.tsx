@@ -1915,6 +1915,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [userStory, setUserStory] = useState<{ id: string; media: string; time: string } | null>(null);
   const [viewStory, setViewStory] = useState<{ id?: string; name: string; avatar?: string; media?: string; emoji?: string; time?: string; isMe?: boolean } | null>(null);
 
+  // Speech to text & TikTok-style new message pill states
+  const [isSpeechToTextEnabled, setIsSpeechToTextEnabled] = useState<boolean>(false);
+  const [showNewMessagePill, setShowNewMessagePill] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('connect_speech_to_text_enabled');
+      if (saved !== null) {
+        setIsSpeechToTextEnabled(saved === 'true');
+      }
+    }
+  }, []);
+
   // Load real active stories on mount and after session is ready
   useEffect(() => {
     if (!session?.user) return;
@@ -2992,6 +3005,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         // 4. Mark as seen if active chat is open and this message is incoming
         if (selectedUserRef.current?.id === partnerId && msgSenderId !== String((sessionRef.current?.user as any)?.id || '')) {
+          if (!isNearBottomRef.current) {
+            setShowNewMessagePill(true);
+          }
           markMessagesAsSeen(partnerId).catch(() => {});
           const seenAt = new Date().toISOString();
           newSocket.emit('mark_as_seen', {
@@ -3879,6 +3895,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const target = e.currentTarget;
     const distance = target.scrollHeight - target.scrollTop - target.clientHeight;
     isNearBottomRef.current = distance <= 80;
+    if (distance <= 80) {
+      setShowNewMessagePill(false);
+    }
 
     const isScrollingUp = target.scrollTop < prevScrollTopRef.current;
     prevScrollTopRef.current = target.scrollTop;
@@ -3981,14 +4000,41 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     setReplyToMessage(null);
 
-    if (currentContent.toLowerCase().startsWith('/ai ') || currentContent.toLowerCase().startsWith('@ai ')) {
-      const prompt = currentContent.toLowerCase().startsWith('/ai ') ? currentContent.substring(4) : currentContent.substring(4);
-      const userMsg: any = { id: 'ai-user-' + Date.now(), content: currentContent, senderId, createdAt: new Date(), type: 'text' };
+    if (
+      currentContent.toLowerCase().startsWith('/ai ') ||
+      currentContent.toLowerCase().startsWith('@ai ') ||
+      currentContent.toLowerCase().startsWith('@grok ')
+    ) {
+      const prompt = currentContent.replace(/^(\/ai|@ai|@grok)\s*/i, '');
+      const userMsg: any = {
+        id: 'ai-user-' + Date.now(),
+        content: currentContent,
+        senderId,
+        createdAt: new Date(),
+        type: 'text'
+      };
       setMessages(prev => [...prev, userMsg]);
 
-      const aiResponse = await askAI(prompt);
-      const aiMsg: any = { id: 'ai-resp-' + Date.now(), content: aiResponse, senderId: 'ai', createdAt: new Date(), type: 'text' };
-      setMessages(prev => [...prev, aiMsg]);
+      try {
+        const aiResponse = await askAI(prompt);
+        const aiMsg: any = {
+          id: 'ai-resp-' + Date.now(),
+          content: aiResponse || "I couldn't find an answer to that.",
+          senderId: 'ai',
+          createdAt: new Date(),
+          type: 'text'
+        };
+        setMessages(prev => [...prev, aiMsg]);
+      } catch (e) {
+        const errAiMsg: any = {
+          id: 'ai-err-' + Date.now(),
+          content: "Sorry, I couldn't process your request right now.",
+          senderId: 'ai',
+          createdAt: new Date(),
+          type: 'text'
+        };
+        setMessages(prev => [...prev, errAiMsg]);
+      }
       return;
     }
 
@@ -5313,21 +5359,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </div>
                   </div>
 
-                  {/* Right: Audio Call + Video Call — Frameless, Outline None */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  {/* Right: Audio Call + Video Call — Equal size, frameless, smooth */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleCall('audio'); }}
-                      className="p-2 text-white hover:text-zinc-300 active:scale-95 cursor-pointer transition-all outline-none border-0 bg-transparent"
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white hover:text-zinc-300 hover:bg-white/5 active:scale-90 cursor-pointer transition-all outline-none border-0 bg-transparent"
                       title="Voice Call"
                     >
-                      <Phone className="w-5 h-5 text-white" strokeWidth={2} />
+                      <Phone className="w-5 h-5 text-white" strokeWidth={2.2} />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleCall('video'); }}
-                      className="p-2 text-white hover:text-zinc-300 active:scale-95 cursor-pointer transition-all outline-none border-0 bg-transparent"
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white hover:text-zinc-300 hover:bg-white/5 active:scale-90 cursor-pointer transition-all outline-none border-0 bg-transparent"
                       title="Video Call"
                     >
-                      <Video className="w-5 h-5 text-white" strokeWidth={2} />
+                      <Video className="w-5 h-5 text-white" strokeWidth={2.2} />
                     </button>
                   </div>
                 </div>
@@ -5339,7 +5385,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   <div
                     ref={messagesContainerRef}
                     onScroll={handleMessagesScroll}
-                    className="flex flex-col gap-2.5 overflow-y-auto overflow-x-hidden flex-1 no-scrollbar px-1 pt-3 pb-20 w-full"
+                    className={`flex flex-col gap-2.5 overflow-y-auto overflow-x-hidden flex-1 no-scrollbar px-1 pt-3 w-full transition-all ${
+                      replyToMessage ? 'pb-32' : 'pb-20'
+                    }`}
                   >
                     {isLoadingMessages && messages.length === 0 && (
                       <div className="chat-skeleton-container">
@@ -5433,11 +5481,28 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     multiple
                   />
 
-                  {/* ── INTERACTIVE CHAT INPUT PILL (95% width, positioned slightly up) ── */}
+                  {/* ── INTERACTIVE CHAT INPUT PILL & TIKTOK BOUNCE NEW MESSAGE PILL ── */}
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-[460px] z-30 flex flex-col items-center pointer-events-none gap-1">
-                    {/* Seamless floating reply indicator above type box: no bg, round, matching font */}
+                    
+                    {/* Floating TikTok-style New Message Bounce Indicator */}
+                    {showNewMessagePill && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                          setShowNewMessagePill(false);
+                        }}
+                        className="pointer-events-auto mb-1.5 px-4 py-2 rounded-full bg-[#181515] border border-zinc-700 text-white text-[12px] font-bold shadow-2xl flex items-center gap-1.5 animate-bounce cursor-pointer hover:bg-zinc-800 transition-all select-none"
+                      >
+                        <span>New message</span>
+                        <span className="text-[13px] font-black">↓</span>
+                      </button>
+                    )}
+
+                    {/* Fully Rounded Reply Indicator */}
                     {replyToMessage && (
-                      <div className="w-full flex items-center justify-between px-3 py-1 rounded-full pointer-events-auto text-zinc-900 border-none bg-transparent">
+                      <div className="w-full flex items-center justify-between px-4 py-2 rounded-full pointer-events-auto text-zinc-900 bg-zinc-100 border border-zinc-200 shadow-xs mb-1">
                         <div className="flex items-center gap-1.5 min-w-0 pr-2">
                           <span className="text-[12px] font-bold text-zinc-900 shrink-0">
                             Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : (nicknames[selectedUser.id] || selectedUser?.name)}:
@@ -5460,6 +5525,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <ChatInput
                         onSendMessage={(text) => handleSendMessage(undefined, text)}
                         onOpenGallery={() => fileInputRef.current?.click()}
+                        isSpeechToTextEnabled={isSpeechToTextEnabled}
                         onSendVoice={async (audioBlob, duration) => {
                           if (selectedUser && socket && session?.user) {
                             const senderId = (session.user as any).id;
@@ -5618,6 +5684,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   isUserBlocked={isUserBlocked}
                   onToggleBlock={() => setIsUserBlocked((prev) => !prev)}
                   formatLastSeenAgo={formatLastSeenAgo}
+                  isSpeechToTextEnabled={isSpeechToTextEnabled}
+                  onToggleSpeechToText={setIsSpeechToTextEnabled}
                 />
 
                 {/* ── MULTI-MEDIA ALBUM VIEWER OVERLAY (Instagram style) ── */}

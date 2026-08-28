@@ -338,31 +338,41 @@ export async function hideSocialChat(hiddenUserId: string) {
   if (!currentUser) return null;
 
   try {
-    // 1. Find all messages between currentUser and hiddenUserId
-    const msgs = await prisma.socialMessage.findMany({
+    // 1. Mark sent messages as deletedBySender for currentUser
+    await prisma.socialMessage.updateMany({
       where: {
+        senderId: currentUser.id,
+        receiverId: hiddenUserId
+      },
+      data: {
+        deletedBySender: true
+      }
+    });
+
+    // 2. Mark received messages as deletedByReceiver for currentUser
+    await prisma.socialMessage.updateMany({
+      where: {
+        senderId: hiddenUserId,
+        receiverId: currentUser.id
+      },
+      data: {
+        deletedByReceiver: true
+      }
+    });
+
+    // 3. Clean up messages where BOTH users have deleted them
+    await prisma.socialMessage.deleteMany({
+      where: {
+        deletedBySender: true,
+        deletedByReceiver: true,
         OR: [
           { senderId: currentUser.id, receiverId: hiddenUserId },
           { senderId: hiddenUserId, receiverId: currentUser.id }
         ]
-      },
-      select: { id: true }
-    });
-    const msgIds = msgs.map(m => m.id);
+      }
+    }).catch(() => {});
 
-    if (msgIds.length > 0) {
-      // 2. Delete all reactions on these messages
-      await prisma.socialReaction.deleteMany({
-        where: { messageId: { in: msgIds } }
-      }).catch(() => {});
-
-      // 3. Permanently delete all messages from DB
-      await prisma.socialMessage.deleteMany({
-        where: { id: { in: msgIds } }
-      });
-    }
-
-    // 4. Also track in HiddenSocialChat table
+    // 4. Track in HiddenSocialChat table
     await prisma.hiddenSocialChat.upsert({
       where: {
         userId_hiddenUserId: {
@@ -379,8 +389,8 @@ export async function hideSocialChat(hiddenUserId: string) {
 
     return { success: true };
   } catch (err) {
-    console.error('Failed to permanently delete chat messages from DB:', err);
-    return { success: false, error: 'Database delete failed' };
+    console.error('Failed to hide chat messages for user:', err);
+    return { success: false, error: 'Database update failed' };
   }
 }
 
