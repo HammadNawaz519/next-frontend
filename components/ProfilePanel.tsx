@@ -809,8 +809,8 @@ export default function ProfilePanel({
                     {savedAccounts.map((acc) => (
                       <div
                         key={acc.userId}
-                        onClick={() => {
-                          DeviceAccountStore.switchAccount(acc.userId);
+                        onClick={async () => {
+                          await DeviceAccountStore.setCurrentAccountId(acc.userId);
                           window.location.reload();
                         }}
                         className={`flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all ${
@@ -821,14 +821,14 @@ export default function ProfilePanel({
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full overflow-hidden bg-zinc-200 flex items-center justify-center font-bold text-xs text-zinc-800">
-                            {acc.image ? (
-                              <img src={acc.image} alt={acc.name} className="w-full h-full object-cover" />
+                            {acc.profilePicture ? (
+                              <img src={acc.profilePicture} alt={acc.displayName || acc.username} className="w-full h-full object-cover" />
                             ) : (
-                              <span>{(acc.name || 'U').charAt(0)}</span>
+                              <span>{((acc.displayName || acc.username) || 'U').charAt(0)}</span>
                             )}
                           </div>
                           <div>
-                            <p className="text-xs font-bold truncate">{acc.name}</p>
+                            <p className="text-xs font-bold truncate">{acc.displayName || acc.username}</p>
                             <p className="text-[10px] opacity-70 truncate">{acc.email}</p>
                           </div>
                         </div>
@@ -864,9 +864,10 @@ export default function ProfilePanel({
               <div
                 onClick={async () => {
                   triggerHaptic('medium');
-                  const res = await toggleProfilePrivacy();
+                  const currentPrivate = !!(fullUser as any)?.isPrivate;
+                  const res = await toggleProfilePrivacy(!currentPrivate);
                   if (res.success) {
-                    showToast(`Account is now ${res.isPrivate ? 'Private' : 'Public'}`);
+                    showToast(`Account is now ${!currentPrivate ? 'Private' : 'Public'}`);
                     refreshProfile?.();
                   }
                 }}
