@@ -412,30 +412,36 @@ export default function LoginPage() {
     <div className="fixed inset-0 h-screen w-full flex flex-col bg-[#141111] overflow-hidden font-sans select-none">
       
       {/* ── 1. TOP DARK REGION: BRANDING & HEADLINE ── */}
-      <div className="w-full bg-[#141111] pt-14 pb-6 px-6 flex flex-col items-center relative select-none shrink-0">
-        {/* Back Button for Sub-views */}
-        {view !== 'main' && view !== 'success' && (
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              setError('');
-              setInfo('');
-              setView('main');
-            }}
-            className="absolute top-14 left-5 p-2 text-white/80 hover:text-white active:scale-90 transition-all cursor-pointer outline-none bg-transparent"
-            title="Back"
-          >
-            <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
-          </button>
-        )}
+      <div className="w-full bg-[#141111] pt-12 pb-6 px-6 flex flex-col relative select-none shrink-0">
+        {/* Navigation Action Row */}
+        <div className="w-full flex items-center justify-between min-h-[36px] mb-1">
+          {view !== 'main' && view !== 'success' ? (
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setError('');
+                setInfo('');
+                setView('main');
+              }}
+              className="p-1.5 -ml-1.5 text-white/80 hover:text-white active:scale-90 transition-all cursor-pointer outline-none bg-transparent"
+              title="Back"
+            >
+              <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
+            </button>
+          ) : (
+            <div className="w-6 h-6" />
+          )}
+        </div>
 
-        {/* Title & Subtitle */}
-        <h1 className="text-[23px] font-black text-white tracking-tight leading-tight text-center">
-          {headerMeta.title}
-        </h1>
-        <p className="text-[13.5px] text-zinc-400 mt-1 text-center max-w-xs font-normal">
-          {headerMeta.subtitle}
-        </p>
+        {/* Title & Subtitle spaced down comfortably */}
+        <div className="flex flex-col items-center text-center">
+          <h1 className="text-[23px] font-black text-white tracking-tight leading-tight text-center">
+            {headerMeta.title}
+          </h1>
+          <p className="text-[13.5px] text-zinc-400 mt-1 text-center max-w-xs font-normal">
+            {headerMeta.subtitle}
+          </p>
+        </div>
       </div>
 
       {/* ── 2. BOTTOM WHITE SHEET CONTAINER ── */}
