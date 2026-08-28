@@ -838,6 +838,15 @@ const formatChatTime = (timeVal?: any) => {
   return `${d.getDate()}/${d.getMonth() + 1}`;
 };
 
+const formatChatDotTime = (dateVal: any) => {
+  if (!dateVal) return '';
+  const d = typeof dateVal === 'string' ? new Date(dateVal) : (dateVal instanceof Date ? dateVal : new Date(dateVal));
+  if (isNaN(d.getTime())) return '';
+  const hrs = String(d.getHours()).padStart(2, '0');
+  const mins = String(d.getMinutes()).padStart(2, '0');
+  return `${hrs}.${mins}`;
+};
+
 const ChatItem = memo(({
   user,
   isSelected,
@@ -1353,10 +1362,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
-        // Pure soft pill rounded bubble shape with extra light font
+        // Big, elegant, rounded bubble shapes matching the design image
         const bubbleClasses = isSent
-          ? `bg-zinc-100 text-zinc-900 px-4.5 py-3 !rounded-[28px] max-w-full self-end text-[13.5px] font-light leading-relaxed ${isPrevSameSender ? '-mt-2' : ''}`
-          : `bg-[#FEF5D1] text-zinc-900 px-4.5 py-3 !rounded-[28px] max-w-full text-[13.5px] font-light leading-relaxed ${isPrevSameSender ? '-mt-2' : ''}`;
+          ? `bg-[#F4F4F5] text-zinc-900 px-5 py-3.5 !rounded-[24px] !rounded-tr-[8px] max-w-[85%] self-end text-[14.5px] font-normal leading-relaxed shadow-2xs ${isPrevSameSender ? '-mt-2' : ''}`
+          : `bg-[#FEF5D1] text-zinc-900 px-5 py-3.5 !rounded-[24px] !rounded-tl-[8px] max-w-[85%] self-start text-[14.5px] font-normal leading-relaxed shadow-2xs ${isPrevSameSender ? '-mt-2' : ''}`;
 
         return (
           <div
@@ -1364,7 +1373,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
             className={`msg ${bubbleClasses} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''} ${isMedia ? '!p-0 !bg-transparent !border-0 !shadow-none' : ''}`}
             style={{
               position: 'relative',
-              borderRadius: '28px',
+              borderRadius: isSent ? '24px 8px 24px 24px' : '8px 24px 24px 24px',
               transition: isSelected ? 'transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28)' : 'none',
               transform: isSelected ? 'scale(0.965) translateX(' + (isSent ? '4px' : '-4px') + ')' : 'none',
             }}
@@ -1670,9 +1679,9 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         );
       })()}
 
-      {/* Time text below message bubble */}
-      <span className={`text-[11px] font-medium text-zinc-400 mt-1 select-none ${isSent ? 'mr-2 self-end text-right' : 'ml-2 self-start text-left'}`}>
-        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+      {/* Time text below message bubble matching reference image */}
+      <span className={`text-[11.5px] font-normal text-zinc-400 mt-1 select-none ${isSent ? 'mr-1.5 self-end text-right' : 'ml-1.5 self-start text-left'}`}>
+        {formatChatDotTime(msg.createdAt)}
       </span>
 
       {/* Status indicator row under the last sent message */}
@@ -1719,6 +1728,7 @@ interface SocialChatProps {
   onOpenProfile?: (user: any) => void;
   onLongPressChatChange?: (active: boolean) => void;
   onSearchActiveChange?: (isSearching: boolean) => void;
+  onStoryEditorChange?: (isOpen: boolean) => void;
 }
 
 // ── Custom PWA & Capacitor Mobile Notification Dispatcher ──
@@ -2053,6 +2063,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   }, [selectedChatForOptions, onLongPressChatChange]);
 
   // Load storage states safely after mount to prevent React hydration mismatch errors on Vercel
+  useEffect(() => {
+    onStoryEditorChange?.(showStoryEditor);
+  }, [showStoryEditor, onStoryEditorChange]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
@@ -5342,20 +5356,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             {selectedUser ? (
               <div className="flex flex-col h-full w-full overflow-hidden bg-[#141111] relative">
                 
-                {/* ── SCREEN 1: DARK HEADER (Top Bar) ── */}
+                {/* ── SCREEN 1: DARK HEADER (Top Bar - Frameless & Sleek) ── */}
                 <div className="w-full bg-[#141111] pt-14 pb-7 px-5 flex items-center justify-between shrink-0 select-none z-20">
                   {/* Left: Back Button + Contact Information */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* Back Action (ChevronLeft) */}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleChatBack(e); }}
-                      className="w-10 h-10 rounded-full bg-zinc-800/80 border border-zinc-700/50 flex items-center justify-center text-white cursor-pointer active:scale-95 transition-all flex-shrink-0"
+                      className="p-1.5 -ml-1.5 text-white hover:text-zinc-300 active:scale-95 transition-all flex-shrink-0 cursor-pointer outline-none border-0 bg-transparent"
                       title="Back to conversation list"
                     >
-                      <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2.2} />
+                      <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
                     </button>
 
-                    {/* User Identifier (Touch Target -> Screen 2) */}
+                    {/* User Identifier */}
                     <div
                       onClick={() => {
                         if (selectedUser) {
@@ -5363,7 +5377,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           setShowChatDetails(true);
                         }
                       }}
-                      className="flex items-center gap-3 flex-1 ml-1 cursor-pointer min-w-0"
+                      className="flex items-center gap-3 flex-1 cursor-pointer min-w-0"
                       title="View Profile & Chat Details"
                     >
                       {/* Avatar with deterministic matching token */}
@@ -5371,7 +5385,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         const pastel = getPastelForUser(selectedUser.id || selectedUser.username || selectedUser.name);
                         return (
                           <div 
-                            className="w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0 overflow-hidden relative border border-zinc-800 font-bold shadow-xs"
+                            className="w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0 overflow-hidden relative shadow-xs"
                             style={{ background: pastel.bg, color: pastel.text }}
                           >
                             {selectedUser.image && selectedUser.image.length > 5 ? (
@@ -5392,7 +5406,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                       {/* Contact Name & Presence */}
                       <div className="flex flex-col min-w-0">
-                        <h3 className="text-[16px] font-bold text-white truncate leading-tight">
+                        <h3 className="text-[17px] font-bold text-white truncate leading-tight">
                           {nicknames[selectedUser.id] || selectedUser.name}
                         </h3>
                         <span className="text-[12px] text-zinc-400 mt-0.5 truncate font-medium">
@@ -5409,14 +5423,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </div>
                   </div>
 
-                  {/* Right: Options & Call Controls */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {/* Right: Options & Call Controls - Frameless, Outline None */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleCall('audio'); }}
-                      className="w-10 h-10 rounded-full bg-zinc-800/80 border border-zinc-700/50 hover:bg-zinc-700/80 active:scale-95 text-white flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                      className="p-2 text-white hover:text-zinc-300 active:scale-95 cursor-pointer transition-all outline-none border-0 bg-transparent"
                       title="Voice Call"
                     >
-                      <Phone className="w-4 h-4 text-white" strokeWidth={2} />
+                      <Phone className="w-5 h-5 text-white" strokeWidth={2} />
                     </button>
                     <button
                       onClick={() => {
@@ -5425,13 +5439,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           setShowChatDetails(true);
                         }
                       }}
-                      className="w-10 h-10 rounded-full bg-zinc-800/80 border border-zinc-700/50 hover:bg-zinc-700/80 active:scale-95 text-white flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                      className="p-2 text-white hover:text-zinc-300 active:scale-95 cursor-pointer transition-all outline-none border-0 bg-transparent"
                       title="Chat Info"
                     >
                       <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="6" r="1.5" />
-                        <circle cx="12" cy="12" r="1.5" />
-                        <circle cx="12" cy="18" r="1.5" />
+                        <circle cx="12" cy="5" r="1.75" />
+                        <circle cx="12" cy="12" r="1.75" />
+                        <circle cx="12" cy="19" r="1.75" />
                       </svg>
                     </button>
                   </div>
@@ -5797,12 +5811,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     {/* Light Mode Information & Settings Bottom Sheet */}
                     <div className="flex-1 bg-white rounded-t-[36px] px-6 pt-7 pb-24 flex flex-col gap-6 text-zinc-900 shadow-[0_-10px_40px_rgba(0,0,0,0.15)]">
                       
-                      {/* Section 1: Chat Customization */}
+                      {/* Section 1: Chat Customization (Clean text-only list) */}
                       <div className="flex flex-col gap-1.5">
                         <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">
                           Preferences
                         </span>
-                        <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-1.5 divide-y divide-zinc-100">
+                        <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-2 divide-y divide-zinc-100">
                           {/* Notifications Mute Row */}
                           <div 
                             onClick={() => {
@@ -5814,28 +5828,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                 return next;
                               });
                             }}
-                            className="flex items-center justify-between p-3 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors"
+                            className="flex items-center justify-between py-3 px-2 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-xl bg-purple-50 text-[#9D4EDD] flex items-center justify-center">
-                                <Bell className="w-4 h-4" strokeWidth={2} />
-                              </div>
-                              <span className="text-[14px] font-semibold text-zinc-800">Notifications</span>
-                            </div>
+                            <span className="text-[14px] font-semibold text-zinc-800">Notifications</span>
                             <span className="text-[13px] font-medium text-zinc-500">
                               {isChatMuted ? 'Muted' : 'Sound & Banners'}
                             </span>
                           </div>
 
                           {/* Nickname Row */}
-                          <div className="p-3">
+                          <div className="py-3 px-2">
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                                  <Pencil className="w-4 h-4" strokeWidth={2} />
-                                </div>
-                                <span className="text-[14px] font-semibold text-zinc-800">Nickname</span>
-                              </div>
+                              <span className="text-[14px] font-semibold text-zinc-800">Nickname</span>
                               {!editingNickname ? (
                                 <button
                                   onClick={() => setEditingNickname(true)}
@@ -5881,17 +5885,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           {/* Theme Row */}
                           <div
                             onClick={() => setShowThemePicker(true)}
-                            className="flex items-center justify-between p-3 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors"
+                            className="flex items-center justify-between py-3 px-2 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                                <Palette className="w-4 h-4" strokeWidth={2} />
-                              </div>
-                              <span className="text-[14px] font-semibold text-zinc-800">Chat Theme</span>
-                            </div>
-                            <div className="flex items-center gap-2">
+                            <span className="text-[14px] font-semibold text-zinc-800">Chat Theme</span>
+                            <div className="flex items-center gap-1.5">
                               <span className="text-[13px] font-medium text-zinc-500">{activeTheme.name}</span>
-                              <span className="text-zinc-400">›</span>
+                              <span className="text-zinc-400 font-bold">›</span>
                             </div>
                           </div>
                         </div>
@@ -5992,37 +5991,27 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </div>
                       </div>
 
-                      {/* Section 3: Privacy & Actions (Clean dark/zinc tokens) */}
+                      {/* Section 3: Privacy & Actions (Clean text-only list) */}
                       <div className="flex flex-col gap-1.5 pt-2">
                         <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">
                           Privacy & Security
                         </span>
-                        <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-1.5 divide-y divide-zinc-100">
+                        <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-2 divide-y divide-zinc-100">
                           <div
                             onClick={() => setShowClearConfirmModal(true)}
-                            className="flex items-center justify-between p-3 cursor-pointer hover:bg-zinc-100 rounded-xl transition-colors group"
+                            className="flex items-center justify-between py-3 px-2 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors group"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-xl bg-zinc-200 text-zinc-700 group-hover:text-rose-600 flex items-center justify-center transition-colors">
-                                <Trash2 className="w-4 h-4" strokeWidth={2} />
-                              </div>
-                              <span className="text-[14px] font-semibold text-zinc-800 group-hover:text-rose-600 transition-colors">Clear Chat History</span>
-                            </div>
+                            <span className="text-[14px] font-semibold text-zinc-800 group-hover:text-red-500 transition-colors">Clear Chat History</span>
                             <span className="text-xs text-zinc-400 font-medium">Delete messages</span>
                           </div>
 
                           <div
                             onClick={() => setIsUserBlocked(prev => !prev)}
-                            className="flex items-center justify-between p-3 cursor-pointer hover:bg-zinc-100 rounded-xl transition-colors group"
+                            className="flex items-center justify-between py-3 px-2 cursor-pointer hover:bg-zinc-100/70 rounded-xl transition-colors group"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-xl bg-zinc-200 text-zinc-700 group-hover:text-rose-600 flex items-center justify-center transition-colors">
-                                <Ban className="w-4 h-4" strokeWidth={2} />
-                              </div>
-                              <span className="text-[14px] font-semibold text-zinc-800 group-hover:text-rose-600 transition-colors">
-                                {isUserBlocked ? 'Unblock Contact' : 'Block Contact'}
-                              </span>
-                            </div>
+                            <span className="text-[14px] font-semibold text-zinc-800 group-hover:text-red-500 transition-colors">
+                              {isUserBlocked ? 'Unblock Contact' : 'Block Contact'}
+                            </span>
                             <span className="text-xs text-zinc-400 font-medium">{isUserBlocked ? 'Blocked' : 'Active'}</span>
                           </div>
                         </div>

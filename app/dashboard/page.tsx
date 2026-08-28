@@ -52,6 +52,7 @@ export default function DashboardPage() {
   const [isAccountSheetOpen, setIsAccountSheetOpen] = useState(false);
   const [isChatLongPressActive, setIsChatLongPressActive] = useState(false);
   const [isSearchActive, setIsSearchActive] = useState(false);
+  const [isStoryEditorOpen, setIsStoryEditorOpen] = useState(false);
 
   // Auto-register account immediately on every successful session mount
   useEffect(() => {
@@ -475,6 +476,7 @@ export default function DashboardPage() {
             }}
             onLongPressChatChange={setIsChatLongPressActive}
             onSearchActiveChange={setIsSearchActive}
+            onStoryEditorChange={setIsStoryEditorOpen}
           />
         </div>
 
@@ -529,7 +531,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Mobile Bottom Navigation — single unified bottom bar: Messages (left), Calls (center), Profile (right) */}
-      {(!selectedChatUser && !isCallActive && !isProfileOpen && !isSearchActive) && (
+      {(!selectedChatUser && !isCallActive && !isProfileOpen && !isSearchActive && !isStoryEditorOpen) && (
         <nav className={`mobile-nav ${(isAccountSheetOpen || isChatLongPressActive) ? 'mobile-nav-hidden' : ''}`}>
           {/* 1. Messages (Leftmost) */}
           <button
