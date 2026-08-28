@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import DashboardPage from './dashboard/page';
 import { DeviceAccountStore } from '@/lib/deviceAccountStore';
 import {
-  MessageCircle,
   Mail,
   Lock,
   User,
@@ -14,9 +13,7 @@ import {
   EyeOff,
   ChevronLeft,
   ArrowRight,
-  CheckCircle2,
   RefreshCw,
-  AlertCircle,
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 
@@ -46,7 +43,6 @@ export default function LoginPage() {
 
   // Status & Feedback
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -130,7 +126,7 @@ export default function LoginPage() {
     e.preventDefault();
   };
 
-  // ── Sign In ───────────────────────────────────────────────────────────────
+  // ── Sign In (Database Authentication) ───────────────────────────────────────
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -175,7 +171,7 @@ export default function LoginPage() {
     }
   };
 
-  // ── Sign Up ───────────────────────────────────────────────────────────────
+  // ── Sign Up (Database Registration) ─────────────────────────────────────────
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !email || !password) {
@@ -416,7 +412,7 @@ export default function LoginPage() {
     <div className="fixed inset-0 h-screen w-full flex flex-col bg-[#141111] overflow-hidden font-sans select-none">
       
       {/* ── 1. TOP DARK REGION: BRANDING & HEADLINE ── */}
-      <div className="w-full bg-[#141111] pt-14 pb-8 px-6 flex flex-col items-center relative select-none shrink-0">
+      <div className="w-full bg-[#141111] pt-14 pb-6 px-6 flex flex-col items-center relative select-none shrink-0">
         {/* Back Button for Sub-views */}
         {view !== 'main' && view !== 'success' && (
           <button
@@ -433,16 +429,11 @@ export default function LoginPage() {
           </button>
         )}
 
-        {/* App Logo Icon */}
-        <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center shadow-lg mb-3">
-          <MessageCircle className="w-7 h-7 text-[#D8B4E2]" />
-        </div>
-
         {/* Title & Subtitle */}
-        <h1 className="text-[22px] font-black text-white tracking-tight leading-tight text-center">
+        <h1 className="text-[23px] font-black text-white tracking-tight leading-tight text-center">
           {headerMeta.title}
         </h1>
-        <p className="text-[13px] text-zinc-400 mt-1 text-center max-w-xs font-normal">
+        <p className="text-[13.5px] text-zinc-400 mt-1 text-center max-w-xs font-normal">
           {headerMeta.subtitle}
         </p>
       </div>
@@ -453,18 +444,16 @@ export default function LoginPage() {
         {/* Sheet Drag Handle */}
         <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-1 mb-4 shrink-0" />
 
-        {/* Alerts / Error Messages */}
+        {/* Subtle, Full-Rounded Grey Pill Alerts */}
         {error && (
-          <div className="w-full max-w-[420px] mx-auto mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200/80 text-rose-700 text-[13px] font-medium flex items-center gap-2.5">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-            <span>{error}</span>
+          <div className="w-full max-w-[420px] mx-auto mb-4 py-2.5 px-4 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-700 text-[12.5px] font-medium text-center animate-in fade-in duration-200">
+            {error}
           </div>
         )}
 
         {info && (
-          <div className="w-full max-w-[420px] mx-auto mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-800 text-[13px] font-medium flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-amber-600" />
-            <span>{info}</span>
+          <div className="w-full max-w-[420px] mx-auto mb-4 py-2.5 px-4 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-700 text-[12.5px] font-medium text-center animate-in fade-in duration-200">
+            {info}
           </div>
         )}
 
@@ -602,14 +591,9 @@ export default function LoginPage() {
               <div className="flex-1 h-px bg-zinc-200" />
             </div>
 
-            {/* Google Sign In */}
+            {/* Google Pill Button */}
             <button
               type="button"
-              onClick={() => {
-                setGoogleLoading(true);
-                signIn('google', { callbackUrl: '/dashboard' });
-              }}
-              disabled={googleLoading}
               className="w-full h-13 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-800 font-semibold text-[14px] rounded-full flex items-center justify-center gap-3 active:scale-[0.98] transition-all cursor-pointer"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -618,7 +602,7 @@ export default function LoginPage() {
                 <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15Z" />
                 <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z" />
               </svg>
-              <span>Continue with Google</span>
+              <span>{tab === 'signIn' ? 'Continue with Google' : 'Sign up with Google'}</span>
             </button>
           </div>
         )}
@@ -816,10 +800,7 @@ export default function LoginPage() {
         {/* ── VIEW F: SUCCESS VIEW ── */}
         {view === 'success' && (
           <div className="w-full max-w-[420px] mx-auto flex flex-col items-center justify-center py-6 text-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 className="w-10 h-10" />
-            </div>
-            <h2 className="text-[20px] font-bold text-zinc-900">Email Verified!</h2>
+            <h2 className="text-[22px] font-bold text-zinc-900">Email Verified!</h2>
             <p className="text-[13.5px] text-zinc-500 -mt-2">
               Your account is now ready. Click below to launch your dashboard.
             </p>

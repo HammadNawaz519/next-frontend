@@ -189,10 +189,6 @@ export default function AccountsPage() {
           </button>
         </div>
 
-        <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center shadow-lg mb-2">
-          <Users className="w-7 h-7 text-[#D8B4E2]" />
-        </div>
-
         <p className="text-[13px] text-zinc-400 text-center font-normal">
           Switch between your accounts or add a new one
         </p>
