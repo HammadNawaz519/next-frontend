@@ -850,6 +850,7 @@ const formatChatDotTime = (dateVal: any) => {
 const ChatItem = memo(({
   user,
   isSelected,
+  isGreyedOut,
   isOnline,
   showActivity,
   isPinned,
@@ -918,8 +919,10 @@ const ChatItem = memo(({
 
   return (
     <div
-      className={`flex items-center gap-3.5 p-2 rounded-2xl hover:bg-zinc-50 transition-colors cursor-pointer active:scale-[0.99] select-none ${
-        isSelected ? 'bg-zinc-100/80' : ''
+      className={`flex items-center gap-3.5 p-2 rounded-2xl transition-all cursor-pointer active:scale-[0.99] select-none ${
+        isGreyedOut
+          ? 'bg-zinc-200/80 dark:bg-zinc-800/80 opacity-60 grayscale-[40%] scale-[0.98]'
+          : (isSelected ? 'bg-zinc-100/80' : 'hover:bg-zinc-50')
       }`}
       onClick={handleClick}
       onMouseDown={startPress}
@@ -1197,14 +1200,14 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
       }}
     >
 
-      {/* Consecutive Grouping Tail Logic — column wrapper keeps bubble + time stacked */}
+      {/* Consecutive Grouping Tail Logic — column wrapper keeps bubble + time stacked, wraps at ~half width */}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: isSent ? 'flex-end' : 'flex-start',
         order: isSent ? 2 : 1,
         minWidth: 0,
-        maxWidth: '92%',
+        maxWidth: '60%',
         width: 'fit-content',
       }}>
       {(() => {
@@ -1229,10 +1232,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
-        // Extra spacious, comfortable rounded bubbles with extra width, height, and generous padding
+        // Proportional rounded bubbles wrapping cleanly at half width
         const bubbleClasses = isSent
-          ? `bg-zinc-100 text-zinc-900 px-7 py-4 !rounded-[26px] max-w-full self-end text-[14px] font-normal leading-snug shadow-2xs min-h-[50px] flex items-center justify-center ${isPrevSameSender ? '-mt-1.5' : ''}`
-          : `bg-[#FEF5D1] text-zinc-900 px-7 py-4 !rounded-[26px] max-w-full self-start text-[14px] font-normal leading-snug shadow-2xs min-h-[50px] flex items-center justify-center ${isPrevSameSender ? '-mt-1.5' : ''}`;
+          ? `bg-zinc-100 text-zinc-900 px-5 py-3 !rounded-[22px] max-w-full self-end text-[13.5px] font-normal leading-snug shadow-2xs min-h-[44px] flex items-center justify-center ${isPrevSameSender ? '-mt-1.5' : ''}`
+          : `bg-[#FEF5D1] text-zinc-900 px-5 py-3 !rounded-[22px] max-w-full self-start text-[13.5px] font-normal leading-snug shadow-2xs min-h-[44px] flex items-center justify-center ${isPrevSameSender ? '-mt-1.5' : ''}`;
 
         return (
           <div
@@ -1482,7 +1485,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                   </div>
                 )}
                 {msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
-                  <div style={{ fontSize: '0.90rem', lineHeight: '1.45', letterSpacing: '-0.005em', wordBreak: 'break-word', minWidth: '48px', textAlign: 'center', width: '100%' }}>
+                  <div style={{ fontSize: '0.885rem', lineHeight: '1.4', wordBreak: 'break-word', whiteSpace: 'pre-wrap', minWidth: '32px', textAlign: 'center', width: '100%' }}>
                     <span>{msg.content}</span>
                   </div>
                 ) : null}
@@ -4742,12 +4745,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     setSearchQuery('');
                     setIsSearchFocused(false);
                   }}
-                  className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 text-white flex items-center justify-center cursor-pointer active:scale-90 transition-all shrink-0 hover:bg-zinc-800"
+                  className="p-1.5 -ml-1.5 text-white hover:text-zinc-300 active:scale-95 transition-all flex-shrink-0 cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent"
                   title="Back to conversation list"
                 >
-                  <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2.4} />
+                  <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
                 </button>
-                <div className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-zinc-900 border border-zinc-800 focus-within:border-[#9D4EDD] focus-within:ring-2 focus-within:ring-[#9D4EDD]/20 transition-all text-white">
+                <div className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-zinc-900 border border-zinc-800 text-white outline-none ring-0 focus-within:ring-0 focus-within:border-zinc-700 transition-all">
                   <Search className="w-4 h-4 text-[#9D4EDD] flex-shrink-0" strokeWidth={2.2} />
                   <input 
                     type="text" 
@@ -4755,12 +4758,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     placeholder="Search people & conversations..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-transparent text-[13.5px] text-white placeholder:text-zinc-500 outline-none font-medium"
+                    className="w-full bg-transparent text-[13.5px] text-white placeholder:text-zinc-500 outline-none focus:outline-none ring-0 font-medium"
                   />
                   {searchQuery && (
                     <button 
                       onClick={() => setSearchQuery('')} 
-                      className="w-5 h-5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs flex items-center justify-center cursor-pointer transition-colors"
+                      className="w-5 h-5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs flex items-center justify-center cursor-pointer transition-colors outline-none border-0"
                     >
                       ✕
                     </button>
@@ -4781,19 +4784,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </h1>
                   </div>
 
-                  {/* Right: ONLY the Notification Bell button */}
+                  {/* Right: ONLY the Notification Bell button - frameless & simple */}
                   <div className="relative">
                     <button
                       onClick={() => {
                         triggerHaptic('light');
                         setShowNotificationsDrawer(prev => !prev);
                       }}
-                      className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center relative cursor-pointer active:scale-95 transition-all shadow-xs hover:bg-zinc-800"
+                      className="p-2 text-white hover:text-zinc-300 active:scale-95 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent relative"
                       title="Notifications"
                     >
-                      <Bell className="w-5 h-5 text-white" strokeWidth={2} />
+                      <Bell className="w-6 h-6 text-white" strokeWidth={2} />
                       {unreadNotifications > 0 && (
-                        <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full absolute top-2 right-2 ring-2 ring-[#141111]" />
+                        <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full absolute top-1.5 right-1.5 ring-2 ring-[#141111]" />
                       )}
                     </button>
                   </div>
@@ -5000,7 +5003,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         }
                         setSelectedChatForOptions(null);
                       }}
-                      className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-all cursor-pointer active:scale-90"
+                      className="p-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-full transition-all cursor-pointer active:scale-90 outline-none border-0 ring-0 focus:outline-none"
                       title="Delete Chat & Messages"
                     >
                       <Trash2 className="w-4 h-4" strokeWidth={2} />
@@ -5023,7 +5026,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         });
                         setSelectedChatForOptions(null);
                       }}
-                      className={`p-1.5 rounded-full transition-all cursor-pointer active:scale-90 ${
+                      className={`p-1.5 rounded-full transition-all cursor-pointer active:scale-90 outline-none border-0 ring-0 ${
                         pinnedChats.has(selectedChatForOptions.id)
                           ? 'text-[#9D4EDD] bg-[#9D4EDD]/15'
                           : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
@@ -5050,7 +5053,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         });
                         setSelectedChatForOptions(null);
                       }}
-                      className={`p-1.5 rounded-full transition-all cursor-pointer active:scale-90 ${
+                      className={`p-1.5 rounded-full transition-all cursor-pointer active:scale-90 outline-none border-0 ring-0 ${
                         archivedChatIds.has(selectedChatForOptions.id)
                           ? 'text-amber-600 bg-amber-100'
                           : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
@@ -5071,14 +5074,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     : (isArchivedView ? 'Archived Chats' : 'Recent Chat')}
                 </h2>
 
-                {/* Archive Button (Only in normal view) */}
+                {/* Archive Button (Only in normal view - no outlines) */}
                 {!isSearchFocused && (
                   <button 
                     onClick={() => {
                       triggerHaptic('light');
                       setIsArchivedView(prev => !prev);
                     }}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-semibold transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-semibold transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 select-none ${
                       isArchivedView
                         ? 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
                         : 'bg-[#FFF3CD] text-black hover:bg-[#ffeaa7]'
@@ -5160,6 +5163,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         user={user}
                         index={idx}
                         isSelected={selectedUser?.id === user.id}
+                        isGreyedOut={selectedChatForOptions?.id === user.id}
                         isOnline={isOnline}
                         showActivity={showActivity}
                         isPinned={isPinned}
