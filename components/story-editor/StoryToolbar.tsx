@@ -638,11 +638,9 @@ export default function StoryToolbar({
         <button
           onClick={() => {
             triggerHaptic('light');
-            setActiveSubTool(activeSubTool === 'filters' ? 'none' : 'filters');
+            setActiveSubTool('filters');
           }}
-          className={`p-2.5 rounded-full active:scale-95 transition-all flex flex-col items-center gap-0.5 ${
-            activeSubTool === 'filters' ? 'bg-[#9D4EDD] text-white' : 'text-zinc-300 hover:text-white hover:bg-zinc-800/80'
-          }`}
+          className="p-2.5 rounded-full active:scale-95 transition-all flex flex-col items-center gap-0.5 text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer"
           title="Filters"
         >
           <Sparkles className="w-5 h-5" strokeWidth={2.2} />
@@ -654,11 +652,9 @@ export default function StoryToolbar({
         <button
           onClick={() => {
             triggerHaptic('light');
-            setActiveSubTool(activeSubTool === 'adjust' ? 'none' : 'adjust');
+            setActiveSubTool('adjust');
           }}
-          className={`p-2.5 rounded-full active:scale-95 transition-all flex flex-col items-center gap-0.5 ${
-            activeSubTool === 'adjust' ? 'bg-[#9D4EDD] text-white' : 'text-zinc-300 hover:text-white hover:bg-zinc-800/80'
-          }`}
+          className="p-2.5 rounded-full active:scale-95 transition-all flex flex-col items-center gap-0.5 text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer"
           title="Adjustments"
         >
           <SlidersHorizontal className="w-5 h-5" strokeWidth={2.2} />
@@ -670,11 +666,9 @@ export default function StoryToolbar({
         <button
           onClick={() => {
             triggerHaptic('light');
-            setActiveSubTool(activeSubTool === 'transform' ? 'none' : 'transform');
+            setActiveSubTool('transform');
           }}
-          className={`p-2.5 rounded-full active:scale-95 transition-all flex flex-col items-center gap-0.5 ${
-            activeSubTool === 'transform' ? 'bg-[#9D4EDD] text-white' : 'text-zinc-300 hover:text-white hover:bg-zinc-800/80'
-          }`}
+          className="p-2.5 rounded-full active:scale-95 transition-all flex flex-col items-center gap-0.5 text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer"
           title="Crop & Rotate"
         >
           <Crop className="w-5 h-5" strokeWidth={2.2} />
@@ -686,11 +680,9 @@ export default function StoryToolbar({
         <button
           onClick={() => {
             triggerHaptic('light');
-            setActiveSubTool(activeSubTool === 'background' ? 'none' : 'background');
+            setActiveSubTool('background');
           }}
-          className={`p-2.5 rounded-full active:scale-95 transition-all flex flex-col items-center gap-0.5 ${
-            activeSubTool === 'background' ? 'bg-[#9D4EDD] text-white' : 'text-zinc-300 hover:text-white hover:bg-zinc-800/80'
-          }`}
+          className="p-2.5 rounded-full active:scale-95 transition-all flex flex-col items-center gap-0.5 text-zinc-300 hover:text-white hover:bg-zinc-800/80 cursor-pointer"
           title="Background Style"
         >
           <Palette className="w-5 h-5 text-[#9D4EDD]" strokeWidth={2.2} />
