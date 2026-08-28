@@ -5157,13 +5157,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           </aside>
 
           <section
-            className={`chat-area ${selectedUser ? 'active ig-chat-enter' : ''} ${selectedUser ? 'show-on-mobile' : 'hide-on-mobile'} !bg-[#141111] flex flex-col h-full overflow-hidden relative`}
+            className={`chat-area ${selectedUser ? 'active ig-chat-enter' : ''} ${selectedUser ? 'show-on-mobile' : 'hide-on-mobile'} !bg-[#141111] h-full w-full flex flex-col overflow-hidden relative m-0 p-0`}
           >
             {selectedUser ? (
-              <div className="flex flex-col h-full w-full overflow-hidden bg-[#141111] relative">
+              <div className="bg-[#141111] h-full w-full flex flex-col overflow-hidden relative m-0 p-0">
                 
                 {/* ── SCREEN 1: DARK HEADER (Top Bar - Frameless & Sleek) ── */}
-                <div className="w-full bg-[#141111] pt-14 pb-7 px-5 flex items-center justify-between shrink-0 select-none z-20">
+                <div className="w-full bg-[#141111] pt-14 pb-8 px-5 flex items-center justify-between shrink-0 select-none z-20 m-0 border-none">
                   {/* Left: Back Button + Contact Information */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* Back Action (ChevronLeft) */}
@@ -5245,13 +5245,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
 
                 {/* ── SCREEN 1: LIGHT MESSAGES SHEET (Smooth rounded-t-[36px], zero redundant top margin) ── */}
-                <div className="w-full flex-1 bg-white rounded-t-[36px] px-4 pt-2 pb-2 flex flex-col relative shadow-[0_-12px_32px_rgba(0,0,0,0.25)] overflow-hidden z-10 min-h-0">
+                <div className="w-full flex-1 bg-white rounded-t-[36px] rounded-b-none -mt-4 px-4 pt-4 pb-0 mb-0 flex flex-col relative shadow-[0_-12px_32px_rgba(0,0,0,0.25)] overflow-hidden z-10 min-h-0">
 
                   {/* Messages Scroll Area - Clean padding above floating input bar */}
                   <div
                     ref={messagesContainerRef}
                     onScroll={handleMessagesScroll}
-                    className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden flex-1 no-scrollbar pr-0.5 pb-16 pt-1"
+                    className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden flex-1 no-scrollbar pr-0.5 pt-2 pb-24"
                   >
                     {isLoadingMessages && messages.length === 0 && (
                       <div className="chat-skeleton-container">
@@ -5359,120 +5359,122 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   />
 
                   {/* ── INTERACTIVE CHAT INPUT PILL ── */}
-                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-full z-30 flex justify-center">
-                    <ChatInput
-                      onSendMessage={(text) => handleSendMessage(undefined, text)}
-                      onOpenGallery={() => fileInputRef.current?.click()}
-                      onSendVoice={async (audioBlob, duration) => {
-                        if (selectedUser && socket && session?.user) {
-                          const senderId = (session.user as any).id;
-                          const stableId = 'voice-' + Date.now() + Math.random().toString(36).substring(7);
-                          const localPreview = URL.createObjectURL(audioBlob);
+                  <div className="absolute bottom-4 left-0 right-0 w-full px-4 z-30 flex justify-center pointer-events-none">
+                    <div className="w-full max-w-[350px] pointer-events-auto">
+                      <ChatInput
+                        onSendMessage={(text) => handleSendMessage(undefined, text)}
+                        onOpenGallery={() => fileInputRef.current?.click()}
+                        onSendVoice={async (audioBlob, duration) => {
+                          if (selectedUser && socket && session?.user) {
+                            const senderId = (session.user as any).id;
+                            const stableId = 'voice-' + Date.now() + Math.random().toString(36).substring(7);
+                            const localPreview = URL.createObjectURL(audioBlob);
 
-                          const optimisticMsg: any = {
-                            id: stableId,
-                            senderId: senderId,
-                            receiverId: selectedUser.id,
-                            content: localPreview,
-                            type: 'voice',
-                            createdAt: new Date(),
-                            isSeen: false,
-                            status: 'sending',
-                            uploadProgress: 0,
-                          };
-                          setMessages(prev => [...prev, optimisticMsg]);
-                          setMessagesCache(prev => {
-                            const current = prev[selectedUser.id] || [];
-                            return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
-                          });
-
-                          try {
-                            const presignRes = await fetch('/api/chat/media/presign', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                filename: `voice_${Date.now()}.webm`,
-                                mimeType: 'audio/webm',
-                                fileSize: audioBlob.size,
-                                chatType: 'dm',
-                              }),
+                            const optimisticMsg: any = {
+                              id: stableId,
+                              senderId: senderId,
+                              receiverId: selectedUser.id,
+                              content: localPreview,
+                              type: 'voice',
+                              createdAt: new Date(),
+                              isSeen: false,
+                              status: 'sending',
+                              uploadProgress: 0,
+                            };
+                            setMessages(prev => [...prev, optimisticMsg]);
+                            setMessagesCache(prev => {
+                              const current = prev[selectedUser.id] || [];
+                              return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
                             });
 
-                            let finalAudioUrl = localPreview;
-                            let storagePath: string | undefined;
-
-                            if (presignRes.ok) {
-                              const { uploadUrl, fileUrl, storagePath: sPath } = await presignRes.json();
-                              const uploadRes = await fetch(uploadUrl, {
-                                method: 'PUT',
-                                body: audioBlob,
-                                headers: { 'Content-Type': 'audio/webm' },
+                            try {
+                              const presignRes = await fetch('/api/chat/media/presign', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  filename: `voice_${Date.now()}.webm`,
+                                  mimeType: 'audio/webm',
+                                  fileSize: audioBlob.size,
+                                  chatType: 'dm',
+                                }),
                               });
-                              if (uploadRes.ok) {
-                                finalAudioUrl = fileUrl;
-                                storagePath = sPath;
+
+                              let finalAudioUrl = localPreview;
+                              let storagePath: string | undefined;
+
+                              if (presignRes.ok) {
+                                const { uploadUrl, fileUrl, storagePath: sPath } = await presignRes.json();
+                                const uploadRes = await fetch(uploadUrl, {
+                                  method: 'PUT',
+                                  body: audioBlob,
+                                  headers: { 'Content-Type': 'audio/webm' },
+                                });
+                                if (uploadRes.ok) {
+                                  finalAudioUrl = fileUrl;
+                                  storagePath = sPath;
+                                }
                               }
-                            }
 
-                            const savedMsg = await saveSocialMessage(
-                              selectedUser.id,
-                              finalAudioUrl,
-                              'voice',
-                              null,
-                              {
-                                mediaUrl: finalAudioUrl,
-                                mimeType: 'audio/webm',
-                                fileSize: audioBlob.size,
-                                storagePath,
+                              const savedMsg = await saveSocialMessage(
+                                selectedUser.id,
+                                finalAudioUrl,
+                                'voice',
+                                null,
+                                {
+                                  mediaUrl: finalAudioUrl,
+                                  mimeType: 'audio/webm',
+                                  fileSize: audioBlob.size,
+                                  storagePath,
+                                }
+                              );
+
+                              if (savedMsg) {
+                                setMessages(prev => prev.map(m => m.id === stableId ? {
+                                  ...(savedMsg as any),
+                                  id: (savedMsg as any).id || stableId,
+                                  isSeen: m.isSeen || (savedMsg as any).isSeen || false,
+                                  status: 'sent'
+                                } : m));
+
+                                setMessagesCache(prev => {
+                                  const current = prev[selectedUser.id] || [];
+                                  return {
+                                    ...prev,
+                                    [selectedUser.id]: current.map(m => m.id === stableId ? {
+                                      ...(savedMsg as any),
+                                      id: (savedMsg as any).id || stableId,
+                                      isSeen: m.isSeen || (savedMsg as any).isSeen || false,
+                                      status: 'sent'
+                                    } : m)
+                                  };
+                                });
+
+                                socket.emit('send_social_message', {
+                                  ...(savedMsg as any),
+                                  id: (savedMsg as any).id || stableId,
+                                  receiverId: selectedUser.id,
+                                  receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+                                  ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
+                                });
                               }
-                            );
-
-                            if (savedMsg) {
-                              setMessages(prev => prev.map(m => m.id === stableId ? {
-                                ...(savedMsg as any),
-                                id: (savedMsg as any).id || stableId,
-                                isSeen: m.isSeen || (savedMsg as any).isSeen || false,
-                                status: 'sent'
-                              } : m));
-
-                              setMessagesCache(prev => {
-                                const current = prev[selectedUser.id] || [];
-                                return {
-                                  ...prev,
-                                  [selectedUser.id]: current.map(m => m.id === stableId ? {
-                                    ...(savedMsg as any),
-                                    id: (savedMsg as any).id || stableId,
-                                    isSeen: m.isSeen || (savedMsg as any).isSeen || false,
-                                    status: 'sent'
-                                  } : m)
-                                };
-                              });
-
-                              socket.emit('send_social_message', {
-                                ...(savedMsg as any),
-                                id: (savedMsg as any).id || stableId,
-                                receiverId: selectedUser.id,
-                                receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
-                                ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
-                              });
+                            } catch (err) {
+                              console.error('Failed to upload voice message:', err);
+                              setMessages(prev => prev.map(m => m.id === stableId ? { ...m, status: 'error' } : m));
                             }
-                          } catch (err) {
-                            console.error('Failed to upload voice message:', err);
-                            setMessages(prev => prev.map(m => m.id === stableId ? { ...m, status: 'error' } : m));
                           }
-                        }
-                      }}
-                      onTyping={() => {
-                        if (socket && selectedUser) {
-                          if (!typingTimeoutRef.current) { socket.emit('typing', { receiverEmail: selectedUser.email }); }
-                          else { clearTimeout(typingTimeoutRef.current); }
-                          typingTimeoutRef.current = setTimeout(() => {
-                            socket.emit('stop_typing', { receiverEmail: selectedUser.email });
-                            typingTimeoutRef.current = null;
-                          }, 2000);
-                        }
-                      }}
-                    />
+                        }}
+                        onTyping={() => {
+                          if (socket && selectedUser) {
+                            if (!typingTimeoutRef.current) { socket.emit('typing', { receiverEmail: selectedUser.email }); }
+                            else { clearTimeout(typingTimeoutRef.current); }
+                            typingTimeoutRef.current = setTimeout(() => {
+                              socket.emit('stop_typing', { receiverEmail: selectedUser.email });
+                              typingTimeoutRef.current = null;
+                            }, 2000);
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
 
