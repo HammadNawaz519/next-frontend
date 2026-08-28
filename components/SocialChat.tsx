@@ -1840,7 +1840,7 @@ const normalizeMsg = (m: any): any => {
   return m;
 };
 
-const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange, initialUser, onOpenProfile, onLongPressChatChange, onSearchActiveChange }: SocialChatProps, ref) => {
+const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, onBack, onCallStateChange, initialUser, onOpenProfile, onLongPressChatChange, onSearchActiveChange, onStoryEditorChange }: SocialChatProps, ref) => {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
