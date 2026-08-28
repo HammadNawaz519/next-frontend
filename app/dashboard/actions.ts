@@ -698,7 +698,34 @@ export async function getCallHistory() {
     },
     orderBy: { createdAt: 'desc' }
   });
+}
 
+export async function clearCallHistory() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { success: false };
+
+  const currentUser = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  });
+  if (!currentUser) return { success: false };
+
+  const callModel = (prisma as any).socialCall;
+  if (callModel) {
+    try {
+      await callModel.deleteMany({
+        where: {
+          OR: [
+            { callerId: currentUser.id },
+            { receiverId: currentUser.id }
+          ]
+        }
+      });
+    } catch (e) {
+      console.warn("Failed to clear calls from DB:", e);
+    }
+  }
+
+  return { success: true };
 }
 
 

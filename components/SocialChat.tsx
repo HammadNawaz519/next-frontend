@@ -924,9 +924,9 @@ const ChatItem = memo(({
 
   const latestMessageDisplay = (() => {
     if (latestCachedMsg) {
-      if (latestCachedMsg.type === 'voice') return '🎤 Voice message';
-      if (latestCachedMsg.type === 'image') return '📷 Photo';
-      if (latestCachedMsg.type === 'video') return '🎥 Video';
+      if (latestCachedMsg.type === 'voice') return 'Voice Message';
+      if (latestCachedMsg.type === 'image') return 'Photo';
+      if (latestCachedMsg.type === 'video') return 'Video';
       if (latestCachedMsg.content) return latestCachedMsg.content;
     }
     return (user as any).lastMessage || (
@@ -1122,8 +1122,9 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
     );
   }
 
-  const isAI = msg.senderId === 'ai';
+  const isAI = msg.senderId === 'ai' || (msg as any).isAi || (typeof msg.content === 'string' && (msg.content.startsWith('🤖') || msg.content.startsWith('Grok AI:')));
   const isSent = !isAI && String(msg.senderId) === String(currentUserId);
+  const cleanMsgContent = typeof msg.content === 'string' ? msg.content.replace(/^(🤖\s*)?Grok AI:\s*/i, '') : msg.content;
 
   // Long-press detection
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -1521,7 +1522,12 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                 )}
                 {msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
                   <div style={{ fontSize: '14px', lineHeight: '1.4', wordBreak: 'break-word', whiteSpace: 'pre-wrap', textAlign: 'left', width: '100%' }}>
-                    <span>{msg.content}</span>
+                    <span>{cleanMsgContent}</span>
+                    {isAI && (
+                      <div className="flex justify-end mt-1 -mb-0.5">
+                        <span className="text-[10px] text-zinc-400 font-medium select-none">AI</span>
+                      </div>
+                    )}
                   </div>
                 ) : null}
               </>
@@ -3995,7 +4001,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     const currentReplyTo = replyToMessage ? {
       id: replyToMessage.id,
-      content: replyToMessage.type === 'voice' ? '🎙️ Voice Clip' : replyToMessage.type === 'image' ? '📷 Photo' : replyToMessage.content,
+      content: replyToMessage.type === 'voice' ? 'Voice Message' : replyToMessage.type === 'image' ? 'Photo' : replyToMessage.content,
       senderName: replyToMessage.senderId === senderId ? 'You' : selectedUser.name
     } : undefined;
 
@@ -4025,28 +4031,30 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       try {
         const aiResponse = await askAI(prompt);
-        const aiFormatted = `🤖 Grok AI: ${aiResponse || "I couldn't find an answer to that."}`;
+        const cleanAiAnswer = aiResponse || "I couldn't find an answer to that.";
         const aiTempId = 'ai-resp-' + Date.now();
         const aiMsg: any = {
           id: aiTempId,
-          content: aiFormatted,
-          senderId,
-          receiverId: selectedUser.id,
+          content: cleanAiAnswer,
+          senderId: 'ai',
+          receiverId: senderId,
+          isAi: true,
           createdAt: new Date(),
           type: 'text'
         };
         setMessages(prev => [...prev, aiMsg]);
 
-        // Save AI response to DB
-        saveSocialMessage(selectedUser.id, aiFormatted, 'text').catch(err =>
+        // Save pure clean AI response to DB as normal message
+        saveSocialMessage(selectedUser.id, cleanAiAnswer, 'text').catch(err =>
           console.error('Failed to save AI response:', err)
         );
       } catch (e) {
         const errAiMsg: any = {
           id: 'ai-err-' + Date.now(),
-          content: "🤖 Grok AI: Sorry, I couldn't process your request right now.",
-          senderId,
-          receiverId: selectedUser.id,
+          content: "Sorry, I couldn't process your request right now.",
+          senderId: 'ai',
+          receiverId: senderId,
+          isAi: true,
           createdAt: new Date(),
           type: 'text'
         };

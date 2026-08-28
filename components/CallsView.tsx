@@ -3,21 +3,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
-  Phone,
-  Video,
-  PhoneIncoming,
-  PhoneOutgoing,
-  PhoneMissed,
-  X,
-  MessageCircle,
-  Clock,
-  Calendar,
-  Trash2,
-  Check,
-  ChevronRight,
   ChevronLeft
 } from 'lucide-react';
-import { getCallHistory } from '@/app/dashboard/actions';
+import { getCallHistory, clearCallHistory } from '@/app/dashboard/actions';
 import { triggerHaptic } from '@/lib/haptics';
 
 export interface CallRecord {
@@ -130,8 +118,6 @@ export default function CallsView({
   const [activeTab, setActiveTab] = useState<'All' | 'Received' | 'Sent' | 'Missed'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Synchronize search state with parent for bottom bar hiding
   const handleOpenSearch = () => {
@@ -281,39 +267,17 @@ export default function CallsView({
     return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${timeStr}`;
   };
 
-  const getStatusIcon = (status: 'received' | 'sent' | 'missed') => {
-    switch (status) {
-      case 'received':
-        return <PhoneIncoming className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.4} />;
-      case 'sent':
-        return <PhoneOutgoing className="w-3.5 h-3.5 text-[#9D4EDD]" strokeWidth={2.4} />;
-      case 'missed':
-        return <PhoneMissed className="w-3.5 h-3.5 text-rose-500" strokeWidth={2.4} />;
-    }
-  };
-
-  const handleStartCall = (call: CallRecord, overrideType?: 'audio' | 'video') => {
-    triggerHaptic('medium');
-    const targetType = overrideType || call.type;
-    const userToCall = call.partnerUser || {
-      id: call.callerId === currentUserId ? call.receiverId : call.callerId,
-      name: call.contactName,
-      username: call.contactUsername,
-      image: call.contactImage
-    };
-
-    if (onStartCall) {
-      onStartCall(userToCall, targetType);
-    }
-  };
-
-  const handleClearHistory = () => {
+  const handleClearHistory = async () => {
     triggerHaptic('heavy');
     setCalls([]);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('connect_call_history');
     }
-    setShowClearConfirm(false);
+    try {
+      await clearCallHistory();
+    } catch (e) {
+      console.warn('Failed to clear call history DB:', e);
+    }
   };
 
   return (
@@ -407,9 +371,6 @@ export default function CallsView({
             </div>
           ) : filteredCalls.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400 mb-2">
-                <Phone className="w-6 h-6" strokeWidth={1.5} />
-              </div>
               <p className="text-sm font-bold text-zinc-800">No call records found</p>
               <p className="text-xs text-zinc-500 mt-0.5">
                 {activeTab === 'All'
@@ -429,8 +390,7 @@ export default function CallsView({
               return (
                 <div
                   key={call.id}
-                  onClick={() => setSelectedCall(call)}
-                  className="flex items-center justify-between py-3 px-1.5 rounded-2xl hover:bg-zinc-50 transition-colors cursor-pointer group"
+                  className="flex items-center justify-between py-3 px-1.5 rounded-2xl select-none"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div
@@ -449,17 +409,10 @@ export default function CallsView({
                     </div>
 
                     <div className="flex flex-col min-w-0">
-                      <span
-                        className={`text-[15px] font-bold truncate ${
-                          call.status === 'missed' ? 'text-rose-600' : 'text-zinc-900'
-                        }`}
-                      >
+                      <span className="text-[15px] font-bold text-zinc-900 truncate">
                         {call.contactName}
                       </span>
                       <div className="flex items-center gap-1.5 mt-0.5 text-xs text-zinc-500">
-                        {getStatusIcon(call.status)}
-                        <span className="capitalize">{call.status}</span>
-                        <span>•</span>
                         <span>{formatCallDate(call.createdAt)}</span>
                         {call.duration && call.duration > 0 ? (
                           <>
@@ -471,29 +424,6 @@ export default function CallsView({
                         ) : null}
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartCall(call, 'audio');
-                      }}
-                      className="w-9 h-9 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center cursor-pointer active:scale-90 transition-all outline-none"
-                      title="Audio Call"
-                    >
-                      <Phone className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartCall(call, 'video');
-                      }}
-                      className="w-9 h-9 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center cursor-pointer active:scale-90 transition-all outline-none"
-                      title="Video Call"
-                    >
-                      <Video className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
               );
@@ -561,11 +491,7 @@ export default function CallsView({
                   return (
                     <div
                       key={call.id}
-                      onClick={() => {
-                        handleCloseSearch();
-                        setSelectedCall(call);
-                      }}
-                      className="flex items-center justify-between py-3 px-1.5 rounded-2xl hover:bg-zinc-50 transition-colors cursor-pointer group"
+                      className="flex items-center justify-between py-3 px-1.5 rounded-2xl select-none"
                     >
                       <div className="flex items-center gap-3.5 min-w-0">
                         <div
@@ -584,180 +510,18 @@ export default function CallsView({
                         </div>
 
                         <div className="flex flex-col min-w-0">
-                          <span
-                            className={`text-[15px] font-bold truncate ${
-                              call.status === 'missed' ? 'text-rose-600' : 'text-zinc-900'
-                            }`}
-                          >
+                          <span className="text-[15px] font-bold text-zinc-900 truncate">
                             {call.contactName}
                           </span>
                           <div className="flex items-center gap-1.5 mt-0.5 text-xs text-zinc-500">
-                            {getStatusIcon(call.status)}
-                            <span className="capitalize">{call.status}</span>
-                            <span>•</span>
                             <span>{formatCallDate(call.createdAt)}</span>
                           </div>
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCloseSearch();
-                            handleStartCall(call, 'audio');
-                          }}
-                          className="w-9 h-9 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center cursor-pointer active:scale-90 transition-all outline-none"
-                          title="Audio Call"
-                        >
-                          <Phone className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCloseSearch();
-                            handleStartCall(call, 'video');
-                          }}
-                          className="w-9 h-9 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center cursor-pointer active:scale-90 transition-all outline-none"
-                          title="Video Call"
-                        >
-                          <Video className="w-4 h-4" />
-                        </button>
                       </div>
                     </div>
                   );
                 })
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 4. CALL DETAILS MODAL ── */}
-      {selectedCall && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
-          onClick={() => setSelectedCall(null)}
-        >
-          <div
-            className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl flex flex-col gap-4 text-zinc-900 animate-in slide-in-from-bottom-4 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                Call Information
-              </span>
-              <button
-                onClick={() => setSelectedCall(null)}
-                className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3.5 py-2">
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg text-zinc-800 shrink-0 overflow-hidden shadow-xs"
-                style={{
-                  backgroundColor: getDeterministicAvatarBg(
-                    selectedCall.partnerUser?.id || selectedCall.contactName
-                  )
-                }}
-              >
-                {selectedCall.contactImage ? (
-                  <img
-                    src={selectedCall.contactImage}
-                    alt={selectedCall.contactName}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span>{selectedCall.contactName.charAt(0).toUpperCase()}</span>
-                )}
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-lg font-bold text-zinc-900 truncate">
-                  {selectedCall.contactName}
-                </span>
-                <span className="text-xs text-zinc-500">
-                  {selectedCall.contactUsername ? `@${selectedCall.contactUsername}` : 'Connect User'}
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-zinc-50 rounded-2xl p-3.5 space-y-2 border border-zinc-100 text-xs text-zinc-600">
-              <div className="flex justify-between items-center">
-                <span>Call Type</span>
-                <span className="font-semibold text-zinc-900 capitalize">
-                  {selectedCall.type} Call
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Status</span>
-                <span
-                  className={`font-semibold capitalize ${
-                    selectedCall.status === 'missed' ? 'text-rose-600' : 'text-zinc-900'
-                  }`}
-                >
-                  {selectedCall.status}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Duration</span>
-                <span className="font-semibold text-zinc-900">
-                  {formatDuration(selectedCall.duration)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Date & Time</span>
-                <span className="font-semibold text-zinc-900">
-                  {formatCallDate(selectedCall.createdAt)}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 pt-1">
-              <button
-                onClick={() => {
-                  setSelectedCall(null);
-                  handleStartCall(selectedCall, 'audio');
-                }}
-                className="py-2.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
-              >
-                <Phone className="w-3.5 h-3.5" />
-                <span>Audio</span>
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedCall(null);
-                  handleStartCall(selectedCall, 'video');
-                }}
-                className="py-2.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
-              >
-                <Video className="w-3.5 h-3.5" />
-                <span>Video</span>
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedCall(null);
-                  if (onOpenChat) {
-                    onOpenChat(
-                      selectedCall.partnerUser || {
-                        id:
-                          selectedCall.callerId === currentUserId
-                            ? selectedCall.receiverId
-                            : selectedCall.callerId,
-                        name: selectedCall.contactName,
-                        username: selectedCall.contactUsername,
-                        image: selectedCall.contactImage
-                      }
-                    );
-                  }
-                }}
-                className="py-2.5 rounded-full bg-[#9D4EDD] hover:bg-[#8A38CC] text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-xs"
-              >
-                <MessageCircle className="w-3.5 h-3.5" />
-                <span>Message</span>
-              </button>
             </div>
           </div>
         </div>
