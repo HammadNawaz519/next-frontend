@@ -858,6 +858,7 @@ const ChatItem = memo(({
   isPinned,
   lastSeenVal,
   nickname,
+  latestCachedMsg,
   onSelect,
   onLongPress,
   index = 0
@@ -916,8 +917,21 @@ const ChatItem = memo(({
   };
 
   const pastel = getPastelForUser(user.id || user.username || user.name);
-  const timeDisplay = formatChatTime((user as any).lastMessageTime || (user as any).updatedAt || lastSeenVal);
+  const latestTimeVal = latestCachedMsg?.createdAt || (user as any).lastMessageTime || (user as any).updatedAt || lastSeenVal;
+  const timeDisplay = formatChatTime(latestTimeVal);
   const unseen = (user as any).unseenCount || 0;
+
+  const latestMessageDisplay = (() => {
+    if (latestCachedMsg) {
+      if (latestCachedMsg.type === 'voice') return '🎤 Voice message';
+      if (latestCachedMsg.type === 'image') return '📷 Photo';
+      if (latestCachedMsg.type === 'video') return '🎥 Video';
+      if (latestCachedMsg.content) return latestCachedMsg.content;
+    }
+    return (user as any).lastMessage || (
+      showActivity && isOnline ? 'Active now' : 'Tap to start chatting'
+    );
+  })();
 
   return (
     <div
@@ -963,9 +977,7 @@ const ChatItem = memo(({
           {isPinned && <span className="text-[10px] text-[#9D4EDD]">📌</span>}
         </div>
         <p className="text-[13px] text-zinc-400 truncate">
-          {(user as any).lastMessage || (
-            showActivity && isOnline ? 'Active now' : 'Tap to start chatting'
-          )}
+          {latestMessageDisplay}
         </p>
       </div>
 
@@ -5126,7 +5138,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     .sort((a, b) => {
                       const ap = pinnedChats.has(a.id) ? 0 : 1;
                       const bp = pinnedChats.has(b.id) ? 0 : 1;
-                      return ap - bp;
+                      if (ap !== bp) return ap - bp;
+
+                      const getContactLatestTime = (u: any) => {
+                        const cached = messagesCache[u.id];
+                        if (cached && cached.length > 0) {
+                          const last = cached[cached.length - 1];
+                          if (last?.createdAt) return new Date(last.createdAt).getTime();
+                        }
+                        if (u.lastMessageTime) return new Date(u.lastMessageTime).getTime();
+                        if (u.updatedAt) return new Date(u.updatedAt).getTime();
+                        if (u.lastSeen) return new Date(u.lastSeen).getTime();
+                        return 0;
+                      };
+
+                      return getContactLatestTime(b) - getContactLatestTime(a);
                     });
 
                   // If user is searching, merge global registered users seamlessly
@@ -5174,6 +5200,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     const isOnline = showActivity && ((userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(user.id));
                     const isPinned = pinnedChats.has(user.id);
                     const lastSeenVal = (userEmail && lastSeenMap[userEmail]) || lastSeenMap[user.id] || (user as any).lastSeen || (user as any).lastHeartbeat;
+                    const cachedMsgs = messagesCache[user.id];
+                    const latestCachedMsg = cachedMsgs && cachedMsgs.length > 0 ? cachedMsgs[cachedMsgs.length - 1] : null;
 
                     return (
                       <ChatItem
@@ -5187,6 +5215,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         isPinned={isPinned}
                         lastSeenVal={lastSeenVal}
                         nickname={nicknames[user.id]}
+                        latestCachedMsg={latestCachedMsg}
                         onSelect={handleSelectUser}
                         onLongPress={setSelectedChatForOptions}
                       />
@@ -5277,10 +5306,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       className="p-2 text-white hover:text-zinc-300 active:scale-95 cursor-pointer transition-all outline-none border-0 bg-transparent"
                       title="Video Call"
                     >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polygon points="23 7 16 12 23 17 23 7" />
-                        <rect x="1" y="5" width="15" height="14" rx="3" ry="3" />
-                      </svg>
+                      <Video className="w-5 h-5 text-white" strokeWidth={2} />
                     </button>
                   </div>
                 </div>
@@ -5386,8 +5412,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     multiple
                   />
 
-                  {/* ── INTERACTIVE CHAT INPUT PILL (95% width, positioned down) ── */}
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[95%] max-w-[460px] z-30 flex flex-col items-center pointer-events-none gap-1">
+                  {/* ── INTERACTIVE CHAT INPUT PILL (95% width, positioned slightly up) ── */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-[460px] z-30 flex flex-col items-center pointer-events-none gap-1">
                     {/* Seamless floating reply indicator above type box: no bg, round, matching font */}
                     {replyToMessage && (
                       <div className="w-full flex items-center justify-between px-3 py-1 rounded-full pointer-events-auto text-zinc-900 border-none bg-transparent">
