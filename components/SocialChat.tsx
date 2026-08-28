@@ -1204,7 +1204,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         alignItems: isSent ? 'flex-end' : 'flex-start',
         order: isSent ? 2 : 1,
         minWidth: 0,
-        maxWidth: '78%',
+        maxWidth: '88%',
         width: 'fit-content',
       }}>
       {(() => {
@@ -1229,10 +1229,10 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
-        // Balanced, comfortable rounded pill bubbles with light/normal font and proper padding
+        // Open, comfortable rounded bubbles with extra width, height, and generous balanced padding
         const bubbleClasses = isSent
-          ? `bg-zinc-100 text-zinc-900 px-4.5 py-2.5 !rounded-[24px] max-w-[78%] self-end text-[13px] font-normal leading-snug shadow-2xs ${isPrevSameSender ? '-mt-2' : ''}`
-          : `bg-[#FEF5D1] text-zinc-900 px-4.5 py-2.5 !rounded-[24px] max-w-[78%] self-start text-[13px] font-normal leading-snug shadow-2xs ${isPrevSameSender ? '-mt-2' : ''}`;
+          ? `bg-zinc-100 text-zinc-900 px-6 py-3.5 !rounded-[24px] max-w-full self-end text-[13.5px] font-normal leading-snug shadow-2xs min-h-[46px] flex items-center justify-center ${isPrevSameSender ? '-mt-1.5' : ''}`
+          : `bg-[#FEF5D1] text-zinc-900 px-6 py-3.5 !rounded-[24px] max-w-full self-start text-[13.5px] font-normal leading-snug shadow-2xs min-h-[46px] flex items-center justify-center ${isPrevSameSender ? '-mt-1.5' : ''}`;
 
         return (
           <div
@@ -1482,7 +1482,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                   </div>
                 )}
                 {msg.type !== 'voice' && msg.type !== 'file' && msg.type !== 'call' ? (
-                  <div style={{ fontSize: '0.885rem', lineHeight: '1.45', letterSpacing: '-0.005em', wordBreak: 'break-word', minWidth: '24px' }}>
+                  <div style={{ fontSize: '0.885rem', lineHeight: '1.45', letterSpacing: '-0.005em', wordBreak: 'break-word', minWidth: '36px', textAlign: 'center', width: '100%' }}>
                     <span>{msg.content}</span>
                   </div>
                 ) : null}
@@ -4952,34 +4952,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto my-1.5 shrink-0" />
               )}
 
-              {/* Header Row when not searching and no chat selected */}
-              {!isSearchFocused && !selectedChatForOptions && (
-                <div className="flex justify-between items-center mt-3 mb-3 px-1 shrink-0">
-                  <h2 className="text-[22px] font-bold text-black tracking-tight">
-                    {isArchivedView ? 'Archived Chats' : (searchQuery.trim() ? 'Search Results' : 'Recent Chat')}
-                  </h2>
-
-                  {/* Archive Button */}
-                  <button 
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setIsArchivedView(prev => !prev);
-                    }}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-semibold transition-all cursor-pointer ${
-                      isArchivedView
-                        ? 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
-                        : 'bg-[#FFF3CD] text-black hover:bg-[#ffeaa7]'
-                    }`}
-                  >
-                    <Archive className="w-3.5 h-3.5" strokeWidth={2} />
-                    <span>{isArchivedView ? 'Inbox' : 'Archive'}</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Top Long-Press Action Bar (Delete SVG, Pin SVG, Archive SVG, and Deselect) */}
+              {/* Top Long-Press Action Bar (Delete SVG, Pin SVG, Archive SVG, and Deselect) - Appears above Recent Chat row */}
               {selectedChatForOptions && (
-                <div className="mt-2 mb-3 p-2 rounded-2xl bg-[#141111] text-white border border-zinc-800 flex items-center justify-between shadow-lg animate-in fade-in slide-in-from-top-2 duration-200 shrink-0">
+                <div className="mt-1 mb-2.5 p-2 rounded-2xl bg-[#141111] text-white border border-zinc-800 flex items-center justify-between shadow-lg animate-in slide-in-from-top-2 duration-300 shrink-0">
                   <div className="flex items-center gap-2 min-w-0 flex-1 pl-1">
                     <button
                       onClick={() => {
@@ -5091,36 +5066,107 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
               )}
 
-              {/* Quick Search - Only rendered when search mode is active */}
+              {/* Header Row - Always visible and moves down when action bar opens */}
+              {!isSearchFocused && (
+                <div className="flex justify-between items-center mt-2 mb-3 px-1 shrink-0 transition-all duration-300">
+                  <h2 className="text-[22px] font-bold text-black tracking-tight">
+                    {isArchivedView ? 'Archived Chats' : (searchQuery.trim() ? 'Search Results' : 'Recent Chat')}
+                  </h2>
+
+                  {/* Archive Button */}
+                  <button 
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setIsArchivedView(prev => !prev);
+                    }}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-semibold transition-all cursor-pointer ${
+                      isArchivedView
+                        ? 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                        : 'bg-[#FFF3CD] text-black hover:bg-[#ffeaa7]'
+                    }`}
+                  >
+                    <Archive className="w-3.5 h-3.5" strokeWidth={2} />
+                    <span>{isArchivedView ? 'Inbox' : 'Archive'}</span>
+                  </button>
+                </div>
+              )}
+
+              {/* ── CREATIVE & MODERN SEARCH UI OVERHAUL ── */}
               {isSearchFocused && (
-                <div className="pt-1 pb-3 px-1 flex-shrink-0 animate-in fade-in duration-200">
-                  <div className="flex items-center gap-2">
+                <div className="pt-2 pb-3 px-1 flex flex-col gap-3 flex-shrink-0 animate-in fade-in slide-in-from-top-3 duration-300">
+                  {/* Top Bar: Back & Pill Search Input */}
+                  <div className="flex items-center gap-2.5">
                     <button
                       onClick={() => {
                         triggerHaptic('light');
                         setSearchQuery('');
                         setIsSearchFocused(false);
                       }}
-                      className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center cursor-pointer active:scale-95 transition-all shrink-0 shadow-2xs"
+                      className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 flex items-center justify-center cursor-pointer active:scale-90 transition-all shrink-0 shadow-2xs"
                       title="Back to conversation list"
                     >
-                      <ChevronLeft className="w-5 h-5 text-zinc-800" strokeWidth={2.2} />
+                      <ChevronLeft className="w-5 h-5 text-zinc-800" strokeWidth={2.4} />
                     </button>
-                    <div className="flex-1 flex items-center gap-2.5 px-4.5 py-2.5 rounded-full bg-zinc-100/90 border border-zinc-200/50 text-zinc-800 transition-all">
-                      <Search className="w-[18px] h-[18px] text-zinc-400 flex-shrink-0" strokeWidth={2} />
+                    
+                    <div className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-zinc-100/90 border border-zinc-200/60 focus-within:border-[#9D4EDD]/50 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#9D4EDD]/15 transition-all shadow-2xs">
+                      <Search className="w-4 h-4 text-[#9D4EDD] flex-shrink-0" strokeWidth={2.2} />
                       <input 
                         type="text" 
                         autoFocus
-                        placeholder="Search people, conversations..." 
+                        placeholder="Search people & conversations..." 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full bg-transparent text-[13.5px] text-zinc-900 placeholder:text-zinc-400 outline-none font-medium"
                       />
                       {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="text-xs text-zinc-400 hover:text-zinc-600 cursor-pointer p-1">✕</button>
+                        <button 
+                          onClick={() => setSearchQuery('')} 
+                          className="w-5 h-5 rounded-full bg-zinc-200 hover:bg-zinc-300 text-zinc-600 text-xs flex items-center justify-center cursor-pointer transition-colors"
+                        >
+                          ✕
+                        </button>
                       )}
                     </div>
                   </div>
+
+                  {/* Suggested Contacts Row (When Search Query is Empty) */}
+                  {!searchQuery.trim() && users.length > 0 && (
+                    <div className="flex flex-col gap-2 pt-1 pb-1 animate-in fade-in duration-200">
+                      <span className="text-[12px] font-bold text-zinc-400 tracking-wide uppercase px-1">
+                        Recent People
+                      </span>
+                      <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1 px-1">
+                        {users.slice(0, 8).map(u => {
+                          const p = getPastelForUser(u.id || u.name);
+                          return (
+                            <div 
+                              key={u.id}
+                              onClick={() => {
+                                handleSelectUser(u);
+                                setIsSearchFocused(false);
+                                setSearchQuery('');
+                              }}
+                              className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group active:scale-95 transition-transform"
+                            >
+                              <div 
+                                className="w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-xs group-hover:scale-105 transition-transform"
+                                style={{ background: p.bg, color: p.text }}
+                              >
+                                {u.image && u.image.length > 5 ? (
+                                  <img src={u.image} alt={u.name} className="w-full h-full object-cover rounded-full" />
+                                ) : (
+                                  <span>{p.emoji}</span>
+                                )}
+                              </div>
+                              <span className="text-[11px] font-medium text-zinc-700 max-w-[56px] truncate text-center">
+                                {u.name.split(' ')[0]}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -5296,19 +5342,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       className="p-2 text-white hover:text-zinc-300 active:scale-95 cursor-pointer transition-all outline-none border-0 bg-transparent"
                       title="Video Call"
                     >
-                      <Video className="w-5 h-5 text-white" strokeWidth={2} />
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="23 7 16 12 23 17 23 7" />
+                        <rect x="1" y="5" width="15" height="14" rx="3" ry="3" />
+                      </svg>
                     </button>
                   </div>
                 </div>
 
-                {/* ── SCREEN 1: LIGHT MESSAGES SHEET (Smooth rounded-t-[36px]) ── */}
-                <div className="w-full flex-1 bg-white rounded-t-[36px] px-4 pt-3 pb-20 flex flex-col relative shadow-[0_-12px_32px_rgba(0,0,0,0.25)] overflow-hidden z-10 min-h-0">
+                {/* ── SCREEN 1: LIGHT MESSAGES SHEET (Smooth rounded-t-[36px], zero redundant top margin) ── */}
+                <div className="w-full flex-1 bg-white rounded-t-[36px] px-4 pt-2 pb-2 flex flex-col relative shadow-[0_-12px_32px_rgba(0,0,0,0.25)] overflow-hidden z-10 min-h-0">
 
-                  {/* Messages Scroll Area - Clean padding above input bar */}
+                  {/* Messages Scroll Area - Clean padding above floating input bar */}
                   <div
                     ref={messagesContainerRef}
                     onScroll={handleMessagesScroll}
-                    className="flex flex-col gap-2.5 overflow-y-auto overflow-x-hidden flex-1 no-scrollbar pr-0.5 pb-16"
+                    className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden flex-1 no-scrollbar pr-0.5 pb-16 pt-1"
                   >
                     {isLoadingMessages && messages.length === 0 && (
                       <div className="chat-skeleton-container">
