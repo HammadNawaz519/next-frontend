@@ -6175,11 +6175,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             setActiveCall(null);
             setIncomingCall(null);
 
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new Event('connect_call_history_updated'));
+            }
+
             if (callData && callData.isCaller) {
               (async () => {
                 try {
                   const status = wasConnected ? 'completed' : 'missed';
                   const result = await saveCall(callData.peer.id, callData.type, status, duration);
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new Event('connect_call_history_updated'));
+                  }
                   if (result?.message && socket) {
                     socket.emit('send_social_message', { receiverEmail: callData.peer.email, ...result.message });
                     setMessages(prev => {

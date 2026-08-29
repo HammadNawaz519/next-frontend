@@ -484,6 +484,7 @@ export default function DashboardPage() {
         <div className={`w-full h-full flex flex-col min-h-0 relative ${activeView === 'calls' ? 'flex' : 'hidden'}`}>
           <CallsView 
             currentUserId={(displaySession.user as any)?.id}
+            isActive={activeView === 'calls'}
             onOpenChat={(targetUser) => {
               setSelectedChatUser({ ...targetUser, _openTs: Date.now() });
               setActiveView('chat');

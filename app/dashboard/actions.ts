@@ -705,27 +705,26 @@ export async function getCallHistory() {
     }
   }
 
-  // Also query any call-type messages in socialMessage for backwards compatibility
-  try {
-    const callMessages = await prisma.socialMessage.findMany({
-      where: {
-        OR: [
-          { senderId: currentUser.id },
-          { receiverId: currentUser.id }
-        ],
-        type: 'call'
-      },
-      include: {
-        sender: { select: { id: true, name: true, image: true, username: true } },
-        receiver: { select: { id: true, name: true, image: true, username: true } }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+  // If no socialCall records exist, check legacy socialMessage records
+  if (calls.length === 0) {
+    try {
+      const callMessages = await prisma.socialMessage.findMany({
+        where: {
+          OR: [
+            { senderId: currentUser.id },
+            { receiverId: currentUser.id }
+          ],
+          type: 'call'
+        },
+        include: {
+          sender: { select: { id: true, name: true, image: true, username: true } },
+          receiver: { select: { id: true, name: true, image: true, username: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
 
-    if (callMessages && callMessages.length > 0) {
-      const existingIds = new Set(calls.map((c: any) => c.id));
-      for (const cm of callMessages) {
-        if (!existingIds.has(cm.id)) {
+      if (callMessages && callMessages.length > 0) {
+        for (const cm of callMessages) {
           const isVideo = cm.content?.toLowerCase().includes('video');
           const isMissed = cm.content?.toLowerCase().includes('missed');
           const isRejected = cm.content?.toLowerCase().includes('rejected');
@@ -749,10 +748,9 @@ export async function getCallHistory() {
           });
         }
       }
-      calls.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (e) {
+      console.warn("getCallHistory socialMessage fallback error:", e);
     }
-  } catch (e) {
-    console.warn("getCallHistory socialMessage fallback error:", e);
   }
 
   return calls;

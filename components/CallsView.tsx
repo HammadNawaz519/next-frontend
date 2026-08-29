@@ -24,6 +24,7 @@ export interface CallRecord {
 
 interface CallsViewProps {
   currentUserId?: string;
+  isActive?: boolean;
   onOpenChat?: (user: any) => void;
   onNavigate?: (view: 'chat' | 'calls') => void;
   onOpenProfile?: () => void;
@@ -46,6 +47,7 @@ export function getDeterministicAvatarBg(key: string): string {
 
 export default function CallsView({
   currentUserId,
+  isActive = true,
   onOpenChat,
   onNavigate,
   onOpenProfile,
@@ -73,84 +75,105 @@ export default function CallsView({
   };
 
   // Load real call history
-  useEffect(() => {
-    let isMounted = true;
-    async function loadData() {
-      try {
-        setLoading(true);
-        // Load local custom calls if any
-        let localCalls: CallRecord[] = [];
-        if (typeof window !== 'undefined') {
-          const stored = localStorage.getItem('connect_call_history');
-          if (stored) {
-            try {
-              localCalls = JSON.parse(stored);
-            } catch (e) {}
-          }
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      // Load local custom calls if any
+      let localCalls: CallRecord[] = [];
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('connect_call_history');
+        if (stored) {
+          try {
+            localCalls = JSON.parse(stored);
+          } catch (e) {}
         }
-
-        // Fetch DB calls
-        let dbCalls: CallRecord[] = [];
-        try {
-          const fetched = await getCallHistory();
-          if (Array.isArray(fetched)) {
-            dbCalls = fetched.map((item: any) => {
-              const isCaller = String(item.callerId) === String(currentUserId);
-              const partner = isCaller ? item.receiver : item.caller;
-              let status: 'received' | 'sent' | 'missed' = 'received';
-              const rawStatus = String(item.status || '').toLowerCase();
-              if (rawStatus === 'missed' || rawStatus === 'rejected') {
-                status = isCaller ? 'sent' : 'missed';
-              } else if (isCaller) {
-                status = 'sent';
-              } else {
-                status = 'received';
-              }
-
-              return {
-                id: item.id,
-                callerId: item.callerId,
-                receiverId: item.receiverId,
-                type: String(item.type || '').toLowerCase() === 'video' ? 'video' : 'audio',
-                status,
-                duration: item.duration || 0,
-                createdAt: item.createdAt,
-                contactName: partner?.name || partner?.username || 'User',
-                contactImage: partner?.image || '',
-                contactUsername: partner?.username || '',
-                partnerUser: partner
-              };
-            });
-          }
-        } catch (err) {
-          console.warn('DB call history fetch error:', err);
-        }
-
-        if (!isMounted) return;
-
-        // Combine DB and local calls (no demo/seed data)
-        const map = new Map<string, CallRecord>();
-        [...localCalls, ...dbCalls].forEach((c) => {
-          if (c && c.id) map.set(c.id, c);
-        });
-
-        const merged = Array.from(map.values()).sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        setCalls(merged);
-      } catch (e) {
-        console.error('Call log load failed:', e);
-        if (isMounted) setCalls([]);
-      } finally {
-        if (isMounted) setLoading(false);
       }
-    }
 
-    loadData();
+      // Fetch DB calls
+      let dbCalls: CallRecord[] = [];
+      try {
+        const fetched = await getCallHistory();
+        if (Array.isArray(fetched)) {
+          dbCalls = fetched.map((item: any) => {
+            const isCaller = String(item.callerId) === String(currentUserId);
+            const partner = isCaller ? item.receiver : item.caller;
+            let status: 'received' | 'sent' | 'missed' = 'received';
+            const rawStatus = String(item.status || '').toLowerCase();
+            if (rawStatus === 'missed' || rawStatus === 'rejected') {
+              status = isCaller ? 'sent' : 'missed';
+            } else if (isCaller) {
+              status = 'sent';
+            } else {
+              status = 'received';
+            }
+
+            return {
+              id: item.id,
+              callerId: item.callerId,
+              receiverId: item.receiverId,
+              type: String(item.type || '').toLowerCase() === 'video' ? 'video' : 'audio',
+              status,
+              duration: item.duration || 0,
+              createdAt: item.createdAt,
+              contactName: partner?.name || partner?.username || 'User',
+              contactImage: partner?.image || '',
+              contactUsername: partner?.username || '',
+              partnerUser: partner
+            };
+          });
+        }
+      } catch (err) {
+        console.warn('DB call history fetch error:', err);
+      }
+
+      // Combine DB and local calls with strict deduplication
+      const map = new Map<string, CallRecord>();
+      [...localCalls, ...dbCalls].forEach((c) => {
+        if (c && c.id) map.set(c.id, c);
+      });
+
+      const merged = Array.from(map.values()).sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      // Deduplicate by pair + timestamp minute to eliminate any doubled entries
+      const seenKeys = new Set<string>();
+      const uniqueCalls: CallRecord[] = [];
+      for (const c of merged) {
+        const timeBucket = Math.floor(new Date(c.createdAt).getTime() / 60000);
+        const pairKey = [c.callerId, c.receiverId].sort().join('_') + '_' + c.type + '_' + timeBucket;
+        if (!seenKeys.has(c.id) && !seenKeys.has(pairKey)) {
+          seenKeys.add(c.id);
+          seenKeys.add(pairKey);
+          uniqueCalls.push(c);
+        }
+      }
+
+      setCalls(uniqueCalls);
+    } catch (e) {
+      console.error('Call log load failed:', e);
+      setCalls([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isActive) {
+      loadData();
+    }
+    const handleUpdate = () => loadData();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('connect_call_history_updated', handleUpdate);
+      window.addEventListener('storage', handleUpdate);
+    }
     return () => {
-      isMounted = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('connect_call_history_updated', handleUpdate);
+        window.removeEventListener('storage', handleUpdate);
+      }
     };
-  }, [currentUserId]);
+  }, [currentUserId, isActive]);
 
   // Filtered calls based on activeTab and searchQuery
   const filteredCalls = useMemo(() => {
