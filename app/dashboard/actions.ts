@@ -676,28 +676,86 @@ export async function getCallHistory() {
   if (!session?.user?.email) return [];
 
   const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email }
+    where: { email: session.user.email },
+    select: { id: true }
   });
 
   if (!currentUser) return [];
   
   const callModel = (prisma as any).socialCall;
-  if (!callModel) return [];
+  let calls: any[] = [];
 
-  return await callModel.findMany({
+  if (callModel) {
+    try {
+      calls = await callModel.findMany({
+        where: {
+          OR: [
+            { callerId: currentUser.id },
+            { receiverId: currentUser.id }
+          ]
+        },
+        include: {
+          caller: { select: { id: true, name: true, image: true, username: true } },
+          receiver: { select: { id: true, name: true, image: true, username: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+    } catch (e) {
+      console.warn("getCallHistory socialCall query error:", e);
+    }
+  }
 
-    where: {
-      OR: [
-        { callerId: currentUser.id },
-        { receiverId: currentUser.id }
-      ]
-    },
-    include: {
-      caller: { select: { name: true, image: true } },
-      receiver: { select: { name: true, image: true } }
-    },
-    orderBy: { createdAt: 'desc' }
-  });
+  // Also query any call-type messages in socialMessage for backwards compatibility
+  try {
+    const callMessages = await prisma.socialMessage.findMany({
+      where: {
+        OR: [
+          { senderId: currentUser.id },
+          { receiverId: currentUser.id }
+        ],
+        type: 'call'
+      },
+      include: {
+        sender: { select: { id: true, name: true, image: true, username: true } },
+        receiver: { select: { id: true, name: true, image: true, username: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (callMessages && callMessages.length > 0) {
+      const existingIds = new Set(calls.map((c: any) => c.id));
+      for (const cm of callMessages) {
+        if (!existingIds.has(cm.id)) {
+          const isVideo = cm.content?.toLowerCase().includes('video');
+          const isMissed = cm.content?.toLowerCase().includes('missed');
+          const isRejected = cm.content?.toLowerCase().includes('rejected');
+          
+          let duration = 0;
+          const matchMins = cm.content?.match(/(\d+)m/);
+          const matchSecs = cm.content?.match(/(\d+)s/);
+          if (matchMins) duration += parseInt(matchMins[1], 10) * 60;
+          if (matchSecs) duration += parseInt(matchSecs[1], 10);
+
+          calls.push({
+            id: cm.id,
+            callerId: cm.senderId,
+            receiverId: cm.receiverId,
+            type: isVideo ? 'video' : 'audio',
+            status: isMissed ? 'missed' : isRejected ? 'rejected' : 'completed',
+            duration: duration || 0,
+            createdAt: cm.createdAt,
+            caller: cm.sender,
+            receiver: cm.receiver
+          });
+        }
+      }
+      calls.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  } catch (e) {
+    console.warn("getCallHistory socialMessage fallback error:", e);
+  }
+
+  return calls;
 }
 
 export async function clearCallHistory() {
@@ -705,7 +763,8 @@ export async function clearCallHistory() {
   if (!session?.user?.email) return { success: false };
 
   const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email }
+    where: { email: session.user.email },
+    select: { id: true }
   });
   if (!currentUser) return { success: false };
 
@@ -723,6 +782,20 @@ export async function clearCallHistory() {
     } catch (e) {
       console.warn("Failed to clear calls from DB:", e);
     }
+  }
+
+  try {
+    await prisma.socialMessage.deleteMany({
+      where: {
+        OR: [
+          { senderId: currentUser.id },
+          { receiverId: currentUser.id }
+        ],
+        type: 'call'
+      }
+    });
+  } catch (e) {
+    console.warn("Failed to clear call messages from DB:", e);
   }
 
   return { success: true };

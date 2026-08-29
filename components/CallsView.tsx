@@ -44,67 +44,6 @@ export function getDeterministicAvatarBg(key: string): string {
   return PASTEL_AVATAR_BGS[index];
 }
 
-const SEED_CALLS: CallRecord[] = [
-  {
-    id: 'seed-1',
-    callerId: 'u2',
-    receiverId: 'me',
-    type: 'audio',
-    status: 'received',
-    duration: 272, // 4m 32s
-    createdAt: new Date(Date.now() - 1000 * 60 * 25).toISOString(), // 25 mins ago
-    contactName: 'Rehan Wangsaff',
-    contactUsername: 'rehan_w',
-    partnerUser: { id: 'u2', name: 'Rehan Wangsaff', username: 'rehan_w' }
-  },
-  {
-    id: 'seed-2',
-    callerId: 'u3',
-    receiverId: 'me',
-    type: 'video',
-    status: 'missed',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2.5).toISOString(), // 2.5 hrs ago
-    contactName: 'Aleeza Khan',
-    contactUsername: 'aleeza_k',
-    partnerUser: { id: 'u3', name: 'Aleeza Khan', username: 'aleeza_k' }
-  },
-  {
-    id: 'seed-3',
-    callerId: 'me',
-    receiverId: 'u4',
-    type: 'audio',
-    status: 'sent',
-    duration: 890, // 14m 50s
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(), // 18 hrs ago
-    contactName: 'Bilal Farooq',
-    contactUsername: 'bilal_f',
-    partnerUser: { id: 'u4', name: 'Bilal Farooq', username: 'bilal_f' }
-  },
-  {
-    id: 'seed-4',
-    callerId: 'u5',
-    receiverId: 'me',
-    type: 'video',
-    status: 'received',
-    duration: 1450, // 24m 10s
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(), // Yesterday
-    contactName: 'Sara Daniyal',
-    contactUsername: 'sara_d',
-    partnerUser: { id: 'u5', name: 'Sara Daniyal', username: 'sara_d' }
-  },
-  {
-    id: 'seed-5',
-    callerId: 'u6',
-    receiverId: 'me',
-    type: 'audio',
-    status: 'missed',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(), // 3 days ago
-    contactName: 'Hamza Sheikh',
-    contactUsername: 'hamza_s',
-    partnerUser: { id: 'u6', name: 'Hamza Sheikh', username: 'hamza_s' }
-  }
-];
-
 export default function CallsView({
   currentUserId,
   onOpenChat,
@@ -133,13 +72,13 @@ export default function CallsView({
     onSearchActiveChange?.(false);
   };
 
-  // Load call history
+  // Load real call history
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
       try {
         setLoading(true);
-        // Load local custom calls
+        // Load local custom calls if any
         let localCalls: CallRecord[] = [];
         if (typeof window !== 'undefined') {
           const stored = localStorage.getItem('connect_call_history');
@@ -150,7 +89,7 @@ export default function CallsView({
           }
         }
 
-        // Fetch DB calls if available
+        // Fetch DB calls
         let dbCalls: CallRecord[] = [];
         try {
           const fetched = await getCallHistory();
@@ -159,8 +98,9 @@ export default function CallsView({
               const isCaller = String(item.callerId) === String(currentUserId);
               const partner = isCaller ? item.receiver : item.caller;
               let status: 'received' | 'sent' | 'missed' = 'received';
-              if (item.status === 'MISSED') {
-                status = 'missed';
+              const rawStatus = String(item.status || '').toLowerCase();
+              if (rawStatus === 'missed' || rawStatus === 'rejected') {
+                status = isCaller ? 'sent' : 'missed';
               } else if (isCaller) {
                 status = 'sent';
               } else {
@@ -171,11 +111,11 @@ export default function CallsView({
                 id: item.id,
                 callerId: item.callerId,
                 receiverId: item.receiverId,
-                type: item.type === 'VIDEO' ? 'video' : 'audio',
+                type: String(item.type || '').toLowerCase() === 'video' ? 'video' : 'audio',
                 status,
                 duration: item.duration || 0,
                 createdAt: item.createdAt,
-                contactName: partner?.name || 'User',
+                contactName: partner?.name || partner?.username || 'User',
                 contactImage: partner?.image || '',
                 contactUsername: partner?.username || '',
                 partnerUser: partner
@@ -183,20 +123,16 @@ export default function CallsView({
             });
           }
         } catch (err) {
-          console.warn('DB call history fetch error, using local fallback:', err);
+          console.warn('DB call history fetch error:', err);
         }
 
         if (!isMounted) return;
 
-        // Combine DB, local, and seeds
+        // Combine DB and local calls (no demo/seed data)
         const map = new Map<string, CallRecord>();
         [...localCalls, ...dbCalls].forEach((c) => {
           if (c && c.id) map.set(c.id, c);
         });
-
-        if (map.size === 0) {
-          SEED_CALLS.forEach((c) => map.set(c.id, c));
-        }
 
         const merged = Array.from(map.values()).sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -204,7 +140,7 @@ export default function CallsView({
         setCalls(merged);
       } catch (e) {
         console.error('Call log load failed:', e);
-        if (isMounted) setCalls(SEED_CALLS);
+        if (isMounted) setCalls([]);
       } finally {
         if (isMounted) setLoading(false);
       }
