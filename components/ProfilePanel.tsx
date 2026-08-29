@@ -12,6 +12,7 @@ import {
   UserPlus,
   UserCheck,
   MessageCircle,
+  Users,
 } from 'lucide-react';
 import {
   updateProfileImageAction,
@@ -38,6 +39,17 @@ interface Props {
   onOpenUpload?: (type: 'single_image' | 'reel') => void;
 }
 
+const PASTEL_AVATAR_BGS = ['#FFF3CD', '#E0F2FE', '#FCE7F3', '#FEF9C3', '#EDE9FE', '#DCFCE7'];
+function getPastelAvatarBg(key: string): string {
+  if (!key) return PASTEL_AVATAR_BGS[0];
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash << 5) - hash + key.charCodeAt(i);
+    hash |= 0;
+  }
+  return PASTEL_AVATAR_BGS[Math.abs(hash) % PASTEL_AVATAR_BGS.length];
+}
+
 export default function ProfilePanel({
   isOpen,
   onClose,
@@ -58,6 +70,9 @@ export default function ProfilePanel({
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
 
+  // Followers / Following list view tab ('followers' | 'following' | null)
+  const [listTab, setListTab] = useState<'followers' | 'following' | null>(null);
+
   // Follow State for Other User
   const [isFollowing, setIsFollowing] = useState(false);
   const [hasSentRequest, setHasSentRequest] = useState(false);
@@ -71,11 +86,13 @@ export default function ProfilePanel({
   const isSelf = !targetUser || targetUser.id === (session?.user as any)?.id;
 
   const curEmail = (activeUserData?.email || session?.user?.email || '').toLowerCase().trim();
-  const [localUsername, setLocalUsername] = useState(
-    activeUserData?.username || (session?.user as any)?.username || (curEmail ? curEmail.split('@')[0] : 'user')
-  );
+  const curUsername = activeUserData?.username || (session?.user as any)?.username || (curEmail ? curEmail.split('@')[0] : 'user');
+  const [localUsername, setLocalUsername] = useState(curUsername);
   const curName = activeUserData?.name || session?.user?.name || 'User';
   const curImage = activeUserData?.image || session?.user?.image || '';
+
+  const followersList: any[] = activeUserData?.followers || [];
+  const followingList: any[] = activeUserData?.following || [];
 
   // Sync counts and username on user change
   useEffect(() => {
@@ -239,7 +256,7 @@ export default function ProfilePanel({
               </button>
             )}
             <h1 className="text-[24px] font-black text-white tracking-tight leading-tight">
-              {isSelf ? 'Profile' : curName}
+              {isSelf ? 'Profile' : (activeUserData?.username || curName)}
             </h1>
           </div>
 
@@ -253,7 +270,8 @@ export default function ProfilePanel({
                   if (isEditing) {
                     handleSaveUsername();
                   } else {
-                    setUsernameInput(localUsername);
+                    setListTab(null);
+                    setUsernameInput(localUsername || curUsername);
                     setUsernameError(null);
                     setIsEditing(true);
                   }
@@ -286,7 +304,7 @@ export default function ProfilePanel({
               />
             ) : (
               <span className="text-3xl font-black text-white">
-                {curName.charAt(0)}
+                {(localUsername || curName).charAt(0).toUpperCase()}
               </span>
             )}
             {isUploadingAvatar && (
@@ -309,7 +327,7 @@ export default function ProfilePanel({
           )}
         </div>
 
-        {/* User Details (Displays Username) */}
+        {/* User Details (Username displayed under profile pic) */}
         <h2 className="text-[20px] font-bold text-white mt-3 leading-tight text-center tracking-tight">
           {isSelf ? (localUsername || curUsername) : (activeUserData?.username || curName)}
         </h2>
@@ -321,7 +339,7 @@ export default function ProfilePanel({
         <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-1 mb-1 shrink-0" />
 
         {isEditing ? (
-          /* ── EDIT MODE: Clean Username Input Field inside White Box ── */
+          /* ── 1. EDIT MODE: Clean Username Input Field inside White Box ── */
           <div className="w-full flex flex-col gap-3.5 mt-2 animate-in fade-in duration-200">
             <div className="flex flex-col gap-1.5">
               <label className="text-[13px] font-bold text-zinc-700 uppercase tracking-wider">
@@ -375,19 +393,131 @@ export default function ProfilePanel({
               </button>
             </div>
           </div>
+        ) : listTab !== null ? (
+          /* ── 2. FOLLOWERS / FOLLOWING LIST VIEW INSIDE WHITE BOX ── */
+          <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
+            {/* Header inside White Box with Frameless Back Button */}
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-1">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setListTab(null);
+                  }}
+                  className="p-1.5 -ml-1.5 text-zinc-800 hover:text-zinc-600 active:scale-95 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none bg-transparent"
+                  title="Back to profile"
+                  aria-label="Back to profile"
+                >
+                  <ChevronLeft className="w-5 h-5 text-zinc-800" strokeWidth={2.4} />
+                </button>
+                <h3 className="text-[17px] font-bold text-zinc-900 tracking-tight">
+                  {listTab === 'followers' ? 'Followers' : 'Following'}
+                </h3>
+              </div>
+
+              <span className="text-xs font-bold text-zinc-400">
+                {listTab === 'followers' ? followerCount : followingCount}
+              </span>
+            </div>
+
+            {/* User List */}
+            <div className="flex flex-col gap-2 overflow-y-auto no-scrollbar">
+              {(listTab === 'followers' ? followersList : followingList).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center text-zinc-400">
+                  <div className="w-14 h-14 rounded-full bg-zinc-100 flex items-center justify-center mb-2.5">
+                    <Users className="w-6 h-6 text-zinc-300" />
+                  </div>
+                  <span className="text-[14px] font-bold text-zinc-700">
+                    {listTab === 'followers' ? 'No Followers Yet' : 'Not Following Anyone'}
+                  </span>
+                  <span className="text-xs text-zinc-400 mt-0.5">
+                    {listTab === 'followers' ? 'When users follow you, they will appear here.' : 'Users you follow will appear here.'}
+                  </span>
+                </div>
+              ) : (
+                (listTab === 'followers' ? followersList : followingList).map((userItem: any) => {
+                  const itemUsername = userItem.username || (userItem.email ? userItem.email.split('@')[0] : 'user');
+                  const itemName = userItem.name || itemUsername;
+                  const itemBg = getPastelAvatarBg(userItem.id || itemUsername);
+
+                  return (
+                    <div
+                      key={userItem.id || itemUsername}
+                      onClick={() => {
+                        triggerHaptic('light');
+                        onClose();
+                        onOpenChat?.(userItem);
+                      }}
+                      className="w-full p-3 rounded-2xl bg-zinc-50 hover:bg-zinc-100 active:scale-[0.99] border border-zinc-100 flex items-center justify-between gap-3 cursor-pointer transition-all shadow-2xs"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-800 text-sm font-bold shrink-0 shadow-xs overflow-hidden"
+                          style={{ backgroundColor: itemBg }}
+                        >
+                          {userItem.image ? (
+                            <img src={userItem.image} alt={itemName} className="w-full h-full object-cover" />
+                          ) : (
+                            <span>{itemUsername.charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[14.5px] font-bold text-zinc-900 truncate">
+                            {itemUsername}
+                          </span>
+                          {itemName !== itemUsername && (
+                            <span className="text-xs text-zinc-400 truncate font-medium">
+                              {itemName}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          triggerHaptic('light');
+                          onClose();
+                          onOpenChat?.(userItem);
+                        }}
+                        className="px-3.5 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition-all active:scale-95 shrink-0"
+                      >
+                        Message
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         ) : (
-          /* ── NORMAL MODE: Followers/Following + Logout directly underneath ── */
+          /* ── 3. NORMAL MODE: Followers/Following Capsules + Logout directly underneath ── */
           <>
             {/* Followers & Following Round Capsules */}
             <div className="flex items-center justify-center gap-4 w-full">
-              <div className="flex-1 py-4 px-6 rounded-full bg-zinc-50 border border-zinc-100 flex flex-col items-center justify-center shadow-xs">
+              <div
+                onClick={() => {
+                  triggerHaptic('light');
+                  setListTab('followers');
+                }}
+                className="flex-1 py-4 px-6 rounded-full bg-zinc-50 hover:bg-zinc-100 active:scale-95 transition-all border border-zinc-100 flex flex-col items-center justify-center shadow-xs cursor-pointer"
+              >
                 <span className="text-[22px] font-black text-zinc-900 leading-tight">
                   {followerCount}
                 </span>
                 <span className="text-[12px] text-zinc-500 font-medium mt-0.5">Followers</span>
               </div>
 
-              <div className="flex-1 py-4 px-6 rounded-full bg-zinc-50 border border-zinc-100 flex flex-col items-center justify-center shadow-xs">
+              <div
+                onClick={() => {
+                  triggerHaptic('light');
+                  setListTab('following');
+                }}
+                className="flex-1 py-4 px-6 rounded-full bg-zinc-50 hover:bg-zinc-100 active:scale-95 transition-all border border-zinc-100 flex flex-col items-center justify-center shadow-xs cursor-pointer"
+              >
                 <span className="text-[22px] font-black text-zinc-900 leading-tight">
                   {followingCount}
                 </span>
