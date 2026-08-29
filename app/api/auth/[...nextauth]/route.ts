@@ -116,28 +116,38 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
 
-    // ── JWT: written once on sign-in, no extra DB calls after ────────────────
-    async jwt({ token, user, account }) {
+    // ── JWT: written once on sign-in, updated on profile edit ────────────────
+    async jwt({ token, user, account, trigger, session }) {
       if (user) {
         if (account?.provider === "google" && user.email) {
-          // Fetch real DB user ID for Google user
+          // Fetch real DB user ID and username for Google user
           try {
             const dbUser = await prisma.user.findUnique({
               where: { email: user.email },
-              select: { id: true },
+              select: { id: true, username: true },
             });
             token.id = dbUser?.id ?? user.id;
+            token.username = dbUser?.username ?? (user as any).username ?? null;
           } catch {
             token.id = user.id;
+            token.username = (user as any).username ?? null;
           }
         } else {
           token.id = user.id;
+          token.username = (user as any).username ?? null;
         }
         token.email = user.email;
         token.name = user.name;
         token.picture = user.image ?? null;
         token.provider = account?.provider ?? "credentials";
       }
+
+      if (trigger === "update" && session) {
+        if (session.name) token.name = session.name;
+        if (session.username) token.username = session.username;
+        if (session.image) token.picture = session.image;
+      }
+
       return token;
     },
 
@@ -145,6 +155,7 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         (session.user as any).id = token.id;
         (session.user as any).provider = token.provider;
+        (session.user as any).username = token.username;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
         session.user.image = token.picture as string;

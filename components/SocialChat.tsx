@@ -2605,6 +2605,30 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     requestsRef.current = requests;
   }, [selectedUser, session, users, requests]);
 
+  // Listen for real-time user profile updates from ProfilePanel
+  useEffect(() => {
+    const handleProfileUpdate = (e: any) => {
+      const { username, name, image } = e.detail || {};
+      if (sessionRef.current?.user) {
+        const userObj = sessionRef.current.user as any;
+        if (username) userObj.username = username;
+        if (name) userObj.name = name;
+        if (image) userObj.image = image;
+
+        if (socketRef.current?.connected) {
+          socketRef.current.emit('identify', {
+            email: userObj.email ? userObj.email.toLowerCase().trim() : undefined,
+            userId: userObj.id,
+            username: username || userObj.username,
+            name: name || userObj.name
+          });
+        }
+      }
+    };
+    window.addEventListener('user_profile_updated', handleProfileUpdate);
+    return () => window.removeEventListener('user_profile_updated', handleProfileUpdate);
+  }, []);
+
   const handleSelectTheme = async (theme: ChatTheme) => {
     if (!selectedUser) return;
     const currentUserName = session?.user?.name || (session?.user?.email ? session.user.email.split('@')[0] : 'Someone');
@@ -2853,7 +2877,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           const userObj = sessionRef.current.user as any;
           newSocket.emit('identify', {
             email: userObj.email ? userObj.email.toLowerCase().trim() : undefined,
-            userId: userObj.id
+            userId: userObj.id,
+            username: userObj.username || undefined,
+            name: userObj.name || undefined
           });
         }
         // ── Refresh lastSeenMap from DB only on true reconnect after being disconnected ──

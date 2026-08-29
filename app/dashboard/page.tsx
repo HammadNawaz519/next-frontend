@@ -205,6 +205,25 @@ export default function DashboardPage() {
   }, [isProfileOpen, status, fullUser]);
 
   useEffect(() => {
+    const handleProfileUpdate = (e: any) => {
+      const { username, name, image } = e.detail || {};
+      setFullUser((prev: any) => {
+        if (!prev) return prev;
+        const updated = {
+          ...prev,
+          ...(username ? { username } : {}),
+          ...(name ? { name } : {}),
+          ...(image ? { image } : {}),
+        };
+        try { localStorage.setItem('cached_profile_details', JSON.stringify(updated)); } catch {}
+        return updated;
+      });
+    };
+    window.addEventListener('user_profile_updated', handleProfileUpdate);
+    return () => window.removeEventListener('user_profile_updated', handleProfileUpdate);
+  }, []);
+
+  useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/');
     }

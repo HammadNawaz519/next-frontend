@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { triggerHaptic } from '@/lib/haptics';
 import {
   Camera,
@@ -60,6 +60,7 @@ export default function ProfilePanel({
   onToggleFollow,
   onOpenChat,
 }: Props) {
+  const { update: updateSession } = useSession();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -195,6 +196,37 @@ export default function ProfilePanel({
         setLocalUsername(cleaned);
         setIsEditing(false);
         showToast('Username updated successfully!');
+
+        // 1. Update localStorage cached details
+        try {
+          const cached = localStorage.getItem('cached_profile_details');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            parsed.username = cleaned;
+            localStorage.setItem('cached_profile_details', JSON.stringify(parsed));
+          }
+          const userMeta = localStorage.getItem('cached_user_meta');
+          if (userMeta) {
+            const parsedMeta = JSON.parse(userMeta);
+            parsedMeta.username = cleaned;
+            localStorage.setItem('cached_user_meta', JSON.stringify(parsedMeta));
+          }
+        } catch (e) {}
+
+        // 2. Broadcast globally so SocialChat, Stories, Search, etc. update immediately
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('user_profile_updated', {
+            detail: { username: cleaned, name: res.user?.name, image: res.user?.image }
+          }));
+        }
+
+        // 3. Update NextAuth session
+        try {
+          if (updateSession) {
+            updateSession({ username: cleaned });
+          }
+        } catch (e) {}
+
         refreshProfile?.();
       }
     } catch (err) {
