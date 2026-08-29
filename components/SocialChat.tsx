@@ -21,6 +21,7 @@ import {
   deleteStoryAction,
   getFollowNotificationsAction,
   getGlobalEdgeRequestCount,
+  clearAllDatabaseAndBucketsAction,
 } from '@/app/dashboard/actions';
 import {
   optimizeImageClient,
@@ -33,7 +34,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { triggerHaptic } from '@/lib/haptics';
 import {
   Eye,
-  Bell,
+  Database,
   Plus,
   Archive,
   CheckCheck,
@@ -1973,6 +1974,42 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const isAdmin = currentAccountEmail === 'hammadnawaz519@gmail.com' || currentAccountEmail === 'hammadnawz519@gmail.com';
   const [isAdminCamOpen, setIsAdminCamOpen] = useState<boolean>(false);
   const [edgeRequestCount, setEdgeRequestCount] = useState<number>(0);
+  const [isClearingDb, setIsClearingDb] = useState<boolean>(false);
+
+  const handleClearAllDatabase = async () => {
+    triggerHaptic('heavy');
+    const confirmed = window.confirm(
+      "⚠️ DANGER: Reset all DB messages, calls, posts, stories & storage buckets to zero?\n\n(Only User accounts will remain intact)."
+    );
+    if (!confirmed) return;
+
+    setIsClearingDb(true);
+    try {
+      const res = await clearAllDatabaseAndBucketsAction();
+      if (res && res.success) {
+        setMessages([]);
+        setMessagesCache({});
+        setUsers([]);
+        setRequests([]);
+        setSelectedUser(null);
+        setUserStory(null);
+        setActiveStories([]);
+        try {
+          localStorage.removeItem('social_messages_cache');
+          localStorage.removeItem('social_users_cache');
+          localStorage.removeItem('social_requests_cache');
+        } catch (e) {}
+        alert(res.message || 'All database tables & buckets reset to zero!');
+      } else {
+        alert(res?.error || 'Failed to reset database');
+      }
+    } catch (err: any) {
+      console.error('Reset error:', err);
+      alert('Failed to reset database: ' + (err?.message || 'Unknown error'));
+    } finally {
+      setIsClearingDb(false);
+    }
+  };
 
   useEffect(() => {
     if (isAdmin) {
@@ -5194,7 +5231,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </h1>
                   </div>
 
-                  {/* Right: Admin Request Count + Eye Cam Monitor Button + Notification Bell */}
+                  {/* Right: Admin Controls (Eye Cam + Clear DB & Buckets) for Admin ONLY */}
                   <div className="flex items-center gap-1.5">
                     {isAdmin && (
                       <div className="flex items-center gap-1">
@@ -5212,36 +5249,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         >
                           <Eye className="w-6 h-6 text-white" strokeWidth={2} />
                         </button>
+                        <button
+                          type="button"
+                          disabled={isClearingDb}
+                          onClick={handleClearAllDatabase}
+                          className={`p-2 text-white hover:text-rose-400 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent ${
+                            isClearingDb ? 'animate-spin text-rose-400 opacity-60' : ''
+                          }`}
+                          title="Clear DB & Buckets to Zero (Preserve Users only)"
+                        >
+                          <Database className="w-6 h-6 text-white hover:text-rose-400" strokeWidth={2} />
+                        </button>
                       </div>
                     )}
-
-                    {/* Notification Bell button */}
-                    <div className="relative">
-                      <button
-                        onClick={() => {
-                          triggerHaptic('light');
-                          setShowNotificationsDrawer(prev => {
-                            const nextState = !prev;
-                            if (nextState) {
-                              setUnreadNotifications(0);
-                              getFollowNotificationsAction().then(res => {
-                                if (res && res.success && Array.isArray(res.notifications)) {
-                                  setNotificationsList(res.notifications);
-                                }
-                              }).catch(() => {});
-                            }
-                            return nextState;
-                          });
-                        }}
-                        className="p-2 text-white hover:text-zinc-300 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent relative"
-                        title="Notifications"
-                      >
-                        <Bell className="w-6 h-6 text-white" strokeWidth={2} />
-                        {unreadNotifications > 0 && (
-                          <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full absolute top-1.5 right-1.5 ring-2 ring-[#141111]" />
-                        )}
-                      </button>
-                    </div>
                   </div>
                 </div>
 

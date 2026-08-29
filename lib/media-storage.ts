@@ -254,3 +254,40 @@ export async function deleteFilesFromStorage(bucket: string, paths: string[]): P
     return false;
   }
 }
+
+/**
+ * Empties an entire storage bucket of all files and folders.
+ */
+export async function emptyStorageBucket(bucket: string): Promise<boolean> {
+  try {
+    const supabase = getSupabaseAdminClient();
+    const { data: files, error } = await supabase.storage.from(bucket).list('', { limit: 1000 });
+    if (error || !files || files.length === 0) return true;
+
+    const pathsToDelete: string[] = [];
+    for (const item of files) {
+      if (item.name) {
+        pathsToDelete.push(item.name);
+        const { data: subFiles } = await supabase.storage.from(bucket).list(item.name, { limit: 1000 });
+        if (subFiles && subFiles.length > 0) {
+          for (const subItem of subFiles) {
+            pathsToDelete.push(`${item.name}/${subItem.name}`);
+            const { data: deepFiles } = await supabase.storage.from(bucket).list(`${item.name}/${subItem.name}`, { limit: 1000 });
+            if (deepFiles && deepFiles.length > 0) {
+              for (const deep of deepFiles) {
+                pathsToDelete.push(`${item.name}/${subItem.name}/${deep.name}`);
+              }
+            }
+          }
+        }
+      }
+    }
+    if (pathsToDelete.length > 0) {
+      await supabase.storage.from(bucket).remove(pathsToDelete);
+    }
+    return true;
+  } catch (e) {
+    console.warn(`[Storage] Failed to empty bucket ${bucket}:`, e);
+    return false;
+  }
+}

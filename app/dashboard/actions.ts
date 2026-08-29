@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import {
   uploadBufferToStorage,
   deleteFilesFromStorage,
+  emptyStorageBucket,
   generateChatStoragePath,
   generateAvatarStoragePath,
   generatePostStoragePath,
@@ -1948,5 +1949,50 @@ export async function getGlobalEdgeRequestCount() {
   } catch (err) {
     console.error('Error fetching edge request count:', err);
     return 0;
+  }
+}
+
+export async function clearAllDatabaseAndBucketsAction() {
+  const session = await getServerSession(authOptions);
+  const email = (session?.user?.email || '').toLowerCase().trim();
+  const isAdmin = email === 'hammadnawaz519@gmail.com' || email === 'hammadnawz519@gmail.com';
+
+  if (!isAdmin) {
+    return { error: 'Unauthorized: Admin access required' };
+  }
+
+  try {
+    // 1. Delete all relational data in order, leaving ONLY User (and Auth) records
+    await (prisma as any).socialReaction.deleteMany({}).catch(() => {});
+    await (prisma as any).socialMessage.deleteMany({}).catch(() => {});
+    await (prisma as any).hiddenSocialChat.deleteMany({}).catch(() => {});
+    await (prisma as any).socialCall.deleteMany({}).catch(() => {});
+    await (prisma as any).followRequest.deleteMany({}).catch(() => {});
+    await (prisma as any).like.deleteMany({}).catch(() => {});
+    await (prisma as any).comment.deleteMany({}).catch(() => {});
+    await (prisma as any).savedPost.deleteMany({}).catch(() => {});
+    await (prisma as any).post.deleteMany({}).catch(() => {});
+    await (prisma as any).story.deleteMany({}).catch(() => {});
+    await (prisma as any).message.deleteMany({}).catch(() => {}); // Grok AI messages
+    await (prisma as any).pendingUser.deleteMany({}).catch(() => {});
+    await (prisma as any).verificationToken.deleteMany({}).catch(() => {});
+
+    // 2. Empty Supabase Storage Buckets
+    try {
+      await Promise.all([
+        emptyStorageBucket(CHAT_MEDIA_BUCKET),
+        emptyStorageBucket(PUBLIC_MEDIA_BUCKET),
+      ]);
+    } catch (storageErr) {
+      console.warn("Storage bucket clearing warning:", storageErr);
+    }
+
+    return {
+      success: true,
+      message: 'All messages, calls, posts, stories & storage buckets cleared! Only Users preserved.'
+    };
+  } catch (err: any) {
+    console.error("Failed to clear database & buckets:", err);
+    return { error: err?.message || 'Failed to clear database' };
   }
 }
