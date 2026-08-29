@@ -212,10 +212,12 @@ export default function SongPickerModal({
       {step === 'search' ? (
         /* ══════════════════════════════════════════════════════════════════════
            SCREEN 1: SEARCH MUSIC
+           Top: Dark Zinc with search input
+           Bottom: Rounded White Container with zinc outline song cards
            ══════════════════════════════════════════════════════════════════════ */
         <div className="flex-1 w-full max-w-lg mx-auto flex flex-col bg-[#141111] overflow-hidden sm:rounded-3xl sm:my-6 sm:border sm:border-zinc-800 shadow-2xl">
-          {/* Header */}
-          <div className="pt-12 sm:pt-6 px-4 pb-3 flex items-center gap-3 border-b border-zinc-800/80 bg-[#141111]">
+          {/* Top Dark Zinc Header */}
+          <div className="pt-14 sm:pt-6 px-4 pb-4 flex items-center gap-3 bg-[#141111] shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -232,20 +234,20 @@ export default function SongPickerModal({
 
             {/* Search Input */}
             <div className="flex-1 relative flex items-center">
-              <Search className="w-4 h-4 text-zinc-400 absolute left-3 pointer-events-none" />
+              <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 pointer-events-none" />
               <input
                 ref={searchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search songs, artists, hits..."
-                className="w-full pl-9 pr-8 py-2.5 rounded-full bg-zinc-900 border border-zinc-800 focus:border-[#9D4EDD] outline-none text-[14px] text-white placeholder:text-zinc-500 transition-all"
+                className="w-full pl-9 pr-8 py-2.5 rounded-full bg-zinc-900 border border-zinc-700/80 focus:border-[#9D4EDD] outline-none text-[14px] text-white placeholder:text-zinc-500 transition-all"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 text-zinc-500 hover:text-white"
+                  className="absolute right-3 text-zinc-500 hover:text-white cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -253,90 +255,97 @@ export default function SongPickerModal({
             </div>
           </div>
 
-          {/* Track List */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2 no-scrollbar">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-2.5 text-zinc-400">
-                <div className="w-7 h-7 border-2 border-zinc-700 border-t-[#9D4EDD] rounded-full animate-spin" />
-                <span className="text-xs font-medium">Searching music...</span>
-              </div>
-            ) : tracks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center text-zinc-500">
-                <Music className="w-10 h-10 text-zinc-600 mb-2 stroke-[1.5]" />
-                <span className="text-[14px] font-semibold text-zinc-300">No songs found</span>
-                <span className="text-xs text-zinc-500 mt-0.5">Try searching for another song or artist</span>
-              </div>
-            ) : (
-              tracks.map((track) => {
-                const isItemPlaying = previewTrackId === track.id && isPlaying;
+          {/* Bottom Rounded White Container */}
+          <div className="flex-1 bg-white rounded-t-[32px] sm:rounded-t-[36px] px-4 pt-3 pb-6 flex flex-col overflow-hidden shadow-[0_-10px_30px_rgba(0,0,0,0.15)] min-h-0">
+            {/* Top Pull Bar */}
+            <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto mb-3 shrink-0" />
 
-                return (
-                  <div
-                    key={track.id}
-                    onClick={() => handleSelectTrack(track)}
-                    className="w-full p-2.5 rounded-2xl bg-zinc-900/60 hover:bg-zinc-800/80 active:scale-[0.99] border border-zinc-800/60 flex items-center justify-between gap-3 cursor-pointer transition-all group"
-                  >
-                    {/* Artwork + Play overlay */}
-                    <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-zinc-800 shrink-0 shadow-sm">
-                      {track.artworkUrl ? (
-                        <img
-                          src={track.artworkUrl}
-                          alt={track.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-zinc-800 text-zinc-400">
-                          <Music className="w-5 h-5" />
-                        </div>
-                      )}
+            {/* Track List */}
+            <div className="flex-1 overflow-y-auto space-y-2.5 no-scrollbar pr-0.5">
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-2.5 text-zinc-400">
+                  <div className="w-7 h-7 border-2 border-zinc-300 border-t-[#9D4EDD] rounded-full animate-spin" />
+                  <span className="text-xs font-semibold text-zinc-600">Searching music...</span>
+                </div>
+              ) : tracks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center text-zinc-400">
+                  <Music className="w-10 h-10 text-zinc-300 mb-2 stroke-[1.5]" />
+                  <span className="text-[14px] font-bold text-zinc-800">No songs found</span>
+                  <span className="text-xs text-zinc-400 mt-0.5">Try searching for another song or artist</span>
+                </div>
+              ) : (
+                tracks.map((track) => {
+                  const isItemPlaying = previewTrackId === track.id && isPlaying;
 
-                      {/* Play Preview Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => handleToggleSearchPreview(track, e)}
-                        className={`absolute inset-0 flex items-center justify-center transition-all ${
-                          isItemPlaying
-                            ? 'bg-black/60 opacity-100'
-                            : 'bg-black/40 opacity-0 group-hover:opacity-100'
-                        }`}
-                      >
-                        {isItemPlaying ? (
-                          <Pause className="w-5 h-5 text-[#D8B4E2] fill-current" />
+                  return (
+                    <div
+                      key={track.id}
+                      onClick={() => handleSelectTrack(track)}
+                      className="w-full p-2.5 rounded-2xl bg-white hover:bg-zinc-50 active:scale-[0.99] border border-zinc-200 shadow-xs flex items-center justify-between gap-3 cursor-pointer transition-all group"
+                    >
+                      {/* Artwork + Play overlay */}
+                      <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-zinc-100 shrink-0 shadow-xs border border-zinc-100">
+                        {track.artworkUrl ? (
+                          <img
+                            src={track.artworkUrl}
+                            alt={track.title}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
-                          <Play className="w-5 h-5 text-white fill-current ml-0.5" />
+                          <div className="w-full h-full flex items-center justify-center bg-zinc-100 text-zinc-400">
+                            <Music className="w-5 h-5" />
+                          </div>
                         )}
-                      </button>
-                    </div>
 
-                    {/* Song Details */}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-[14px] font-bold text-zinc-100 truncate leading-tight group-hover:text-white">
-                        {track.title}
-                      </h4>
-                      <p className="text-[12px] text-zinc-400 truncate mt-0.5 font-medium">
-                        {track.artist}
-                      </p>
-                    </div>
+                        {/* Play Preview Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleSearchPreview(track, e)}
+                          className={`absolute inset-0 flex items-center justify-center transition-all ${
+                            isItemPlaying
+                              ? 'bg-black/60 opacity-100'
+                              : 'bg-black/40 opacity-0 group-hover:opacity-100'
+                          }`}
+                        >
+                          {isItemPlaying ? (
+                            <Pause className="w-5 h-5 text-[#D8B4E2] fill-current" />
+                          ) : (
+                            <Play className="w-5 h-5 text-white fill-current ml-0.5" />
+                          )}
+                        </button>
+                      </div>
 
-                    {/* Select Badge */}
-                    <div className="px-3 py-1.5 rounded-full bg-white/10 group-hover:bg-white text-white group-hover:text-zinc-950 text-[11.5px] font-bold transition-all shrink-0">
-                      Select
+                      {/* Song Details */}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-[14px] font-bold text-zinc-900 truncate leading-tight group-hover:text-black">
+                          {track.title}
+                        </h4>
+                        <p className="text-[12px] text-zinc-500 truncate mt-0.5 font-medium">
+                          {track.artist}
+                        </p>
+                      </div>
+
+                      {/* Select Pill */}
+                      <div className="px-3.5 py-1.5 rounded-full bg-zinc-900 group-hover:bg-zinc-800 text-white text-[11.5px] font-bold transition-all shrink-0 shadow-xs">
+                        Select
+                      </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       ) : (
         /* ══════════════════════════════════════════════════════════════════════
            SCREEN 2: SONG TRIMMER (VIDEO CALL UI STYLE)
            Upper White Container + Bottom Dark Zinc Bar
+           With Safe-Area Spacing away from Mobile Notification Bar!
            ══════════════════════════════════════════════════════════════════════ */
         <div className="flex-1 w-full max-w-lg mx-auto flex flex-col bg-[#141111] overflow-hidden sm:rounded-3xl sm:my-6 sm:border sm:border-zinc-800 shadow-2xl">
           {/* ── 1. Upper White Box: Artwork, Title, Frameless Back & Send SVG ── */}
-          <div className="flex-1 bg-white rounded-t-[32px] sm:rounded-t-[36px] p-6 flex flex-col justify-between items-center relative shadow-md">
-            {/* Top Navigation Row */}
+          <div className="flex-1 bg-white rounded-t-[32px] sm:rounded-t-[36px] pt-14 sm:pt-6 px-6 pb-6 flex flex-col justify-between items-center relative shadow-md">
+            {/* Top Navigation Row (Safely below mobile notification/status bar) */}
             <div className="w-full flex items-center justify-between">
               {/* Top Left: Frameless Back Button (No border, No outline) */}
               <button
@@ -378,7 +387,7 @@ export default function SongPickerModal({
             </div>
 
             {/* Album Artwork & Song Details */}
-            <div className="flex flex-col items-center text-center my-auto">
+            <div className="flex flex-col items-center text-center my-auto py-2">
               <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-3xl overflow-hidden shadow-2xl ring-4 ring-zinc-100 bg-zinc-900">
                 {selectedTrack?.artworkUrl ? (
                   <img
