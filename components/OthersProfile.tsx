@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Share2, UserPlus, UserCheck, Star, Heart } from 'lucide-react';
+import { ChevronLeft, Share2, UserPlus, UserCheck, Star, Heart, Trees } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 import { getUserPublicProfile, toggleFollowUser } from '@/app/dashboard/actions';
 
@@ -138,23 +138,23 @@ export default function OthersProfile({
       
       {/* Floating Toast Notification */}
       {toastMessage && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-zinc-900/90 backdrop-blur-md border border-zinc-700 text-xs font-semibold text-white shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-zinc-900/90 backdrop-blur-md border-0 text-xs font-semibold text-white shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
           {toastMessage}
         </div>
       )}
 
-      {/* ── 1. UPPER WHITE CONTAINER (REVERSED CALL LAYOUT, CLEAN & BALANCED) ── */}
+      {/* ── 1. UPPER WHITE CONTAINER (REVERSED CALL LAYOUT, CLEAN, BALANCED & SPACIOUS) ── */}
       <div className="w-full flex-1 bg-white rounded-[32px] sm:rounded-[36px] shadow-[0_15px_45px_rgba(0,0,0,0.3)] relative overflow-hidden flex flex-col justify-between p-5 min-h-0">
         
         {/* Top Header Bar Inside White Card (Borderless, No Outline) */}
-        <div className="w-full flex items-center justify-between z-20 shrink-0 mb-2">
+        <div className="w-full flex items-center justify-between z-20 shrink-0 mb-3">
           {/* Borderless Back Button */}
           <button
             onClick={() => {
               triggerHaptic('light');
               onClose();
             }}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-zinc-100/90 hover:bg-zinc-200 text-zinc-800 active:scale-90 transition-all cursor-pointer shadow-xs border-0 outline-none"
+            className="w-11 h-11 rounded-full flex items-center justify-center bg-zinc-100/90 hover:bg-zinc-200 text-zinc-800 active:scale-90 transition-all cursor-pointer border-0 outline-none ring-0"
             title="Back"
           >
             <ChevronLeft className="w-5 h-5 text-zinc-800" strokeWidth={2.5} />
@@ -165,24 +165,37 @@ export default function OthersProfile({
           </span>
 
           {/* Clean spacer on right */}
-          <div className="w-10 h-10" />
+          <div className="w-11 h-11" />
         </div>
 
-        {/* ── CARD CONTENT (LARGE 3D BANNER + LARGE AVATAR + DETAILS + 3-COL STATS) ── */}
-        <div className="flex-1 flex flex-col justify-between overflow-y-auto no-scrollbar py-1">
+        {/* ── CARD CONTENT (FOREST CANOPY COVER + AVATAR + DETAILS + LARGE STATS + LIKE BUTTON) ── */}
+        <div className="flex-1 flex flex-col justify-between overflow-y-auto no-scrollbar py-1 min-h-0">
           
-          {/* Cover / Portfolio Art Banner */}
-          <div className="w-full h-40 sm:h-48 rounded-[26px] overflow-hidden relative shadow-inner bg-gradient-to-tr from-[#8B5CF6] via-[#6366F1] to-[#EC4899] flex items-center justify-center shrink-0">
-            {/* 3D abstract geometric sphere/torus shapes */}
-            <div className="absolute -right-8 -bottom-8 w-36 h-36 rounded-full bg-orange-400/80 blur-xs" />
-            <div className="absolute left-8 top-6 w-20 h-20 rounded-full bg-pink-300/40 blur-xs" />
-            <div className="absolute right-14 top-8 w-14 h-14 rotate-45 bg-purple-300/30 backdrop-blur-md rounded-2xl" />
+          {/* Deep Emerald Forest Theme Banner (Takes Remaining Space Gracefully) */}
+          <div className="w-full flex-1 min-h-[140px] sm:min-h-[180px] rounded-[28px] overflow-hidden relative shadow-inner bg-gradient-to-br from-[#064E3B] via-[#047857] to-[#022C22] flex items-center justify-center shrink-0">
+            {/* Ambient organic glowing tree canopies and emerald bokeh lights */}
+            <div className="absolute -right-6 -bottom-10 w-44 h-44 rounded-full bg-emerald-400/30 blur-xl" />
+            <div className="absolute left-6 -top-8 w-36 h-36 rounded-full bg-teal-300/25 blur-lg" />
+            <div className="absolute right-12 top-6 w-20 h-20 rounded-full bg-lime-300/20 blur-md" />
+            
+            {/* Layered botanical / forest silhouettes */}
+            <div className="absolute inset-0 opacity-15 flex items-end justify-between px-6 pb-2 pointer-events-none">
+              <Trees className="w-16 h-16 text-emerald-200" />
+              <Trees className="w-20 h-20 text-emerald-100" />
+              <Trees className="w-14 h-14 text-emerald-200" />
+            </div>
+
+            {/* Glowing subtle center mist */}
+            <div className="relative z-10 flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/25 backdrop-blur-md text-emerald-100 text-xs font-semibold">
+              <Trees className="w-3.5 h-3.5 text-emerald-300" />
+              <span>Wilderness Atmosphere</span>
+            </div>
           </div>
 
-          {/* Overlapping Avatar */}
-          <div className="relative flex items-end px-3 -mt-14 mb-2">
+          {/* Overlapping Avatar (Moved down with breathing space) */}
+          <div className="relative flex items-end px-4 -mt-12 mb-1 shrink-0">
             <div
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden flex items-center justify-center text-4xl font-black text-zinc-900 shadow-2xl border-4 border-white relative z-10 shrink-0"
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden flex items-center justify-center text-3xl sm:text-4xl font-black text-zinc-900 shadow-2xl border-4 border-white relative z-10 shrink-0"
               style={{ backgroundColor: avatarBg }}
             >
               {profileData?.image && profileData.image.length > 5 ? (
@@ -198,8 +211,8 @@ export default function OthersProfile({
             </div>
           </div>
 
-          {/* Name & Headline */}
-          <div className="px-3 space-y-1 mb-3">
+          {/* Name & Headline (Moved comfortably down with clear vertical separation) */}
+          <div className="px-4 pt-2 pb-1 space-y-1 mb-3 shrink-0">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight truncate">
               {displayName}
             </h2>
@@ -208,41 +221,41 @@ export default function OthersProfile({
             </p>
           </div>
 
-          {/* 3-Column Stats Row (Exact Layout from Design with Balanced Large Numbers) */}
-          <div className="w-full bg-zinc-50/90 border border-zinc-100 rounded-2xl p-3.5 flex items-center justify-around text-center mb-3 shadow-2xs">
+          {/* 3-Column Stats Row (Large, Prominent & Balanced) */}
+          <div className="w-full bg-zinc-50/90 border border-zinc-100 rounded-2xl p-4 sm:p-4.5 flex items-center justify-around text-center mb-3.5 shadow-2xs shrink-0">
             {/* Column 1: Rating (Follower to Like ratio) */}
             <div className="flex-1 flex flex-col items-center">
-              <div className="flex items-center gap-1.5 text-lg sm:text-xl font-extrabold text-zinc-900">
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+              <div className="flex items-center gap-1.5 text-xl sm:text-2xl font-black text-zinc-900">
+                <Star className="w-4.5 h-4.5 fill-amber-400 text-amber-400" />
                 <span>{rating}</span>
               </div>
-              <span className="text-[11px] font-semibold text-zinc-400 mt-0.5 tracking-wider">
+              <span className="text-[12px] font-bold text-zinc-400 mt-1 uppercase tracking-wider">
                 rating
               </span>
             </div>
 
             {/* Divider */}
-            <div className="w-px h-8 bg-zinc-200" />
+            <div className="w-px h-9 bg-zinc-200" />
 
             {/* Column 2: Followers */}
             <div className="flex-1 flex flex-col items-center">
-              <span className="text-lg sm:text-xl font-extrabold text-zinc-900">
+              <span className="text-xl sm:text-2xl font-black text-zinc-900">
                 {followersCount > 999 ? `${(followersCount / 1000).toFixed(1)}k` : followersCount}
               </span>
-              <span className="text-[11px] font-semibold text-zinc-400 mt-0.5 tracking-wider">
+              <span className="text-[12px] font-bold text-zinc-400 mt-1 uppercase tracking-wider">
                 followers
               </span>
             </div>
 
             {/* Divider */}
-            <div className="w-px h-8 bg-zinc-200" />
+            <div className="w-px h-9 bg-zinc-200" />
 
             {/* Column 3: Following */}
             <div className="flex-1 flex flex-col items-center">
-              <span className="text-lg sm:text-xl font-extrabold text-zinc-900">
+              <span className="text-xl sm:text-2xl font-black text-zinc-900">
                 {followingCount > 999 ? `${(followingCount / 1000).toFixed(1)}k` : followingCount}
               </span>
-              <span className="text-[11px] font-semibold text-zinc-400 mt-0.5 tracking-wider">
+              <span className="text-[12px] font-bold text-zinc-400 mt-1 uppercase tracking-wider">
                 following
               </span>
             </div>
@@ -251,16 +264,16 @@ export default function OthersProfile({
           {/* Big Like Button at the bottom of the white card */}
           <button
             onClick={handleToggleLike}
-            className={`w-full py-4 rounded-full font-bold text-[15px] transition-all shadow-md flex items-center justify-center gap-2.5 cursor-pointer border-0 outline-none active:scale-98 ${
+            className={`w-full py-4 sm:py-4.5 rounded-full font-bold text-[15px] sm:text-[16px] transition-all shadow-md flex items-center justify-center gap-2.5 cursor-pointer border-0 outline-none ring-0 active:scale-98 shrink-0 ${
               isLiked
                 ? 'bg-zinc-900 text-[#EC4899]'
                 : 'bg-zinc-950 hover:bg-zinc-800 text-white'
             }`}
           >
             <Heart className={`w-5 h-5 ${isLiked ? 'fill-[#EC4899] text-[#EC4899]' : 'text-white'}`} />
-            <span>{isLiked ? 'Liked' : 'Like'}</span>
+            <span>{isLiked ? 'Liked' : 'Like Profile'}</span>
             {likesCount > 0 && (
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/15 ml-1">
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-white/15 ml-1">
                 {likesCount}
               </span>
             )}
@@ -270,38 +283,38 @@ export default function OthersProfile({
 
       </div>
 
-      {/* ── 2. LOWER DARK ZINC CONTAINER (SHARE & FOLLOW BUTTONS) ── */}
-      <div className="w-full bg-[#141111] border border-zinc-800/80 rounded-[32px] sm:rounded-[36px] py-4 px-5 mt-4 shadow-[0_10px_35px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3 shrink-0">
+      {/* ── 2. LOWER DARK ZINC CONTAINER (LARGE SHARE & FOLLOW BUTTONS WITHOUT OUTLINES) ── */}
+      <div className="w-full bg-[#141111] border-0 outline-none ring-0 rounded-[32px] sm:rounded-[36px] py-4 sm:py-5 px-5 mt-4 shadow-[0_10px_35px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3.5 shrink-0">
         
-        {/* Left: Share Button */}
+        {/* Left: Big Share Button (No outline, no border) */}
         <button
           onClick={handleShare}
-          className="flex-1 py-3.5 rounded-full bg-zinc-800/90 hover:bg-zinc-700 active:scale-95 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer border border-zinc-700/60 shadow-md outline-none"
+          className="flex-1 py-4 sm:py-4.5 rounded-full bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-white text-[15px] font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer border-0 outline-none ring-0 shadow-none"
           title="Share Profile"
         >
-          <Share2 className="w-4 h-4 text-zinc-300" />
+          <Share2 className="w-4.5 h-4.5 text-zinc-300" />
           <span>Share</span>
         </button>
 
-        {/* Right: Follow / Unfollow Button */}
+        {/* Right: Big Follow / Unfollow Button (No outline, no border) */}
         <button
           onClick={handleToggleFollow}
           disabled={loadingFollow}
-          className={`flex-1 py-3.5 rounded-full text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md outline-none active:scale-95 ${
+          className={`flex-1 py-4 sm:py-4.5 rounded-full text-[15px] font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer border-0 outline-none ring-0 shadow-none active:scale-95 ${
             isFollowing
-              ? 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700 border border-zinc-700/80'
-              : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border-0'
+              ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+              : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900'
           }`}
           title={isFollowing ? 'Unfollow' : 'Follow'}
         >
           {isFollowing ? (
             <>
-              <UserCheck className="w-4 h-4 text-zinc-300" />
+              <UserCheck className="w-4.5 h-4.5 text-zinc-300" />
               <span>Following</span>
             </>
           ) : (
             <>
-              <UserPlus className="w-4 h-4 text-zinc-900" />
+              <UserPlus className="w-4.5 h-4.5 text-zinc-900" />
               <span>Follow</span>
             </>
           )}
