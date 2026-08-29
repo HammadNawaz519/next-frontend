@@ -15,9 +15,7 @@ import { useTheme } from '@/app/components/ThemeProvider';
 import { triggerHaptic } from '@/lib/haptics';
 import { DeviceAccountStore } from '@/lib/deviceAccountStore';
 
-const ProfilePanel = dynamic(() => import('@/components/ProfilePanel'), {
-  ssr: false,
-});
+import ProfilePanel from '@/components/ProfilePanel';
 
 const CallsView = dynamic(() => import('@/components/CallsView'), {
   ssr: false,
@@ -35,7 +33,15 @@ export default function DashboardPage() {
   const [isCallActive, setIsCallActive] = useState(false);
   const [selectedProfileUser, setSelectedProfileUser] = useState<any>(null);
   
-  const [fullUser, setFullUser] = useState<any>(null);
+  const [fullUser, setFullUser] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('cached_profile_details');
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return null;
+  });
   const [activeView, setActiveView] = useState<'chat' | 'calls'>('chat');
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
 
@@ -172,11 +178,18 @@ export default function DashboardPage() {
     return () => window.removeEventListener('open_user_profile', handleOpenProfile as any);
   }, []);
 
-  // Load User Details for Profile Panel on-demand when profile is opened
+  // Load User Details for Profile Panel on-demand when profile is opened (cached)
   const hasLoadedUser = useRef(false);
   const refreshProfile = () => {
     if (status === 'authenticated') {
-      getProfileDetails().then(setFullUser).catch(() => {});
+      getProfileDetails().then(data => {
+        if (data) {
+          setFullUser(data);
+          try {
+            localStorage.setItem('cached_profile_details', JSON.stringify(data));
+          } catch {}
+        }
+      }).catch(() => {});
     }
   };
 
@@ -184,10 +197,12 @@ export default function DashboardPage() {
     if (status !== 'authenticated') return;
     if (isProfileOpen && !hasLoadedUser.current) {
       hasLoadedUser.current = true;
-      refreshProfile();
+      if (!fullUser) {
+        refreshProfile();
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isProfileOpen, status]);
+  }, [isProfileOpen, status, fullUser]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
