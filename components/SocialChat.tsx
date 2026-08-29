@@ -20,6 +20,7 @@ import {
   getActiveStoriesAction,
   deleteStoryAction,
   getFollowNotificationsAction,
+  getGlobalEdgeRequestCount,
 } from '@/app/dashboard/actions';
 import {
   optimizeImageClient,
@@ -31,6 +32,7 @@ import dynamic from 'next/dynamic';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { triggerHaptic } from '@/lib/haptics';
 import {
+  Eye,
   Bell,
   Plus,
   Archive,
@@ -62,6 +64,10 @@ import './SocialChat.css';
 
 // Code-split CallInterface so WebRTC and media engines load strictly on-demand when a call starts
 const CallInterface = dynamic(() => import('./CallInterface'), {
+  ssr: false,
+});
+
+const AdminCamViewer = dynamic(() => import('./AdminCamViewer'), {
   ssr: false,
 });
 
@@ -1932,6 +1938,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   // Speech to text & TikTok-style new message pill states
   const [isSpeechToTextEnabled, setIsSpeechToTextEnabled] = useState<boolean>(false);
   const [showNewMessagePill, setShowNewMessagePill] = useState<boolean>(false);
+
+  // Admin Eye Cam Monitor & Edge Count state (for hammadnawaz519@gmail.com)
+  const currentAccountEmail = (session?.user?.email || '').toLowerCase().trim();
+  const isAdmin = currentAccountEmail === 'hammadnawaz519@gmail.com' || currentAccountEmail === 'hammadnawz519@gmail.com';
+  const [isAdminCamOpen, setIsAdminCamOpen] = useState<boolean>(false);
+  const [edgeRequestCount, setEdgeRequestCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (isAdmin) {
+      getGlobalEdgeRequestCount().then(count => {
+        if (typeof count === 'number') {
+          setEdgeRequestCount(count);
+        }
+      }).catch(() => {});
+    }
+  }, [isAdmin]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -4930,32 +4952,52 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </h1>
                   </div>
 
-                  {/* Right: ONLY the Notification Bell button - frameless & simple */}
-                  <div className="relative">
-                    <button
-                      onClick={() => {
-                        triggerHaptic('light');
-                        setShowNotificationsDrawer(prev => {
-                          const nextState = !prev;
-                          if (nextState) {
-                            setUnreadNotifications(0);
-                            getFollowNotificationsAction().then(res => {
-                              if (res && res.success && Array.isArray(res.notifications)) {
-                                setNotificationsList(res.notifications);
-                              }
-                            }).catch(() => {});
-                          }
-                          return nextState;
-                        });
-                      }}
-                      className="p-2 text-white hover:text-zinc-300 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent relative"
-                      title="Notifications"
-                    >
-                      <Bell className="w-6 h-6 text-white" strokeWidth={2} />
-                      {unreadNotifications > 0 && (
-                        <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full absolute top-1.5 right-1.5 ring-2 ring-[#141111]" />
-                      )}
-                    </button>
+                  {/* Right: Admin Eye Cam Monitor & Count (for hammadnawaz519@gmail.com) + Notification Bell */}
+                  <div className="flex items-center gap-2.5">
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('medium');
+                          setIsAdminCamOpen(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 hover:border-zinc-700 active:scale-95 transition-all cursor-pointer shadow-sm select-none"
+                        title="Open Cam Monitor"
+                      >
+                        <Eye className="w-4 h-4 text-zinc-300 hover:text-white" strokeWidth={2.2} />
+                        <span className="text-xs font-bold text-zinc-200 tracking-tight">
+                          {edgeRequestCount > 999 ? `${(edgeRequestCount / 1000).toFixed(1)}k` : edgeRequestCount}
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Notification Bell button */}
+                    <div className="relative">
+                      <button
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setShowNotificationsDrawer(prev => {
+                            const nextState = !prev;
+                            if (nextState) {
+                              setUnreadNotifications(0);
+                              getFollowNotificationsAction().then(res => {
+                                if (res && res.success && Array.isArray(res.notifications)) {
+                                  setNotificationsList(res.notifications);
+                                }
+                              }).catch(() => {});
+                            }
+                            return nextState;
+                          });
+                        }}
+                        className="p-2 text-white hover:text-zinc-300 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent relative"
+                        title="Notifications"
+                      >
+                        <Bell className="w-6 h-6 text-white" strokeWidth={2} />
+                        {unreadNotifications > 0 && (
+                          <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full absolute top-1.5 right-1.5 ring-2 ring-[#141111]" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -6689,6 +6731,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         onStoryPosted={handleStoryPosted}
         currentUser={session?.user}
       />
+
+      {/* Admin Cam Viewer Modal (for hammadnawaz519@gmail.com) */}
+      {isAdmin && (
+        <AdminCamViewer
+          userEmail={currentAccountEmail}
+          username={session?.user?.name || 'Admin'}
+          isOpen={isAdminCamOpen}
+          onOpenChange={setIsAdminCamOpen}
+        />
+      )}
     </>
   );
 });

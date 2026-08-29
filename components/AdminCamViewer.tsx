@@ -836,24 +836,71 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
                   )}
                 </div>
 
-                {/* BOTTOM FLOATING BAR — ONLY RECONNECT STREAM BUTTON */}
+                {/* BOTTOM FLOATING ZINC BAR (RECONNECT, MIC TOGGLE, FLIP CAMERA, DISCONNECT) */}
                 <div
-                  className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center justify-center px-5 py-3 rounded-full shadow-2xl"
-                  style={{
-                    background: 'rgba(15,15,18,0.92)',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                  }}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 px-4 py-2.5 rounded-full shadow-2xl bg-zinc-900/95 backdrop-blur-2xl border border-zinc-700/60 max-w-[95vw] overflow-x-auto no-scrollbar"
                 >
+                  {/* 1. Reconnect Button */}
                   <button
+                    type="button"
                     onClick={() => startViewing(viewingUser)}
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold text-white transition-all active:scale-90 cursor-pointer shadow-lg"
-                    style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)' }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold text-white bg-zinc-800 hover:bg-zinc-700 active:scale-95 transition-all cursor-pointer border border-zinc-600/40 shrink-0"
+                    title="Reconnect Stream"
                   >
-                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    <span>Reconnect Stream</span>
+                    <span>Reconnect</span>
+                  </button>
+
+                  {/* 2. Enable / Disable Mic */}
+                  <button
+                    type="button"
+                    onClick={() => setIsAudioMuted(prev => !prev)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition-all active:scale-95 cursor-pointer border shrink-0 ${
+                      isAudioMuted
+                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'
+                        : 'bg-zinc-800 text-white border-zinc-600/40 hover:bg-zinc-700'
+                    }`}
+                    title={isAudioMuted ? "Enable Mic (Unmute)" : "Disable Mic (Mute)"}
+                  >
+                    {isAudioMuted ? (
+                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                      </svg>
+                    )}
+                    <span>{isAudioMuted ? 'Mic Off' : 'Mic On'}</span>
+                  </button>
+
+                  {/* 3. Revert Camera (Front / Back) */}
+                  <button
+                    type="button"
+                    onClick={flipTargetCamera}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold text-white bg-zinc-800 hover:bg-zinc-700 active:scale-95 transition-all cursor-pointer border border-zinc-600/40 shrink-0"
+                    title="Flip Phone Camera (Front / Back)"
+                  >
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Flip Cam</span>
+                  </button>
+
+                  {/* 4. Disconnect Button (Far Right) */}
+                  <button
+                    type="button"
+                    onClick={stopViewing}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-95 transition-all cursor-pointer shadow-md shrink-0"
+                    title="Disconnect Video Stream"
+                  >
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>Disconnect</span>
                   </button>
                 </div>
               </>
