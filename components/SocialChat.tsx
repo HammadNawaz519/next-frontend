@@ -1961,8 +1961,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showSongPicker, setShowSongPicker] = useState<boolean>(false);
 
   // Admin Eye Cam Monitor & Edge Count state (for hammadnawaz519@gmail.com / admin)
+  const currentAccountEmail = (session?.user?.email || '').toLowerCase().trim();
   const isAdmin = useMemo(() => {
-    const email = (session?.user?.email || '').toLowerCase().trim();
+    const email = currentAccountEmail;
     const username = (((session?.user as any)?.username) || '').toLowerCase().trim();
     const name = (session?.user?.name || '').toLowerCase().trim();
 
