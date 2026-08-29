@@ -174,18 +174,19 @@ export default function OthersProfile({
 
       {/* ── 1. UPPER WHITE CONTAINER (REVERSED CALL LAYOUT, BALANCED PROPORTIONS) ── */}
       <div className="w-full flex-1 bg-white rounded-[32px] sm:rounded-[36px] shadow-[0_15px_45px_rgba(0,0,0,0.3)] relative overflow-hidden flex flex-col justify-between p-5 min-h-0">
-        {/* Top Header Bar Inside White Card (Borderless & Outline-Free) */}
+        {/* Top Header Bar Inside White Card (Completely Borderless & Outline-Free) */}
         <div className="w-full flex items-center justify-between z-20 shrink-0 mb-3">
-          {/* Borderless Back Button */}
+          {/* Borderless Transparent Back Button */}
           <button
+            type="button"
             onClick={() => {
               triggerHaptic('light');
               onClose();
             }}
-            className="w-11 h-11 rounded-full flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-800 active:scale-90 transition-all cursor-pointer border-0 outline-none ring-0 focus:outline-none focus:ring-0 shadow-none"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-transparent hover:bg-zinc-100 text-zinc-800 active:scale-90 transition-all cursor-pointer border-0 outline-none ring-0 focus:outline-none focus:ring-0 shadow-none"
             title="Back"
           >
-            <ChevronLeft className="w-5 h-5 text-zinc-800" strokeWidth={2.5} />
+            <ChevronLeft className="w-6 h-6 text-zinc-800" strokeWidth={2.4} />
           </button>
 
           <span className="text-[12px] font-bold tracking-wider text-zinc-400 uppercase">
@@ -193,7 +194,7 @@ export default function OthersProfile({
           </span>
 
           {/* Clean spacer on right */}
-          <div className="w-11 h-11" />
+          <div className="w-10 h-10" />
         </div>
 
         {/* ── CARD CONTENT (GOLDEN LEAF ON COBALT CANVAS + AVATAR + DETAILS + STATS + LIKE BUTTON) ── */}
@@ -345,15 +346,12 @@ export default function OthersProfile({
           <span>Share</span>
         </button>
 
-        {/* Right: Big Follow / Unfollow / Requested Button (No outline, no border) */}
+        {/* Right: Big Follow / Unfollow / Requested Button (No light background, dark zinc theme) */}
         <button
+          type="button"
           onClick={handleToggleFollow}
           disabled={loadingFollow}
-          className={`flex-1 py-4 sm:py-4.5 rounded-full text-[15px] font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer border-0 outline-none ring-0 shadow-none active:scale-95 ${
-            isFollowing || hasSentRequest
-              ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-              : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900'
-          }`}
+          className="flex-1 py-4 sm:py-4.5 rounded-full text-[15px] font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer border-0 outline-none ring-0 shadow-none active:scale-95 bg-zinc-800 hover:bg-zinc-700 text-white"
           title={hasSentRequest ? 'Cancel Request' : isFollowing ? 'Unfollow' : 'Follow'}
         >
           {hasSentRequest ? (
@@ -368,7 +366,7 @@ export default function OthersProfile({
             </>
           ) : (
             <>
-              <UserPlus className="w-4.5 h-4.5 text-zinc-900" />
+              <UserPlus className="w-4.5 h-4.5 text-white" />
               <span>Follow</span>
             </>
           )}
