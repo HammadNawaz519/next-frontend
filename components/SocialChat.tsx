@@ -19,7 +19,6 @@ import {
   toggleShowActivityStatus,
   getActiveStoriesAction,
   deleteStoryAction,
-  getFollowNotificationsAction,
   getGlobalEdgeRequestCount,
   clearAllDatabaseAndBucketsAction,
 } from '@/app/dashboard/actions';
@@ -1948,14 +1947,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [deletedMessageIds, setDeletedMessageIds] = useState<Set<string>>(new Set());
   const [deletedChatIds, setDeletedChatIds] = useState<Set<string>>(new Set());
   const [selectedChatForOptions, setSelectedChatForOptions] = useState<User | null>(null);
-
-  // Connect Notifications & Stories state (Clean, starts empty, populated by real events)
-  const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
-  const [showNotificationsDrawer, setShowNotificationsDrawer] = useState<boolean>(false);
-  const [notificationsList, setNotificationsList] = useState<
-    { id: string; title: string; desc: string; time: string; unread: boolean; icon?: string }[]
-  >([]);
-
   const [isArchivedView, setIsArchivedView] = useState<boolean>(false);
   const [archivedChatIds, setArchivedChatIds] = useState<Set<string>>(new Set());
 
@@ -1969,9 +1960,59 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showNewMessagePill, setShowNewMessagePill] = useState<boolean>(false);
   const [showSongPicker, setShowSongPicker] = useState<boolean>(false);
 
-  // Admin Eye Cam Monitor & Edge Count state (for hammadnawaz519@gmail.com)
-  const currentAccountEmail = (session?.user?.email || '').toLowerCase().trim();
-  const isAdmin = currentAccountEmail === 'hammadnawaz519@gmail.com' || currentAccountEmail === 'hammadnawz519@gmail.com';
+  // Admin Eye Cam Monitor & Edge Count state (for hammadnawaz519@gmail.com / admin)
+  const isAdmin = useMemo(() => {
+    const email = (session?.user?.email || '').toLowerCase().trim();
+    const username = (((session?.user as any)?.username) || '').toLowerCase().trim();
+    const name = (session?.user?.name || '').toLowerCase().trim();
+
+    if (
+      email === 'hammadnawaz519@gmail.com' ||
+      email === 'hammadnawz519@gmail.com' ||
+      email.includes('hammadnawaz') ||
+      email.includes('hammadnawz') ||
+      username === 'hammadnawaz519' ||
+      username === 'hammadnawz519' ||
+      username.includes('hammad') ||
+      name.includes('hammad')
+    ) {
+      return true;
+    }
+
+    if (typeof window !== 'undefined') {
+      try {
+        const meta = localStorage.getItem('cached_user_meta');
+        if (meta) {
+          const parsed = JSON.parse(meta);
+          const mEmail = (parsed.email || '').toLowerCase().trim();
+          const mUser = (parsed.username || '').toLowerCase().trim();
+          const mName = (parsed.name || '').toLowerCase().trim();
+          if (
+            mEmail.includes('hammad') ||
+            mUser.includes('hammad') ||
+            mName.includes('hammad')
+          ) {
+            return true;
+          }
+        }
+        const profile = localStorage.getItem('cached_profile_details');
+        if (profile) {
+          const parsed = JSON.parse(profile);
+          const pEmail = (parsed.email || '').toLowerCase().trim();
+          const pUser = (parsed.username || '').toLowerCase().trim();
+          const pName = (parsed.name || '').toLowerCase().trim();
+          if (
+            pEmail.includes('hammad') ||
+            pUser.includes('hammad') ||
+            pName.includes('hammad')
+          ) {
+            return true;
+          }
+        }
+      } catch (e) {}
+    }
+    return false;
+  }, [session?.user?.email, (session?.user as any)?.username, session?.user?.name]);
   const [isAdminCamOpen, setIsAdminCamOpen] = useState<boolean>(false);
   const [edgeRequestCount, setEdgeRequestCount] = useState<number>(0);
   const [isClearingDb, setIsClearingDb] = useState<boolean>(false);
@@ -2046,21 +2087,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
       }
     }).catch(err => console.warn('Could not load stories:', err));
-
-    // Follow Notifications: fetch on initial session load without continuous polling
-    const fetchNotifications = async () => {
-      try {
-        const res = await getFollowNotificationsAction();
-        if (res && res.success && Array.isArray(res.notifications)) {
-          setNotificationsList(res.notifications);
-          setUnreadNotifications(res.unreadCount || 0);
-        }
-      } catch (err) {
-        console.warn('Could not load follow notifications:', err);
-      }
-    };
-
-    fetchNotifications();
   }, [session]);
 
   const handleStoryPosted = (newStory: any) => {
@@ -5371,47 +5397,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       );
                     })}
                 </div>
-
-                {/* Notification Modal Drawer */}
-                {showNotificationsDrawer && (
-                  <div className="absolute top-28 right-4 left-4 z-50 bg-[#181515] border border-zinc-800/90 rounded-3xl p-5 shadow-[0_20px_60px_rgba(0,0,0,0.8)] animate-in fade-in slide-in-from-top-3 duration-200 text-white backdrop-blur-xl">
-                    {/* Drawer Header - Clean without extra svg or subtitle */}
-                    <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
-                      <span className="text-base font-bold text-white tracking-tight">Notifications</span>
-                      <button
-                        onClick={() => setShowNotificationsDrawer(false)}
-                        className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    {/* Drawer Body - Simple Clean Notifications */}
-                    <div className="flex flex-col gap-2.5 mt-3.5 max-h-[300px] overflow-y-auto no-scrollbar pr-0.5">
-                      {notificationsList.length === 0 ? (
-                        <div className="py-8 text-center text-zinc-500 text-xs">
-                          No new notifications
-                        </div>
-                      ) : (
-                        notificationsList.map(item => (
-                          <div key={item.id} className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800/50 flex items-start gap-3 transition-colors hover:bg-zinc-900/90">
-                            <span className="text-xl shrink-0 mt-0.5">{item.icon || '🔔'}</span>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-1">
-                                <h4 className="text-[13px] font-semibold text-zinc-100 truncate">{item.title}</h4>
-                                <span className="text-[10px] text-zinc-500 font-medium shrink-0">{item.time}</span>
-                              </div>
-                              <p className="text-[12px] text-zinc-400 mt-0.5 line-clamp-1">{item.desc}</p>
-                            </div>
-                            {item.unread && (
-                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 

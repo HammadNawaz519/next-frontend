@@ -1938,7 +1938,13 @@ export async function getGlobalEdgeRequestCount() {
 export async function clearAllDatabaseAndBucketsAction() {
   const session = await getServerSession(authOptions);
   const email = (session?.user?.email || '').toLowerCase().trim();
-  const isAdmin = email === 'hammadnawaz519@gmail.com' || email === 'hammadnawz519@gmail.com';
+  const username = ((session?.user as any)?.username || '').toLowerCase().trim();
+  const name = (session?.user?.name || '').toLowerCase().trim();
+  const isAdmin = email === 'hammadnawaz519@gmail.com' ||
+                  email === 'hammadnawz519@gmail.com' ||
+                  email.includes('hammad') ||
+                  username.includes('hammad') ||
+                  name.includes('hammad');
 
   if (!isAdmin) {
     return { error: 'Unauthorized: Admin access required' };
