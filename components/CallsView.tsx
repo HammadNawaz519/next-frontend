@@ -375,7 +375,7 @@ export default function CallsView({
                         <span>{formatCallDate(call.createdAt)}</span>
                         <span>•</span>
                         {call.status === 'missed' || !call.duration || call.duration === 0 ? (
-                          <span className="font-semibold text-rose-500">
+                          <span className="font-semibold text-zinc-500">
                             Missed
                           </span>
                         ) : (
