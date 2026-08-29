@@ -54,6 +54,14 @@ export default function LoginPage() {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
+  // Check if we previously had an active session to prevent login screen flash
+  const [hasCachedSession] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('has_active_session') === 'true';
+    }
+    return false;
+  });
+
   // Sync active session in localStorage
   useEffect(() => {
     if (sessStatus === 'authenticated' && session?.user) {
@@ -72,6 +80,13 @@ export default function LoginPage() {
   // If user is already authenticated, show the dashboard directly
   if (sessStatus === 'authenticated' && session?.user) {
     return <DashboardPage />;
+  }
+
+  // When session is resolving, render smooth dark background to prevent flashing the login form
+  if (sessStatus === 'loading' || (hasCachedSession && sessStatus !== 'unauthenticated')) {
+    return (
+      <div className="fixed inset-0 bg-[#141111] flex items-center justify-center transition-opacity duration-300 animate-in fade-in" />
+    );
   }
 
   // ── OTP Handlers ──────────────────────────────────────────────────────────

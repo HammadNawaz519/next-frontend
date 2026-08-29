@@ -211,7 +211,7 @@ export default function CallsView({
       d.getMonth() === now.getMonth() &&
       d.getFullYear() === now.getFullYear();
 
-    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
     if (isToday) return `Today, ${timeStr}`;
 
     const yesterday = new Date(now);

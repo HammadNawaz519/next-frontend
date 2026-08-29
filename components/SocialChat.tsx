@@ -831,9 +831,12 @@ const formatChatTime = (timeVal?: any) => {
   const now = new Date();
   const isToday = d.toDateString() === now.toDateString();
   if (isToday) {
-    const hrs = String(d.getHours()).padStart(2, '0');
+    let hrs = d.getHours();
     const mins = String(d.getMinutes()).padStart(2, '0');
-    return `${hrs}.${mins}`;
+    const ampm = hrs >= 12 ? 'PM' : 'AM';
+    hrs = hrs % 12;
+    hrs = hrs ? hrs : 12;
+    return `${hrs}:${mins} ${ampm}`;
   }
   const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays === 1) return 'Yesterday';
@@ -845,9 +848,12 @@ const formatChatDotTime = (dateVal: any) => {
   if (!dateVal) return '';
   const d = typeof dateVal === 'string' ? new Date(dateVal) : (dateVal instanceof Date ? dateVal : new Date(dateVal));
   if (isNaN(d.getTime())) return '';
-  const hrs = String(d.getHours()).padStart(2, '0');
+  let hrs = d.getHours();
   const mins = String(d.getMinutes()).padStart(2, '0');
-  return `${hrs}.${mins}`;
+  const ampm = hrs >= 12 ? 'PM' : 'AM';
+  hrs = hrs % 12;
+  hrs = hrs ? hrs : 12;
+  return `${hrs}:${mins} ${ampm}`;
 };
 
 const ChatItem = memo(({
