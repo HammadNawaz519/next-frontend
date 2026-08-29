@@ -37,6 +37,8 @@ export default function ChatInput({
   const startTimeRef = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<any>(null);
+  const shouldListenRef = useRef<boolean>(false);
+  const finalTranscriptRef = useRef<string>('');
 
   // Show @ai suggestion when user types @ or ends with @
   useEffect(() => {
@@ -50,6 +52,7 @@ export default function ChatInput({
   // Clean up timers & recording on unmount
   useEffect(() => {
     return () => {
+      shouldListenRef.current = false;
       if (timerRef.current) clearInterval(timerRef.current);
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
@@ -111,6 +114,7 @@ export default function ChatInput({
     }
 
     if (isListeningSpeech) {
+      shouldListenRef.current = false;
       try {
         speechRecognitionRef.current?.stop();
       } catch (e) {}
@@ -131,49 +135,88 @@ export default function ChatInput({
         }
       }
 
-      if (speechRecognitionRef.current) {
+      shouldListenRef.current = true;
+      finalTranscriptRef.current = message ? message.trim() + ' ' : '';
+
+      const startRecognition = () => {
+        if (!shouldListenRef.current) return;
         try {
-          speechRecognitionRef.current.stop();
-        } catch (e) {}
-        speechRecognitionRef.current = null;
-      }
+          if (speechRecognitionRef.current) {
+            try { speechRecognitionRef.current.stop(); } catch (e) {}
+            speechRecognitionRef.current = null;
+          }
 
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = navigator.language || 'en-US';
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = navigator.language || 'en-US';
 
-      recognition.onstart = () => {
-        setIsListeningSpeech(true);
-        triggerHaptic('medium');
-      };
+          recognition.onstart = () => {
+            if (shouldListenRef.current) {
+              setIsListeningSpeech(true);
+            }
+          };
 
-      recognition.onresult = (event: any) => {
-        let fullTranscript = '';
-        for (let i = 0; i < event.results.length; i++) {
-          fullTranscript += event.results[i][0].transcript;
+          recognition.onresult = (event: any) => {
+            let interim = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                finalTranscriptRef.current += event.results[i][0].transcript + ' ';
+              } else {
+                interim += event.results[i][0].transcript;
+              }
+            }
+            const combined = (finalTranscriptRef.current + interim).trim();
+            if (combined) {
+              setMessage(combined);
+            }
+          };
+
+          recognition.onerror = (event: any) => {
+            console.warn('Speech recognition event:', event.error);
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+              shouldListenRef.current = false;
+              setIsListeningSpeech(false);
+              speechRecognitionRef.current = null;
+            }
+          };
+
+          recognition.onend = () => {
+            if (shouldListenRef.current) {
+              setTimeout(() => {
+                if (shouldListenRef.current) {
+                  try {
+                    recognition.start();
+                  } catch (e) {
+                    startRecognition();
+                  }
+                }
+              }, 80);
+            } else {
+              setIsListeningSpeech(false);
+              speechRecognitionRef.current = null;
+            }
+          };
+
+          speechRecognitionRef.current = recognition;
+          recognition.start();
+          setIsListeningSpeech(true);
+          triggerHaptic('medium');
+        } catch (err) {
+          console.error('Speech recognition start failed:', err);
+          if (shouldListenRef.current) {
+            setTimeout(startRecognition, 250);
+          } else {
+            setIsListeningSpeech(false);
+            speechRecognitionRef.current = null;
+          }
         }
-        if (fullTranscript) {
-          setMessage(fullTranscript);
-        }
       };
 
-      recognition.onerror = (event: any) => {
-        console.warn('Speech recognition error:', event.error);
-        setIsListeningSpeech(false);
-        speechRecognitionRef.current = null;
-      };
-
-      recognition.onend = () => {
-        setIsListeningSpeech(false);
-        speechRecognitionRef.current = null;
-      };
-
-      speechRecognitionRef.current = recognition;
-      recognition.start();
-      setIsListeningSpeech(true);
+      startRecognition();
     } catch (err) {
-      console.error('Speech recognition start failed:', err);
+      console.error('Speech recognition initialization failed:', err);
+      shouldListenRef.current = false;
       setIsListeningSpeech(false);
       speechRecognitionRef.current = null;
     }
