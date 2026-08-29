@@ -262,10 +262,10 @@ export default function ChatInput({
         </div>
       )}
 
-      {/* ── Chat Composer Pill Container (Simple rounded-full when 1-line, expands to rounded-3xl when multiline) ── */}
+      {/* ── Chat Composer Pill Container (Always fully rounded continuous capsule) ── */}
       <div
-        className={`w-full bg-white p-1.5 pl-2 pr-1.5 flex gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-zinc-200/80 transition-all focus-within:border-zinc-300 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.08)] ${
-          isMultiline ? 'rounded-3xl items-end' : 'rounded-full items-center'
+        className={`w-full bg-white rounded-[28px] sm:rounded-[32px] p-1.5 pl-2 pr-1.5 flex gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-zinc-200/80 transition-all focus-within:border-zinc-300 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.08)] ${
+          isMultiline ? 'items-end' : 'items-center'
         }`}
       >
         {/* ── LEFT: Attachment / File Button ── */}
