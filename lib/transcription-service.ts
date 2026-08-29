@@ -26,15 +26,10 @@ export interface TranscriptionOptions {
   temperature?: number;
 }
 
-// Configurable constants
-export const MAX_VOICE_TO_TEXT_DURATION_SECONDS = parseInt(
-  process.env.MAX_VOICE_TO_TEXT_DURATION_SECONDS || '120',
-  10
-);
-export const MAX_VOICE_TO_TEXT_SIZE_BYTES = parseInt(
-  process.env.MAX_VOICE_TO_TEXT_SIZE_BYTES || '15728640', // 15MB
-  10
-);
+// Hardcoded defaults (no extra Vercel env vars required beyond GROQ_API_KEY)
+export const GROQ_STT_MODEL = 'whisper-large-v3-turbo';
+export const MAX_VOICE_TO_TEXT_DURATION_SECONDS = 120;
+export const MAX_VOICE_TO_TEXT_SIZE_BYTES = 15728640; // 15MB
 export const MIN_AUDIO_SIZE_BYTES = 200; // Under 200 bytes is empty/invalid header only
 
 // Allowed audio MIME types
@@ -120,7 +115,7 @@ async function transcribeWithGroq(
   const formData = new FormData();
   const blob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
   formData.append('file', blob, fileName);
-  formData.append('model', process.env.GROQ_STT_MODEL || 'whisper-large-v3-turbo');
+  formData.append('model', GROQ_STT_MODEL);
   formData.append('response_format', 'json');
 
   if (options?.language) {
