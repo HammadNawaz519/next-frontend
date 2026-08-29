@@ -1104,7 +1104,10 @@ export async function searchUsers(query: string) {
   return await (prisma.user as any).findMany({
     where: {
       id: { not: currentUser.id },
-      username: { contains: q, mode: 'insensitive' }
+      OR: [
+        { username: { contains: q, mode: 'insensitive' } },
+        { name: { contains: q, mode: 'insensitive' } }
+      ]
     },
     select: { id: true, name: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true },
     take: 40,

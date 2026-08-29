@@ -202,7 +202,10 @@ export default function ProfilePanel({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-40 h-screen w-full flex flex-col bg-[#141111] overflow-hidden font-sans select-none animate-in fade-in duration-200">
+    <div
+      data-profile-open="true"
+      className="fixed inset-0 z-[100] h-screen w-full flex flex-col bg-[#141111] overflow-hidden font-sans select-none animate-in fade-in duration-200"
+    >
       {/* Toast Alert */}
       {toastMessage && (
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 bg-zinc-900/95 backdrop-blur-md text-white text-xs font-semibold rounded-full shadow-lg border border-white/10 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
@@ -306,9 +309,9 @@ export default function ProfilePanel({
           )}
         </div>
 
-        {/* User Details (Name only, @username removed) */}
+        {/* User Details (Displays Username) */}
         <h2 className="text-[20px] font-bold text-white mt-3 leading-tight text-center tracking-tight">
-          {curName}
+          {isSelf ? (localUsername || curUsername) : (activeUserData?.username || curName)}
         </h2>
       </div>
 
