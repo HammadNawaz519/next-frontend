@@ -284,12 +284,6 @@ export default function CallInterface({
           <div className="flex-1 flex flex-col items-center justify-center text-center my-auto w-full z-10 animate-in zoom-in-95 duration-300">
             {/* User DP / Avatar */}
             <div className="relative mb-5">
-              {callStatus === 'ringing' && (
-                <>
-                  <div className="absolute -inset-4 rounded-full animate-ping opacity-25 bg-[#9D4EDD] [animation-duration:2.2s]" />
-                  <div className="absolute -inset-2 rounded-full animate-pulse opacity-30 bg-[#9D4EDD] [animation-duration:1.8s]" />
-                </>
-              )}
               <div
                 className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden flex items-center justify-center text-3xl font-bold text-zinc-900 shadow-xl border-4 border-white relative z-10"
                 style={{ backgroundColor: avatarBg }}
@@ -311,13 +305,6 @@ export default function CallInterface({
             <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 tracking-tight truncate max-w-[85%]">
               {callerDisplayName}
             </h2>
-
-            {/* Username / Handle */}
-            {peer.username && (
-              <p className="text-xs sm:text-sm text-zinc-500 font-medium mt-0.5">
-                @{peer.username}
-              </p>
-            )}
 
             {/* Status / Active Timer */}
             <div className="mt-3 px-4 py-1.5 rounded-full bg-zinc-100 text-zinc-800 text-[13px] font-bold shadow-2xs">
