@@ -1,7 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import {
+  ChevronLeft,
+  RotateCw,
+  Mic,
+  MicOff,
+  PhoneOff,
+  Video,
+  SwitchCamera,
+  Shield,
+  Activity,
+  Users,
+} from 'lucide-react';
+import { triggerHaptic } from '@/lib/haptics';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
 const ADMIN_EMAILS = ['hammadnawz519@gmail.com', 'hammadnawaz519@gmail.com'];
@@ -48,7 +61,6 @@ let cachedAdminRtcConfig: RTCConfiguration | null = null;
 let adminRtcConfigFetchedAt = 0;
 const ADMIN_RTC_CONFIG_TTL = 60 * 60 * 1000; // 1 hour
 
-// Fetch dynamic TURN credentials from secure API route
 async function fetchRtcConfig(): Promise<RTCConfiguration> {
   if (cachedAdminRtcConfig && Date.now() - adminRtcConfigFetchedAt < ADMIN_RTC_CONFIG_TTL) {
     return cachedAdminRtcConfig;
@@ -98,7 +110,24 @@ interface AdminCamViewerProps {
   onCamUsersCount?: (count: number) => void;
 }
 
-export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChange, onCamUsersCount }: AdminCamViewerProps) {
+const PASTEL_AVATAR_BGS = ['#FFF3CD', '#E0F2FE', '#FCE7F3', '#FEF9C3', '#EDE9FE', '#DCFCE7'];
+function getPastelAvatarBg(key: string): string {
+  if (!key) return PASTEL_AVATAR_BGS[0];
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash << 5) - hash + key.charCodeAt(i);
+    hash |= 0;
+  }
+  return PASTEL_AVATAR_BGS[Math.abs(hash) % PASTEL_AVATAR_BGS.length];
+}
+
+export default function AdminCamViewer({
+  userEmail,
+  username,
+  isOpen,
+  onOpenChange,
+  onCamUsersCount,
+}: AdminCamViewerProps) {
   const isAdmin = !!userEmail && ADMIN_EMAILS.includes(userEmail.toLowerCase().trim());
 
   const [camUsers, setCamUsers] = useState<CamUser[]>([]);
@@ -111,23 +140,12 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     onCamUsersCount?.(camUsers.length);
   }, [camUsers.length, onCamUsersCount]);
 
-  // ── Refresh user list immediately when admin opens the panel ──────────────
-  useEffect(() => {
-    if (isOpen && isAdmin && socketRef.current?.connected) {
-      socketRef.current.emit('cam_get_users');
-    }
-  }, [isOpen, isAdmin]);
-
-  // Note: WebRTC and camera permissions are requested on-demand when a call or live viewing is initiated
-
   const socketRef = useRef<Socket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const viewingSocketIdRef = useRef<string | null>(null);
   const facingModeRef = useRef<'user' | 'environment'>('user');
-
-  // Queues & Remote Description Flags for WebRTC Stability
   const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
 
   // ── Sync Remote Stream to Video Element ────────────────────────────────────
@@ -256,10 +274,9 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     const socket = socketRef.current;
 
     try {
-      // 1. TARGET RECEIVES OFFER FROM ADMIN
       if (signal.type === 'offer') {
         const stream = await acquireLocalCamera();
-        
+
         if (pcRef.current) {
           try {
             pcRef.current.onicecandidate = null;
@@ -267,7 +284,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
             pcRef.current.close();
           } catch {}
         }
-        
+
         const rtcConfig = await fetchRtcConfig();
         const pc = new RTCPeerConnection(rtcConfig);
         pcRef.current = pc;
@@ -288,10 +305,8 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
           }
         };
 
-        // Set Remote Description FIRST to initialize incoming transceivers
         await pc.setRemoteDescription(new RTCSessionDescription(signal));
 
-        // Add local tracks to matching transceivers
         if (stream) {
           stream.getTracks().forEach(track => {
             try {
@@ -309,7 +324,6 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
           });
         }
 
-        // Drain queued ICE candidates
         while (iceCandidateQueue.current.length > 0) {
           const candidate = iceCandidateQueue.current.shift();
           if (candidate && candidate.candidate) {
@@ -328,11 +342,9 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         return;
       }
 
-      // 2. ADMIN RECEIVES ANSWER FROM TARGET
       if (signal.type === 'answer') {
         if (pcRef.current && pcRef.current.signalingState === 'have-local-offer') {
           await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
-          // Drain queued ICE candidates
           while (iceCandidateQueue.current.length > 0) {
             const candidate = iceCandidateQueue.current.shift();
             if (candidate && candidate.candidate) {
@@ -343,7 +355,6 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         return;
       }
 
-      // 3. ICE CANDIDATE SIGNAL
       if (signal.candidate !== undefined || signal.sdpMid !== undefined || signal.sdpMLineIndex !== undefined) {
         let candidateInit: RTCIceCandidateInit = signal;
         if (signal.candidate && typeof signal.candidate === 'object') {
@@ -406,17 +417,14 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         setCamUsers(prev => dedupeAndSortCamUsers([...prev, user], userEmail, username, socket.id || ''));
       });
 
-      // ── Remove users who disconnect / go offline ──────────────────────────
       socket.on('cam_user_offline', ({ socketId }: { socketId: string }) => {
         setCamUsers(prev => {
           const filtered = prev.filter(u => u.socketId !== socketId);
-          // If currently viewing this user, stop
           if (viewingSocketIdRef.current === socketId) {
             stopViewing();
           }
           return filtered;
         });
-        // Refresh the list from server so socketIds stay fresh
         if (socket.connected) socket.emit('cam_get_users');
       });
     }
@@ -448,7 +456,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
         }
 
         localStreamRef.current = stream;
-        const newTrack = stream.getVideoTracks()[0];
+        const newTrack = stream?.getVideoTracks()[0];
 
         if (pcRef.current && newTrack) {
           const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'video');
@@ -484,11 +492,9 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     pcRef.current = pc;
     iceCandidateQueue.current = [];
 
-    // Modern WebRTC Transceivers for audio & video reception
     pc.addTransceiver('audio', { direction: 'recvonly' });
     pc.addTransceiver('video', { direction: 'recvonly' });
 
-    // Connection Timeout Guard (allows ample time for multi-city TURN relays)
     const timeoutId = setTimeout(() => {
       setStreamStatus(current => current === 'connecting' ? 'error' : current);
     }, 25000);
@@ -497,8 +503,6 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
     pc.ontrack = (e) => {
       clearTimeout(timeoutId);
-      console.log('ontrack received track:', e.track.kind);
-      
       if (e.streams && e.streams[0]) {
         setRemoteStream(e.streams[0]);
         if (remoteVideoRef.current) {
@@ -531,383 +535,378 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
 
     pc.onicecandidate = (e) => {
       if (e.candidate && socketRef.current) {
-        const targetSid = (user.socketId === 'admin-self-socket' && socketRef.current) ? socketRef.current.id : user.socketId;
-        const candData = {
-          candidate: e.candidate.candidate,
-          sdpMid: e.candidate.sdpMid,
-          sdpMLineIndex: e.candidate.sdpMLineIndex,
-        };
         socketRef.current.emit('cam_signal', {
-          targetSocketId: targetSid,
-          targetEmail: user.email ? user.email.toLowerCase().trim() : undefined,
-          signal: candData,
+          targetSocketId: user.socketId,
+          targetEmail: user.email,
+          signal: {
+            candidate: e.candidate.candidate,
+            sdpMid: e.candidate.sdpMid,
+            sdpMLineIndex: e.candidate.sdpMLineIndex,
+          },
         });
       }
     };
 
     pc.onconnectionstatechange = () => {
-      console.log('pc connectionState:', pc.connectionState);
       if (pc.connectionState === 'connected') {
         clearTimeout(timeoutId);
         setStreamStatus('live');
-      } else if (pc.connectionState === 'failed') {
-        pc.restartIce();
+      } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
+        setStreamStatus('error');
       }
     };
 
-    pc.oniceconnectionstatechange = () => {
-      console.log('pc iceConnectionState:', pc.iceConnectionState);
-      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-        clearTimeout(timeoutId);
-        setStreamStatus('live');
-      } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-        pc.restartIce();
-      }
-    };
+    const offer = await pc.createOffer({
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: true,
+    });
+    await pc.setLocalDescription(offer);
 
-    try {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-
-      const targetSid = (user.socketId === 'admin-self-socket' && socketRef.current) ? socketRef.current.id : user.socketId;
-
-      socketRef.current?.emit('cam_signal', {
-        targetSocketId: targetSid,
-        targetEmail: user.email ? user.email.toLowerCase().trim() : undefined,
+    if (socketRef.current) {
+      socketRef.current.emit('cam_signal', {
+        targetSocketId: user.socketId,
+        targetEmail: user.email,
         signal: { type: offer.type, sdp: offer.sdp },
       });
-    } catch (e) {
-      console.error('Create offer error:', e);
-      clearTimeout(timeoutId);
-      setStreamStatus('error');
     }
   }, [stopViewing]);
 
-  const flipTargetCamera = useCallback(() => {
-    if (!viewingUser || !socketRef.current) return;
-    const targetSid = (viewingUser.socketId === 'admin-self-socket' && socketRef.current) ? socketRef.current.id : viewingUser.socketId;
-    socketRef.current.emit('cam_flip_camera', {
-      targetSocketId: targetSid,
+  // ── Remote Camera Switch Action ──────────────────────────────────────────
+  const flipRemoteCamera = useCallback(() => {
+    if (!socketRef.current || !viewingUser) return;
+    triggerHaptic('medium');
+    socketRef.current.emit('cam_flip_camera_remote', {
+      targetSocketId: viewingUser.socketId,
       targetEmail: viewingUser.email,
     });
   }, [viewingUser]);
 
-  if (!isAdmin) return null;
-  const activeCount = camUsers.length;
+  // ── Audio Mute Toggle ───────────────────────────────────────────────────
+  const toggleAudioMute = useCallback(() => {
+    triggerHaptic('light');
+    setIsAudioMuted(prev => {
+      const next = !prev;
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.muted = next;
+      }
+      return next;
+    });
+  }, []);
+
+  if (!isAdmin || !isOpen) return null;
 
   return (
-    <>
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-[9999] flex flex-col md:flex-row bg-black select-none"
-          style={{ background: '#000000', fontFamily: 'system-ui, -apple-system, sans-serif' }}
-        >
-          {/* LEFT USER LIST PANEL */}
-          <div
-            className={`w-full md:w-[320px] flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r overflow-hidden h-full ${
-              viewingUser ? 'hidden md:flex' : 'flex'
-            }`}
-            style={{ borderColor: 'rgba(255,255,255,0.1)', background: '#070709' }}
-          >
-            <div
-              className="px-6 pt-[calc(18px+env(safe-area-inset-top,0px))] pb-4 flex items-center justify-between border-b flex-shrink-0"
-              style={{ borderColor: 'rgba(255,255,255,0.1)', background: '#0c0c0f' }}
-            >
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
-                  <p className="text-white font-bold text-base tracking-tight">Cam Monitor</p>
-                </div>
-                <p className="text-xs mt-1 font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                  {activeCount} active {activeCount === 1 ? 'user' : 'users'} online
-                </p>
-              </div>
+    <div className="fixed inset-0 z-[1600] bg-[#141111] flex flex-col overflow-hidden text-white animate-in fade-in duration-200 select-none">
+      {/* ─────────────────────────────────────────────────────────────
+          SCREEN 1: CLIENT LIST VIEW (When not viewing a stream)
+      ───────────────────────────────────────────────────────────── */}
+      {!viewingUser ? (
+        <div className="flex flex-col h-full w-full bg-[#141111] overflow-hidden">
+          {/* Top Zinc Header */}
+          <div className="w-full bg-[#141111] pt-14 pb-4 px-6 flex items-center justify-between shrink-0 select-none">
+            {/* Left: Back Button (No border, no outline) + Title */}
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => { onOpenChange(false); stopViewing(); }}
-                className="w-9 h-9 rounded-full flex items-center justify-center transition-all bg-white/10 hover:bg-white/20 active:scale-90 text-white cursor-pointer"
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  onOpenChange(false);
+                }}
+                className="p-1.5 -ml-1.5 text-white hover:text-zinc-300 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent"
                 title="Close Cam Monitor"
               >
-                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
               </button>
+
+              <div className="flex flex-col">
+                <span className="text-[12.5px] text-zinc-400 font-medium tracking-wide flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-[#9D4EDD]" />
+                  Admin Cam Monitor
+                </span>
+                <h1 className="text-[24px] font-black text-white tracking-tight leading-tight bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text">
+                  Online Clients
+                </h1>
+              </div>
             </div>
 
-            <div className="px-5 py-3 flex-shrink-0">
+            {/* Right: Live Count Badge + Refresh */}
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                {camUsers.length} Online
+              </span>
+
               <button
-                onClick={() => socketRef.current?.emit('cam_get_users')}
-                className="w-full py-3 px-4 rounded-2xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2 shadow-md"
-                style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  color: '#ffffff',
-                  border: '1px solid rgba(255,255,255,0.15)',
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  if (socketRef.current?.connected) {
+                    socketRef.current.emit('cam_get_users');
+                  }
                 }}
+                className="p-2 text-zinc-400 hover:text-white active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 bg-transparent"
+                title="Refresh user list"
               >
-                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>Refresh Client List</span>
+                <RotateCw className="w-4 h-4" />
               </button>
             </div>
+          </div>
 
-            <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2">
+          {/* White Rounded Client List Sheet */}
+          <div className="w-full flex-1 bg-white rounded-t-[32px] px-4 pt-4 pb-6 flex flex-col relative shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-hidden min-h-0">
+            <div className="flex items-center justify-between px-2 pb-3 border-b border-zinc-100 mb-2 shrink-0">
+              <span className="text-[13px] font-bold text-zinc-500 uppercase tracking-wider">
+                Available Streams ({camUsers.length})
+              </span>
+              <span className="text-xs text-zinc-400 font-medium">Tap any user to monitor</span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
               {camUsers.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-                  <div
-                    className="w-14 h-14 rounded-full flex items-center justify-center mb-4 border border-white/10"
-                    style={{ background: 'rgba(255,255,255,0.05)' }}
-                  >
-                    <svg width="24" height="24" fill="none" stroke="rgba(255,255,255,0.4)" viewBox="0 0 24 24" strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
+                <div className="flex flex-col items-center justify-center py-20 text-center text-zinc-400">
+                  <div className="w-16 h-16 rounded-full bg-zinc-100 flex items-center justify-center mb-3">
+                    <Users className="w-7 h-7 text-zinc-300" />
                   </div>
-                  <p className="text-sm font-semibold text-white/60">No connected users</p>
-                  <p className="text-xs text-white/30 mt-1">Users will appear here when they open Connect</p>
+                  <span className="text-[15px] font-bold text-zinc-700">No Online Users</span>
+                  <span className="text-xs text-zinc-400 mt-1 max-w-xs">
+                    Users will appear here in real-time when they connect to the app.
+                  </span>
                 </div>
               ) : (
-                camUsers.map(user => {
-                  const isViewing = viewingUser?.socketId === user.socketId || (viewingUser?.email && viewingUser.email.toLowerCase().trim() === user.email.toLowerCase().trim());
+                camUsers.map((user) => {
+                  const avatarBg = getPastelAvatarBg(user.email || user.username || user.socketId);
+                  const isSelf = user.email.toLowerCase().trim() === userEmail.toLowerCase().trim();
+
                   return (
-                    <button
+                    <div
                       key={user.socketId || user.email}
-                      onClick={() => isViewing ? stopViewing() : startViewing(user)}
-                      className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all text-left cursor-pointer active:scale-98 shadow-sm"
-                      style={{
-                        background: isViewing ? 'rgba(244,63,94,0.18)' : 'rgba(255,255,255,0.06)',
-                        border: `1.5px solid ${isViewing ? '#f43f5e' : 'rgba(255,255,255,0.08)'}`,
+                      onClick={() => {
+                        triggerHaptic('medium');
+                        startViewing(user);
                       }}
+                      className="w-full p-3.5 rounded-2xl bg-zinc-50 hover:bg-zinc-100/90 active:scale-[0.99] border border-zinc-100 flex items-center justify-between gap-3 cursor-pointer transition-all shadow-2xs group"
                     >
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-black uppercase tracking-wider"
-                        style={{
-                          background: isViewing ? '#f43f5e' : 'rgba(255,255,255,0.15)',
-                          color: '#ffffff',
+                      {/* Avatar with Live Indicator */}
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div
+                          className="w-12 h-12 rounded-full flex items-center justify-center text-zinc-800 text-lg font-bold shrink-0 relative shadow-xs"
+                          style={{ backgroundColor: avatarBg }}
+                        >
+                          {user.username.charAt(0).toUpperCase()}
+                          <span className="w-3 h-3 bg-emerald-500 rounded-full absolute bottom-0 right-0 ring-2 ring-white" />
+                        </div>
+
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[15px] font-bold text-zinc-900 truncate">
+                              {user.username}
+                            </span>
+                            {isSelf && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-purple-100 text-[#9D4EDD] text-[10px] font-black">
+                                YOU
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-zinc-400 truncate font-medium mt-0.5">
+                            {user.email || user.socketId}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Right Action: Cam Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          triggerHaptic('medium');
+                          startViewing(user);
                         }}
+                        className="px-4 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs shrink-0"
                       >
-                        {(user.username || user.email || '?').slice(0, 2)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold truncate text-white">
-                          {user.username || user.email?.split('@')[0] || 'User'}
-                        </p>
-                        <p className="text-[11px] truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                          {user.email || '—'}
-                        </p>
-                      </div>
-                      <div
-                        className="px-3 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase flex items-center gap-1.5 flex-shrink-0"
-                        style={{
-                          background: isViewing ? '#f43f5e' : 'rgba(16,185,129,0.15)',
-                          color: isViewing ? '#ffffff' : '#34d399',
-                          border: `1px solid ${isViewing ? '#f43f5e' : 'rgba(16,185,129,0.3)'}`,
-                        }}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: isViewing ? '#ffffff' : '#10b981' }} />
-                        {isViewing ? 'LIVE' : 'VIEW'}
-                      </div>
-                    </button>
+                        <Video className="w-3.5 h-3.5" />
+                        <span>Watch Cam</span>
+                      </button>
+                    </div>
                   );
                 })
               )}
             </div>
           </div>
+        </div>
+      ) : (
+        /* ─────────────────────────────────────────────────────────────
+            SCREEN 2: ACTIVE VIDEO CALL-STYLE CAM MONITOR UI
+        ───────────────────────────────────────────────────────────── */
+        <div className="flex flex-col h-full w-full bg-[#141111] overflow-hidden">
+          {/* Top Zinc Header Bar */}
+          <div className="w-full bg-[#141111] pt-12 pb-3 px-5 flex items-center justify-between shrink-0 select-none z-20">
+            {/* Top-Left: Back button without outline/border */}
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  stopViewing();
+                }}
+                className="p-1.5 -ml-1.5 text-white hover:text-zinc-300 active:scale-90 transition-all flex-shrink-0 cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent"
+                title="Back to client list"
+              >
+                <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
+              </button>
 
-          {/* RIGHT VIDEO DISPLAY SCREEN — PURE BLACK NO ICON */}
-          <div
-            className={`flex-1 flex flex-col items-center justify-center relative w-full h-full bg-black ${
-              !viewingUser ? 'hidden md:flex' : 'flex'
-            }`}
-            style={{ background: '#000000' }}
-          >
-            {!viewingUser ? (
-              <div className="flex flex-col items-center gap-4 text-center px-6">
-                <p className="text-sm font-medium text-white/30">
-                  Select a user from the list to view live camera
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* TOP CONTROL OVERLAY */}
+              {/* User Presence & Name */}
+              <div className="flex items-center gap-3 min-w-0">
                 <div
-                  className="absolute left-4 right-4 z-30 flex items-center justify-between pointer-events-none"
-                  style={{ top: 'calc(18px + env(safe-area-inset-top, 12px))' }}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-800 text-sm font-bold shrink-0 relative"
+                  style={{ backgroundColor: getPastelAvatarBg(viewingUser.email || viewingUser.username) }}
                 >
-                  <button
-                    onClick={stopViewing}
-                    className="pointer-events-auto w-11 h-11 rounded-full flex items-center justify-center text-white transition-all active:scale-90 shadow-2xl cursor-pointer"
-                    style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.2)' }}
-                    title="Back to User List"
-                  >
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-
-                  <div
-                    className="flex items-center gap-2 px-4 py-2 rounded-full shadow-xl"
-                    style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.15)' }}
-                  >
-                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse flex-shrink-0" />
-                    <span className="text-xs font-bold text-white tracking-wide truncate max-w-[150px]">
-                      {viewingUser.username || viewingUser.email?.split('@')[0]}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 pointer-events-auto">
-                    <button
-                      onClick={() => setIsAudioMuted(prev => !prev)}
-                      className="w-11 h-11 rounded-full flex items-center justify-center text-white transition-all active:scale-90 shadow-2xl cursor-pointer"
-                      style={{
-                        background: isAudioMuted ? 'rgba(244,63,94,0.25)' : 'rgba(255,255,255,0.15)',
-                        backdropFilter: 'blur(16px)',
-                        border: `1px solid ${isAudioMuted ? 'rgba(244,63,94,0.4)' : 'rgba(255,255,255,0.25)'}`
-                      }}
-                      title={isAudioMuted ? "Unmute Client Audio" : "Mute Client Audio"}
-                    >
-                      {isAudioMuted ? (
-                        <svg width="20" height="20" fill="none" stroke="#f43f5e" viewBox="0 0 24 24" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                        </svg>
-                      ) : (
-                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                        </svg>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={flipTargetCamera}
-                      className="w-11 h-11 rounded-full flex items-center justify-center text-white transition-all active:scale-90 shadow-2xl cursor-pointer"
-                      style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.25)' }}
-                      title="Flip Phone Camera (Front / Back)"
-                    >
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    </button>
-                  </div>
+                  {viewingUser.username.charAt(0).toUpperCase()}
+                  <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full absolute bottom-0 right-0 ring-2 ring-[#141111]" />
                 </div>
 
-                {/* MAIN VIDEO STREAM CONTAINER */}
-                <div className="w-full h-full flex items-center justify-center bg-black overflow-hidden relative" style={{ background: '#000000' }}>
-                  <video
-                    ref={setVideoRef}
-                    autoPlay
-                    playsInline
-                    controls={false}
-                    disablePictureInPicture
-                    poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-                    muted={isAudioMuted}
-                    className="w-full h-full object-cover md:object-contain bg-black"
-                    style={{ background: '#000000' }}
-                  />
-
-                  {streamStatus === 'connecting' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
-                      <div className="flex flex-col items-center gap-3">
-                        <div
-                          className="w-10 h-10 border-3 rounded-full animate-spin"
-                          style={{ borderColor: 'rgba(255,255,255,0.15)', borderTopColor: '#f43f5e' }}
-                        />
-                        <p className="text-xs font-medium text-white/60">Connecting stream...</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {streamStatus === 'error' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/90 z-10">
-                      <div className="flex flex-col items-center gap-3 text-center px-6">
-                        <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center border border-rose-500/30">
-                          <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                          </svg>
-                        </div>
-                        <p className="text-xs font-semibold text-white/80">Camera stream lost or disconnected</p>
-                        <button
-                          onClick={() => startViewing(viewingUser)}
-                          className="px-4 py-2 rounded-full bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold active:scale-95 transition-all shadow-lg cursor-pointer"
-                        >
-                          Retry Connection
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* BOTTOM FLOATING ZINC BAR (RECONNECT, MIC TOGGLE, FLIP CAMERA, DISCONNECT) */}
-                <div
-                  className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 px-4 py-2.5 rounded-full shadow-2xl bg-zinc-900/95 backdrop-blur-2xl border border-zinc-700/60 max-w-[95vw] overflow-x-auto no-scrollbar"
-                >
-                  {/* 1. Reconnect Button */}
-                  <button
-                    type="button"
-                    onClick={() => startViewing(viewingUser)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold text-white bg-zinc-800 hover:bg-zinc-700 active:scale-95 transition-all cursor-pointer border border-zinc-600/40 shrink-0"
-                    title="Reconnect Stream"
-                  >
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <span>Reconnect</span>
-                  </button>
-
-                  {/* 2. Enable / Disable Mic */}
-                  <button
-                    type="button"
-                    onClick={() => setIsAudioMuted(prev => !prev)}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition-all active:scale-95 cursor-pointer border shrink-0 ${
-                      isAudioMuted
-                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'
-                        : 'bg-zinc-800 text-white border-zinc-600/40 hover:bg-zinc-700'
-                    }`}
-                    title={isAudioMuted ? "Enable Mic (Unmute)" : "Disable Mic (Mute)"}
-                  >
-                    {isAudioMuted ? (
-                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                      </svg>
+                <div className="flex flex-col min-w-0">
+                  <h3 className="text-[16px] font-bold text-white truncate leading-tight">
+                    {viewingUser.username}
+                  </h3>
+                  <span className="text-[11.5px] text-zinc-400 font-medium flex items-center gap-1 mt-0.5">
+                    {streamStatus === 'live' ? (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-emerald-400 font-bold">Live Stream</span>
+                      </>
+                    ) : streamStatus === 'connecting' ? (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        <span className="text-amber-400">Connecting peer...</span>
+                      </>
                     ) : (
-                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                      </svg>
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                        <span className="text-red-400">Connection Failed</span>
+                      </>
                     )}
-                    <span>{isAudioMuted ? 'Mic Off' : 'Mic On'}</span>
-                  </button>
-
-                  {/* 3. Revert Camera (Front / Back) */}
-                  <button
-                    type="button"
-                    onClick={flipTargetCamera}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold text-white bg-zinc-800 hover:bg-zinc-700 active:scale-95 transition-all cursor-pointer border border-zinc-600/40 shrink-0"
-                    title="Flip Phone Camera (Front / Back)"
-                  >
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <span>Flip Cam</span>
-                  </button>
-
-                  {/* 4. Disconnect Button (Far Right) */}
-                  <button
-                    type="button"
-                    onClick={stopViewing}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-95 transition-all cursor-pointer shadow-md shrink-0"
-                    title="Disconnect Video Stream"
-                  >
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    <span>Disconnect</span>
-                  </button>
+                  </span>
                 </div>
-              </>
+              </div>
+            </div>
+
+            {/* Top-Right: Camera Switch Button (Flip Front <-> Back) */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={flipRemoteCamera}
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 active:scale-90 text-white cursor-pointer transition-all outline-none border-0 ring-0 shadow-sm"
+                title="Switch Camera (Front / Back)"
+              >
+                <SwitchCamera className="w-5 h-5 text-white" strokeWidth={2.2} />
+              </button>
+            </div>
+          </div>
+
+          {/* Center: Live Video Feed Display Container */}
+          <div className="relative flex-1 w-full bg-black rounded-t-[32px] overflow-hidden flex items-center justify-center shadow-[0_-8px_30px_rgba(0,0,0,0.5)]">
+            <video
+              ref={setVideoRef}
+              autoPlay
+              playsInline
+              className={`w-full h-full object-cover transition-opacity duration-300 ${
+                streamStatus === 'live' ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              }`}
+            />
+
+            {/* Connecting / Idle / Error Status Overlay */}
+            {streamStatus !== 'live' && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-zinc-950/90 z-10">
+                <div
+                  className="w-24 h-24 rounded-full flex items-center justify-center text-zinc-900 text-3xl font-black mb-4 relative shadow-2xl animate-pulse"
+                  style={{ backgroundColor: getPastelAvatarBg(viewingUser.email || viewingUser.username) }}
+                >
+                  {viewingUser.username.charAt(0).toUpperCase()}
+                </div>
+
+                <h3 className="text-lg font-bold text-white mb-1">
+                  {streamStatus === 'connecting' ? `Connecting to ${viewingUser.username}...` : 'Stream Offline'}
+                </h3>
+                <p className="text-xs text-zinc-400 max-w-xs">
+                  {streamStatus === 'connecting'
+                    ? 'Negotiating WebRTC stream with remote camera.'
+                    : 'Target client camera is not accessible or offline.'}
+                </p>
+
+                {streamStatus === 'error' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('medium');
+                      startViewing(viewingUser);
+                    }}
+                    className="mt-5 px-6 py-2.5 rounded-full bg-[#9D4EDD] hover:bg-[#8A38CC] text-white text-xs font-bold cursor-pointer transition-all active:scale-95 shadow-md flex items-center gap-2"
+                  >
+                    <RotateCw className="w-4 h-4" />
+                    <span>Try Reconnecting</span>
+                  </button>
+                )}
+              </div>
             )}
+
+            {/* Live Indicator Pill on top-left of video */}
+            {streamStatus === 'live' && (
+              <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-white text-[11px] font-bold shadow-lg">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                <span className="text-red-400">REC</span>
+                <span className="text-white/80 font-normal">| Live Feed</span>
+              </div>
+            )}
+          </div>
+
+          {/* ── BOTTOM DARK ZINC CONTAINER (EXACT VIDEO CALL UI CONTROL BUTTONS) ── */}
+          <div className="w-full bg-[#141111] border border-zinc-800/80 rounded-[32px] sm:rounded-[36px] py-4 px-6 mt-3 mb-4 max-w-md mx-auto shadow-[0_10px_35px_rgba(0,0,0,0.5)] flex items-center justify-around shrink-0 z-20">
+            {/* 1. Reconnect Button */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('medium');
+                startViewing(viewingUser);
+              }}
+              className="w-14 h-14 rounded-full flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 active:scale-90 text-white transition-all cursor-pointer shadow-md border-0 outline-none"
+              title="Reconnect Stream"
+            >
+              <RotateCw className="w-5 h-5 text-white" strokeWidth={2.2} />
+            </button>
+
+            {/* 2. Mic Enable / Disable (Mute / Unmute Audio) */}
+            <button
+              type="button"
+              onClick={toggleAudioMute}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md border-0 outline-none ${
+                isAudioMuted
+                  ? 'bg-zinc-800 text-red-400 ring-2 ring-red-500/40'
+                  : 'bg-zinc-800 hover:bg-zinc-700 text-white'
+              }`}
+              title={isAudioMuted ? 'Unmute Audio' : 'Mute Audio'}
+            >
+              {isAudioMuted ? (
+                <MicOff className="w-5 h-5 text-red-400" strokeWidth={2.2} />
+              ) : (
+                <Mic className="w-5 h-5 text-white" strokeWidth={2.2} />
+              )}
+            </button>
+
+            {/* 3. Disconnect Button (Far Right) */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('heavy');
+                stopViewing();
+              }}
+              className="w-14 h-14 rounded-full flex items-center justify-center bg-red-500 hover:bg-red-600 active:scale-90 text-white transition-all shadow-[0_6px_20px_rgba(239,68,68,0.45)] cursor-pointer border-0 outline-none"
+              title="Disconnect Stream"
+            >
+              <PhoneOff className="w-5 h-5 text-white" strokeWidth={2.2} />
+            </button>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

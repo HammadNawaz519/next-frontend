@@ -4973,23 +4973,25 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     </h1>
                   </div>
 
-                  {/* Right: Admin Eye Cam Monitor & Count (for hammadnawaz519@gmail.com) + Notification Bell */}
-                  <div className="flex items-center gap-2.5">
+                  {/* Right: Admin Request Count + Eye Cam Monitor Button + Notification Bell */}
+                  <div className="flex items-center gap-1.5">
                     {isAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          triggerHaptic('medium');
-                          setIsAdminCamOpen(true);
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 hover:border-zinc-700 active:scale-95 transition-all cursor-pointer shadow-sm select-none"
-                        title="Open Cam Monitor"
-                      >
-                        <Eye className="w-4 h-4 text-zinc-300 hover:text-white" strokeWidth={2.2} />
-                        <span className="text-xs font-bold text-zinc-200 tracking-tight">
+                      <div className="flex items-center gap-1">
+                        <span className="text-[13px] font-semibold text-zinc-400 tracking-tight select-none mr-0.5">
                           {edgeRequestCount > 999 ? `${(edgeRequestCount / 1000).toFixed(1)}k` : edgeRequestCount}
                         </span>
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic('medium');
+                            setIsAdminCamOpen(true);
+                          }}
+                          className="p-2 text-white hover:text-zinc-300 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent"
+                          title="Open Cam Monitor"
+                        >
+                          <Eye className="w-6 h-6 text-white" strokeWidth={2} />
+                        </button>
+                      </div>
                     )}
 
                     {/* Notification Bell button */}
