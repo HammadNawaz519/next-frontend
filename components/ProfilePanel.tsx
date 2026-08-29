@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import {
   updateProfileImageAction,
+  updateProfileDetails,
   toggleFollowUser,
 } from '@/app/dashboard/actions';
 import { optimizeImageClient } from '@/lib/media-optimizer';
@@ -51,6 +52,12 @@ export default function ProfilePanel({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Edit Username State
+  const [isEditing, setIsEditing] = useState(false);
+  const [usernameInput, setUsernameInput] = useState('');
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
+
   // Follow State for Other User
   const [isFollowing, setIsFollowing] = useState(false);
   const [hasSentRequest, setHasSentRequest] = useState(false);
@@ -64,11 +71,13 @@ export default function ProfilePanel({
   const isSelf = !targetUser || targetUser.id === (session?.user as any)?.id;
 
   const curEmail = (activeUserData?.email || session?.user?.email || '').toLowerCase().trim();
-  const curUsername = activeUserData?.username || (session?.user as any)?.username || (curEmail ? curEmail.split('@')[0] : 'user');
+  const [localUsername, setLocalUsername] = useState(
+    activeUserData?.username || (session?.user as any)?.username || (curEmail ? curEmail.split('@')[0] : 'user')
+  );
   const curName = activeUserData?.name || session?.user?.name || 'User';
   const curImage = activeUserData?.image || session?.user?.image || '';
 
-  // Sync counts on user change
+  // Sync counts and username on user change
   useEffect(() => {
     if (activeUserData) {
       const followers = activeUserData.followers || [];
@@ -76,12 +85,16 @@ export default function ProfilePanel({
       setFollowerCount(followers.length);
       setFollowingCount(following.length);
 
+      const resolvedUsername = activeUserData?.username || (session?.user as any)?.username || (curEmail ? curEmail.split('@')[0] : 'user');
+      setLocalUsername(resolvedUsername);
+      setUsernameInput(resolvedUsername);
+
       if (!isSelf && session?.user) {
         const myId = (session.user as any)?.id;
         setIsFollowing(followers.some((f: any) => f.id === myId));
       }
     }
-  }, [activeUserData, isSelf, session]);
+  }, [activeUserData, isSelf, session, curEmail]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -137,6 +150,44 @@ export default function ProfilePanel({
     }
   };
 
+  const handleSaveUsername = async () => {
+    const cleaned = usernameInput.trim().toLowerCase().replace(/^@+/, '').replace(/\s+/g, '');
+    if (!cleaned || cleaned.length < 3) {
+      setUsernameError('Username must be at least 3 characters');
+      return;
+    }
+    if (cleaned.length > 30) {
+      setUsernameError('Username cannot exceed 30 characters');
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(cleaned)) {
+      setUsernameError('Username can only contain letters, numbers, and underscores');
+      return;
+    }
+
+    triggerHaptic('medium');
+    setIsSavingUsername(true);
+    setUsernameError(null);
+
+    try {
+      const res = await updateProfileDetails({ username: cleaned });
+      if (res.error) {
+        setUsernameError(res.error);
+        showToast(res.error);
+      } else {
+        setLocalUsername(cleaned);
+        setIsEditing(false);
+        showToast('Username updated successfully!');
+        refreshProfile?.();
+      }
+    } catch (err) {
+      setUsernameError('Failed to update username');
+      showToast('Failed to update username');
+    } finally {
+      setIsSavingUsername(false);
+    }
+  };
+
   const handleLogout = async () => {
     triggerHaptic('medium');
     try {
@@ -189,12 +240,33 @@ export default function ProfilePanel({
             </h1>
           </div>
 
-          {/* Right side: Top Edit SVG icon (visual only, no functions) */}
+          {/* Right side: Top Edit / Save button (No border, no outline) */}
           <div className="flex items-center">
             {isSelf && (
-              <div className="p-2 text-white/80 flex items-center justify-center">
-                <Edit3 className="w-5 h-5 text-white" strokeWidth={2} />
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  if (isEditing) {
+                    handleSaveUsername();
+                  } else {
+                    setUsernameInput(localUsername);
+                    setUsernameError(null);
+                    setIsEditing(true);
+                  }
+                }}
+                className="p-2 text-white hover:text-zinc-300 active:scale-95 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none bg-transparent flex items-center justify-center"
+                title={isEditing ? 'Save' : 'Edit'}
+                aria-label={isEditing ? 'Save Username' : 'Edit Username'}
+              >
+                {isEditing ? (
+                  <span className="text-sm font-bold text-white hover:text-zinc-200">
+                    {isSavingUsername ? 'Saving...' : 'Save'}
+                  </span>
+                ) : (
+                  <Edit3 className="w-5 h-5 text-white" strokeWidth={2} />
+                )}
+              </button>
             )}
           </div>
         </div>
@@ -234,91 +306,148 @@ export default function ProfilePanel({
           )}
         </div>
 
-        {/* User Details */}
+        {/* User Details (Name only, @username removed) */}
         <h2 className="text-[20px] font-bold text-white mt-3 leading-tight text-center tracking-tight">
           {curName}
         </h2>
-        <p className="text-[13px] text-[#D8B4E2] font-medium mt-0.5 text-center">
-          @{curUsername}
-        </p>
       </div>
 
       {/* ── 2. Bottom Light Sheet ── */}
-      <div className="w-full flex-1 bg-white rounded-t-[36px] px-6 pt-5 pb-28 flex flex-col gap-5 relative shadow-[0_-12px_35px_rgba(0,0,0,0.15)] overflow-y-auto no-scrollbar min-h-0 text-zinc-900">
+      <div className="w-full flex-1 bg-white rounded-t-[36px] px-6 pt-5 pb-28 flex flex-col gap-4 relative shadow-[0_-12px_35px_rgba(0,0,0,0.15)] overflow-y-auto no-scrollbar min-h-0 text-zinc-900">
         {/* Sheet Drag Handle */}
         <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-1 mb-1 shrink-0" />
 
-        {/* ── Followers & Following Round Capsules ── */}
-        <div className="flex items-center justify-center gap-4 w-full">
-          <div className="flex-1 py-4 px-6 rounded-full bg-zinc-50 border border-zinc-100 flex flex-col items-center justify-center shadow-xs">
-            <span className="text-[22px] font-black text-zinc-900 leading-tight">
-              {followerCount}
-            </span>
-            <span className="text-[12px] text-zinc-500 font-medium mt-0.5">Followers</span>
-          </div>
-
-          <div className="flex-1 py-4 px-6 rounded-full bg-zinc-50 border border-zinc-100 flex flex-col items-center justify-center shadow-xs">
-            <span className="text-[22px] font-black text-zinc-900 leading-tight">
-              {followingCount}
-            </span>
-            <span className="text-[12px] text-zinc-500 font-medium mt-0.5">Following</span>
-          </div>
-        </div>
-
-        {/* ── Other User Actions (Follow & Message) ── */}
-        {!isSelf && (
-          <div className="flex items-center gap-3 w-full">
-            <button
-              onClick={handleFollowToggle}
-              disabled={isFollowLoading}
-              className={`flex-1 py-3.5 px-4 rounded-full font-semibold text-[13.5px] flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer outline-none border-0 ${
-                isFollowing
-                  ? 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'
-                  : hasSentRequest
-                  ? 'bg-amber-100 text-amber-800'
-                  : 'bg-zinc-900 text-white hover:bg-zinc-800'
-              }`}
-            >
-              {isFollowing ? (
-                <>
-                  <UserCheck className="w-4 h-4" />
-                  <span>Following</span>
-                </>
-              ) : hasSentRequest ? (
-                <span>Requested</span>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4" />
-                  <span>Follow</span>
-                </>
+        {isEditing ? (
+          /* ── EDIT MODE: Clean Username Input Field inside White Box ── */
+          <div className="w-full flex flex-col gap-3.5 mt-2 animate-in fade-in duration-200">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-bold text-zinc-700 uppercase tracking-wider">
+                Username
+              </label>
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  value={usernameInput}
+                  onChange={(e) => {
+                    setUsernameInput(e.target.value.toLowerCase().replace(/[^a-zA-Z0-9_]/g, ''));
+                    setUsernameError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSaveUsername();
+                    }
+                  }}
+                  placeholder="Enter username"
+                  autoFocus
+                  className="w-full px-4 py-3.5 rounded-2xl bg-zinc-50 border border-zinc-200 focus:border-zinc-900 outline-none text-[15px] font-medium text-zinc-900 transition-all placeholder:text-zinc-400"
+                />
+              </div>
+              {usernameError && (
+                <span className="text-xs font-semibold text-rose-500 mt-1">
+                  {usernameError}
+                </span>
               )}
-            </button>
+            </div>
 
-            <button
-              onClick={() => {
-                onClose();
-                onOpenChat?.(targetUser);
-              }}
-              className="flex-1 py-3.5 px-4 rounded-full bg-[#FFF3CD] hover:bg-[#ffeaa7] text-zinc-900 font-semibold text-[13.5px] flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer outline-none border-0"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>Message</span>
-            </button>
-          </div>
-        )}
+            <div className="flex items-center gap-3 mt-2">
+              <button
+                type="button"
+                onClick={handleSaveUsername}
+                disabled={isSavingUsername}
+                className="flex-1 py-3.5 px-6 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-[13.5px] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 outline-none border-0 ring-0 shadow-sm"
+              >
+                {isSavingUsername ? 'Saving...' : 'Save Username'}
+              </button>
 
-        {/* ── Log Out Button for Self ── */}
-        {isSelf && (
-          <div className="mt-auto mb-4">
-            <button
-              onClick={handleLogout}
-              className="w-full py-3 px-6 rounded-full bg-rose-50/80 hover:bg-rose-100 text-rose-600 border border-rose-100/60 font-semibold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] outline-none"
-              aria-label="Log Out of Account"
-            >
-              <LogOut className="w-4 h-4" strokeWidth={2} />
-              <span>Log Out</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setIsEditing(false);
+                  setUsernameError(null);
+                }}
+                className="py-3.5 px-6 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold text-[13.5px] transition-all cursor-pointer active:scale-95 outline-none border-0 ring-0"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
+        ) : (
+          /* ── NORMAL MODE: Followers/Following + Logout directly underneath ── */
+          <>
+            {/* Followers & Following Round Capsules */}
+            <div className="flex items-center justify-center gap-4 w-full">
+              <div className="flex-1 py-4 px-6 rounded-full bg-zinc-50 border border-zinc-100 flex flex-col items-center justify-center shadow-xs">
+                <span className="text-[22px] font-black text-zinc-900 leading-tight">
+                  {followerCount}
+                </span>
+                <span className="text-[12px] text-zinc-500 font-medium mt-0.5">Followers</span>
+              </div>
+
+              <div className="flex-1 py-4 px-6 rounded-full bg-zinc-50 border border-zinc-100 flex flex-col items-center justify-center shadow-xs">
+                <span className="text-[22px] font-black text-zinc-900 leading-tight">
+                  {followingCount}
+                </span>
+                <span className="text-[12px] text-zinc-500 font-medium mt-0.5">Following</span>
+              </div>
+            </div>
+
+            {/* Log Out Button directly under followers and following for Self */}
+            {isSelf && (
+              <div className="w-full mt-1">
+                <button
+                  onClick={handleLogout}
+                  className="w-full py-3 px-6 rounded-full bg-rose-50/80 hover:bg-rose-100 text-rose-600 border border-rose-100/60 font-semibold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] outline-none"
+                  aria-label="Log Out of Account"
+                >
+                  <LogOut className="w-4 h-4" strokeWidth={2} />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            )}
+
+            {/* Other User Actions (Follow & Message) */}
+            {!isSelf && (
+              <div className="flex items-center gap-3 w-full">
+                <button
+                  onClick={handleFollowToggle}
+                  disabled={isFollowLoading}
+                  className={`flex-1 py-3.5 px-4 rounded-full font-semibold text-[13.5px] flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer outline-none border-0 ${
+                    isFollowing
+                      ? 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'
+                      : hasSentRequest
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-zinc-900 text-white hover:bg-zinc-800'
+                  }`}
+                >
+                  {isFollowing ? (
+                    <>
+                      <UserCheck className="w-4 h-4" />
+                      <span>Following</span>
+                    </>
+                  ) : hasSentRequest ? (
+                    <span>Requested</span>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4" />
+                      <span>Follow</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => {
+                    onClose();
+                    onOpenChat?.(targetUser);
+                  }}
+                  className="flex-1 py-3.5 px-4 rounded-full bg-[#FFF3CD] hover:bg-[#ffeaa7] text-zinc-900 font-semibold text-[13.5px] flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer outline-none border-0"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Message</span>
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
