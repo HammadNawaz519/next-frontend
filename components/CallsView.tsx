@@ -373,14 +373,16 @@ export default function CallsView({
                       </span>
                       <div className="flex items-center gap-1.5 mt-0.5 text-xs text-zinc-500">
                         <span>{formatCallDate(call.createdAt)}</span>
-                        {call.duration && call.duration > 0 ? (
-                          <>
-                            <span>•</span>
-                            <span className="font-semibold text-zinc-600">
-                              {formatDuration(call.duration)}
-                            </span>
-                          </>
-                        ) : null}
+                        <span>•</span>
+                        {call.status === 'missed' || !call.duration || call.duration === 0 ? (
+                          <span className="font-semibold text-rose-500">
+                            Missed
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-zinc-600">
+                            {formatDuration(call.duration)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
