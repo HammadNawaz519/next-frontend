@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Share2, UserPlus, UserCheck, Star, Heart, Trees } from 'lucide-react';
+import { ChevronLeft, Share2, UserPlus, UserCheck, Star, Heart } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 import { getUserPublicProfile, toggleFollowUser } from '@/app/dashboard/actions';
 
@@ -168,28 +168,23 @@ export default function OthersProfile({
           <div className="w-11 h-11" />
         </div>
 
-        {/* ── CARD CONTENT (FOREST CANOPY COVER + AVATAR + DETAILS + LARGE STATS + LIKE BUTTON) ── */}
+        {/* ── CARD CONTENT (FROST GLASS ARTWORK + AVATAR + DETAILS + LARGE STATS + LIKE BUTTON) ── */}
         <div className="flex-1 flex flex-col justify-between overflow-y-auto no-scrollbar py-1 min-h-0">
           
-          {/* Deep Emerald Forest Theme Banner (Takes Remaining Space Gracefully) */}
-          <div className="w-full flex-1 min-h-[140px] sm:min-h-[180px] rounded-[28px] overflow-hidden relative shadow-inner bg-gradient-to-br from-[#064E3B] via-[#047857] to-[#022C22] flex items-center justify-center shrink-0">
-            {/* Ambient organic glowing tree canopies and emerald bokeh lights */}
-            <div className="absolute -right-6 -bottom-10 w-44 h-44 rounded-full bg-emerald-400/30 blur-xl" />
-            <div className="absolute left-6 -top-8 w-36 h-36 rounded-full bg-teal-300/25 blur-lg" />
-            <div className="absolute right-12 top-6 w-20 h-20 rounded-full bg-lime-300/20 blur-md" />
+          {/* ── Frost / Ice Aurora Glassmorphism Artwork Banner (Pure Design, No Text) ── */}
+          <div className="w-full flex-1 min-h-[140px] sm:min-h-[180px] rounded-[28px] overflow-hidden relative shadow-inner bg-gradient-to-tr from-[#1E1B4B] via-[#0F172A] to-[#0284C7] flex items-center justify-center shrink-0">
+            {/* Ambient frosted aura orbs */}
+            <div className="absolute -right-8 -bottom-10 w-48 h-48 rounded-full bg-cyan-400/35 blur-2xl animate-pulse" style={{ animationDuration: '4s' }} />
+            <div className="absolute left-6 -top-10 w-40 h-40 rounded-full bg-indigo-500/40 blur-2xl" />
+            <div className="absolute right-16 top-6 w-24 h-24 rounded-full bg-violet-400/30 blur-xl" />
             
-            {/* Layered botanical / forest silhouettes */}
-            <div className="absolute inset-0 opacity-15 flex items-end justify-between px-6 pb-2 pointer-events-none">
-              <Trees className="w-16 h-16 text-emerald-200" />
-              <Trees className="w-20 h-20 text-emerald-100" />
-              <Trees className="w-14 h-14 text-emerald-200" />
-            </div>
-
-            {/* Glowing subtle center mist */}
-            <div className="relative z-10 flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/25 backdrop-blur-md text-emerald-100 text-xs font-semibold">
-              <Trees className="w-3.5 h-3.5 text-emerald-300" />
-              <span>Wilderness Atmosphere</span>
-            </div>
+            {/* Frosted glass 3D geometric crystal plates with backdrop blur */}
+            <div className="absolute w-32 h-32 rotate-12 rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] -top-4 -left-4" />
+            <div className="absolute w-24 h-24 -rotate-12 rounded-2xl bg-cyan-200/10 backdrop-blur-xl border border-white/25 shadow-lg bottom-2 right-8" />
+            <div className="absolute w-16 h-16 rotate-45 rounded-xl bg-indigo-300/15 backdrop-blur-lg border border-white/30 top-6 right-20" />
+            
+            {/* Shimmering frost diagonal reflection */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent rotate-45 scale-150 pointer-events-none" />
           </div>
 
           {/* Overlapping Avatar (Moved down with breathing space) */}
@@ -221,41 +216,41 @@ export default function OthersProfile({
             </p>
           </div>
 
-          {/* 3-Column Stats Row (Large, Prominent & Balanced) */}
-          <div className="w-full bg-zinc-50/90 border border-zinc-100 rounded-2xl p-4 sm:p-4.5 flex items-center justify-around text-center mb-3.5 shadow-2xs shrink-0">
+          {/* 3-Column Stats Row (Large, Prominent & High-End Typography) */}
+          <div className="w-full bg-zinc-50/90 border border-zinc-100 rounded-2xl p-4 sm:p-5 flex items-center justify-around text-center mb-3.5 shadow-2xs shrink-0">
             {/* Column 1: Rating (Follower to Like ratio) */}
             <div className="flex-1 flex flex-col items-center">
-              <div className="flex items-center gap-1.5 text-xl sm:text-2xl font-black text-zinc-900">
-                <Star className="w-4.5 h-4.5 fill-amber-400 text-amber-400" />
+              <div className="flex items-center gap-1.5 text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight tabular-nums">
+                <Star className="w-5 h-5 fill-amber-400 text-amber-400 shrink-0" />
                 <span>{rating}</span>
               </div>
-              <span className="text-[12px] font-bold text-zinc-400 mt-1 uppercase tracking-wider">
+              <span className="text-[11.5px] sm:text-[12px] font-extrabold text-zinc-400 mt-1 tracking-[0.14em] uppercase">
                 rating
               </span>
             </div>
 
             {/* Divider */}
-            <div className="w-px h-9 bg-zinc-200" />
+            <div className="w-px h-10 bg-zinc-200" />
 
             {/* Column 2: Followers */}
             <div className="flex-1 flex flex-col items-center">
-              <span className="text-xl sm:text-2xl font-black text-zinc-900">
+              <span className="text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight tabular-nums">
                 {followersCount > 999 ? `${(followersCount / 1000).toFixed(1)}k` : followersCount}
               </span>
-              <span className="text-[12px] font-bold text-zinc-400 mt-1 uppercase tracking-wider">
+              <span className="text-[11.5px] sm:text-[12px] font-extrabold text-zinc-400 mt-1 tracking-[0.14em] uppercase">
                 followers
               </span>
             </div>
 
             {/* Divider */}
-            <div className="w-px h-9 bg-zinc-200" />
+            <div className="w-px h-10 bg-zinc-200" />
 
             {/* Column 3: Following */}
             <div className="flex-1 flex flex-col items-center">
-              <span className="text-xl sm:text-2xl font-black text-zinc-900">
+              <span className="text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight tabular-nums">
                 {followingCount > 999 ? `${(followingCount / 1000).toFixed(1)}k` : followingCount}
               </span>
-              <span className="text-[12px] font-bold text-zinc-400 mt-1 uppercase tracking-wider">
+              <span className="text-[11.5px] sm:text-[12px] font-extrabold text-zinc-400 mt-1 tracking-[0.14em] uppercase">
                 following
               </span>
             </div>
