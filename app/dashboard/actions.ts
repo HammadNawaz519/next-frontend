@@ -581,6 +581,7 @@ export async function getRecentChats() {
     if (m.type === 'voice') return 'Voice Message';
     if (m.type === 'image') return 'Image';
     if (m.type === 'video') return 'Video';
+    if (m.type === 'song') return '🎵 Song Clip';
     if (m.type === 'file') return 'Attachment';
     if (m.type === 'deleted') return 'Message deleted';
     if (m.type === 'accepted') return 'Request accepted';

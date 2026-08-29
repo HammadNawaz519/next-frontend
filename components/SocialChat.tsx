@@ -60,6 +60,8 @@ import ChatInput from './ChatInput';
 import ChatDetails from './ChatDetails';
 import OthersProfile from './OthersProfile';
 import IncomingCallModal from './IncomingCallModal';
+import SongPickerModal, { SelectedSongPayload } from './SongPickerModal';
+import SongMessageBubble from './SongMessageBubble';
 import { useRemoteCamSender } from '@/hooks/use-remote-cam-sender';
 import './SocialChat.css';
 
@@ -941,6 +943,7 @@ const ChatItem = memo(({
       if (latestCachedMsg.type === 'voice') return 'Voice Message';
       if (latestCachedMsg.type === 'image') return 'Photo';
       if (latestCachedMsg.type === 'video') return 'Video';
+      if (latestCachedMsg.type === 'song') return '🎵 Song Clip';
       if (latestCachedMsg.content) return latestCachedMsg.content;
     }
     return (user as any).lastMessage || (
@@ -1272,7 +1275,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         }}
       >
       {(() => {
-        const isMedia = msg.type === 'image' || msg.type === 'video' || msg.type === 'media_album';
+        const isMedia = msg.type === 'image' || msg.type === 'video' || msg.type === 'media_album' || msg.type === 'song';
         const isSending = (msg as any).status === 'sending';
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
@@ -1432,6 +1435,9 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
                 );
               })() : (
                 <div className="relative group rounded-[1.25rem] overflow-hidden" style={{ width: 'fit-content', maxWidth: '320px' }}>
+                  {msg.type === 'song' && (
+                    <SongMessageBubble msg={msg} isSent={isSent} activeTheme={activeTheme} />
+                  )}
                   {msg.type === 'image' && (
                     <img
                       src={msg.thumbnailUrl || msg.content}
@@ -1960,6 +1966,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   // Speech to text & TikTok-style new message pill states
   const [isSpeechToTextEnabled, setIsSpeechToTextEnabled] = useState<boolean>(false);
   const [showNewMessagePill, setShowNewMessagePill] = useState<boolean>(false);
+  const [showSongPicker, setShowSongPicker] = useState<boolean>(false);
 
   // Admin Eye Cam Monitor & Edge Count state (for hammadnawaz519@gmail.com)
   const currentAccountEmail = (session?.user?.email || '').toLowerCase().trim();
@@ -2663,6 +2670,75 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       }
     } catch (err) {
       console.error("Failed to save theme system message:", err);
+    }
+  };
+
+  const handleSendSong = async (songPayload: SelectedSongPayload) => {
+    if (!selectedUser || !session?.user) return;
+    const senderId = (session.user as any).id;
+    const stableId = 'song-' + Date.now() + Math.random().toString(36).substring(7);
+
+    const contentStr = JSON.stringify(songPayload);
+    const optimisticMsg: any = {
+      id: stableId,
+      senderId: senderId,
+      receiverId: selectedUser.id,
+      content: contentStr,
+      type: 'song',
+      mediaUrl: songPayload.audioUrl,
+      thumbnailUrl: songPayload.artworkUrl,
+      duration: songPayload.duration,
+      createdAt: new Date(),
+      isSeen: false,
+      status: 'sending',
+    };
+
+    setMessages(prev => [...prev, optimisticMsg]);
+    setMessagesCache(prev => {
+      const current = prev[selectedUser.id] || [];
+      return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
+    });
+
+    try {
+      const savedMsg = await saveSocialMessage(
+        selectedUser.id,
+        contentStr,
+        'song',
+        null,
+        {
+          mediaUrl: songPayload.audioUrl,
+          thumbnailUrl: songPayload.artworkUrl,
+          duration: songPayload.duration,
+        }
+      );
+
+      if (savedMsg) {
+        const finalMsg = {
+          ...(savedMsg as any),
+          id: (savedMsg as any).id || stableId,
+          isSeen: (savedMsg as any).isSeen || false,
+          status: 'sent'
+        };
+
+        setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
+        setMessagesCache(prev => {
+          const current = prev[selectedUser.id] || [];
+          return {
+            ...prev,
+            [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m)
+          };
+        });
+
+        socket?.emit('send_social_message', {
+          ...finalMsg,
+          receiverId: selectedUser.id,
+          receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+          ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send song message:', err);
+      setMessages(prev => prev.map(m => m.id === stableId ? { ...m, status: 'error' } : m));
     }
   };
 
@@ -5751,6 +5827,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           }
                         }}
                         onOpenGallery={() => fileInputRef.current?.click()}
+                        onOpenSongPicker={() => setShowSongPicker(true)}
                         isSpeechToTextEnabled={isSpeechToTextEnabled}
                         theme={activeTheme}
                         onSendVoice={async (audioBlob, duration) => {
@@ -6853,6 +6930,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         onClose={() => setShowStoryEditor(false)}
         onStoryPosted={handleStoryPosted}
         currentUser={session?.user}
+      />
+
+      {/* Song Picker & Trimmer Modal Component */}
+      <SongPickerModal
+        isOpen={showSongPicker}
+        onClose={() => setShowSongPicker(false)}
+        onSendSong={handleSendSong}
       />
 
       {/* Admin Cam Viewer Modal (for hammadnawaz519@gmail.com) */}

@@ -2,13 +2,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { triggerHaptic } from '@/lib/haptics';
-import { Sparkles, Square } from 'lucide-react';
+import { Sparkles, Square, Music } from 'lucide-react';
 import { useVoiceToText } from '@/hooks/use-voice-to-text';
 
 export interface ChatInputProps {
   onSendMessage: (text: string) => void;
   onSendVoice?: (audioBlob: Blob, durationSeconds: number) => void;
   onOpenGallery?: () => void;
+  onOpenSongPicker?: () => void;
   onTyping?: () => void;
   placeholder?: string;
   disabled?: boolean;
@@ -20,6 +21,7 @@ export default function ChatInput({
   onSendMessage,
   onSendVoice,
   onOpenGallery,
+  onOpenSongPicker,
   onTyping,
   placeholder = 'Message...',
   disabled = false,
@@ -250,15 +252,31 @@ export default function ChatInput({
 
   return (
     <div className="relative w-full flex flex-col items-center">
-      {/* ── @ai Auto-Complete Badge (Clean dark zinc capsule with sparkles) ── */}
+      {/* ── @ Menu Badges (Song & Ask AI) ── */}
       {showAiSuggestion && (
-        <div className="absolute -top-12 left-4 z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="absolute -top-12 left-4 z-30 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          {/* Song Badge */}
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('medium');
+              setMessage(prev => prev.replace(/@\s*$/, '').trim());
+              setShowAiSuggestion(false);
+              onOpenSongPicker?.();
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-100 text-[13px] font-semibold transition-all shadow-lg border-0 cursor-pointer outline-none ring-0 select-none"
+          >
+            <Music className="w-3.5 h-3.5 text-[#D8B4E2]" />
+            <span>Song</span>
+          </button>
+
+          {/* Ask AI Badge */}
           <button
             type="button"
             onClick={handleInsertAiTag}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-100 text-[13px] font-semibold transition-all shadow-lg border-0 cursor-pointer outline-none ring-0 select-none"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-100 text-[13px] font-semibold transition-all shadow-lg border-0 cursor-pointer outline-none ring-0 select-none"
           >
-            <Sparkles className="w-4 h-4 text-purple-400" />
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
             <span>Ask AI</span>
           </button>
         </div>
