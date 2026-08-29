@@ -29,6 +29,7 @@ export default function ChatInput({
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isCancelled, setIsCancelled] = useState(false);
   const [showAiSuggestion, setShowAiSuggestion] = useState(false);
+  const [isMultiline, setIsMultiline] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -37,12 +38,18 @@ export default function ChatInput({
   const startTimeRef = useRef<number>(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-expand textarea height up to 120px when message is long
+  // Auto-expand textarea height when message is long while keeping simple pill when 1 line
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       const scrollHeight = textareaRef.current.scrollHeight;
-      textareaRef.current.style.height = `${Math.min(Math.max(scrollHeight, 40), 120)}px`;
+      if (scrollHeight > 44) {
+        setIsMultiline(true);
+        textareaRef.current.style.height = `${Math.min(scrollHeight, 120)}px`;
+      } else {
+        setIsMultiline(false);
+        textareaRef.current.style.height = '38px';
+      }
     }
   }, [message]);
 
@@ -88,9 +95,10 @@ export default function ChatInput({
     triggerHaptic('light');
     onSendMessage(trimmed);
     setMessage('');
+    setIsMultiline(false);
     setShowAiSuggestion(false);
     if (textareaRef.current) {
-      textareaRef.current.style.height = '40px';
+      textareaRef.current.style.height = '38px';
       textareaRef.current.focus();
     }
   };
@@ -254,10 +262,13 @@ export default function ChatInput({
         </div>
       )}
 
-      {/* ── Chat Composer Pill Container ── */}
-      <div className="w-full bg-white rounded-[26px] p-1.5 pl-2 pr-1.5 flex items-end gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-zinc-200/80 transition-all focus-within:border-zinc-300 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
-        
-        {/* ── LEFT: Attachment / Gallery Button ── */}
+      {/* ── Chat Composer Pill Container (Simple rounded-full when 1-line, expands to rounded-3xl when multiline) ── */}
+      <div
+        className={`w-full bg-white p-1.5 pl-2 pr-1.5 flex gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-zinc-200/80 transition-all focus-within:border-zinc-300 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.08)] ${
+          isMultiline ? 'rounded-3xl items-end' : 'rounded-full items-center'
+        }`}
+      >
+        {/* ── LEFT: Attachment / File Button ── */}
         <button
           type="button"
           onClick={() => {
@@ -265,7 +276,7 @@ export default function ChatInput({
             onOpenGallery?.();
           }}
           disabled={disabled || isRecording || vtt.isBusy}
-          className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs mb-0.5"
+          className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs"
           title="Attach Photos & Videos"
         >
           <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -273,9 +284,9 @@ export default function ChatInput({
           </svg>
         </button>
 
-        {/* ── CENTER: Auto-Expanding Text Input / Recording State / Transcribing State ── */}
+        {/* ── CENTER: Text Input / Recording State / Transcribing State ── */}
         {isRecording ? (
-          <div className="flex-1 flex items-center justify-between px-3.5 min-w-0 h-10 my-0.5">
+          <div className="flex-1 flex items-center justify-between px-3.5 min-w-0 h-10">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 bg-rose-500 rounded-full animate-ping" />
               <span className="text-[13.5px] font-semibold text-zinc-800 tracking-tight">
@@ -287,7 +298,7 @@ export default function ChatInput({
             </span>
           </div>
         ) : vtt.isRecording ? (
-          <div className="flex-1 flex items-center justify-between px-3.5 min-w-0 h-10 my-0.5">
+          <div className="flex-1 flex items-center justify-between px-3.5 min-w-0 h-10">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full animate-ping" />
               <span className="text-[13px] font-bold text-[#9D4EDD]">
@@ -303,7 +314,7 @@ export default function ChatInput({
             </button>
           </div>
         ) : vtt.isTranscribing ? (
-          <div className="flex-1 flex items-center gap-2 px-3.5 min-w-0 h-10 my-0.5">
+          <div className="flex-1 flex items-center gap-2 px-3.5 min-w-0 h-10">
             <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full animate-pulse" />
             <span className="text-[13px] font-semibold text-zinc-600 animate-pulse">
               Transcribing speech...
@@ -321,8 +332,8 @@ export default function ChatInput({
             onKeyDown={handleKeyDown}
             disabled={disabled}
             placeholder={placeholder}
-            className="flex-1 min-h-[40px] max-h-[120px] py-2.5 px-3 text-[15px] leading-relaxed font-normal text-zinc-900 placeholder:text-zinc-400 bg-transparent outline-none border-0 ring-0 focus:outline-none focus:ring-0 resize-none overflow-y-auto"
-            style={{ height: '40px' }}
+            className="flex-1 min-h-[38px] max-h-[120px] py-2 px-3 text-[15px] leading-normal font-normal text-zinc-900 placeholder:text-zinc-400 bg-transparent outline-none border-0 ring-0 focus:outline-none focus:ring-0 resize-none overflow-y-auto"
+            style={{ height: '38px' }}
           />
         )}
 
@@ -332,7 +343,7 @@ export default function ChatInput({
             type="button"
             onClick={handleSend}
             disabled={disabled || vtt.isBusy}
-            className="w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs mb-0.5"
+            className="w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs"
             title="Send Message"
           >
             <svg className="w-5 h-5 text-zinc-700" viewBox="-0.5 0 25 25" fill="none" stroke="currentColor">
@@ -345,7 +356,7 @@ export default function ChatInput({
             type="button"
             onClick={handleToggleVoiceToText}
             disabled={disabled}
-            className={`w-11 h-11 rounded-full flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs mb-0.5 ${
+            className={`w-11 h-11 rounded-full flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs ${
               vtt.isRecording
                 ? 'bg-[#9D4EDD] text-white animate-pulse shadow-md'
                 : vtt.isTranscribing
@@ -376,7 +387,7 @@ export default function ChatInput({
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
             disabled={disabled}
-            className={`w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 touch-none shadow-2xs mb-0.5 ${
+            className={`w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 touch-none shadow-2xs ${
               isRecording ? 'ring-4 ring-zinc-200 animate-pulse bg-zinc-200' : ''
             }`}
             title="Hold to Record Voice Message"
