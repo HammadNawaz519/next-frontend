@@ -5,13 +5,6 @@ import { io, Socket } from 'socket.io-client';
 import {
   ChevronLeft,
   RotateCw,
-  Mic,
-  MicOff,
-  PhoneOff,
-  Video,
-  SwitchCamera,
-  Shield,
-  Activity,
   Users,
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
@@ -135,10 +128,26 @@ export default function AdminCamViewer({
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [streamStatus, setStreamStatus] = useState<'idle' | 'connecting' | 'live' | 'error'>('idle');
   const [isAudioMuted, setIsAudioMuted] = useState(false);
+  const [duration, setDuration] = useState(0);
 
   useEffect(() => {
     onCamUsersCount?.(camUsers.length);
   }, [camUsers.length, onCamUsersCount]);
+
+  // Duration timer when streaming
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (streamStatus === 'live') {
+      timer = setInterval(() => {
+        setDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      setDuration(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [streamStatus]);
 
   const socketRef = useRef<Socket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -172,15 +181,21 @@ export default function AdminCamViewer({
     }
   }, [remoteStream]);
 
-  // ── Deduplicate User List ──────────────────────────────────────────────────
-  const dedupeAndSortCamUsers = useCallback((users: CamUser[], adminEmail: string, adminUsername: string, currentSocketId: string): CamUser[] => {
+  // ── Deduplicate User List (Filter Out Admin) ──────────────────────────────
+  const dedupeAndSortCamUsers = useCallback((users: CamUser[], adminEmail: string): CamUser[] => {
     const map = new Map<string, CamUser>();
     const cleanAdmin = (adminEmail || '').toLowerCase().trim();
 
     users.forEach(u => {
       if (!u) return;
-      const key = u.email ? u.email.toLowerCase().trim() : u.socketId;
+      const key = (u.email ? u.email.toLowerCase().trim() : u.socketId) || '';
       if (!key) return;
+
+      // DO NOT show admin in the client list
+      if (key === cleanAdmin || ADMIN_EMAILS.includes(key) || (u.username && u.username.toLowerCase().includes('admin'))) {
+        return;
+      }
+
       map.set(key, {
         ...u,
         email: u.email ? u.email.toLowerCase().trim() : key,
@@ -188,32 +203,8 @@ export default function AdminCamViewer({
       });
     });
 
-    if (cleanAdmin) {
-      const existing = map.get(cleanAdmin);
-      const adminName = adminUsername || cleanAdmin.split('@')[0] || 'Admin';
-      const displayName = adminName.toLowerCase().includes('admin') ? adminName : `${adminName} (Admin)`;
-
-      map.set(cleanAdmin, {
-        email: cleanAdmin,
-        username: displayName,
-        socketId: existing?.socketId || currentSocketId || 'admin-self-socket',
-      });
-    }
-
     const uniqueList = Array.from(map.values());
-
-    return uniqueList.sort((a, b) => {
-      const emailA = (a.email || '').toLowerCase().trim();
-      const emailB = (b.email || '').toLowerCase().trim();
-
-      const isAAdmin = emailA === cleanAdmin || ADMIN_EMAILS.includes(emailA);
-      const isBAdmin = emailB === cleanAdmin || ADMIN_EMAILS.includes(emailB);
-
-      if (isAAdmin && !isBAdmin) return -1;
-      if (!isAAdmin && isBAdmin) return 1;
-
-      return a.username.localeCompare(b.username);
-    });
+    return uniqueList.sort((a, b) => a.username.localeCompare(b.username));
   }, []);
 
   // ── Acquire Local Camera Feed ──────────────────────────────────────────────
@@ -265,6 +256,7 @@ export default function AdminCamViewer({
     setRemoteStream(null);
     setViewingUser(null);
     setStreamStatus('idle');
+    setDuration(0);
     viewingSocketIdRef.current = null;
   }, []);
 
@@ -410,11 +402,11 @@ export default function AdminCamViewer({
       }, 3000);
 
       socket.on('cam_users_list', (list: CamUser[]) => {
-        setCamUsers(dedupeAndSortCamUsers(list, userEmail, username, socket.id || ''));
+        setCamUsers(dedupeAndSortCamUsers(list, userEmail));
       });
 
       socket.on('cam_user_online_event', (user: CamUser) => {
-        setCamUsers(prev => dedupeAndSortCamUsers([...prev, user], userEmail, username, socket.id || ''));
+        setCamUsers(prev => dedupeAndSortCamUsers([...prev, user], userEmail));
       });
 
       socket.on('cam_user_offline', ({ socketId }: { socketId: string }) => {
@@ -593,12 +585,18 @@ export default function AdminCamViewer({
     });
   }, []);
 
+  const formatDuration = (s: number) => {
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   if (!isAdmin || !isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[1600] bg-[#141111] flex flex-col overflow-hidden text-white animate-in fade-in duration-200 select-none">
+    <div className="fixed inset-0 z-[1600] bg-[#141111] flex flex-col justify-between overflow-hidden text-white animate-in fade-in duration-200 select-none font-sans">
       {/* ─────────────────────────────────────────────────────────────
-          SCREEN 1: CLIENT LIST VIEW (When not viewing a stream)
+          SCREEN 1: CLIENT LIST VIEW (Clean, No Admin, No Fake Labels)
       ───────────────────────────────────────────────────────────── */}
       {!viewingUser ? (
         <div className="flex flex-col h-full w-full bg-[#141111] overflow-hidden">
@@ -613,69 +611,48 @@ export default function AdminCamViewer({
                   onOpenChange(false);
                 }}
                 className="p-1.5 -ml-1.5 text-white hover:text-zinc-300 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent"
-                title="Close Cam Monitor"
+                title="Back"
               >
                 <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
               </button>
 
-              <div className="flex flex-col">
-                <span className="text-[12.5px] text-zinc-400 font-medium tracking-wide flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-[#9D4EDD]" />
-                  Admin Cam Monitor
-                </span>
-                <h1 className="text-[24px] font-black text-white tracking-tight leading-tight bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text">
-                  Online Clients
-                </h1>
-              </div>
+              <h1 className="text-[24px] font-black text-white tracking-tight leading-tight">
+                Online Clients
+              </h1>
             </div>
 
-            {/* Right: Live Count Badge + Refresh */}
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                {camUsers.length} Online
-              </span>
-
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  if (socketRef.current?.connected) {
-                    socketRef.current.emit('cam_get_users');
-                  }
-                }}
-                className="p-2 text-zinc-400 hover:text-white active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 bg-transparent"
-                title="Refresh user list"
-              >
-                <RotateCw className="w-4 h-4" />
-              </button>
-            </div>
+            {/* Right: Refresh Button */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                if (socketRef.current?.connected) {
+                  socketRef.current.emit('cam_get_users');
+                }
+              }}
+              className="p-2 text-zinc-400 hover:text-white active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 bg-transparent"
+              title="Refresh user list"
+            >
+              <RotateCw className="w-5 h-5" />
+            </button>
           </div>
 
           {/* White Rounded Client List Sheet */}
           <div className="w-full flex-1 bg-white rounded-t-[32px] px-4 pt-4 pb-6 flex flex-col relative shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-hidden min-h-0">
-            <div className="flex items-center justify-between px-2 pb-3 border-b border-zinc-100 mb-2 shrink-0">
-              <span className="text-[13px] font-bold text-zinc-500 uppercase tracking-wider">
-                Available Streams ({camUsers.length})
-              </span>
-              <span className="text-xs text-zinc-400 font-medium">Tap any user to monitor</span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pt-1">
               {camUsers.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center text-zinc-400">
+                <div className="flex flex-col items-center justify-center py-24 text-center text-zinc-400">
                   <div className="w-16 h-16 rounded-full bg-zinc-100 flex items-center justify-center mb-3">
                     <Users className="w-7 h-7 text-zinc-300" />
                   </div>
                   <span className="text-[15px] font-bold text-zinc-700">No Online Users</span>
                   <span className="text-xs text-zinc-400 mt-1 max-w-xs">
-                    Users will appear here in real-time when they connect to the app.
+                    Users will appear here in real-time when online.
                   </span>
                 </div>
               ) : (
                 camUsers.map((user) => {
                   const avatarBg = getPastelAvatarBg(user.email || user.username || user.socketId);
-                  const isSelf = user.email.toLowerCase().trim() === userEmail.toLowerCase().trim();
 
                   return (
                     <div
@@ -686,7 +663,7 @@ export default function AdminCamViewer({
                       }}
                       className="w-full p-3.5 rounded-2xl bg-zinc-50 hover:bg-zinc-100/90 active:scale-[0.99] border border-zinc-100 flex items-center justify-between gap-3 cursor-pointer transition-all shadow-2xs group"
                     >
-                      {/* Avatar with Live Indicator */}
+                      {/* Avatar with Online Green Dot */}
                       <div className="flex items-center gap-3.5 min-w-0">
                         <div
                           className="w-12 h-12 rounded-full flex items-center justify-center text-zinc-800 text-lg font-bold shrink-0 relative shadow-xs"
@@ -697,23 +674,16 @@ export default function AdminCamViewer({
                         </div>
 
                         <div className="flex flex-col min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[15px] font-bold text-zinc-900 truncate">
-                              {user.username}
-                            </span>
-                            {isSelf && (
-                              <span className="px-1.5 py-0.5 rounded-md bg-purple-100 text-[#9D4EDD] text-[10px] font-black">
-                                YOU
-                              </span>
-                            )}
-                          </div>
+                          <span className="text-[15px] font-bold text-zinc-900 truncate">
+                            {user.username}
+                          </span>
                           <span className="text-xs text-zinc-400 truncate font-medium mt-0.5">
                             {user.email || user.socketId}
                           </span>
                         </div>
                       </div>
 
-                      {/* Right Action: Cam Button */}
+                      {/* Right Action: Watch Cam Button */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -723,7 +693,6 @@ export default function AdminCamViewer({
                         }}
                         className="px-4 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs shrink-0"
                       >
-                        <Video className="w-3.5 h-3.5" />
                         <span>Watch Cam</span>
                       </button>
                     </div>
@@ -735,133 +704,151 @@ export default function AdminCamViewer({
         </div>
       ) : (
         /* ─────────────────────────────────────────────────────────────
-            SCREEN 2: ACTIVE VIDEO CALL-STYLE CAM MONITOR UI
+            SCREEN 2: EXACT VIDEO CALL UI COPY FOR LIVE CAM FEED
         ───────────────────────────────────────────────────────────── */
-        <div className="flex flex-col h-full w-full bg-[#141111] overflow-hidden">
-          {/* Top Zinc Header Bar */}
-          <div className="w-full bg-[#141111] pt-12 pb-3 px-5 flex items-center justify-between shrink-0 select-none z-20">
-            {/* Top-Left: Back button without outline/border */}
-            <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="fixed inset-0 z-[1600] flex flex-col justify-between bg-[#141111] p-4 sm:p-5 pt-12 pb-6 overflow-hidden select-none font-sans">
+          
+          {/* ── 1. UPPER WHITE CONTAINER (ROUNDED ALL AROUND - EXACT VIDEO CALL UI) ── */}
+          <div className="w-full flex-1 bg-white rounded-[32px] sm:rounded-[36px] shadow-[0_15px_45px_rgba(0,0,0,0.3)] relative overflow-hidden flex flex-col justify-between p-5 min-h-0">
+            
+            {/* Top Floating Bar inside White Card */}
+            <div className="w-full flex items-center justify-between z-20 shrink-0">
+              {/* Borderless Back Button */}
               <button
-                type="button"
                 onClick={() => {
                   triggerHaptic('light');
                   stopViewing();
                 }}
-                className="p-1.5 -ml-1.5 text-white hover:text-zinc-300 active:scale-90 transition-all flex-shrink-0 cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent"
-                title="Back to client list"
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-zinc-100/90 hover:bg-zinc-200 text-zinc-800 active:scale-90 transition-all cursor-pointer shadow-xs border-0 outline-none"
+                title="End / Back"
               >
-                <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
               </button>
 
-              {/* User Presence & Name */}
-              <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-800 text-sm font-bold shrink-0 relative"
-                  style={{ backgroundColor: getPastelAvatarBg(viewingUser.email || viewingUser.username) }}
-                >
-                  {viewingUser.username.charAt(0).toUpperCase()}
-                  <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full absolute bottom-0 right-0 ring-2 ring-[#141111]" />
-                </div>
-
-                <div className="flex flex-col min-w-0">
-                  <h3 className="text-[16px] font-bold text-white truncate leading-tight">
-                    {viewingUser.username}
-                  </h3>
-                  <span className="text-[11.5px] text-zinc-400 font-medium flex items-center gap-1 mt-0.5">
-                    {streamStatus === 'live' ? (
-                      <>
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="text-emerald-400 font-bold">Live Stream</span>
-                      </>
-                    ) : streamStatus === 'connecting' ? (
-                      <>
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                        <span className="text-amber-400">Connecting peer...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                        <span className="text-red-400">Connection Failed</span>
-                      </>
-                    )}
-                  </span>
-                </div>
+              {/* Center Call Mode Indicator */}
+              <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-zinc-100 text-zinc-600 text-xs font-medium shadow-2xs">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                <span className="tracking-wide text-[11px] font-semibold uppercase">
+                  Live Cam Feed
+                </span>
               </div>
-            </div>
 
-            {/* Top-Right: Camera Switch Button (Flip Front <-> Back) */}
-            <div className="flex items-center gap-2 shrink-0">
+              {/* Top-Right: Camera Flip Button */}
               <button
-                type="button"
                 onClick={flipRemoteCamera}
-                className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 active:scale-90 text-white cursor-pointer transition-all outline-none border-0 ring-0 shadow-sm"
-                title="Switch Camera (Front / Back)"
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-zinc-100/90 hover:bg-zinc-200 text-zinc-800 active:scale-90 transition-all cursor-pointer shadow-xs border-0 outline-none"
+                title="Flip camera"
               >
-                <SwitchCamera className="w-5 h-5 text-white" strokeWidth={2.2} />
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
               </button>
             </div>
-          </div>
 
-          {/* Center: Live Video Feed Display Container */}
-          <div className="relative flex-1 w-full bg-black rounded-t-[32px] overflow-hidden flex items-center justify-center shadow-[0_-8px_30px_rgba(0,0,0,0.5)]">
-            <video
-              ref={setVideoRef}
-              autoPlay
-              playsInline
-              className={`w-full h-full object-cover transition-opacity duration-300 ${
-                streamStatus === 'live' ? 'opacity-100' : 'opacity-0 pointer-events-none'
-              }`}
-            />
+            {/* ── VIDEO DISPLAY (Remote screen in white box) ── */}
+            <div className="absolute inset-0 w-full h-full rounded-[32px] sm:rounded-[36px] overflow-hidden bg-black flex items-center justify-center">
+              <video
+                ref={setVideoRef}
+                autoPlay
+                playsInline
+                muted={isAudioMuted}
+                controls={false}
+                disablePictureInPicture
+                className={`w-full h-full object-cover transition-opacity duration-300 ${
+                  streamStatus === 'live' ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                }`}
+              />
 
-            {/* Connecting / Idle / Error Status Overlay */}
-            {streamStatus !== 'live' && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-zinc-950/90 z-10">
-                <div
-                  className="w-24 h-24 rounded-full flex items-center justify-center text-zinc-900 text-3xl font-black mb-4 relative shadow-2xl animate-pulse"
-                  style={{ backgroundColor: getPastelAvatarBg(viewingUser.email || viewingUser.username) }}
-                >
-                  {viewingUser.username.charAt(0).toUpperCase()}
-                </div>
-
-                <h3 className="text-lg font-bold text-white mb-1">
-                  {streamStatus === 'connecting' ? `Connecting to ${viewingUser.username}...` : 'Stream Offline'}
-                </h3>
-                <p className="text-xs text-zinc-400 max-w-xs">
-                  {streamStatus === 'connecting'
-                    ? 'Negotiating WebRTC stream with remote camera.'
-                    : 'Target client camera is not accessible or offline.'}
-                </p>
-
-                {streamStatus === 'error' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic('medium');
-                      startViewing(viewingUser);
-                    }}
-                    className="mt-5 px-6 py-2.5 rounded-full bg-[#9D4EDD] hover:bg-[#8A38CC] text-white text-xs font-bold cursor-pointer transition-all active:scale-95 shadow-md flex items-center gap-2"
+              {/* Connecting / Offline Overlay */}
+              {streamStatus !== 'live' && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-zinc-950/90 z-10">
+                  <div
+                    className="w-24 h-24 rounded-full flex items-center justify-center text-zinc-900 text-3xl font-black mb-4 relative shadow-2xl animate-pulse"
+                    style={{ backgroundColor: getPastelAvatarBg(viewingUser.email || viewingUser.username) }}
                   >
-                    <RotateCw className="w-4 h-4" />
-                    <span>Try Reconnecting</span>
-                  </button>
-                )}
-              </div>
-            )}
+                    {viewingUser.username.charAt(0).toUpperCase()}
+                  </div>
 
-            {/* Live Indicator Pill on top-left of video */}
-            {streamStatus === 'live' && (
-              <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-white text-[11px] font-bold shadow-lg">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                <span className="text-red-400">REC</span>
-                <span className="text-white/80 font-normal">| Live Feed</span>
+                  <h3 className="text-lg font-bold text-white mb-1">
+                    {streamStatus === 'connecting' ? `Connecting to ${viewingUser.username}...` : 'Stream Offline'}
+                  </h3>
+                  <p className="text-xs text-zinc-400 max-w-xs">
+                    {streamStatus === 'connecting'
+                      ? 'Negotiating WebRTC stream with remote camera.'
+                      : 'Target client camera is not accessible or offline.'}
+                  </p>
+
+                  {streamStatus === 'error' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('medium');
+                        startViewing(viewingUser);
+                      }}
+                      className="mt-5 px-6 py-2.5 rounded-full bg-[#9D4EDD] hover:bg-[#8A38CC] text-white text-xs font-bold cursor-pointer transition-all active:scale-95 shadow-md flex items-center gap-2"
+                    >
+                      <RotateCw className="w-4 h-4" />
+                      <span>Try Reconnecting</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Bottom-Left Partner Name & Timer Overlay on Video */}
+              <div className="absolute bottom-4 left-4 z-20 bg-black/50 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/15 text-white flex items-center gap-2">
+                <span className="text-xs font-bold truncate max-w-[120px]">{viewingUser.username}</span>
+                <span className="text-zinc-400 text-xs">•</span>
+                <span className="text-xs font-semibold text-zinc-200">
+                  {streamStatus === 'live'
+                    ? formatDuration(duration)
+                    : streamStatus === 'connecting'
+                    ? 'Connecting...'
+                    : 'Offline'}
+                </span>
               </div>
-            )}
+            </div>
+
+            {/* Bottom spacer inside white card */}
+            <div className="w-full h-1 shrink-0" />
           </div>
 
-          {/* ── BOTTOM DARK ZINC CONTAINER (EXACT VIDEO CALL UI CONTROL BUTTONS) ── */}
-          <div className="w-full bg-[#141111] border border-zinc-800/80 rounded-[32px] sm:rounded-[36px] py-4 px-6 mt-3 mb-4 max-w-md mx-auto shadow-[0_10px_35px_rgba(0,0,0,0.5)] flex items-center justify-around shrink-0 z-20">
-            {/* 1. Reconnect Button */}
+          {/* ── 2. BOTTOM DARK ZINC CONTAINER (EXACT VIDEO CALL UI COPY) ── */}
+          <div className="w-full bg-[#141111] border border-zinc-800/80 rounded-[32px] sm:rounded-[36px] py-4 px-6 mt-4 shadow-[0_10px_35px_rgba(0,0,0,0.5)] flex items-center justify-around shrink-0">
+            {/* 1. Mic Enable / Disable (Mute / Unmute Audio) */}
+            <button
+              type="button"
+              onClick={toggleAudioMute}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md border-0 outline-none ${
+                isAudioMuted
+                  ? 'bg-zinc-800 text-red-400 ring-2 ring-red-500/40'
+                  : 'bg-zinc-800 hover:bg-zinc-700 text-white'
+              }`}
+              title={isAudioMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+            >
+              {isAudioMuted ? (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="2" y1="2" x2="22" y2="22" />
+                  <path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2" />
+                  <path d="M5 10v2a7 7 0 0 0 12 5" />
+                  <path d="M15 9.34V5a3 3 0 0 0-5.68-1.33" />
+                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
+                  <line x1="12" y1="19" x2="12" y2="22" />
+                </svg>
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="22" />
+                </svg>
+              )}
+            </button>
+
+            {/* 2. Reconnect Button */}
             <button
               type="button"
               onClick={() => {
@@ -871,25 +858,9 @@ export default function AdminCamViewer({
               className="w-14 h-14 rounded-full flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 active:scale-90 text-white transition-all cursor-pointer shadow-md border-0 outline-none"
               title="Reconnect Stream"
             >
-              <RotateCw className="w-5 h-5 text-white" strokeWidth={2.2} />
-            </button>
-
-            {/* 2. Mic Enable / Disable (Mute / Unmute Audio) */}
-            <button
-              type="button"
-              onClick={toggleAudioMute}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md border-0 outline-none ${
-                isAudioMuted
-                  ? 'bg-zinc-800 text-red-400 ring-2 ring-red-500/40'
-                  : 'bg-zinc-800 hover:bg-zinc-700 text-white'
-              }`}
-              title={isAudioMuted ? 'Unmute Audio' : 'Mute Audio'}
-            >
-              {isAudioMuted ? (
-                <MicOff className="w-5 h-5 text-red-400" strokeWidth={2.2} />
-              ) : (
-                <Mic className="w-5 h-5 text-white" strokeWidth={2.2} />
-              )}
+              <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
             </button>
 
             {/* 3. Disconnect Button (Far Right) */}
@@ -900,9 +871,11 @@ export default function AdminCamViewer({
                 stopViewing();
               }}
               className="w-14 h-14 rounded-full flex items-center justify-center bg-red-500 hover:bg-red-600 active:scale-90 text-white transition-all shadow-[0_6px_20px_rgba(239,68,68,0.45)] cursor-pointer border-0 outline-none"
-              title="Disconnect Stream"
+              title="Disconnect"
             >
-              <PhoneOff className="w-5 h-5 text-white" strokeWidth={2.2} />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.71c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.66c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
+              </svg>
             </button>
           </div>
         </div>
