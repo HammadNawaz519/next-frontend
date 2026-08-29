@@ -122,9 +122,11 @@ async function transcribeWithGroq(
     formData.append('language', options.language);
   }
 
-  if (options?.prompt) {
-    formData.append('prompt', options.prompt);
-  }
+  // Condition Whisper with Urdu/Roman Urdu context so it outputs proper Urdu/English without confusing with Hindi
+  const defaultMultilingualPrompt =
+    options?.prompt ||
+    'یہ اردو، رومن اردو اور انگلش گفتگو ہے۔ السلام علیکم، کیسے ہیں آپ؟ Kya haal hai? I am good.';
+  formData.append('prompt', defaultMultilingualPrompt);
 
   // Use temperature 0 for deterministic, high-fidelity transcription in the speaker's exact language
   formData.append('temperature', String(options?.temperature ?? 0));
@@ -149,7 +151,38 @@ async function transcribeWithGroq(
     }
 
     const data = await response.json();
-    return data.text || '';
+    let transcriptText = (data.text || '').trim();
+
+    // If Whisper mistakenly produced Devanagari Hindi characters for spoken Urdu, retry with explicit 'ur' language
+    if (/[\u0900-\u097F]/.test(transcriptText)) {
+      try {
+        const retryForm = new FormData();
+        retryForm.append('file', blob, fileName);
+        retryForm.append('model', GROQ_STT_MODEL);
+        retryForm.append('response_format', 'json');
+        retryForm.append('language', 'ur');
+        retryForm.append('temperature', '0');
+
+        const retryRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: retryForm,
+        });
+
+        if (retryRes.ok) {
+          const retryData = await retryRes.json();
+          if (retryData.text) {
+            transcriptText = retryData.text.trim();
+          }
+        }
+      } catch (retryErr) {
+        console.warn('Urdu language retry failed, falling back to original:', retryErr);
+      }
+    }
+
+    return transcriptText;
   } finally {
     clearTimeout(timeout);
   }
