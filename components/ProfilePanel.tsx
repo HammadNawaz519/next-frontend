@@ -221,7 +221,7 @@ export default function ProfilePanel({
   return (
     <div
       data-profile-open="true"
-      className="fixed inset-0 z-[100] h-screen w-full flex flex-col bg-[#141111] overflow-hidden font-sans select-none animate-in fade-in duration-200"
+      className="fixed inset-0 z-30 h-screen w-full flex flex-col bg-[#141111] overflow-hidden font-sans select-none animate-in fade-in duration-200"
     >
       {/* Toast Alert */}
       {toastMessage && (

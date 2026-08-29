@@ -5875,16 +5875,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             }
                           }
                         }}
-                        onTyping={() => {
-                          if (socket && selectedUser) {
-                            if (!typingTimeoutRef.current) { socket.emit('typing', { receiverEmail: selectedUser.email }); }
-                            else { clearTimeout(typingTimeoutRef.current); }
-                            typingTimeoutRef.current = setTimeout(() => {
-                              socket.emit('stop_typing', { receiverEmail: selectedUser.email });
-                              typingTimeoutRef.current = null;
-                            }, 2000);
-                          }
-                        }}
                       />
                     </div>
                   </div>

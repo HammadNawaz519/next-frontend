@@ -528,8 +528,8 @@ export default function DashboardPage() {
       </div>
 
       {/* Mobile Bottom Navigation — single unified bottom bar: Messages (left), Calls (center), Profile (right) */}
-      {(!selectedChatUser && !isCallActive && !isSearchActive && !isStoryEditorOpen && !isProfileOpen) && (
-        <nav className={`mobile-nav ${(isAccountSheetOpen || isChatLongPressActive || isProfileOpen) ? 'mobile-nav-hidden' : ''}`}>
+      {(!selectedChatUser && !isCallActive && !isSearchActive && !isStoryEditorOpen) && (
+        <nav className={`mobile-nav ${(isAccountSheetOpen || isChatLongPressActive) ? 'mobile-nav-hidden' : ''}`}>
           {/* 1. Messages (Leftmost) */}
           <button
             onClick={(e) => handleNavClick('chat', e)}
