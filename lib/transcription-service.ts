@@ -118,7 +118,7 @@ async function transcribeWithGroq(
   }
 
   const formData = new FormData();
-  const blob = new Blob([audioBuffer], { type: mimeType });
+  const blob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
   formData.append('file', blob, fileName);
   formData.append('model', process.env.GROQ_STT_MODEL || 'whisper-large-v3-turbo');
   formData.append('response_format', 'json');
@@ -175,7 +175,7 @@ async function transcribeWithOpenAI(
   }
 
   const formData = new FormData();
-  const blob = new Blob([audioBuffer], { type: mimeType });
+  const blob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
   formData.append('file', blob, fileName);
   formData.append('model', 'whisper-1');
   formData.append('response_format', 'json');
