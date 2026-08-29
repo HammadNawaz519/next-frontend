@@ -2017,14 +2017,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [isAdminCamOpen, setIsAdminCamOpen] = useState<boolean>(false);
   const [edgeRequestCount, setEdgeRequestCount] = useState<number>(0);
   const [isClearingDb, setIsClearingDb] = useState<boolean>(false);
+  const [showDbResetModal, setShowDbResetModal] = useState<boolean>(false);
+  const [dbResetToast, setDbResetToast] = useState<string | null>(null);
 
   const handleClearAllDatabase = async () => {
     triggerHaptic('heavy');
-    const confirmed = window.confirm(
-      "⚠️ DANGER: Reset all DB messages, calls, posts, stories & storage buckets to zero?\n\n(Only User accounts will remain intact)."
-    );
-    if (!confirmed) return;
-
     setIsClearingDb(true);
     try {
       const res = await clearAllDatabaseAndBucketsAction();
@@ -2041,13 +2038,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           localStorage.removeItem('social_users_cache');
           localStorage.removeItem('social_requests_cache');
         } catch (e) {}
-        alert(res.message || 'All database tables & buckets reset to zero!');
+        setShowDbResetModal(false);
+        setDbResetToast('Database & buckets reset to zero! Only Users preserved.');
+        setTimeout(() => setDbResetToast(null), 3500);
       } else {
-        alert(res?.error || 'Failed to reset database');
+        setDbResetToast(res?.error || 'Failed to reset database');
+        setTimeout(() => setDbResetToast(null), 3500);
       }
     } catch (err: any) {
       console.error('Reset error:', err);
-      alert('Failed to reset database: ' + (err?.message || 'Unknown error'));
+      setDbResetToast('Failed to reset database: ' + (err?.message || 'Unknown error'));
+      setTimeout(() => setDbResetToast(null), 3500);
     } finally {
       setIsClearingDb(false);
     }
@@ -5276,21 +5277,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             triggerHaptic('medium');
                             setIsAdminCamOpen(true);
                           }}
-                          className="p-2 text-white hover:text-zinc-300 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent"
+                          className="p-1.5 text-white hover:text-zinc-300 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent"
                           title="Open Cam Monitor"
                         >
-                          <Eye className="w-6 h-6 text-white" strokeWidth={2} />
+                          <Eye className="w-5 h-5 text-white" strokeWidth={2} />
                         </button>
                         <button
                           type="button"
                           disabled={isClearingDb}
-                          onClick={handleClearAllDatabase}
-                          className={`p-2 text-white hover:text-rose-400 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent ${
+                          onClick={() => {
+                            triggerHaptic('medium');
+                            setShowDbResetModal(true);
+                          }}
+                          className={`p-1.5 text-white hover:text-rose-400 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent ${
                             isClearingDb ? 'animate-spin text-rose-400 opacity-60' : ''
                           }`}
                           title="Clear DB & Buckets to Zero (Preserve Users only)"
                         >
-                          <Database className="w-6 h-6 text-white hover:text-rose-400" strokeWidth={2} />
+                          <Database className="w-[18px] h-[18px] text-white hover:text-rose-400" strokeWidth={2.1} />
                         </button>
                       </div>
                     )}
@@ -7104,6 +7108,75 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           callId={activeCall.callId}
           onEnd={handleCallEnded}
         />
+      )}
+
+      {/* Admin Reset Database Confirmation Modal (Custom In-App Dark Theme) */}
+      {showDbResetModal && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => {
+            if (!isClearingDb) {
+              triggerHaptic('light');
+              setShowDbResetModal(false);
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-sm bg-[#181515] border border-zinc-800/90 rounded-[28px] p-6 shadow-[0_25px_70px_rgba(0,0,0,0.9)] animate-in zoom-in-95 duration-200 flex flex-col items-center text-center text-white select-none"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Icon */}
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-4 text-rose-500 shadow-inner">
+              <Database className="w-7 h-7 text-rose-500" strokeWidth={2.2} />
+            </div>
+
+            {/* Title & Description */}
+            <h3 className="text-lg font-bold text-white tracking-tight mb-2">
+              Reset Database to Zero?
+            </h3>
+            <p className="text-[13px] text-zinc-400 leading-relaxed mb-6 font-normal">
+              This will permanently delete all messages, calls, posts, stories, and media files in buckets. <span className="text-zinc-200 font-semibold">User accounts and login credentials will remain intact.</span>
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 w-full">
+              <button
+                type="button"
+                disabled={isClearingDb}
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowDbResetModal(false);
+                }}
+                className="flex-1 py-3 px-4 rounded-full bg-zinc-800/90 hover:bg-zinc-700/90 text-zinc-300 font-semibold text-xs active:scale-95 transition-all cursor-pointer border border-zinc-700/50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isClearingDb}
+                onClick={handleClearAllDatabase}
+                className="flex-1 py-3 px-4 rounded-full bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs shadow-lg shadow-rose-950/50 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 border border-rose-500/30"
+              >
+                {isClearingDb ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Resetting...</span>
+                  </>
+                ) : (
+                  <span>Reset All to Zero</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating In-App Toast */}
+      {dbResetToast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[110] bg-zinc-900/95 border border-zinc-800 text-white px-5 py-2.5 rounded-full shadow-2xl backdrop-blur-xl flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>{dbResetToast}</span>
+        </div>
       )}
     </>
   );
