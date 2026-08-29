@@ -122,15 +122,12 @@ async function transcribeWithGroq(
     formData.append('language', options.language);
   }
 
-  // Preserve conversational Roman Urdu and multilingual nuances
-  const systemPrompt =
-    options?.prompt ||
-    'Transcribe exactly what was spoken in English, Urdu, Roman Urdu, Hindi, or Punjabi without translation.';
-  formData.append('prompt', systemPrompt);
-
-  if (options?.temperature !== undefined) {
-    formData.append('temperature', String(options.temperature));
+  if (options?.prompt) {
+    formData.append('prompt', options.prompt);
   }
+
+  // Use temperature 0 for deterministic, high-fidelity transcription in the speaker's exact language
+  formData.append('temperature', String(options?.temperature ?? 0));
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
