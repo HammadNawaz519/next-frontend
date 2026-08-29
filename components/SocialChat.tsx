@@ -5289,12 +5289,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             triggerHaptic('medium');
                             setShowDbResetModal(true);
                           }}
-                          className={`p-1.5 text-white hover:text-rose-400 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent ${
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-zinc-400 hover:text-rose-400 hover:bg-white/10 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent ${
                             isClearingDb ? 'animate-spin text-rose-400 opacity-60' : ''
                           }`}
-                          title="Clear DB & Buckets to Zero (Preserve Users only)"
+                          title="Reset DB & Buckets to Zero (Preserve Users only)"
                         >
-                          <Database className="w-[18px] h-[18px] text-white hover:text-rose-400" strokeWidth={2.1} />
+                          <Database className="w-3.5 h-3.5" strokeWidth={1.8} />
                         </button>
                       </div>
                     )}
@@ -6512,9 +6512,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               {viewStory.isMe && viewStory.id && (
                 <button
                   onClick={() => {
-                    if (confirm('Delete your story?')) {
-                      handleDeleteCurrentStory(viewStory.id!);
-                    }
+                    handleDeleteCurrentStory(viewStory.id!);
                   }}
                   className="w-8 h-8 rounded-full bg-red-500/30 hover:bg-red-500/50 text-red-300 flex items-center justify-center text-xs transition-colors cursor-pointer"
                   title="Delete Story"
