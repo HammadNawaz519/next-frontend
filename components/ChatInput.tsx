@@ -13,6 +13,7 @@ export interface ChatInputProps {
   placeholder?: string;
   disabled?: boolean;
   isSpeechToTextEnabled?: boolean;
+  theme?: any;
 }
 
 export default function ChatInput({
@@ -23,6 +24,7 @@ export default function ChatInput({
   placeholder = 'Message...',
   disabled = false,
   isSpeechToTextEnabled = false,
+  theme,
 }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -264,9 +266,13 @@ export default function ChatInput({
 
       {/* ── Chat Composer Pill Container (Always fully rounded continuous capsule) ── */}
       <div
-        className={`w-full bg-white rounded-[28px] sm:rounded-[32px] p-1.5 pl-2 pr-1.5 flex gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-zinc-200/80 transition-all focus-within:border-zinc-300 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.08)] ${
+        className={`w-full rounded-[28px] sm:rounded-[32px] p-1.5 pl-2 pr-1.5 flex gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border transition-all focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.08)] ${
           isMultiline ? 'items-end' : 'items-center'
         }`}
+        style={{
+          backgroundColor: theme?.id && theme.id !== 'default' ? (theme.incomingBubbleColor || '#ffffff') : '#ffffff',
+          borderColor: theme?.inputBorderColor && theme.id !== 'default' ? `${theme.inputBorderColor}40` : 'rgba(228,228,231,0.8)',
+        }}
       >
         {/* ── LEFT: Attachment / File Button ── */}
         <button
@@ -276,10 +282,15 @@ export default function ChatInput({
             onOpenGallery?.();
           }}
           disabled={disabled || isRecording || vtt.isBusy}
-          className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs"
+          className="w-10 h-10 rounded-full active:scale-90 flex items-center justify-center transition-all cursor-pointer outline-none shrink-0 shadow-2xs"
+          style={{
+            border: theme?.inputBorderColor && theme.id !== 'default' ? `1.5px solid ${theme.inputBorderColor}` : '1.5px solid #e4e4e7',
+            backgroundColor: theme?.id && theme.id !== 'default' ? 'rgba(255,255,255,0.7)' : '#f4f4f5',
+            color: theme?.inputBorderColor && theme.id !== 'default' ? theme.inputBorderColor : '#3f3f46',
+          }}
           title="Attach Photos & Videos"
         >
-          <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <svg className="w-5 h-5" style={{ color: 'inherit' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
           </svg>
         </button>
@@ -332,8 +343,11 @@ export default function ChatInput({
             onKeyDown={handleKeyDown}
             disabled={disabled}
             placeholder={placeholder}
-            className="flex-1 min-h-[38px] max-h-[120px] py-2 px-3 text-[15px] leading-normal font-normal text-zinc-900 placeholder:text-zinc-400 bg-transparent outline-none border-0 ring-0 focus:outline-none focus:ring-0 resize-none overflow-y-auto"
-            style={{ height: '38px' }}
+            className="flex-1 min-h-[38px] max-h-[120px] py-2 px-3 text-[15px] leading-normal font-normal bg-transparent outline-none border-0 ring-0 focus:outline-none focus:ring-0 resize-none overflow-y-auto"
+            style={{
+              height: '38px',
+              color: theme?.incomingTextColor && theme.id !== 'default' ? theme.incomingTextColor : '#18181b',
+            }}
           />
         )}
 
@@ -343,10 +357,15 @@ export default function ChatInput({
             type="button"
             onClick={handleSend}
             disabled={disabled || vtt.isBusy}
-            className="w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs"
+            className="w-11 h-11 rounded-full active:scale-90 flex items-center justify-center transition-all cursor-pointer outline-none shrink-0 shadow-2xs"
+            style={{
+              border: theme?.inputBorderColor && theme.id !== 'default' ? `1.5px solid ${theme.inputBorderColor}` : '1.5px solid #e4e4e7',
+              backgroundColor: theme?.id && theme.id !== 'default' ? 'rgba(255,255,255,0.7)' : '#f4f4f5',
+              color: theme?.inputBorderColor && theme.id !== 'default' ? theme.inputBorderColor : '#3f3f46',
+            }}
             title="Send Message"
           >
-            <svg className="w-5 h-5 text-zinc-700" viewBox="-0.5 0 25 25" fill="none" stroke="currentColor">
+            <svg className="w-5 h-5" style={{ color: 'inherit' }} viewBox="-0.5 0 25 25" fill="none" stroke="currentColor">
               <path d="M2.33045 8.38999C0.250452 11.82 9.42048 14.9 9.42048 14.9C9.42048 14.9 12.5005 24.07 15.9305 21.99C19.5705 19.77 23.9305 6.13 21.0505 3.27C18.1705 0.409998 4.55045 4.74999 2.33045 8.38999Z" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M15.1999 9.12L9.41992 14.9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -356,13 +375,24 @@ export default function ChatInput({
             type="button"
             onClick={handleToggleVoiceToText}
             disabled={disabled}
-            className={`w-11 h-11 rounded-full flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs ${
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer outline-none shrink-0 shadow-2xs ${
               vtt.isRecording
                 ? 'bg-[#9D4EDD] text-white animate-pulse shadow-md'
                 : vtt.isTranscribing
                 ? 'bg-zinc-200 text-zinc-400 animate-pulse'
-                : 'bg-zinc-100 hover:bg-zinc-200 active:scale-90'
+                : 'hover:opacity-90 active:scale-90'
             }`}
+            style={{
+              border: !vtt.isRecording && !vtt.isTranscribing
+                ? (theme?.inputBorderColor && theme.id !== 'default' ? `1.5px solid ${theme.inputBorderColor}` : '1.5px solid #e4e4e7')
+                : undefined,
+              backgroundColor: !vtt.isRecording && !vtt.isTranscribing
+                ? (theme?.id && theme.id !== 'default' ? 'rgba(255,255,255,0.7)' : '#f4f4f5')
+                : undefined,
+              color: !vtt.isRecording && !vtt.isTranscribing
+                ? (theme?.inputBorderColor && theme.id !== 'default' ? theme.inputBorderColor : '#3f3f46')
+                : undefined,
+            }}
             title={
               vtt.isRecording
                 ? 'Tap to stop and transcribe'
@@ -374,7 +404,7 @@ export default function ChatInput({
             {vtt.isRecording ? (
               <Square className="w-4 h-4 text-white fill-white" />
             ) : (
-              <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 1920 1920" fill="currentColor">
+              <svg className="w-5 h-5" style={{ color: 'inherit' }} viewBox="0 0 1920 1920" fill="currentColor">
                 <path d="M425.818 709.983V943.41c0 293.551 238.946 532.497 532.497 532.497 293.55 0 532.496-238.946 532.496-532.497V709.983h96.818V943.41c0 330.707-256.438 602.668-580.9 627.471l-.006 252.301h242.044V1920H667.862v-96.818h242.043l-.004-252.3C585.438 1546.077 329 1274.116 329 943.41V709.983h96.818ZM958.315 0c240.204 0 435.679 195.475 435.679 435.68v484.087c0 240.205-195.475 435.68-435.68 435.68-240.204 0-435.679-195.475-435.679-435.68V435.68C522.635 195.475 718.11 0 958.315 0Z" fillRule="evenodd"/>
               </svg>
             )}
@@ -387,12 +417,17 @@ export default function ChatInput({
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
             disabled={disabled}
-            className={`w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 touch-none shadow-2xs ${
+            className={`w-11 h-11 rounded-full active:scale-90 flex items-center justify-center transition-all cursor-pointer outline-none shrink-0 touch-none shadow-2xs ${
               isRecording ? 'ring-4 ring-zinc-200 animate-pulse bg-zinc-200' : ''
             }`}
+            style={{
+              border: theme?.inputBorderColor && theme.id !== 'default' ? `1.5px solid ${theme.inputBorderColor}` : '1.5px solid #e4e4e7',
+              backgroundColor: theme?.id && theme.id !== 'default' ? 'rgba(255,255,255,0.7)' : '#f4f4f5',
+              color: theme?.inputBorderColor && theme.id !== 'default' ? theme.inputBorderColor : '#3f3f46',
+            }}
             title="Hold to Record Voice Message"
           >
-            <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 1920 1920" fill="currentColor">
+            <svg className="w-5 h-5" style={{ color: 'inherit' }} viewBox="0 0 1920 1920" fill="currentColor">
               <path d="M425.818 709.983V943.41c0 293.551 238.946 532.497 532.497 532.497 293.55 0 532.496-238.946 532.496-532.497V709.983h96.818V943.41c0 330.707-256.438 602.668-580.9 627.471l-.006 252.301h242.044V1920H667.862v-96.818h242.043l-.004-252.3C585.438 1546.077 329 1274.116 329 943.41V709.983h96.818ZM958.315 0c240.204 0 435.679 195.475 435.679 435.68v484.087c0 240.205-195.475 435.68-435.68 435.68-240.204 0-435.679-195.475-435.679-435.68V435.68C522.635 195.475 718.11 0 958.315 0Z" fillRule="evenodd"/>
             </svg>
           </button>

@@ -145,32 +145,32 @@ export interface ChatTheme {
 }
 
 export const INSTAGRAM_THEMES: ChatTheme[] = [
-  { id: 'default', name: 'Default', category: 'Ambient', outgoingGradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'var(--dm-bg-hover)', incomingTextColor: 'var(--dm-text-primary)', chatBg: 'var(--dm-bg-main)', accentColor: '#6366f1', inputBorderColor: 'var(--dm-border)', reactionAccent: '#6366f1', previewWallpaper: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' },
-  { id: 'care', name: 'Care', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #8C5E3D 0%, #6E4324 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(244, 239, 230, 0.92)', incomingTextColor: '#6E4324', chatBg: 'transparent', accentColor: '#8C5E3D', inputBorderColor: '#6E4324', reactionAccent: '#8C5E3D', previewWallpaper: '/Care.jpeg', wallpaperUrl: '/Care.jpeg' },
-  { id: 'cartoon', name: 'Cartoon', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #5A3828 0%, #3E2419 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(252, 252, 252, 0.94)', incomingTextColor: '#3E2419', chatBg: 'transparent', accentColor: '#5A3828', inputBorderColor: '#3E2419', reactionAccent: '#5A3828', previewWallpaper: '/Cartoon.jpeg', wallpaperUrl: '/Cartoon.jpeg' },
-  { id: 'delululu', name: 'Delululu', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #B82872 0%, #8B1B54 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(252, 215, 229, 0.92)', incomingTextColor: '#8B1B54', chatBg: 'transparent', accentColor: '#B82872', inputBorderColor: '#8B1B54', reactionAccent: '#B82872', previewWallpaper: '/Delululu.jpeg', wallpaperUrl: '/Delululu.jpeg' },
-  { id: 'moment', name: 'Moment', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #B8243A 0%, #8A1525 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(244, 241, 234, 0.92)', incomingTextColor: '#8A1525', chatBg: 'transparent', accentColor: '#B8243A', inputBorderColor: '#8A1525', reactionAccent: '#B8243A', previewWallpaper: '/Moment.jpeg', wallpaperUrl: '/Moment.jpeg' },
-  { id: 'ribbo', name: 'Ribbo', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #AA4862 0%, #7D2E42 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(253, 245, 246, 0.92)', incomingTextColor: '#7D2E42', chatBg: 'transparent', accentColor: '#AA4862', inputBorderColor: '#7D2E42', reactionAccent: '#AA4862', previewWallpaper: '/Ribbo.jpeg', wallpaperUrl: '/Ribbo.jpeg' },
-  { id: 'sunflower', name: 'Sunflower', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #94591B 0%, #6E3F10 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(251, 242, 222, 0.92)', incomingTextColor: '#6E3F10', chatBg: 'transparent', accentColor: '#94591B', inputBorderColor: '#6E3F10', reactionAccent: '#94591B', previewWallpaper: '/Sunflower.jpeg', wallpaperUrl: '/Sunflower.jpeg' },
-  { id: 'suprise', name: 'Suprise', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #A33B4F 0%, #752332 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(247, 235, 235, 0.92)', incomingTextColor: '#752332', chatBg: 'transparent', accentColor: '#A33B4F', inputBorderColor: '#752332', reactionAccent: '#A33B4F', previewWallpaper: '/Suprise.jpeg', wallpaperUrl: '/Suprise.jpeg' },
-  { id: 'tom-jerry', name: 'Tom Jerry', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #586280 0%, #3B4257 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(253, 230, 221, 0.92)', incomingTextColor: '#3B4257', chatBg: 'transparent', accentColor: '#586280', inputBorderColor: '#3B4257', reactionAccent: '#586280', previewWallpaper: '/Tom Jerry.jpeg', wallpaperUrl: '/Tom Jerry.jpeg' },
-  { id: 'vibe', name: 'Vibe', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #2A77C5 0%, #164C82 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(232, 242, 250, 0.92)', incomingTextColor: '#164C82', chatBg: 'transparent', accentColor: '#2A77C5', inputBorderColor: '#164C82', reactionAccent: '#2A77C5', previewWallpaper: '/Vibe.jpeg', wallpaperUrl: '/Vibe.jpeg' },
-  { id: 'alpha', name: 'Alpha', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #5A4230 0%, #3D2B1E 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(245, 237, 228, 0.92)', incomingTextColor: '#4A3525', chatBg: 'transparent', accentColor: '#4A3525', inputBorderColor: '#5A4230', reactionAccent: '#4A3525', previewWallpaper: '/Alpha.jpg', wallpaperUrl: '/Alpha.jpg' },
-  { id: 'dark-alpha', name: 'Dark Alpha', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #5A121E 0%, #36080F 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(242, 216, 220, 0.92)', incomingTextColor: '#420D15', chatBg: 'transparent', accentColor: '#5A121E', inputBorderColor: '#420D15', reactionAccent: '#5A121E', previewWallpaper: '/Dark Alpha.jpg', wallpaperUrl: '/Dark Alpha.jpg' },
-  { id: 'pattern', name: 'Pattern', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #5E2252 0%, #3D1434 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(247, 225, 237, 0.92)', incomingTextColor: '#4A1A40', chatBg: 'transparent', accentColor: '#5E2252', inputBorderColor: '#4A1A40', reactionAccent: '#5E2252', previewWallpaper: '/Pattern.jpg', wallpaperUrl: '/Pattern.jpg' },
-  { id: 'view', name: 'View', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #323C70 0%, #1D2342 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(230, 233, 250, 0.92)', incomingTextColor: '#252D54', chatBg: 'transparent', accentColor: '#323C70', inputBorderColor: '#252D54', reactionAccent: '#323C70', previewWallpaper: '/View.jpg', wallpaperUrl: '/View.jpg' },
-  { id: 'purply', name: 'Purply', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #544975 0%, #352E4B 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(250, 227, 217, 0.92)', incomingTextColor: '#433A5E', chatBg: 'transparent', accentColor: '#544975', inputBorderColor: '#433A5E', reactionAccent: '#544975', previewWallpaper: '/Purply.jpg', wallpaperUrl: '/Purply.jpg' },
-  { id: 'love', name: 'Love', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #ff7597 0%, #e63946 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: '#4d0522', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#ff7597', inputBorderColor: '#ff7597', reactionAccent: '#ff7597', previewWallpaper: '/Love.jpg', wallpaperUrl: '/Love.jpg' },
-  { id: 'love-u', name: 'Love U', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #ff4d6d 0%, #c9184a 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: '#590d22', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#ff4d6d', inputBorderColor: '#ff4d6d', reactionAccent: '#ff4d6d', previewWallpaper: '/Love-2.jpg', wallpaperUrl: '/Love-2.jpg' },
-  { id: 'whale', name: 'Whale', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: '#092038', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#38bdf8', inputBorderColor: '#38bdf8', reactionAccent: '#38bdf8', previewWallpaper: '/Whale.jpg', wallpaperUrl: '/Whale.jpg' },
-  { id: 'couple', name: 'Couple', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #e76f51 0%, #f4a261 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: '#3d1c14', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#f4a261', inputBorderColor: '#f4a261', reactionAccent: '#f4a261', previewWallpaper: '/Couple.jpg', wallpaperUrl: '/Couple.jpg' },
-  { id: 'mono', name: 'Mono', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #27272a 0%, #09090b 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: '#18181b', incomingTextColor: '#f4f4f5', chatBg: 'transparent', accentColor: '#e4e4e7', inputBorderColor: '#71717a', reactionAccent: '#ffffff', previewWallpaper: '/Mono.jpg', wallpaperUrl: '/Mono.jpg' },
-  { id: 'sea-side', name: 'Sea Side', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: '#E83F78', incomingTextColor: '#ffffff', chatBg: 'transparent', accentColor: '#E83F78', inputBorderColor: '#38bdf8', reactionAccent: '#E83F78', previewWallpaper: '/sea-side.jpg', wallpaperUrl: '/sea-side.jpg' },
-  { id: 'hearts', name: 'Hearts', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #FF2A6D 0%, #D8005A 50%, #9B0040 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 240, 246, 0.94)', incomingTextColor: '#3D0B20', chatBg: 'transparent', accentColor: '#FF2A6D', inputBorderColor: '#FF2A6D', reactionAccent: '#FF2A6D', previewWallpaper: '/Hearts.jpg', wallpaperUrl: '/Hearts.jpg' },
-  { id: 'floral', name: 'Floral', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #9C1952 0%, #750D3A 50%, #520526 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 255, 255, 0.96)', incomingTextColor: '#42071F', chatBg: 'transparent', accentColor: '#9C1952', inputBorderColor: '#9C1952', reactionAccent: '#9C1952', previewWallpaper: '/Floral.jpg', wallpaperUrl: '/Floral.jpg' },
-  { id: 'sakura', name: 'Sakura', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #FF1764 0%, #D40049 50%, #8A002E 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 245, 247, 0.95)', incomingTextColor: '#450014', chatBg: 'transparent', accentColor: '#FF1764', inputBorderColor: '#FF1764', reactionAccent: '#FF1764', previewWallpaper: '/Sakura.jpg', wallpaperUrl: '/Sakura.jpg' },
-  { id: 'lilac', name: 'Lilac', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #6B4E9B 0%, #50337E 50%, #371D62 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 253, 248, 0.95)', incomingTextColor: '#2D184C', chatBg: 'transparent', accentColor: '#6B4E9B', inputBorderColor: '#6B4E9B', reactionAccent: '#6B4E9B', previewWallpaper: '/Lilac.jpg', wallpaperUrl: '/Lilac.jpg' },
-  { id: 'moon', name: 'Moon', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #107382 0%, #084D58 50%, #032F36 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(242, 253, 255, 0.95)', incomingTextColor: '#062E35', chatBg: 'transparent', accentColor: '#107382', inputBorderColor: '#107382', reactionAccent: '#107382', previewWallpaper: '/Moon.jpg', wallpaperUrl: '/Moon.jpg' },
+  { id: 'default', name: 'Default', category: 'Ambient', outgoingGradient: 'linear-gradient(135deg, #18181b 0%, #09090b 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: '#FFF3CD', incomingTextColor: '#18181b', chatBg: 'var(--dm-bg-main)', accentColor: '#18181b', inputBorderColor: '#27272a', reactionAccent: '#18181b', previewWallpaper: 'radial-gradient(circle at center, #27272a 0%, #09090b 100%)' },
+  { id: 'care', name: 'Care', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #6E4324 0%, #4E2A12 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(247, 243, 235, 0.94)', incomingTextColor: '#4E2A12', chatBg: 'transparent', accentColor: '#6E4324', inputBorderColor: '#6E4324', reactionAccent: '#6E4324', previewWallpaper: '/Care.jpeg', wallpaperUrl: '/Care.jpeg' },
+  { id: 'cartoon', name: 'Cartoon', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #4A2818 0%, #2E150B 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(253, 251, 247, 0.95)', incomingTextColor: '#2E150B', chatBg: 'transparent', accentColor: '#4A2818', inputBorderColor: '#4A2818', reactionAccent: '#4A2818', previewWallpaper: '/Cartoon.jpeg', wallpaperUrl: '/Cartoon.jpeg' },
+  { id: 'delululu', name: 'Delululu', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #9C185A 0%, #700D3E 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 235, 243, 0.94)', incomingTextColor: '#700D3E', chatBg: 'transparent', accentColor: '#9C185A', inputBorderColor: '#9C185A', reactionAccent: '#9C185A', previewWallpaper: '/Delululu.jpeg', wallpaperUrl: '/Delululu.jpeg' },
+  { id: 'moment', name: 'Moment', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #8F1728 0%, #5E0916 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(253, 245, 245, 0.94)', incomingTextColor: '#5E0916', chatBg: 'transparent', accentColor: '#8F1728', inputBorderColor: '#8F1728', reactionAccent: '#8F1728', previewWallpaper: '/Moment.jpeg', wallpaperUrl: '/Moment.jpeg' },
+  { id: 'ribbo', name: 'Ribbo', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #8A2E46 0%, #5E1A2C 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 243, 246, 0.95)', incomingTextColor: '#5E1A2C', chatBg: 'transparent', accentColor: '#8A2E46', inputBorderColor: '#8A2E46', reactionAccent: '#8A2E46', previewWallpaper: '/Ribbo.jpeg', wallpaperUrl: '/Ribbo.jpeg' },
+  { id: 'sunflower', name: 'Sunflower', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #7C470E 0%, #522C05 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(254, 247, 232, 0.95)', incomingTextColor: '#522C05', chatBg: 'transparent', accentColor: '#7C470E', inputBorderColor: '#7C470E', reactionAccent: '#7C470E', previewWallpaper: '/Sunflower.jpeg', wallpaperUrl: '/Sunflower.jpeg' },
+  { id: 'suprise', name: 'Suprise', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #872336 0%, #5B101F 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 241, 243, 0.95)', incomingTextColor: '#5B101F', chatBg: 'transparent', accentColor: '#872336', inputBorderColor: '#872336', reactionAccent: '#872336', previewWallpaper: '/Suprise.jpeg', wallpaperUrl: '/Suprise.jpeg' },
+  { id: 'tom-jerry', name: 'Tom Jerry', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #3E4B66 0%, #242D40 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(242, 245, 252, 0.95)', incomingTextColor: '#242D40', chatBg: 'transparent', accentColor: '#3E4B66', inputBorderColor: '#3E4B66', reactionAccent: '#3E4B66', previewWallpaper: '/Tom Jerry.jpeg', wallpaperUrl: '/Tom Jerry.jpeg' },
+  { id: 'vibe', name: 'Vibe', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #185A9D 0%, #0C3864 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(235, 245, 255, 0.95)', incomingTextColor: '#0C3864', chatBg: 'transparent', accentColor: '#185A9D', inputBorderColor: '#185A9D', reactionAccent: '#185A9D', previewWallpaper: '/Vibe.jpeg', wallpaperUrl: '/Vibe.jpeg' },
+  { id: 'alpha', name: 'Alpha', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #4A3423 0%, #2D1D11 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(247, 241, 235, 0.95)', incomingTextColor: '#2D1D11', chatBg: 'transparent', accentColor: '#4A3423', inputBorderColor: '#4A3423', reactionAccent: '#4A3423', previewWallpaper: '/Alpha.jpg', wallpaperUrl: '/Alpha.jpg' },
+  { id: 'dark-alpha', name: 'Dark Alpha', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #4D0E19 0%, #2C040B 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(252, 235, 238, 0.94)', incomingTextColor: '#2C040B', chatBg: 'transparent', accentColor: '#4D0E19', inputBorderColor: '#4D0E19', reactionAccent: '#4D0E19', previewWallpaper: '/Dark Alpha.jpg', wallpaperUrl: '/Dark Alpha.jpg' },
+  { id: 'pattern', name: 'Pattern', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #521846 0%, #300A28 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(252, 238, 248, 0.94)', incomingTextColor: '#300A28', chatBg: 'transparent', accentColor: '#521846', inputBorderColor: '#521846', reactionAccent: '#521846', previewWallpaper: '/Pattern.jpg', wallpaperUrl: '/Pattern.jpg' },
+  { id: 'view', name: 'View', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #232B54 0%, #121733 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(238, 242, 255, 0.95)', incomingTextColor: '#121733', chatBg: 'transparent', accentColor: '#232B54', inputBorderColor: '#232B54', reactionAccent: '#232B54', previewWallpaper: '/View.jpg', wallpaperUrl: '/View.jpg' },
+  { id: 'purply', name: 'Purply', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #483C66 0%, #2A2140 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(246, 240, 255, 0.95)', incomingTextColor: '#2A2140', chatBg: 'transparent', accentColor: '#483C66', inputBorderColor: '#483C66', reactionAccent: '#483C66', previewWallpaper: '/Purply.jpg', wallpaperUrl: '/Purply.jpg' },
+  { id: 'love', name: 'Love', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #B8183A 0%, #7D0922 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 238, 242, 0.95)', incomingTextColor: '#7D0922', chatBg: 'transparent', accentColor: '#B8183A', inputBorderColor: '#B8183A', reactionAccent: '#B8183A', previewWallpaper: '/Love.jpg', wallpaperUrl: '/Love.jpg' },
+  { id: 'love-u', name: 'Love U', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #C21344 0%, #7A0625 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 236, 242, 0.95)', incomingTextColor: '#7A0625', chatBg: 'transparent', accentColor: '#C21344', inputBorderColor: '#C21344', reactionAccent: '#C21344', previewWallpaper: '/Love-2.jpg', wallpaperUrl: '/Love-2.jpg' },
+  { id: 'whale', name: 'Whale', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #094770 0%, #032840 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(235, 247, 255, 0.95)', incomingTextColor: '#032840', chatBg: 'transparent', accentColor: '#094770', inputBorderColor: '#094770', reactionAccent: '#094770', previewWallpaper: '/Whale.jpg', wallpaperUrl: '/Whale.jpg' },
+  { id: 'couple', name: 'Couple', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #A84523 0%, #6E260D 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 244, 238, 0.95)', incomingTextColor: '#6E260D', chatBg: 'transparent', accentColor: '#A84523', inputBorderColor: '#A84523', reactionAccent: '#A84523', previewWallpaper: '/Couple.jpg', wallpaperUrl: '/Couple.jpg' },
+  { id: 'mono', name: 'Mono', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #27272a 0%, #09090b 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(244, 244, 245, 0.95)', incomingTextColor: '#09090b', chatBg: 'transparent', accentColor: '#27272a', inputBorderColor: '#27272a', reactionAccent: '#ffffff', previewWallpaper: '/Mono.jpg', wallpaperUrl: '/Mono.jpg' },
+  { id: 'sea-side', name: 'Sea Side', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #03537E 0%, #01314C 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(235, 248, 255, 0.95)', incomingTextColor: '#01314C', chatBg: 'transparent', accentColor: '#03537E', inputBorderColor: '#03537E', reactionAccent: '#03537E', previewWallpaper: '/sea-side.jpg', wallpaperUrl: '/sea-side.jpg' },
+  { id: 'hearts', name: 'Hearts', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #A80D48 0%, #690028 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 238, 245, 0.95)', incomingTextColor: '#690028', chatBg: 'transparent', accentColor: '#A80D48', inputBorderColor: '#A80D48', reactionAccent: '#A80D48', previewWallpaper: '/Hearts.jpg', wallpaperUrl: '/Hearts.jpg' },
+  { id: 'floral', name: 'Floral', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #6E0D35 0%, #42021E 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 243, 248, 0.95)', incomingTextColor: '#42021E', chatBg: 'transparent', accentColor: '#6E0D35', inputBorderColor: '#6E0D35', reactionAccent: '#6E0D35', previewWallpaper: '/Floral.jpg', wallpaperUrl: '/Floral.jpg' },
+  { id: 'sakura', name: 'Sakura', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #B80A40 0%, #700023 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(255, 240, 245, 0.95)', incomingTextColor: '#700023', chatBg: 'transparent', accentColor: '#B80A40', inputBorderColor: '#B80A40', reactionAccent: '#B80A40', previewWallpaper: '/Sakura.jpg', wallpaperUrl: '/Sakura.jpg' },
+  { id: 'lilac', name: 'Lilac', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #4A2F75 0%, #2C184A 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(247, 242, 255, 0.95)', incomingTextColor: '#2C184A', chatBg: 'transparent', accentColor: '#4A2F75', inputBorderColor: '#4A2F75', reactionAccent: '#4A2F75', previewWallpaper: '/Lilac.jpg', wallpaperUrl: '/Lilac.jpg' },
+  { id: 'moon', name: 'Moon', category: 'Special', outgoingGradient: 'linear-gradient(135deg, #094754 0%, #03272E 100%)', outgoingTextColor: '#ffffff', incomingBubbleColor: 'rgba(235, 252, 255, 0.95)', incomingTextColor: '#03272E', chatBg: 'transparent', accentColor: '#094754', inputBorderColor: '#094754', reactionAccent: '#094754', previewWallpaper: '/Moon.jpg', wallpaperUrl: '/Moon.jpg' },
 ];
 
 export interface MessageTag {
@@ -1276,9 +1276,28 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         const isDeletedMsg = msg.type === 'deleted' || msg.content === 'This message was deleted';
 
         // Continuous high-radius capsule shape on all 4 corners, generous padding and height
-        const bubbleClasses = isSent
-          ? `bg-[#F4F4F5] text-zinc-900 px-6 py-3.5 !rounded-[26px] min-h-[44px] w-fit max-w-full text-[14.5px] font-normal leading-[1.45] shadow-2xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`
-          : `bg-[#FFF3CD] text-zinc-900 px-6 py-3.5 !rounded-[26px] min-h-[44px] w-fit max-w-full text-[14.5px] font-normal leading-[1.45] shadow-2xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`;
+        const bubbleClasses = `px-6 py-3.5 !rounded-[26px] min-h-[44px] w-fit max-w-full text-[14.5px] font-normal leading-[1.45] shadow-2xs flex flex-col items-start justify-center text-left ${isPrevSameSender ? '-mt-1' : ''}`;
+
+        const isCustomTheme = activeTheme && activeTheme.id !== 'default';
+        const bubbleBg = isMedia
+          ? 'transparent'
+          : isSent
+          ? isCustomTheme && activeTheme.outgoingGradient
+            ? activeTheme.outgoingGradient
+            : '#18181B'
+          : isCustomTheme && activeTheme.incomingBubbleColor
+          ? activeTheme.incomingBubbleColor
+          : '#FFF3CD';
+
+        const bubbleTextColor = isMedia
+          ? 'inherit'
+          : isSent
+          ? isCustomTheme && activeTheme.outgoingTextColor
+            ? activeTheme.outgoingTextColor
+            : '#ffffff'
+          : isCustomTheme && activeTheme.incomingTextColor
+          ? activeTheme.incomingTextColor
+          : '#18181b';
 
         return (
           <div
@@ -1287,12 +1306,14 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
             style={{
               position: 'relative',
               borderRadius: '26px',
+              background: bubbleBg,
+              color: bubbleTextColor,
               transition: isSwiping.current ? 'none' : 'transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
               transform: `translateX(${swipeOffset}px)` + (isSelected ? ' scale(0.965)' : ''),
             }}
           >
             {msg.replyTo && (
-              <div className={`w-full mb-1.5 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden text-left ${isSent ? 'border-zinc-400 bg-black/5 text-zinc-900' : 'border-amber-400 bg-black/5 text-zinc-900'}`}>
+              <div className={`w-full mb-1.5 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden text-left ${isSent ? 'border-white/50 bg-black/20 text-white' : 'border-black/30 bg-black/5 text-zinc-900'}`}>
                 <span className="font-bold text-[11px] opacity-90">{msg.replyTo.senderName || 'Quoted Message'}</span>
                 <span className="truncate text-[11px] opacity-85">{msg.replyTo.content}</span>
               </div>
@@ -5473,7 +5494,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 </div>
 
                 {/* ── SCREEN 1: LIGHT MESSAGES SHEET (Smooth rounded-t-[32px], zero redundant top margin) ── */}
-                <div className="w-full flex-1 bg-white rounded-t-[32px] px-3 pt-0 pb-0 flex flex-col relative shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-hidden z-20 min-h-0">
+                <div
+                  className="w-full flex-1 rounded-t-[32px] px-3 pt-0 pb-0 flex flex-col relative shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-hidden z-20 min-h-0 bg-cover bg-center bg-no-repeat transition-all duration-300"
+                  style={{
+                    backgroundColor: activeTheme?.wallpaperUrl ? 'transparent' : '#ffffff',
+                    backgroundImage: activeTheme?.wallpaperUrl ? `url("${activeTheme.wallpaperUrl}")` : undefined,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                  }}
+                >
 
                   {/* Messages Scroll Area - Full space from top curves down to floating input */}
                   <div
@@ -5620,6 +5650,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         onSendMessage={(text) => handleSendMessage(undefined, text)}
                         onOpenGallery={() => fileInputRef.current?.click()}
                         isSpeechToTextEnabled={isSpeechToTextEnabled}
+                        theme={activeTheme}
                         onSendVoice={async (audioBlob, duration) => {
                           if (selectedUser && socket && session?.user) {
                             const senderId = (session.user as any).id;
