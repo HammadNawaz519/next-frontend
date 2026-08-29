@@ -205,7 +205,7 @@ export default function SongPickerModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-md animate-in fade-in duration-200 select-none">
+    <div className="fixed inset-0 z-[99999] flex flex-col bg-black/80 backdrop-blur-md animate-in fade-in duration-200 select-none">
       {/* Hidden audio element for preview */}
       <audio ref={audioRef} preload="auto" />
 
