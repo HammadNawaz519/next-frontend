@@ -1960,7 +1960,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       }
     }).catch(err => console.warn('Could not load stories:', err));
 
-    // Realtime Follow Notifications sync
+    // Follow Notifications: fetch on initial session load without continuous polling
     const fetchNotifications = async () => {
       try {
         const res = await getFollowNotificationsAction();
@@ -1974,8 +1974,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     };
 
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 10000); // 10s poll
-    return () => clearInterval(interval);
   }, [session]);
 
   const handleStoryPosted = (newStory: any) => {
@@ -4938,8 +4936,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       onClick={() => {
                         triggerHaptic('light');
                         setShowNotificationsDrawer(prev => {
-                          if (!prev) setUnreadNotifications(0);
-                          return !prev;
+                          const nextState = !prev;
+                          if (nextState) {
+                            setUnreadNotifications(0);
+                            getFollowNotificationsAction().then(res => {
+                              if (res && res.success && Array.isArray(res.notifications)) {
+                                setNotificationsList(res.notifications);
+                              }
+                            }).catch(() => {});
+                          }
+                          return nextState;
                         });
                       }}
                       className="p-2 text-white hover:text-zinc-300 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent relative"

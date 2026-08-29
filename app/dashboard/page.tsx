@@ -172,7 +172,7 @@ export default function DashboardPage() {
     return () => window.removeEventListener('open_user_profile', handleOpenProfile as any);
   }, []);
 
-  // Progressively load User Details for Profile Panel (on idle or when profile is opened)
+  // Load User Details for Profile Panel on-demand when profile is opened
   const hasLoadedUser = useRef(false);
   const refreshProfile = () => {
     if (status === 'authenticated') {
@@ -188,19 +188,6 @@ export default function DashboardPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isProfileOpen, status]);
-
-  useEffect(() => {
-    if (status === 'authenticated' && !hasLoadedUser.current) {
-      const timer = setTimeout(() => {
-        if (!hasLoadedUser.current) {
-          hasLoadedUser.current = true;
-          refreshProfile();
-        }
-      }, 3500);
-      return () => clearTimeout(timer);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
