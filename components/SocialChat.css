@@ -1025,9 +1025,10 @@
   position: relative;
 }
 
-.call-icon.rejected {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+.call-icon.rejected,
+.call-icon.missed {
+  background: rgba(113, 113, 122, 0.15);
+  color: #71717a;
 }
 
 .call-status-badge {
@@ -1036,7 +1037,7 @@
   right: -4px;
   width: 14px;
   height: 14px;
-  background: #ef4444;
+  background: #71717a;
   color: white;
   border-radius: 50%;
   font-size: 9px;

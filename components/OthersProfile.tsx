@@ -334,10 +334,11 @@ export default function OthersProfile({
         </div>
       </div>
 
-      {/* ── 2. LOWER DARK ZINC CONTAINER (LARGE BORDERLESS SHARE & FOLLOW BUTTONS) ── */}
-      <div className="w-full bg-[#141111] border-0 outline-none ring-0 rounded-[32px] sm:rounded-[36px] py-4 sm:py-5 px-5 mt-4 shadow-[0_10px_35px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3.5 shrink-0">
-        {/* Left: Big Share Button (No outline, no border) */}
+      {/* ── 2. LOWER ACTION BUTTONS (NO BACKGROUND BOX BEHIND THEM) ── */}
+      <div className="w-full bg-transparent border-0 outline-none ring-0 p-0 mt-3.5 flex items-center justify-between gap-3 shrink-0">
+        {/* Left: Share Button */}
         <button
+          type="button"
           onClick={handleShare}
           className="flex-1 py-4 sm:py-4.5 rounded-full bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-white text-[15px] font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer border-0 outline-none ring-0 shadow-none"
           title="Share Profile"
@@ -346,7 +347,7 @@ export default function OthersProfile({
           <span>Share</span>
         </button>
 
-        {/* Right: Big Follow / Unfollow / Requested Button (No light background, dark zinc theme) */}
+        {/* Right: Follow / Unfollow / Requested Button */}
         <button
           type="button"
           onClick={handleToggleFollow}
