@@ -1193,6 +1193,7 @@ export async function toggleFollowUser(targetUserId: string) {
   });
 
   if (!currentUser) return { error: 'User not found' };
+  if (currentUser.id === targetUserId) return { error: 'Cannot follow yourself' };
 
   const targetUser = await (prisma.user as any).findUnique({
     where: { id: targetUserId },
@@ -1218,7 +1219,23 @@ export async function toggleFollowUser(targetUserId: string) {
         data: { following: { disconnect: { id: targetUserId } } }
       })
     ]);
-    return { success: true, isFollowing: false, hasSentRequest: false };
+
+    const updatedTarget = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: {
+        _count: {
+          select: { followers: true, following: true }
+        }
+      }
+    });
+
+    return {
+      success: true,
+      isFollowing: false,
+      hasSentRequest: false,
+      followersCount: updatedTarget?._count?.followers ?? 0,
+      followingCount: updatedTarget?._count?.following ?? 0
+    };
   }
 
   // If private, send request
@@ -1234,7 +1251,23 @@ export async function toggleFollowUser(targetUserId: string) {
           }
         }
       });
-      return { success: true, isFollowing: false, hasSentRequest: false };
+
+      const updatedTarget = await prisma.user.findUnique({
+        where: { id: targetUserId },
+        select: {
+          _count: {
+            select: { followers: true, following: true }
+          }
+        }
+      });
+
+      return {
+        success: true,
+        isFollowing: false,
+        hasSentRequest: false,
+        followersCount: updatedTarget?._count?.followers ?? 0,
+        followingCount: updatedTarget?._count?.following ?? 0
+      };
     } else {
       // Create request
       await (prisma as any).followRequest.create({
@@ -1243,7 +1276,23 @@ export async function toggleFollowUser(targetUserId: string) {
           receiverId: targetUserId
         }
       });
-      return { success: true, isFollowing: false, hasSentRequest: true };
+
+      const updatedTarget = await prisma.user.findUnique({
+        where: { id: targetUserId },
+        select: {
+          _count: {
+            select: { followers: true, following: true }
+          }
+        }
+      });
+
+      return {
+        success: true,
+        isFollowing: false,
+        hasSentRequest: true,
+        followersCount: updatedTarget?._count?.followers ?? 0,
+        followingCount: updatedTarget?._count?.following ?? 0
+      };
     }
   }
 
@@ -1258,7 +1307,23 @@ export async function toggleFollowUser(targetUserId: string) {
       data: { following: { connect: { id: targetUserId } } }
     })
   ]);
-  return { success: true, isFollowing: true, hasSentRequest: false };
+
+  const updatedTarget = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: {
+      _count: {
+        select: { followers: true, following: true }
+      }
+    }
+  });
+
+  return {
+    success: true,
+    isFollowing: true,
+    hasSentRequest: false,
+    followersCount: updatedTarget?._count?.followers ?? 0,
+    followingCount: updatedTarget?._count?.following ?? 0
+  };
 }
 
 export async function getFollowNotificationsAction() {
@@ -1799,6 +1864,7 @@ export async function getUserPublicProfile(targetUserId: string) {
   if (!user) return null;
 
   let isFollowing = false;
+  let hasSentRequest = false;
   if (currentUserId && currentUserId !== targetUserId) {
     const followCheck = await prisma.user.findFirst({
       where: {
@@ -1808,21 +1874,34 @@ export async function getUserPublicProfile(targetUserId: string) {
       select: { id: true }
     });
     isFollowing = !!followCheck;
+
+    if (!isFollowing) {
+      const reqCheck = await (prisma as any).followRequest.findUnique({
+        where: {
+          senderId_receiverId: {
+            senderId: currentUserId,
+            receiverId: targetUserId
+          }
+        },
+        select: { id: true }
+      });
+      hasSentRequest = !!reqCheck;
+    }
   }
 
-  // Calculate dynamic rating and stats
-  const followersCount = user._count?.followers || 0;
-  const followingCount = user._count?.following || 0;
-  const postsCount = user._count?.posts || 0;
-  const likesCount = user._count?.likes || 0;
+  // Real authoritative database counts
+  const followersCount = user._count?.followers ?? 0;
+  const followingCount = user._count?.following ?? 0;
+  const postsCount = user._count?.posts ?? 0;
+  const likesCount = user._count?.likes ?? 0;
 
-  // Rating based on engagement ratio (e.g. 4.8 - 5.0)
-  const baseRating = 4.7 + Math.min(0.29, (followersCount * 0.05) + (likesCount * 0.02));
-  const ratingStr = Math.min(5.0, baseRating).toFixed(1);
+  // Real rating: Displays empty state '—' when no reviews exist rather than fake score
+  const ratingStr = '—';
 
   return {
     ...user,
     isFollowing,
+    hasSentRequest,
     isSelf: currentUserId === targetUserId,
     stats: {
       rating: ratingStr,

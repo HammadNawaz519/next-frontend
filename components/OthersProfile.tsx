@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Share2, UserPlus, UserCheck, Star, Heart } from 'lucide-react';
+import { ChevronLeft, Share2, UserPlus, UserCheck, Clock, Star, Heart } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 import { getUserPublicProfile, toggleFollowUser } from '@/app/dashboard/actions';
 
@@ -31,11 +31,12 @@ export default function OthersProfile({
 }: OthersProfileProps) {
   const [profileData, setProfileData] = useState<any>(user);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  const [hasSentRequest, setHasSentRequest] = useState<boolean>(false);
   const [followersCount, setFollowersCount] = useState<number>(0);
   const [followingCount, setFollowingCount] = useState<number>(0);
   const [likesCount, setLikesCount] = useState<number>(0);
   const [isLiked, setIsLiked] = useState<boolean>(false);
-  const [rating, setRating] = useState<string>('4.9');
+  const [rating, setRating] = useState<string>('—');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loadingFollow, setLoadingFollow] = useState<boolean>(false);
 
@@ -44,7 +45,7 @@ export default function OthersProfile({
     setTimeout(() => setToastMessage(null), 2500);
   };
 
-  // Fetch full live profile data & follow/stats state
+  // Fetch full live server-authoritative profile data & follow/stats state
   useEffect(() => {
     let isMounted = true;
     async function loadProfile() {
@@ -54,16 +55,11 @@ export default function OthersProfile({
         if (isMounted && fullData) {
           setProfileData(fullData);
           setIsFollowing(fullData.isFollowing || false);
-          const fCount = fullData.stats?.followers || 0;
-          const foCount = fullData.stats?.following || 0;
-          const lCount = fullData.stats?.likes || 0;
-          setFollowersCount(fCount);
-          setFollowingCount(foCount);
-          setLikesCount(lCount);
-
-          // Calculate balanced follower-to-like engagement rating ratio (4.8 - 5.0)
-          const baseRating = 4.7 + Math.min(0.29, (fCount > 0 ? (lCount / (fCount + 1)) * 0.15 : 0.1) + (fCount * 0.02));
-          setRating(Math.min(5.0, baseRating).toFixed(1));
+          setHasSentRequest(fullData.hasSentRequest || false);
+          setFollowersCount(fullData.stats?.followers || 0);
+          setFollowingCount(fullData.stats?.following || 0);
+          setLikesCount(fullData.stats?.likes || 0);
+          setRating(fullData.stats?.rating || '—');
         }
       } catch (e) {
         console.warn('Failed to load public profile:', e);
@@ -79,27 +75,57 @@ export default function OthersProfile({
     if (!profileData?.id || loadingFollow) return;
     triggerHaptic('medium');
     setLoadingFollow(true);
-    const nextFollowingState = !isFollowing;
-    setIsFollowing(nextFollowingState);
-    setFollowersCount((prev) => (nextFollowingState ? prev + 1 : Math.max(0, prev - 1)));
+
+    const prevFollowing = isFollowing;
+    const prevRequested = hasSentRequest;
+    const prevFollowersCount = followersCount;
+
+    // Safe optimistic update
+    if (isFollowing) {
+      setIsFollowing(false);
+      setHasSentRequest(false);
+      setFollowersCount((c) => Math.max(0, c - 1));
+    } else if (hasSentRequest) {
+      setHasSentRequest(false);
+    } else {
+      setIsFollowing(!profileData.isPrivate);
+      setHasSentRequest(profileData.isPrivate);
+      if (!profileData.isPrivate) {
+        setFollowersCount((c) => c + 1);
+      }
+    }
 
     try {
       const res: any = await toggleFollowUser(profileData.id);
       if (res && !res.error) {
-        const isNowFollowing = res.isFollowing || res.hasSentRequest || false;
-        setIsFollowing(isNowFollowing);
+        // Reconcile with authoritative database counts
+        setIsFollowing(Boolean(res.isFollowing));
+        setHasSentRequest(Boolean(res.hasSentRequest));
         if (typeof res.followersCount === 'number') {
           setFollowersCount(res.followersCount);
         }
-        showToast(res.hasSentRequest ? 'Follow request sent' : isNowFollowing ? 'Following user' : 'Unfollowed user');
+        if (typeof res.followingCount === 'number') {
+          setFollowingCount(res.followingCount);
+        }
+        showToast(
+          res.hasSentRequest
+            ? 'Follow request sent'
+            : res.isFollowing
+            ? 'Following user'
+            : 'Unfollowed user'
+        );
       } else {
-        // Revert on failure
-        setIsFollowing(!nextFollowingState);
-        setFollowersCount((prev) => (!nextFollowingState ? prev + 1 : Math.max(0, prev - 1)));
+        // Revert on error
+        setIsFollowing(prevFollowing);
+        setHasSentRequest(prevRequested);
+        setFollowersCount(prevFollowersCount);
+        showToast(res?.error || 'Action could not be completed');
       }
     } catch (e) {
-      setIsFollowing(!nextFollowingState);
-      setFollowersCount((prev) => (!nextFollowingState ? prev + 1 : Math.max(0, prev - 1)));
+      setIsFollowing(prevFollowing);
+      setHasSentRequest(prevRequested);
+      setFollowersCount(prevFollowersCount);
+      showToast('Network error, please try again');
     } finally {
       setLoadingFollow(false);
     }
@@ -115,7 +141,10 @@ export default function OthersProfile({
 
   const handleShare = async () => {
     triggerHaptic('light');
-    const profileUrl = typeof window !== 'undefined' ? `${window.location.origin}/@${profileData.username || profileData.id}` : '';
+    const profileUrl =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/@${profileData.username || profileData.id}`
+        : '';
     if (navigator.clipboard) {
       try {
         await navigator.clipboard.writeText(profileUrl);
@@ -129,13 +158,13 @@ export default function OthersProfile({
   };
 
   const displayName = profileData?.name || profileData?.username || 'User';
-  const displayHeadline = profileData?.bio || (profileData?.username ? `@${profileData.username}` : 'Connect Member');
+  const displayHeadline =
+    profileData?.bio || (profileData?.username ? `@${profileData.username}` : 'Connect Member');
   const avatarKey = profileData?.id || profileData?.username || displayName;
   const avatarBg = getDeterministicAvatarBg(avatarKey);
 
   return (
     <div className="fixed inset-0 z-[1600] flex flex-col justify-between bg-[#141111] p-4 sm:p-5 pt-12 pb-6 overflow-hidden select-none font-sans animate-in fade-in duration-300">
-      
       {/* Floating Toast Notification */}
       {toastMessage && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-zinc-900/90 backdrop-blur-md border-0 text-xs font-semibold text-white shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
@@ -143,10 +172,9 @@ export default function OthersProfile({
         </div>
       )}
 
-      {/* ── 1. UPPER WHITE CONTAINER (REVERSED CALL LAYOUT, CLEAN, BALANCED & SPACIOUS) ── */}
+      {/* ── 1. UPPER WHITE CONTAINER (REVERSED CALL LAYOUT, BALANCED PROPORTIONS) ── */}
       <div className="w-full flex-1 bg-white rounded-[32px] sm:rounded-[36px] shadow-[0_15px_45px_rgba(0,0,0,0.3)] relative overflow-hidden flex flex-col justify-between p-5 min-h-0">
-        
-        {/* Top Header Bar Inside White Card (Borderless, No Outline) */}
+        {/* Top Header Bar Inside White Card (Borderless & Outline-Free) */}
         <div className="w-full flex items-center justify-between z-20 shrink-0 mb-3">
           {/* Borderless Back Button */}
           <button
@@ -154,7 +182,7 @@ export default function OthersProfile({
               triggerHaptic('light');
               onClose();
             }}
-            className="w-11 h-11 rounded-full flex items-center justify-center bg-zinc-100/90 hover:bg-zinc-200 text-zinc-800 active:scale-90 transition-all cursor-pointer border-0 outline-none ring-0"
+            className="w-11 h-11 rounded-full flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 text-zinc-800 active:scale-90 transition-all cursor-pointer border-0 outline-none ring-0 focus:outline-none focus:ring-0 shadow-none"
             title="Back"
           >
             <ChevronLeft className="w-5 h-5 text-zinc-800" strokeWidth={2.5} />
@@ -168,26 +196,55 @@ export default function OthersProfile({
           <div className="w-11 h-11" />
         </div>
 
-        {/* ── CARD CONTENT (FROST GLASS ARTWORK + AVATAR + DETAILS + LARGE STATS + LIKE BUTTON) ── */}
+        {/* ── CARD CONTENT (GOLDEN LEAF ON COBALT CANVAS + AVATAR + DETAILS + STATS + LIKE BUTTON) ── */}
         <div className="flex-1 flex flex-col justify-between overflow-y-auto no-scrollbar py-1 min-h-0">
-          
-          {/* ── Frost / Ice Aurora Glassmorphism Artwork Banner (Pure Design, No Text) ── */}
-          <div className="w-full flex-1 min-h-[140px] sm:min-h-[180px] rounded-[28px] overflow-hidden relative shadow-inner bg-gradient-to-tr from-[#1E1B4B] via-[#0F172A] to-[#0284C7] flex items-center justify-center shrink-0">
-            {/* Ambient frosted aura orbs */}
-            <div className="absolute -right-8 -bottom-10 w-48 h-48 rounded-full bg-cyan-400/35 blur-2xl animate-pulse" style={{ animationDuration: '4s' }} />
-            <div className="absolute left-6 -top-10 w-40 h-40 rounded-full bg-indigo-500/40 blur-2xl" />
-            <div className="absolute right-16 top-6 w-24 h-24 rounded-full bg-violet-400/30 blur-xl" />
-            
-            {/* Frosted glass 3D geometric crystal plates with backdrop blur */}
-            <div className="absolute w-32 h-32 rotate-12 rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] -top-4 -left-4" />
-            <div className="absolute w-24 h-24 -rotate-12 rounded-2xl bg-cyan-200/10 backdrop-blur-xl border border-white/25 shadow-lg bottom-2 right-8" />
-            <div className="absolute w-16 h-16 rotate-45 rounded-xl bg-indigo-300/15 backdrop-blur-lg border border-white/30 top-6 right-20" />
-            
-            {/* Shimmering frost diagonal reflection */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent rotate-45 scale-150 pointer-events-none" />
+          {/* ── Golden Autumn Leaf on Deep Cobalt Blue Canvas Artwork (No Text) ── */}
+          <div className="w-full flex-1 min-h-[150px] sm:min-h-[190px] rounded-[28px] overflow-hidden relative shadow-inner bg-gradient-to-tr from-[#1E3A8A] via-[#1D4ED8] to-[#2563EB] flex items-center justify-center shrink-0">
+            {/* Painted ultramarine texture background strokes */}
+            <div className="absolute inset-0 opacity-40 bg-[radial-gradient(#60A5FA_1px,transparent_1px)] [background-size:16px_16px]" />
+            <div className="absolute -left-10 -top-10 w-48 h-48 rounded-full bg-blue-400/20 blur-2xl" />
+            <div className="absolute right-0 bottom-0 w-40 h-40 rounded-full bg-indigo-900/40 blur-xl" />
+
+            {/* Stylized Golden Leaf Artwork */}
+            <div className="relative z-10 w-44 h-32 flex items-center justify-center transform -rotate-12 hover:scale-105 transition-transform duration-500">
+              <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
+                <defs>
+                  <linearGradient id="leafGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#FDE68A" />
+                    <stop offset="45%" stopColor="#F59E0B" />
+                    <stop offset="85%" stopColor="#D97706" />
+                    <stop offset="100%" stopColor="#B45309" />
+                  </linearGradient>
+                  <linearGradient id="leafStem" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#92400E" />
+                    <stop offset="100%" stopColor="#78350F" />
+                  </linearGradient>
+                </defs>
+                {/* Main Leaf Body */}
+                <path
+                  d="M10 60 C40 15, 140 10, 185 55 C190 60, 188 62, 182 65 C135 105, 45 100, 10 60 Z"
+                  fill="url(#leafGold)"
+                />
+                {/* Central Leaf Stem */}
+                <path
+                  d="M5 60 Q90 58 195 56"
+                  stroke="url(#leafStem)"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  fill="none"
+                />
+                {/* Delicate leaf side veins */}
+                <path d="M45 59 Q65 42 85 30" stroke="#B45309" strokeWidth="1" strokeOpacity="0.5" fill="none" />
+                <path d="M75 59 Q100 42 125 28" stroke="#B45309" strokeWidth="1" strokeOpacity="0.5" fill="none" />
+                <path d="M115 58 Q140 44 160 38" stroke="#B45309" strokeWidth="1" strokeOpacity="0.5" fill="none" />
+                <path d="M45 61 Q65 78 85 90" stroke="#B45309" strokeWidth="1" strokeOpacity="0.5" fill="none" />
+                <path d="M75 60 Q100 78 125 92" stroke="#B45309" strokeWidth="1" strokeOpacity="0.5" fill="none" />
+                <path d="M115 59 Q140 76 160 82" stroke="#B45309" strokeWidth="1" strokeOpacity="0.5" fill="none" />
+              </svg>
+            </div>
           </div>
 
-          {/* Overlapping Avatar (Moved down with breathing space) */}
+          {/* Overlapping Avatar */}
           <div className="relative flex items-end px-4 -mt-12 mb-1 shrink-0">
             <div
               className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden flex items-center justify-center text-3xl sm:text-4xl font-black text-zinc-900 shadow-2xl border-4 border-white relative z-10 shrink-0"
@@ -206,51 +263,51 @@ export default function OthersProfile({
             </div>
           </div>
 
-          {/* Name & Headline (Moved comfortably down with clear vertical separation) */}
-          <div className="px-4 pt-2 pb-1 space-y-1 mb-3 shrink-0">
+          {/* Name & Headline (Moved comfortably down with clean vertical separation) */}
+          <div className="px-4 pt-2 pb-1 space-y-0.5 mb-2.5 shrink-0">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight truncate">
               {displayName}
             </h2>
-            <p className="text-sm sm:text-base font-medium text-zinc-500 truncate">
+            <p className="text-sm sm:text-base font-normal text-zinc-500 truncate">
               {displayHeadline}
             </p>
           </div>
 
-          {/* 3-Column Stats Row (Large, Prominent & High-End Typography) */}
-          <div className="w-full bg-zinc-50/90 border border-zinc-100 rounded-2xl p-4 sm:p-5 flex items-center justify-around text-center mb-3.5 shadow-2xs shrink-0">
-            {/* Column 1: Rating (Follower to Like ratio) */}
+          {/* 3-Column Stats Row (Light, Clean Typography for Stats) */}
+          <div className="w-full bg-zinc-50/80 border border-zinc-100 rounded-2xl p-3.5 sm:p-4 flex items-center justify-around text-center mb-3 shadow-2xs shrink-0">
+            {/* Column 1: Real Rating */}
             <div className="flex-1 flex flex-col items-center">
-              <div className="flex items-center gap-1.5 text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight tabular-nums">
-                <Star className="w-5 h-5 fill-amber-400 text-amber-400 shrink-0" />
+              <div className="flex items-center gap-1 text-base sm:text-lg font-semibold text-zinc-900 tracking-tight">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400 shrink-0" />
                 <span>{rating}</span>
               </div>
-              <span className="text-[11.5px] sm:text-[12px] font-extrabold text-zinc-400 mt-1 tracking-[0.14em] uppercase">
+              <span className="text-[11px] font-normal text-zinc-500 mt-0.5">
                 rating
               </span>
             </div>
 
             {/* Divider */}
-            <div className="w-px h-10 bg-zinc-200" />
+            <div className="w-px h-7 bg-zinc-200" />
 
-            {/* Column 2: Followers */}
+            {/* Column 2: Followers Count */}
             <div className="flex-1 flex flex-col items-center">
-              <span className="text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight tabular-nums">
+              <span className="text-base sm:text-lg font-semibold text-zinc-900 tracking-tight">
                 {followersCount > 999 ? `${(followersCount / 1000).toFixed(1)}k` : followersCount}
               </span>
-              <span className="text-[11.5px] sm:text-[12px] font-extrabold text-zinc-400 mt-1 tracking-[0.14em] uppercase">
+              <span className="text-[11px] font-normal text-zinc-500 mt-0.5">
                 followers
               </span>
             </div>
 
             {/* Divider */}
-            <div className="w-px h-10 bg-zinc-200" />
+            <div className="w-px h-7 bg-zinc-200" />
 
-            {/* Column 3: Following */}
+            {/* Column 3: Following Count */}
             <div className="flex-1 flex flex-col items-center">
-              <span className="text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight tabular-nums">
+              <span className="text-base sm:text-lg font-semibold text-zinc-900 tracking-tight">
                 {followingCount > 999 ? `${(followingCount / 1000).toFixed(1)}k` : followingCount}
               </span>
-              <span className="text-[11.5px] sm:text-[12px] font-extrabold text-zinc-400 mt-1 tracking-[0.14em] uppercase">
+              <span className="text-[11px] font-normal text-zinc-500 mt-0.5">
                 following
               </span>
             </div>
@@ -259,7 +316,7 @@ export default function OthersProfile({
           {/* Big Like Button at the bottom of the white card */}
           <button
             onClick={handleToggleLike}
-            className={`w-full py-4 sm:py-4.5 rounded-full font-bold text-[15px] sm:text-[16px] transition-all shadow-md flex items-center justify-center gap-2.5 cursor-pointer border-0 outline-none ring-0 active:scale-98 shrink-0 ${
+            className={`w-full py-4 rounded-full font-bold text-[15px] transition-all shadow-md flex items-center justify-center gap-2.5 cursor-pointer border-0 outline-none ring-0 active:scale-98 shrink-0 ${
               isLiked
                 ? 'bg-zinc-900 text-[#EC4899]'
                 : 'bg-zinc-950 hover:bg-zinc-800 text-white'
@@ -268,19 +325,16 @@ export default function OthersProfile({
             <Heart className={`w-5 h-5 ${isLiked ? 'fill-[#EC4899] text-[#EC4899]' : 'text-white'}`} />
             <span>{isLiked ? 'Liked' : 'Like Profile'}</span>
             {likesCount > 0 && (
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-white/15 ml-1">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/15 ml-1">
                 {likesCount}
               </span>
             )}
           </button>
-
         </div>
-
       </div>
 
-      {/* ── 2. LOWER DARK ZINC CONTAINER (LARGE SHARE & FOLLOW BUTTONS WITHOUT OUTLINES) ── */}
+      {/* ── 2. LOWER DARK ZINC CONTAINER (LARGE BORDERLESS SHARE & FOLLOW BUTTONS) ── */}
       <div className="w-full bg-[#141111] border-0 outline-none ring-0 rounded-[32px] sm:rounded-[36px] py-4 sm:py-5 px-5 mt-4 shadow-[0_10px_35px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3.5 shrink-0">
-        
         {/* Left: Big Share Button (No outline, no border) */}
         <button
           onClick={handleShare}
@@ -291,18 +345,23 @@ export default function OthersProfile({
           <span>Share</span>
         </button>
 
-        {/* Right: Big Follow / Unfollow Button (No outline, no border) */}
+        {/* Right: Big Follow / Unfollow / Requested Button (No outline, no border) */}
         <button
           onClick={handleToggleFollow}
           disabled={loadingFollow}
           className={`flex-1 py-4 sm:py-4.5 rounded-full text-[15px] font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer border-0 outline-none ring-0 shadow-none active:scale-95 ${
-            isFollowing
+            isFollowing || hasSentRequest
               ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
               : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900'
           }`}
-          title={isFollowing ? 'Unfollow' : 'Follow'}
+          title={hasSentRequest ? 'Cancel Request' : isFollowing ? 'Unfollow' : 'Follow'}
         >
-          {isFollowing ? (
+          {hasSentRequest ? (
+            <>
+              <Clock className="w-4.5 h-4.5 text-zinc-300" />
+              <span>Requested</span>
+            </>
+          ) : isFollowing ? (
             <>
               <UserCheck className="w-4.5 h-4.5 text-zinc-300" />
               <span>Following</span>
@@ -314,9 +373,7 @@ export default function OthersProfile({
             </>
           )}
         </button>
-
       </div>
-
     </div>
   );
 }
