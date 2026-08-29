@@ -1758,3 +1758,78 @@ export async function getMyActivitySettings() {
     select: { id: true, showActivityStatus: true, isOnline: true, lastSeen: true }
   });
 }
+
+// ── Public User Profile & Follow Server Actions ──
+
+export async function getUserPublicProfile(targetUserId: string) {
+  const session = await getServerSession(authOptions);
+  let currentUserId: string | null = null;
+
+  if (session?.user?.email) {
+    const me = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true }
+    });
+    currentUserId = me?.id || null;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      image: true,
+      bio: true,
+      website: true,
+      isOnline: true,
+      lastSeen: true,
+      createdAt: true,
+      _count: {
+        select: {
+          followers: true,
+          following: true,
+          posts: true,
+          likes: true
+        }
+      }
+    }
+  });
+
+  if (!user) return null;
+
+  let isFollowing = false;
+  if (currentUserId && currentUserId !== targetUserId) {
+    const followCheck = await prisma.user.findFirst({
+      where: {
+        id: currentUserId,
+        following: { some: { id: targetUserId } }
+      },
+      select: { id: true }
+    });
+    isFollowing = !!followCheck;
+  }
+
+  // Calculate dynamic rating and stats
+  const followersCount = user._count?.followers || 0;
+  const followingCount = user._count?.following || 0;
+  const postsCount = user._count?.posts || 0;
+  const likesCount = user._count?.likes || 0;
+
+  // Rating based on engagement ratio (e.g. 4.8 - 5.0)
+  const baseRating = 4.7 + Math.min(0.29, (followersCount * 0.05) + (likesCount * 0.02));
+  const ratingStr = Math.min(5.0, baseRating).toFixed(1);
+
+  return {
+    ...user,
+    isFollowing,
+    isSelf: currentUserId === targetUserId,
+    stats: {
+      rating: ratingStr,
+      followers: followersCount,
+      following: followingCount,
+      posts: postsCount,
+      likes: likesCount
+    }
+  };
+}

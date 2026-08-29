@@ -56,6 +56,7 @@ import {
 import StoryEditor from './StoryEditor';
 import ChatInput from './ChatInput';
 import ChatDetails from './ChatDetails';
+import OthersProfile from './OthersProfile';
 import IncomingCallModal from './IncomingCallModal';
 import './SocialChat.css';
 
@@ -2412,6 +2413,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   }, [acceptedContactIds]);
   const [isUserBlocked, setIsUserBlocked] = useState(false);
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
+  const [viewingProfileUser, setViewingProfileUser] = useState<any>(null);
   const [showSearchWindow, setShowSearchWindow] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -5753,7 +5755,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   formatLastSeenAgo={formatLastSeenAgo}
                   isSpeechToTextEnabled={isSpeechToTextEnabled}
                   onToggleSpeechToText={setIsSpeechToTextEnabled}
+                  onOpenUserProfile={(u) => setViewingProfileUser(u)}
                 />
+
+                {/* ── SCREEN: OTHER USER'S PUBLIC PROFILE MODAL (REVERSED CALL LAYOUT) ── */}
+                {viewingProfileUser && (
+                  <OthersProfile
+                    user={viewingProfileUser}
+                    onClose={() => setViewingProfileUser(null)}
+                    onGetInTouch={() => {
+                      setViewingProfileUser(null);
+                      setShowChatDetails(false);
+                    }}
+                  />
+                )}
 
                 {/* ── MULTI-MEDIA ALBUM VIEWER OVERLAY (Instagram style) ── */}
                 {selectedAlbum && (

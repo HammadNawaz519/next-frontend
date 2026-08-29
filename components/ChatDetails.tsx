@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import {
   ChevronLeft,
+  ChevronRight,
   Search,
   ImageIcon,
   FileText,
+  User,
   Mic as LucideMic
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
@@ -32,6 +34,7 @@ interface ChatDetailsProps {
   formatLastSeenAgo?: (timestamp?: string) => string;
   isSpeechToTextEnabled?: boolean;
   onToggleSpeechToText?: (enabled: boolean) => void;
+  onOpenUserProfile?: (user: any) => void;
 }
 
 export default function ChatDetails({
@@ -55,7 +58,8 @@ export default function ChatDetails({
   onToggleBlock,
   formatLastSeenAgo,
   isSpeechToTextEnabled = false,
-  onToggleSpeechToText
+  onToggleSpeechToText,
+  onOpenUserProfile
 }: ChatDetailsProps) {
   const [editingNickname, setEditingNickname] = useState(false);
   const [nicknameInput, setNicknameInput] = useState('');
@@ -122,7 +126,23 @@ export default function ChatDetails({
           <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">Preferences</span>
           <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-2 divide-y divide-zinc-100">
             
-            {/* Voice Typing (Speech to Text) Toggle (No description) */}
+            {/* View Profile Button */}
+            <div className="py-3 px-2 flex items-center justify-between">
+              <span className="text-[14px] font-semibold text-zinc-800">User Profile</span>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  onOpenUserProfile?.(selectedUser);
+                }}
+                className="text-[13px] font-bold text-[#9D4EDD] hover:underline cursor-pointer outline-none flex items-center gap-1"
+              >
+                <span>View Profile</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Voice Typing (Speech to Text) Toggle */}
             <div className="flex items-center justify-between py-3.5 px-2">
               <span className="text-[14px] font-semibold text-zinc-800">Voice Typing (Speech to Text)</span>
               <button
