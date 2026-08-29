@@ -2013,13 +2013,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   useEffect(() => {
     if (isAdmin) {
-      getGlobalEdgeRequestCount().then(count => {
-        if (typeof count === 'number') {
-          setEdgeRequestCount(count);
-        }
-      }).catch(() => {});
+      setEdgeRequestCount(0);
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('get_server_edge_count');
+      }
     }
-  }, [isAdmin]);
+  }, [isAdmin, socket]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -3485,6 +3484,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           }
           return prev;
         });
+      });
+
+      newSocket.on('server_edge_count', (count: number) => {
+        if (typeof count === 'number') {
+          setEdgeRequestCount(count);
+        }
       });
 
       newSocket.on('receive_chat_theme', ({ themeId, themeName, senderName, senderId, senderEmail }: any) => {

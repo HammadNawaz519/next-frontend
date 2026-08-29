@@ -50,8 +50,12 @@ async function fetchRtcConfig(): Promise<RTCConfiguration> {
   }
 
   try {
-    const res = await fetch('/api/turn-credentials', { credentials: 'include' });
-    if (!res.ok) throw new Error(`TURN API ${res.status}`);
+    const serverUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
+    let res: Response | null = await fetch(`${serverUrl}/api/turn-credentials`).catch(() => null);
+    if (!res || !res.ok) {
+      res = await fetch('/api/turn-credentials', { credentials: 'include' }).catch(() => null);
+    }
+    if (!res || !res.ok) throw new Error(`TURN API unavailable`);
     const data = await res.json();
     if (data && Array.isArray(data.iceServers) && data.iceServers.length > 0) {
       cachedAdminRtcConfig = {

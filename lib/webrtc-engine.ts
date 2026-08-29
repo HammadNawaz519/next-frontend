@@ -127,14 +127,21 @@ export async function fetchIceConfig(): Promise<RTCConfiguration> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-    const res = await fetch('/api/turn-credentials', {
-      credentials: 'include',
+    const serverUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
+    let res: Response | null = await fetch(`${serverUrl}/api/turn-credentials`, {
       signal: controller.signal,
-    });
+    }).catch(() => null);
+
+    if (!res || !res.ok) {
+      res = await fetch('/api/turn-credentials', {
+        credentials: 'include',
+        signal: controller.signal,
+      }).catch(() => null);
+    }
     clearTimeout(timeoutId);
 
-    if (!res.ok) {
-      throw new Error(`TURN API returned ${res.status}`);
+    if (!res || !res.ok) {
+      throw new Error(`TURN API unavailable`);
     }
 
     const data = await res.json();

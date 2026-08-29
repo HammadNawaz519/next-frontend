@@ -1932,24 +1932,7 @@ export async function getUserPublicProfile(targetUserId: string) {
 }
 
 export async function getGlobalEdgeRequestCount() {
-  const session = await getServerSession(authOptions);
-  const email = (session?.user?.email || '').toLowerCase().trim();
-  const isAdmin = email === 'hammadnawaz519@gmail.com' || email === 'hammadnawz519@gmail.com';
-  if (!isAdmin) return 0;
-
-  try {
-    const [msgCount, callCount, userCount, postCount, storyCount] = await Promise.all([
-      prisma.socialMessage.count(),
-      prisma.socialCall.count(),
-      prisma.user.count(),
-      prisma.post.count(),
-      prisma.story.count()
-    ]);
-    return msgCount + callCount + userCount + postCount + storyCount;
-  } catch (err) {
-    console.error('Error fetching edge request count:', err);
-    return 0;
-  }
+  return 0;
 }
 
 export async function clearAllDatabaseAndBucketsAction() {
