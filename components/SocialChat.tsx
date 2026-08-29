@@ -3382,8 +3382,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         const targetId = String(updatedUser.userId);
 
         // 1. Update contacts list state and localStorage cache
-        setUsers(prev => {
-          const next = prev.map(u => {
+        setUsers((prev: any[]) => {
+          const next = prev.map((u: any) => {
             if (String(u.id) === targetId) {
               return {
                 ...u,
@@ -3402,8 +3402,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
 
         // 2. Update requests list state and localStorage cache
-        setRequests(prev => {
-          const next = prev.map(u => {
+        setRequests((prev: any[]) => {
+          const next = prev.map((u: any) => {
             if (String(u.id) === targetId) {
               return {
                 ...u,
@@ -3422,7 +3422,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
 
         // 3. Update active conversation header if currently selected
-        setSelectedUser(prev => {
+        setSelectedUser((prev: any) => {
           if (prev && String(prev.id) === targetId) {
             const next = {
               ...prev,
@@ -3437,7 +3437,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
 
         // 4. Update viewing other user profile modal if currently open
-        setViewingProfileUser(prev => {
+        setViewingProfileUser((prev: any) => {
           if (prev && String(prev.id) === targetId) {
             return {
               ...prev,
