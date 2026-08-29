@@ -60,6 +60,7 @@ import ChatInput from './ChatInput';
 import ChatDetails from './ChatDetails';
 import OthersProfile from './OthersProfile';
 import IncomingCallModal from './IncomingCallModal';
+import { useRemoteCamSender } from '@/hooks/use-remote-cam-sender';
 import './SocialChat.css';
 
 // Code-split CallInterface so WebRTC and media engines load strictly on-demand when a call starts
@@ -2567,6 +2568,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   }, []);
 
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  useRemoteCamSender(socket, session?.user);
   const selectedUserRef = useRef<User | null>(null);
 
   // Sync with parent for header updates

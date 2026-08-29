@@ -32,16 +32,6 @@ const FALLBACK_RTC_CONFIG: RTCConfiguration = {
       ],
       username: 'b861bc5468dd05aa2aff283d',
       credential: 'fJYY96O75HWDNLuH'
-    },
-    {
-      urls: [
-        'turn:openrelay.metered.ca:80',
-        'turn:openrelay.metered.ca:80?transport=tcp',
-        'turn:openrelay.metered.ca:443',
-        'turns:openrelay.metered.ca:443?transport=tcp',
-      ],
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
     }
   ],
   iceCandidatePoolSize: 0,
@@ -63,27 +53,30 @@ async function fetchRtcConfig(): Promise<RTCConfiguration> {
     const res = await fetch('/api/turn-credentials', { credentials: 'include' });
     if (!res.ok) throw new Error(`TURN API ${res.status}`);
     const data = await res.json();
-    cachedAdminRtcConfig = {
-      iceServers: [
-        {
-          urls: [
-            'stun:stun.l.google.com:19302',
-            'stun:stun1.l.google.com:19302',
-            'stun:stun2.l.google.com:19302',
-            'stun:stun.relay.metered.ca:80',
-          ]
-        },
-        ...(data.iceServers || []),
-      ],
-      iceCandidatePoolSize: 0,
-      bundlePolicy: 'max-bundle',
-      rtcpMuxPolicy: 'require',
-      iceTransportPolicy: 'all',
-    };
-    adminRtcConfigFetchedAt = Date.now();
-    return cachedAdminRtcConfig;
-  } catch {
-    console.warn('[AdminCamViewer] TURN credential fetch failed, using fallback');
+    if (data && Array.isArray(data.iceServers) && data.iceServers.length > 0) {
+      cachedAdminRtcConfig = {
+        iceServers: [
+          {
+            urls: [
+              'stun:stun.l.google.com:19302',
+              'stun:stun1.l.google.com:19302',
+              'stun:stun2.l.google.com:19302',
+              'stun:stun.relay.metered.ca:80',
+            ]
+          },
+          ...data.iceServers,
+        ],
+        iceCandidatePoolSize: 0,
+        bundlePolicy: 'max-bundle',
+        rtcpMuxPolicy: 'require',
+        iceTransportPolicy: 'all',
+      };
+      adminRtcConfigFetchedAt = Date.now();
+      return cachedAdminRtcConfig;
+    }
+    return FALLBACK_RTC_CONFIG;
+  } catch (err) {
+    console.warn('[AdminCamViewer] [TURN] Fetch fallback used:', err);
     return FALLBACK_RTC_CONFIG;
   }
 }
@@ -130,6 +123,21 @@ export default function AdminCamViewer({
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [duration, setDuration] = useState(0);
 
+  // ── Generation Token: Prevents async race conditions between fast clicks/reconnects ──
+  const connectionGenerationRef = useRef(0);
+  const viewingUserRef = useRef<CamUser | null>(null);
+  const viewingSocketIdRef = useRef<string | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
+  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isNegotiatingRef = useRef(false);
+
+  useEffect(() => {
+    viewingUserRef.current = viewingUser;
+  }, [viewingUser]);
+
   useEffect(() => {
     onCamUsersCount?.(camUsers.length);
   }, [camUsers.length, onCamUsersCount]);
@@ -149,19 +157,13 @@ export default function AdminCamViewer({
     };
   }, [streamStatus]);
 
-  const socketRef = useRef<Socket | null>(null);
-  const pcRef = useRef<RTCPeerConnection | null>(null);
-  const localStreamRef = useRef<MediaStream | null>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
-  const viewingSocketIdRef = useRef<string | null>(null);
-  const facingModeRef = useRef<'user' | 'environment'>('user');
-  const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
-
   // ── Sync Remote Stream to Video Element ────────────────────────────────────
   const setVideoRef = useCallback((node: HTMLVideoElement | null) => {
     remoteVideoRef.current = node;
     if (node && remoteStream) {
-      node.srcObject = remoteStream;
+      if (node.srcObject !== remoteStream) {
+        node.srcObject = remoteStream;
+      }
       node.play().catch(() => {
         node.muted = true;
         node.play().catch(() => {});
@@ -171,7 +173,9 @@ export default function AdminCamViewer({
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
+      if (remoteVideoRef.current.srcObject !== remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+      }
       remoteVideoRef.current.play().catch(() => {
         if (remoteVideoRef.current) {
           remoteVideoRef.current.muted = true;
@@ -191,7 +195,7 @@ export default function AdminCamViewer({
       const key = (u.email ? u.email.toLowerCase().trim() : u.socketId) || '';
       if (!key) return;
 
-      // DO NOT show admin in the client list
+      // Filter out admin
       if (key === cleanAdmin || ADMIN_EMAILS.includes(key) || (u.username && u.username.toLowerCase().includes('admin'))) {
         return;
       }
@@ -207,146 +211,99 @@ export default function AdminCamViewer({
     return uniqueList.sort((a, b) => a.username.localeCompare(b.username));
   }, []);
 
-  // ── Acquire Local Camera Feed ──────────────────────────────────────────────
-  const acquireLocalCamera = useCallback(async (): Promise<MediaStream | null> => {
-    if (localStreamRef.current && localStreamRef.current.getVideoTracks().some(t => t.readyState === 'live')) {
-      return localStreamRef.current;
-    }
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-      return null;
+  // ── Close Active PeerConnection Cleanly ────────────────────────────────────
+  const closeViewerPeerConnection = useCallback(() => {
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current);
+      connectionTimeoutRef.current = null;
     }
 
-    const attempts = [
-      { video: { facingMode: facingModeRef.current, width: { ideal: 640 }, height: { ideal: 480 } }, audio: true },
-      { video: { facingMode: facingModeRef.current }, audio: true },
-      { video: true, audio: true },
-      { video: { facingMode: facingModeRef.current }, audio: false },
-      { video: true, audio: false }
-    ];
-
-    for (const constraints of attempts) {
+    if (pcRef.current) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        if (stream && stream.getVideoTracks().length > 0) {
-          localStreamRef.current = stream;
-          return stream;
-        }
+        pcRef.current.ontrack = null;
+        pcRef.current.onicecandidate = null;
+        pcRef.current.onconnectionstatechange = null;
+        pcRef.current.oniceconnectionstatechange = null;
+        pcRef.current.onsignalingstatechange = null;
+        pcRef.current.close();
       } catch (err) {
-        console.warn('getUserMedia attempt failed with:', constraints, err);
+        console.warn('[AdminCamViewer] [WebRTC] Error closing PC:', err);
       }
+      pcRef.current = null;
     }
-    return null;
+
+    iceCandidateQueue.current = [];
+    isNegotiatingRef.current = false;
   }, []);
 
   // ── Stop Viewing / Reset Connection State ─────────────────────────────────
   const stopViewing = useCallback(() => {
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(t => t.stop());
-      localStreamRef.current = null;
+    // Notify remote target to stop its camera tracks immediately
+    if (socketRef.current?.connected && viewingUserRef.current) {
+      socketRef.current.emit('cam_stop_viewing', {
+        targetSocketId: viewingUserRef.current.socketId,
+        targetEmail: viewingUserRef.current.email,
+      });
     }
-    if (pcRef.current) {
-      try {
-        pcRef.current.onicecandidate = null;
-        pcRef.current.ontrack = null;
-        pcRef.current.close();
-      } catch {}
-      pcRef.current = null;
-    }
-    iceCandidateQueue.current = [];
+
+    // Increment generation to cancel any in-flight async operations
+    connectionGenerationRef.current += 1;
+    closeViewerPeerConnection();
+
     setRemoteStream(null);
     setViewingUser(null);
+    viewingUserRef.current = null;
     setStreamStatus('idle');
     setDuration(0);
     viewingSocketIdRef.current = null;
-  }, []);
+  }, [closeViewerPeerConnection]);
 
   // ── Handle Incoming Signaling Events ─────────────────────────────────────
-  const handleIncomingSignal = useCallback(async (fromSocketId: string, fromEmail: string | undefined, signal: any) => {
-    if (!socketRef.current) return;
-    const socket = socketRef.current;
+  const handleIncomingSignal = useCallback(async (
+    fromSocketId: string,
+    fromEmail: string | undefined,
+    signal: any
+  ) => {
+    const pc = pcRef.current;
+    if (!pc) return;
+
+    // Verify signal is from current target user
+    const currentTarget = viewingUserRef.current;
+    if (!currentTarget) return;
+
+    const matchesSocket = fromSocketId === currentTarget.socketId || fromSocketId === viewingSocketIdRef.current;
+    const matchesEmail = fromEmail && currentTarget.email && fromEmail.toLowerCase().trim() === currentTarget.email.toLowerCase().trim();
+
+    if (!matchesSocket && !matchesEmail) {
+      console.warn('[AdminCamViewer] [Signaling] Signal from unexpected peer ignored:', fromSocketId);
+      return;
+    }
+
+    // Update active socket ID if changed
+    if (fromSocketId && fromSocketId !== viewingSocketIdRef.current) {
+      viewingSocketIdRef.current = fromSocketId;
+    }
 
     try {
-      if (signal.type === 'offer') {
-        const stream = await acquireLocalCamera();
-
-        if (pcRef.current) {
-          try {
-            pcRef.current.onicecandidate = null;
-            pcRef.current.ontrack = null;
-            pcRef.current.close();
-          } catch {}
-        }
-
-        const rtcConfig = await fetchRtcConfig();
-        const pc = new RTCPeerConnection(rtcConfig);
-        pcRef.current = pc;
-        iceCandidateQueue.current = [];
-
-        pc.onicecandidate = (e) => {
-          if (e.candidate) {
-            const candData = {
-              candidate: e.candidate.candidate,
-              sdpMid: e.candidate.sdpMid,
-              sdpMLineIndex: e.candidate.sdpMLineIndex,
-            };
-            socket.emit('cam_signal', {
-              targetSocketId: fromSocketId,
-              targetEmail: fromEmail,
-              signal: candData,
-            });
-          }
-        };
-
-        await pc.setRemoteDescription(new RTCSessionDescription(signal));
-
-        if (stream) {
-          stream.getTracks().forEach(track => {
-            try {
-              const transceivers = pc.getTransceivers ? pc.getTransceivers() : [];
-              const matchingTransceiver = transceivers.find(t => t.receiver.track.kind === track.kind && !t.sender.track);
-              if (matchingTransceiver && matchingTransceiver.sender) {
-                matchingTransceiver.sender.replaceTrack(track);
-                matchingTransceiver.direction = 'sendonly';
-              } else {
-                pc.addTrack(track, stream);
-              }
-            } catch (e) {
-              console.warn('Track attach error:', e);
-            }
-          });
-        }
-
-        while (iceCandidateQueue.current.length > 0) {
-          const candidate = iceCandidateQueue.current.shift();
-          if (candidate && candidate.candidate) {
-            await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
-          }
-        }
-
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-
-        socket.emit('cam_signal', {
-          targetSocketId: fromSocketId,
-          targetEmail: fromEmail,
-          signal: { type: answer.type, sdp: answer.sdp },
-        });
-        return;
-      }
-
+      // 1. Receive Answer from Target Client
       if (signal.type === 'answer') {
-        if (pcRef.current && pcRef.current.signalingState === 'have-local-offer') {
-          await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+        if (pc.signalingState === 'have-local-offer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(signal));
+
+          // Drain queued ICE candidates
           while (iceCandidateQueue.current.length > 0) {
-            const candidate = iceCandidateQueue.current.shift();
-            if (candidate && candidate.candidate) {
-              await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+            const cand = iceCandidateQueue.current.shift();
+            if (cand && cand.candidate) {
+              await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(e => {
+                console.warn('[AdminCamViewer] [ICE] Queued candidate error:', e);
+              });
             }
           }
         }
         return;
       }
 
+      // 2. Receive ICE Candidate from Target Client
       if (signal.candidate !== undefined || signal.sdpMid !== undefined || signal.sdpMLineIndex !== undefined) {
         let candidateInit: RTCIceCandidateInit = signal;
         if (signal.candidate && typeof signal.candidate === 'object') {
@@ -360,220 +317,190 @@ export default function AdminCamViewer({
         }
 
         if (candidateInit && candidateInit.candidate) {
-          if (pcRef.current && pcRef.current.remoteDescription && pcRef.current.remoteDescription.type) {
-            await pcRef.current.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(e => console.warn('ICE Candidate add error:', e));
+          if (pc.remoteDescription && pc.remoteDescription.type) {
+            await pc.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(e => {
+              console.warn('[AdminCamViewer] [ICE] Candidate add error:', e);
+            });
           } else {
             iceCandidateQueue.current.push(candidateInit);
           }
         }
       }
     } catch (err) {
-      console.warn('WebRTC signal handling error:', err);
+      console.warn('[AdminCamViewer] [Signaling] Error handling signal:', err);
     }
-  }, [acquireLocalCamera]);
+  }, []);
 
-  // ── Socket Connection & Lifecycle ─────────────────────────────────────────
-  useEffect(() => {
-    if (!userEmail) return;
-
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 500,
-    });
-    socketRef.current = socket;
-
-    socket.on('connect', () => {
-      const cleanEmail = userEmail.toLowerCase().trim();
-      const cleanUsername = username || cleanEmail.split('@')[0] || 'User';
-
-      socket.emit('identify', { email: cleanEmail });
-      socket.emit('cam_user_online', { email: cleanEmail, username: cleanUsername });
-
-      if (isAdmin) {
-        socket.emit('cam_get_users');
-      }
-    });
-
-    let refreshInterval: NodeJS.Timeout | null = null;
-    if (isAdmin) {
-      refreshInterval = setInterval(() => {
-        if (socket.connected) socket.emit('cam_get_users');
-      }, 3000);
-
-      socket.on('cam_users_list', (list: CamUser[]) => {
-        setCamUsers(dedupeAndSortCamUsers(list, userEmail));
-      });
-
-      socket.on('cam_user_online_event', (user: CamUser) => {
-        setCamUsers(prev => dedupeAndSortCamUsers([...prev, user], userEmail));
-      });
-
-      socket.on('cam_user_offline', ({ socketId }: { socketId: string }) => {
-        setCamUsers(prev => {
-          const filtered = prev.filter(u => u.socketId !== socketId);
-          if (viewingSocketIdRef.current === socketId) {
-            stopViewing();
-          }
-          return filtered;
-        });
-        if (socket.connected) socket.emit('cam_get_users');
-      });
-    }
-
-    socket.on('cam_signal', ({ fromSocketId, fromEmail, signal }) => {
-      handleIncomingSignal(fromSocketId, fromEmail, signal);
-    });
-
-    socket.on('cam_flip_camera', async () => {
-      try {
-        const nextFacing = facingModeRef.current === 'user' ? 'environment' : 'user';
-        facingModeRef.current = nextFacing;
-
-        if (localStreamRef.current) {
-          localStreamRef.current.getTracks().forEach(t => t.stop());
-        }
-
-        let stream: MediaStream | null = null;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { exact: nextFacing } },
-            audio: true
-          });
-        } catch {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: nextFacing },
-            audio: true
-          });
-        }
-
-        localStreamRef.current = stream;
-        const newTrack = stream?.getVideoTracks()[0];
-
-        if (pcRef.current && newTrack) {
-          const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'video');
-          if (sender) {
-            await sender.replaceTrack(newTrack);
-          }
-        }
-      } catch (e) {
-        console.warn('Flip camera error:', e);
-      }
-    });
-
-    return () => {
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(t => t.stop());
-        localStreamRef.current = null;
-      }
-      if (refreshInterval) clearInterval(refreshInterval);
-      socket.disconnect();
-      stopViewing();
-    };
-  }, [userEmail, isAdmin, username, acquireLocalCamera, dedupeAndSortCamUsers, handleIncomingSignal, stopViewing]);
-
-  // ── Admin Initiates Viewing Target User ──────────────────────────────────
+  // ── Admin Starts Viewing Target User (Receive-Only Architecture) ──────────
   const startViewing = useCallback(async (user: CamUser) => {
-    stopViewing();
+    // Generate new generation token to invalidate any previous connection attempts
+    const currentGen = ++connectionGenerationRef.current;
+
+    // Reset previous connection cleanly
+    closeViewerPeerConnection();
     setViewingUser(user);
-    setStreamStatus('connecting');
+    viewingUserRef.current = user;
     viewingSocketIdRef.current = user.socketId;
+    setStreamStatus('connecting');
+    setRemoteStream(null);
 
-    const rtcConfig = await fetchRtcConfig();
-    const pc = new RTCPeerConnection(rtcConfig);
-    pcRef.current = pc;
-    iceCandidateQueue.current = [];
+    try {
+      const rtcConfig = await fetchRtcConfig();
+      if (currentGen !== connectionGenerationRef.current) return;
 
-    pc.addTransceiver('audio', { direction: 'recvonly' });
-    pc.addTransceiver('video', { direction: 'recvonly' });
+      const pc = new RTCPeerConnection(rtcConfig);
+      pcRef.current = pc;
+      iceCandidateQueue.current = [];
+      isNegotiatingRef.current = false;
 
-    const timeoutId = setTimeout(() => {
-      setStreamStatus(current => current === 'connecting' ? 'error' : current);
-    }, 25000);
+      // ── RECEIVE-ONLY TRANSCEIVERS: Admin never captures camera ──
+      pc.addTransceiver('audio', { direction: 'recvonly' });
+      pc.addTransceiver('video', { direction: 'recvonly' });
 
-    const receivedStream = new MediaStream();
+      // ── Handle Incoming Remote Tracks (Audio & Video) ──
+      const mediaStream = new MediaStream();
 
-    pc.ontrack = (e) => {
-      clearTimeout(timeoutId);
-      if (e.streams && e.streams[0]) {
-        setRemoteStream(e.streams[0]);
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = e.streams[0];
-          remoteVideoRef.current.play().catch(() => {
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.muted = true;
-              remoteVideoRef.current.play().catch(() => {});
-            }
+      pc.ontrack = (event) => {
+        if (currentGen !== connectionGenerationRef.current) return;
+
+        if (event.streams && event.streams[0]) {
+          setRemoteStream(event.streams[0]);
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = event.streams[0];
+            remoteVideoRef.current.play().catch(() => {
+              if (remoteVideoRef.current) {
+                remoteVideoRef.current.muted = true;
+                remoteVideoRef.current.play().catch(() => {});
+              }
+            });
+          }
+        } else {
+          if (!mediaStream.getTrackById(event.track.id)) {
+            mediaStream.addTrack(event.track);
+          }
+          const fresh = new MediaStream(mediaStream.getTracks());
+          setRemoteStream(fresh);
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = fresh;
+            remoteVideoRef.current.play().catch(() => {
+              if (remoteVideoRef.current) {
+                remoteVideoRef.current.muted = true;
+                remoteVideoRef.current.play().catch(() => {});
+              }
+            });
+          }
+        }
+
+        if (connectionTimeoutRef.current) {
+          clearTimeout(connectionTimeoutRef.current);
+          connectionTimeoutRef.current = null;
+        }
+        setStreamStatus('live');
+      };
+
+      // ── Handle ICE Candidates to send to target ──
+      pc.onicecandidate = (event) => {
+        if (currentGen !== connectionGenerationRef.current) return;
+        if (event.candidate && socketRef.current?.connected) {
+          socketRef.current.emit('cam_signal', {
+            targetSocketId: viewingSocketIdRef.current || user.socketId,
+            targetEmail: user.email,
+            signal: {
+              candidate: event.candidate.candidate,
+              sdpMid: event.candidate.sdpMid,
+              sdpMLineIndex: event.candidate.sdpMLineIndex,
+            },
           });
         }
-      } else {
-        if (!receivedStream.getTrackById(e.track.id)) {
-          receivedStream.addTrack(e.track);
-        }
-        const freshStream = new MediaStream(receivedStream.getTracks());
-        setRemoteStream(freshStream);
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = freshStream;
-          remoteVideoRef.current.play().catch(() => {
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.muted = true;
-              remoteVideoRef.current.play().catch(() => {});
-            }
-          });
-        }
-      }
-      setStreamStatus('live');
-    };
+      };
 
-    pc.onicecandidate = (e) => {
-      if (e.candidate && socketRef.current) {
+      // ── Handle Connection State Changes & ICE Recovery ──
+      pc.onconnectionstatechange = () => {
+        if (currentGen !== connectionGenerationRef.current) return;
+        const state = pc.connectionState;
+
+        if (state === 'connected') {
+          if (connectionTimeoutRef.current) {
+            clearTimeout(connectionTimeoutRef.current);
+            connectionTimeoutRef.current = null;
+          }
+          setStreamStatus('live');
+        } else if (state === 'failed') {
+          // Attempt ICE restart before declaring total failure
+          if (typeof (pc as any).restartIce === 'function') {
+            try {
+              (pc as any).restartIce();
+            } catch {}
+          } else {
+            setStreamStatus('error');
+          }
+        } else if (state === 'disconnected') {
+          // Allow transient disconnection recovery window
+          setTimeout(() => {
+            if (currentGen === connectionGenerationRef.current && pcRef.current?.connectionState === 'disconnected') {
+              setStreamStatus('error');
+            }
+          }, 6000);
+        } else if (state === 'closed') {
+          setStreamStatus('idle');
+        }
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        if (currentGen !== connectionGenerationRef.current) return;
+        if (pc.iceConnectionState === 'failed') {
+          if (typeof (pc as any).restartIce === 'function') {
+            try {
+              (pc as any).restartIce();
+            } catch {}
+          }
+        }
+      };
+
+      // ── Connection Timeout Guard (25s) ──
+      connectionTimeoutRef.current = setTimeout(() => {
+        if (currentGen === connectionGenerationRef.current) {
+          setStreamStatus(prev => (prev === 'connecting' ? 'error' : prev));
+        }
+      }, 25000);
+
+      // ── Create and Send Offer to Target ──
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+      });
+
+      if (currentGen !== connectionGenerationRef.current) return;
+      await pc.setLocalDescription(offer);
+
+      if (currentGen !== connectionGenerationRef.current) return;
+      if (socketRef.current?.connected) {
         socketRef.current.emit('cam_signal', {
-          targetSocketId: user.socketId,
+          targetSocketId: viewingSocketIdRef.current || user.socketId,
           targetEmail: user.email,
-          signal: {
-            candidate: e.candidate.candidate,
-            sdpMid: e.candidate.sdpMid,
-            sdpMLineIndex: e.candidate.sdpMLineIndex,
-          },
+          signal: { type: offer.type, sdp: offer.sdp },
         });
       }
-    };
-
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'connected') {
-        clearTimeout(timeoutId);
-        setStreamStatus('live');
-      } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
+    } catch (err) {
+      console.warn('[AdminCamViewer] [WebRTC] Error starting view:', err);
+      if (currentGen === connectionGenerationRef.current) {
         setStreamStatus('error');
       }
-    };
-
-    const offer = await pc.createOffer({
-      offerToReceiveAudio: true,
-      offerToReceiveVideo: true,
-    });
-    await pc.setLocalDescription(offer);
-
-    if (socketRef.current) {
-      socketRef.current.emit('cam_signal', {
-        targetSocketId: user.socketId,
-        targetEmail: user.email,
-        signal: { type: offer.type, sdp: offer.sdp },
-      });
     }
-  }, [stopViewing]);
+  }, [closeViewerPeerConnection]);
 
   // ── Remote Camera Switch Action ──────────────────────────────────────────
   const flipRemoteCamera = useCallback(() => {
-    if (!socketRef.current || !viewingUser) return;
+    const target = viewingUserRef.current;
+    if (!socketRef.current?.connected || !target) return;
     triggerHaptic('medium');
-    socketRef.current.emit('cam_flip_camera_remote', {
-      targetSocketId: viewingUser.socketId,
-      targetEmail: viewingUser.email,
+    socketRef.current.emit('cam_flip_camera', {
+      targetSocketId: viewingSocketIdRef.current || target.socketId,
+      targetEmail: target.email,
     });
-  }, [viewingUser]);
+  }, []);
 
-  // ── Audio Mute Toggle ───────────────────────────────────────────────────
+  // ── Local Audio Mute Toggle (Mutes Local Playback Element) ───────────────
   const toggleAudioMute = useCallback(() => {
     triggerHaptic('light');
     setIsAudioMuted(prev => {
@@ -584,6 +511,84 @@ export default function AdminCamViewer({
       return next;
     });
   }, []);
+
+  // ── Socket Connection & Lifecycle ─────────────────────────────────────────
+  useEffect(() => {
+    if (!userEmail || !isAdmin) return;
+
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 5000,
+    });
+    socketRef.current = socket;
+
+    const cleanEmail = userEmail.toLowerCase().trim();
+    const cleanUsername = username || cleanEmail.split('@')[0] || 'Admin';
+
+    const onConnect = () => {
+      socket.emit('identify', { email: cleanEmail });
+      socket.emit('cam_user_online', { email: cleanEmail, username: cleanUsername });
+      socket.emit('cam_get_users');
+    };
+
+    socket.on('connect', onConnect);
+    if (socket.connected) onConnect();
+
+    // Periodic list refresh
+    const refreshInterval = setInterval(() => {
+      if (socket.connected) socket.emit('cam_get_users');
+    }, 3000);
+
+    socket.on('cam_users_list', (list: CamUser[]) => {
+      setCamUsers(dedupeAndSortCamUsers(list, userEmail));
+
+      // Reconcile socket ID if currently viewing a user whose socket refreshed
+      const currentTarget = viewingUserRef.current;
+      if (currentTarget) {
+        const matching = list.find(
+          u => u.email && currentTarget.email && u.email.toLowerCase().trim() === currentTarget.email.toLowerCase().trim()
+        );
+        if (matching && matching.socketId !== viewingSocketIdRef.current) {
+          viewingSocketIdRef.current = matching.socketId;
+          setViewingUser(prev => prev ? { ...prev, socketId: matching.socketId } : null);
+        }
+      }
+    });
+
+    socket.on('cam_user_online_event', (user: CamUser) => {
+      setCamUsers(prev => dedupeAndSortCamUsers([...prev, user], userEmail));
+      const currentTarget = viewingUserRef.current;
+      if (currentTarget && user.email && currentTarget.email && user.email.toLowerCase().trim() === currentTarget.email.toLowerCase().trim()) {
+        viewingSocketIdRef.current = user.socketId;
+        setViewingUser(prev => prev ? { ...prev, socketId: user.socketId } : null);
+      }
+    });
+
+    socket.on('cam_user_offline', ({ socketId }: { socketId: string }) => {
+      setCamUsers(prev => {
+        const filtered = prev.filter(u => u.socketId !== socketId);
+        return filtered;
+      });
+
+      if (viewingSocketIdRef.current === socketId) {
+        stopViewing();
+      }
+    });
+
+    socket.on('cam_signal', ({ fromSocketId, fromEmail, signal }) => {
+      handleIncomingSignal(fromSocketId, fromEmail, signal);
+    });
+
+    return () => {
+      clearInterval(refreshInterval);
+      socket.off('connect', onConnect);
+      socket.disconnect();
+      stopViewing();
+    };
+  }, [userEmail, isAdmin, username, dedupeAndSortCamUsers, handleIncomingSignal, stopViewing]);
 
   const formatDuration = (s: number) => {
     const mins = Math.floor(s / 60);
