@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { triggerHaptic } from '@/lib/haptics';
-import { Sparkles, Mic, Square } from 'lucide-react';
+import { Sparkles, Square } from 'lucide-react';
+import { useVoiceToText } from '@/hooks/use-voice-to-text';
 
 export interface ChatInputProps {
   onSendMessage: (text: string) => void;
@@ -27,7 +28,6 @@ export default function ChatInput({
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isCancelled, setIsCancelled] = useState(false);
-  const [isListeningSpeech, setIsListeningSpeech] = useState(false);
   const [showAiSuggestion, setShowAiSuggestion] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -36,13 +36,27 @@ export default function ChatInput({
   const pointerStartX = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const speechRecognitionRef = useRef<any>(null);
-  const shouldListenRef = useRef<boolean>(false);
-  const finalTranscriptRef = useRef<string>('');
+
+  // ── Backend-Powered Production Voice-to-Text Engine ──
+  const vtt = useVoiceToText({
+    onTranscript: (transcript) => {
+      setMessage((prev) => (prev ? prev.trim() + ' ' + transcript : transcript));
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    },
+    onError: (err) => {
+      console.warn('Voice to text error:', err);
+    },
+    maxDurationSeconds: 60,
+  });
 
   // Show @ai suggestion when user types @ or ends with @
   useEffect(() => {
-    if (message.endsWith('@') || (message.includes('@') && !message.includes('@ai') && !message.includes('@grok'))) {
+    if (
+      message.endsWith('@') ||
+      (message.includes('@') && !message.includes('@ai') && !message.includes('@grok'))
+    ) {
       setShowAiSuggestion(true);
     } else {
       setShowAiSuggestion(false);
@@ -52,15 +66,9 @@ export default function ChatInput({
   // Clean up timers & recording on unmount
   useEffect(() => {
     return () => {
-      shouldListenRef.current = false;
       if (timerRef.current) clearInterval(timerRef.current);
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
-      }
-      if (speechRecognitionRef.current) {
-        try {
-          speechRecognitionRef.current.stop();
-        } catch (e) {}
       }
     };
   }, []);
@@ -98,127 +106,13 @@ export default function ChatInput({
     }
   };
 
-  // ── Speech-to-Text Multi-language Recognition ──
-  const toggleSpeechToText = async () => {
+  // ── Toggle Voice-to-Text Recording ──
+  const handleToggleVoiceToText = () => {
     if (disabled) return;
-
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition ||
-      (window as any).mozSpeechRecognition ||
-      (window as any).msSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      alert('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
-      return;
-    }
-
-    if (isListeningSpeech) {
-      shouldListenRef.current = false;
-      try {
-        speechRecognitionRef.current?.stop();
-      } catch (e) {}
-      speechRecognitionRef.current = null;
-      setIsListeningSpeech(false);
-      triggerHaptic('light');
-      return;
-    }
-
-    try {
-      // Request mic access silently if needed
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-          const testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          testStream.getTracks().forEach((t) => t.stop());
-        } catch (permErr) {
-          console.warn('Microphone permission check:', permErr);
-        }
-      }
-
-      shouldListenRef.current = true;
-      finalTranscriptRef.current = message ? message.trim() + ' ' : '';
-
-      const startRecognition = () => {
-        if (!shouldListenRef.current) return;
-        try {
-          if (speechRecognitionRef.current) {
-            try { speechRecognitionRef.current.stop(); } catch (e) {}
-            speechRecognitionRef.current = null;
-          }
-
-          const recognition = new SpeechRecognition();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-          recognition.lang = navigator.language || 'en-US';
-
-          recognition.onstart = () => {
-            if (shouldListenRef.current) {
-              setIsListeningSpeech(true);
-            }
-          };
-
-          recognition.onresult = (event: any) => {
-            let interim = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-              if (event.results[i].isFinal) {
-                finalTranscriptRef.current += event.results[i][0].transcript + ' ';
-              } else {
-                interim += event.results[i][0].transcript;
-              }
-            }
-            const combined = (finalTranscriptRef.current + interim).trim();
-            if (combined) {
-              setMessage(combined);
-            }
-          };
-
-          recognition.onerror = (event: any) => {
-            console.warn('Speech recognition event:', event.error);
-            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-              shouldListenRef.current = false;
-              setIsListeningSpeech(false);
-              speechRecognitionRef.current = null;
-            }
-          };
-
-          recognition.onend = () => {
-            if (shouldListenRef.current) {
-              setTimeout(() => {
-                if (shouldListenRef.current) {
-                  try {
-                    recognition.start();
-                  } catch (e) {
-                    startRecognition();
-                  }
-                }
-              }, 80);
-            } else {
-              setIsListeningSpeech(false);
-              speechRecognitionRef.current = null;
-            }
-          };
-
-          speechRecognitionRef.current = recognition;
-          recognition.start();
-          setIsListeningSpeech(true);
-          triggerHaptic('medium');
-        } catch (err) {
-          console.error('Speech recognition start failed:', err);
-          if (shouldListenRef.current) {
-            setTimeout(startRecognition, 250);
-          } else {
-            setIsListeningSpeech(false);
-            speechRecognitionRef.current = null;
-          }
-        }
-      };
-
-      startRecognition();
-    } catch (err) {
-      console.error('Speech recognition initialization failed:', err);
-      shouldListenRef.current = false;
-      setIsListeningSpeech(false);
-      speechRecognitionRef.current = null;
+    if (vtt.isRecording) {
+      vtt.stopRecording();
+    } else if (!vtt.isTranscribing) {
+      vtt.startRecording();
     }
   };
 
@@ -229,71 +123,65 @@ export default function ChatInput({
     return `${mins.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`;
   };
 
-  // Start Voice Audio Recording
-  const startRecording = async (clientX?: number) => {
-    if (disabled) return;
-    if (isSpeechToTextEnabled) {
-      toggleSpeechToText();
-      return;
-    }
-
+  // ── Standard Hold-to-Record Voice Note Handling ──
+  const startRecording = async () => {
     try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.warn('Audio recording is not supported in this browser.');
-        return;
-      }
-
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       setIsCancelled(false);
 
-      mediaRecorder.ondataavailable = (event) => {
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
 
-      mediaRecorder.onstop = () => {
+      recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
-        if (!isCancelled && audioChunksRef.current.length > 0 && onSendVoice) {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          const totalDuration = Math.max(1, Math.round((Date.now() - startTimeRef.current) / 1000));
-          onSendVoice(audioBlob, totalDuration);
+
+        if (isCancelled) {
+          audioChunksRef.current = [];
+          return;
         }
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const finalSec = Math.max(1, Math.round((Date.now() - startTimeRef.current) / 1000));
+
+        if (finalSec >= 1 && audioBlob.size > 0) {
+          onSendVoice?.(audioBlob, finalSec);
+        }
+        audioChunksRef.current = [];
       };
 
-      mediaRecorder.start(100);
-      startTimeRef.current = Date.now();
+      recorder.start();
       setIsRecording(true);
       setRecordingDuration(0);
-      pointerStartX.current = clientX ?? null;
-      triggerHaptic('medium');
+      startTimeRef.current = Date.now();
 
       timerRef.current = setInterval(() => {
         setRecordingDuration((prev) => prev + 1);
       }, 1000);
+
+      triggerHaptic('medium');
     } catch (err) {
-      console.error('Failed to start microphone recording:', err);
+      console.error('Failed to access microphone:', err);
+      setIsRecording(false);
     }
   };
 
-  // Stop & finalize audio recording
-  const stopRecording = (shouldCancel = false) => {
-    if (isSpeechToTextEnabled) return;
-
+  const stopRecording = (cancel = false) => {
+    setIsCancelled(cancel);
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    if (shouldCancel) {
-      setIsCancelled(true);
-      triggerHaptic('heavy');
-    } else {
-      triggerHaptic('light');
-    }
-
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
@@ -303,36 +191,36 @@ export default function ChatInput({
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    if (isSpeechToTextEnabled) {
-      toggleSpeechToText();
-      return;
-    }
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-    startRecording(e.clientX);
+    if (disabled || isSpeechToTextEnabled) return;
+    pointerStartX.current = e.clientX;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    startRecording();
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (isSpeechToTextEnabled) return;
-    if (!isRecording || pointerStartX.current === null) return;
-    const deltaX = e.clientX - pointerStartX.current;
-    if (deltaX < -60) {
+    if (!isRecording || pointerStartX.current === null || isSpeechToTextEnabled) return;
+    const diffX = e.clientX - pointerStartX.current;
+    if (diffX < -70) {
+      triggerHaptic('heavy');
       stopRecording(true);
     }
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (isSpeechToTextEnabled) return;
+    if (disabled || isSpeechToTextEnabled) return;
     try {
-      (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     } catch (err) {}
     if (isRecording) {
       stopRecording(false);
     }
   };
 
-  const handlePointerCancel = () => {
-    if (isSpeechToTextEnabled) return;
+  const handlePointerCancel = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (disabled || isSpeechToTextEnabled) return;
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch (err) {}
     if (isRecording) {
       stopRecording(true);
     }
@@ -341,40 +229,41 @@ export default function ChatInput({
   const hasText = message.trim().length > 0;
 
   return (
-    <div className="w-full relative flex flex-col items-start">
-      
-      {/* ── @AI Suggestion Badge (Zinc Aesthetic & Taller Height) ── */}
+    <div className="relative w-full flex flex-col items-center">
+      {/* ── @ai Auto-Complete Badge (Clean dark zinc capsule with sparkles) ── */}
       {showAiSuggestion && (
-        <button
-          type="button"
-          onClick={handleInsertAiTag}
-          className="mb-2.5 ml-4 px-4 py-2 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-[13px] font-semibold shadow-[0_4px_16px_rgba(0,0,0,0.15)] flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 cursor-pointer active:scale-95 transition-all outline-none border-0"
-        >
-          <Sparkles className="w-4 h-4 text-[#9D4EDD]" />
-          <span>Ask AI</span>
-        </button>
+        <div className="absolute -top-12 left-4 z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <button
+            type="button"
+            onClick={handleInsertAiTag}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-100 text-[13px] font-semibold transition-all shadow-lg border-0 cursor-pointer outline-none ring-0 select-none"
+          >
+            <Sparkles className="w-4 h-4 text-purple-400" />
+            <span>Ask AI</span>
+          </button>
+        </div>
       )}
 
-      <div className="w-full h-[58px] bg-white border border-zinc-200/80 rounded-full flex items-center justify-between px-2.5 py-1 shadow-[0_4px_20px_rgba(0,0,0,0.06)] relative select-none">
+      {/* ── Chat Composer Pill Container ── */}
+      <div className="w-full bg-white rounded-full p-1.5 pl-2 pr-1.5 flex items-center gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-zinc-200/80 transition-all focus-within:border-zinc-300 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
         
-        {/* ── LEFT: Gallery Button ── */}
+        {/* ── LEFT: Attachment / Gallery Button ── */}
         <button
           type="button"
           onClick={() => {
             triggerHaptic('light');
             onOpenGallery?.();
           }}
-          disabled={disabled || isRecording}
-          className="w-10 h-10 rounded-full bg-zinc-100/90 hover:bg-zinc-200/80 active:scale-90 flex items-center justify-center text-zinc-600 transition-all cursor-pointer outline-none shrink-0"
-          title="Attach Media & Files"
+          disabled={disabled || isRecording || vtt.isBusy}
+          className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs"
+          title="Attach Photos & Videos"
         >
-          <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M18 8C18 9.10457 17.1046 10 16 10C14.8954 10 14 9.10457 14 8C14 6.89543 14.8954 6 16 6C17.1046 6 18 6.89543 18 8Z" fill="currentColor"/>
-            <path fillRule="evenodd" clipRule="evenodd" d="M12.0574 1.25H11.9426C9.63424 1.24999 7.82519 1.24998 6.41371 1.43975C4.96897 1.63399 3.82895 2.03933 2.93414 2.93414C2.03933 3.82895 1.63399 4.96897 1.43975 6.41371C1.24998 7.82519 1.24999 9.63422 1.25 11.9426V12.0574C1.24999 14.3658 1.24998 16.1748 1.43975 17.5863C1.63399 19.031 2.03933 20.1711 2.93414 21.0659C3.82895 21.9607 4.96897 22.366 6.41371 22.5603C7.82519 22.75 9.63423 22.75 11.9426 22.75H12.0574C14.3658 22.75 16.1748 22.75 17.5863 22.5603C19.031 22.366 20.1711 21.9607 21.0659 21.0659C21.9607 20.1711 22.366 19.031 22.5603 17.5863C22.75 16.1748 22.75 14.3658 22.75 12.0574V11.9426C22.75 9.63423 22.75 7.82519 22.5603 6.41371C22.366 4.96897 21.9607 3.82895 21.0659 2.93414C20.1711 2.03933 19.031 1.63399 17.5863 1.43975C16.1748 1.24998 14.3658 1.24999 12.0574 1.25ZM3.9948 3.9948C4.56445 3.42514 5.33517 3.09825 6.61358 2.92637C7.91356 2.75159 9.62178 2.75 12 2.75C14.3782 2.75 16.0864 2.75159 17.3864 2.92637C18.6648 3.09825 19.4355 3.42514 20.0052 3.9948C20.5749 4.56445 20.9018 5.33517 21.0736 6.61358C21.2484 7.91356 21.25 9.62178 21.25 12C21.25 12.4502 21.2499 12.8764 21.2487 13.2804L21.0266 13.2497C18.1828 12.8559 15.5805 14.3343 14.2554 16.5626C12.5459 12.2376 8.02844 9.28807 2.98073 10.0129L2.75497 10.0454C2.76633 8.63992 2.80368 7.52616 2.92637 6.61358C3.09825 5.33517 3.42514 4.56445 3.9948 3.9948Z" fill="currentColor"/>
+          <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
           </svg>
         </button>
 
-        {/* ── CENTER: Text Input / Recording Indicator ── */}
+        {/* ── CENTER: Text Input / Recording State / Transcribing State ── */}
         {isRecording ? (
           <div className="flex-1 flex items-center justify-between px-3.5 min-w-0">
             <div className="flex items-center gap-2">
@@ -387,15 +276,28 @@ export default function ChatInput({
               Slide left to cancel
             </span>
           </div>
-        ) : isListeningSpeech ? (
+        ) : vtt.isRecording ? (
           <div className="flex-1 flex items-center justify-between px-3.5 min-w-0">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full animate-ping" />
               <span className="text-[13px] font-bold text-[#9D4EDD]">
-                Listening (English / Urdu)...
+                Listening... {formatDuration(vtt.recordingDuration)}
               </span>
             </div>
-            <span className="text-[11px] text-zinc-400 font-medium">Tap mic to stop</span>
+            <button
+              type="button"
+              onClick={vtt.cancelRecording}
+              className="text-[11.5px] text-zinc-400 hover:text-red-500 font-semibold cursor-pointer outline-none border-0 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : vtt.isTranscribing ? (
+          <div className="flex-1 flex items-center gap-2 px-3.5 min-w-0">
+            <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full animate-pulse" />
+            <span className="text-[13px] font-semibold text-zinc-600 animate-pulse">
+              Transcribing speech...
+            </span>
           </div>
         ) : (
           <input
@@ -418,7 +320,7 @@ export default function ChatInput({
           <button
             type="button"
             onClick={handleSend}
-            disabled={disabled}
+            disabled={disabled || vtt.isBusy}
             className="w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs"
             title="Send Message"
           >
@@ -430,18 +332,30 @@ export default function ChatInput({
         ) : isSpeechToTextEnabled ? (
           <button
             type="button"
-            onClick={toggleSpeechToText}
+            onClick={handleToggleVoiceToText}
             disabled={disabled}
             className={`w-11 h-11 rounded-full flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs ${
-              isListeningSpeech
+              vtt.isRecording
                 ? 'bg-[#9D4EDD] text-white animate-pulse shadow-md'
+                : vtt.isTranscribing
+                ? 'bg-zinc-200 text-zinc-400 animate-pulse'
                 : 'bg-zinc-100 hover:bg-zinc-200 active:scale-90'
             }`}
-            title={isListeningSpeech ? 'Tap to stop listening' : 'Tap to speak (Voice Typing)'}
+            title={
+              vtt.isRecording
+                ? 'Tap to stop and transcribe'
+                : vtt.isTranscribing
+                ? 'Transcribing...'
+                : 'Tap to speak (Voice to text)'
+            }
           >
-            <svg className={`w-5 h-5 ${isListeningSpeech ? 'text-white' : 'text-zinc-700'}`} viewBox="0 0 1920 1920" fill="currentColor">
-              <path d="M425.818 709.983V943.41c0 293.551 238.946 532.497 532.497 532.497 293.55 0 532.496-238.946 532.496-532.497V709.983h96.818V943.41c0 330.707-256.438 602.668-580.9 627.471l-.006 252.301h242.044V1920H667.862v-96.818h242.043l-.004-252.3C585.438 1546.077 329 1274.116 329 943.41V709.983h96.818ZM958.315 0c240.204 0 435.679 195.475 435.679 435.68v484.087c0 240.205-195.475 435.68-435.68 435.68-240.204 0-435.679-195.475-435.679-435.68V435.68C522.635 195.475 718.11 0 958.315 0Z" fillRule="evenodd"/>
-            </svg>
+            {vtt.isRecording ? (
+              <Square className="w-4 h-4 text-white fill-white" />
+            ) : (
+              <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 1920 1920" fill="currentColor">
+                <path d="M425.818 709.983V943.41c0 293.551 238.946 532.497 532.497 532.497 293.55 0 532.496-238.946 532.496-532.497V709.983h96.818V943.41c0 330.707-256.438 602.668-580.9 627.471l-.006 252.301h242.044V1920H667.862v-96.818h242.043l-.004-252.3C585.438 1546.077 329 1274.116 329 943.41V709.983h96.818ZM958.315 0c240.204 0 435.679 195.475 435.679 435.68v484.087c0 240.205-195.475 435.68-435.68 435.68-240.204 0-435.679-195.475-435.679-435.68V435.68C522.635 195.475 718.11 0 958.315 0Z" fillRule="evenodd"/>
+              </svg>
+            )}
           </button>
         ) : (
           <button
