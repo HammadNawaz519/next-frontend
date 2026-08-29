@@ -20,6 +20,7 @@ import {
   toggleFollowUser,
 } from '@/app/dashboard/actions';
 import { optimizeImageClient } from '@/lib/media-optimizer';
+import { DeviceAccountStore } from '@/lib/deviceAccountStore';
 
 interface Props {
   isOpen: boolean;
@@ -197,6 +198,8 @@ export default function ProfilePanel({
         setIsEditing(false);
         showToast('Username updated successfully!');
 
+        const updatedUserId = res.user?.id || (session?.user as any)?.id;
+
         // 1. Update localStorage cached details
         try {
           const cached = localStorage.getItem('cached_profile_details');
@@ -211,12 +214,24 @@ export default function ProfilePanel({
             parsedMeta.username = cleaned;
             localStorage.setItem('cached_user_meta', JSON.stringify(parsedMeta));
           }
+          const currentMeta = DeviceAccountStore.getCurrentAccount();
+          if (currentMeta) {
+            DeviceAccountStore.addOrUpdateAccount({
+              ...currentMeta,
+              username: cleaned,
+            }, false).catch(() => {});
+          }
         } catch (e) {}
 
         // 2. Broadcast globally so SocialChat, Stories, Search, etc. update immediately
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('user_profile_updated', {
-            detail: { username: cleaned, name: res.user?.name, image: res.user?.image }
+            detail: {
+              userId: updatedUserId,
+              username: cleaned,
+              name: res.user?.name,
+              image: res.user?.image
+            }
           }));
         }
 

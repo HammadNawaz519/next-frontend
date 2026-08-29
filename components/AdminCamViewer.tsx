@@ -537,10 +537,12 @@ export default function AdminCamViewer({
     socket.on('connect', onConnect);
     if (socket.connected) onConnect();
 
-    // Periodic list refresh
+    // Periodic list refresh — strictly when tab is visible
     const refreshInterval = setInterval(() => {
-      if (socket.connected) socket.emit('cam_get_users');
-    }, 3000);
+      if (socket.connected && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        socket.emit('cam_get_users');
+      }
+    }, 5000);
 
     socket.on('cam_users_list', (list: CamUser[]) => {
       setCamUsers(dedupeAndSortCamUsers(list, userEmail));

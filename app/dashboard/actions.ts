@@ -908,7 +908,20 @@ export async function updateProfileDetails(data: { name?: string; username?: str
 
   const updated = await prisma.user.update({
     where: { email: session.user.email },
-    data: updateData
+    data: updateData,
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      image: true,
+      bio: true,
+      website: true,
+      isPrivate: true,
+      isOnline: true,
+      lastSeen: true,
+      showActivityStatus: true
+    }
   });
 
   return { success: true, user: updated };

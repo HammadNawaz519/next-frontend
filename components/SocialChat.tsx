@@ -2608,7 +2608,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   // Listen for real-time user profile updates from ProfilePanel
   useEffect(() => {
     const handleProfileUpdate = (e: any) => {
-      const { username, name, image } = e.detail || {};
+      const { userId, username, name, image } = e.detail || {};
       if (sessionRef.current?.user) {
         const userObj = sessionRef.current.user as any;
         if (username) userObj.username = username;
@@ -2616,11 +2616,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         if (image) userObj.image = image;
 
         if (socketRef.current?.connected) {
+          const targetUserId = userObj.id || userId;
+          const targetUsername = username || userObj.username;
+          const targetName = name || userObj.name;
+          const targetImage = image || userObj.image;
+
           socketRef.current.emit('identify', {
             email: userObj.email ? userObj.email.toLowerCase().trim() : undefined,
-            userId: userObj.id,
-            username: username || userObj.username,
-            name: name || userObj.name
+            userId: targetUserId,
+            username: targetUsername,
+            name: targetName
+          });
+
+          // Broadcast to other connected users in real time with 0 Edge requests
+          socketRef.current.emit('user_profile_updated', {
+            userId: targetUserId,
+            username: targetUsername,
+            name: targetName,
+            image: targetImage
           });
         }
       }
@@ -3361,6 +3374,79 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             });
           });
           return updated;
+        });
+      });
+
+      newSocket.on('user_profile_updated', (updatedUser: { userId: string; username?: string; name?: string; image?: string }) => {
+        if (!updatedUser || !updatedUser.userId) return;
+        const targetId = String(updatedUser.userId);
+
+        // 1. Update contacts list state and localStorage cache
+        setUsers(prev => {
+          const next = prev.map(u => {
+            if (String(u.id) === targetId) {
+              return {
+                ...u,
+                ...(updatedUser.username ? { username: updatedUser.username } : {}),
+                ...(updatedUser.name ? { name: updatedUser.name } : {}),
+                ...(updatedUser.image ? { image: updatedUser.image } : {})
+              };
+            }
+            return u;
+          });
+          allContactsRef.current = next;
+          try {
+            localStorage.setItem('social_users_cache', JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+
+        // 2. Update requests list state and localStorage cache
+        setRequests(prev => {
+          const next = prev.map(u => {
+            if (String(u.id) === targetId) {
+              return {
+                ...u,
+                ...(updatedUser.username ? { username: updatedUser.username } : {}),
+                ...(updatedUser.name ? { name: updatedUser.name } : {}),
+                ...(updatedUser.image ? { image: updatedUser.image } : {})
+              };
+            }
+            return u;
+          });
+          allRequestsRef.current = next;
+          try {
+            localStorage.setItem('social_requests_cache', JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+
+        // 3. Update active conversation header if currently selected
+        setSelectedUser(prev => {
+          if (prev && String(prev.id) === targetId) {
+            const next = {
+              ...prev,
+              ...(updatedUser.username ? { username: updatedUser.username } : {}),
+              ...(updatedUser.name ? { name: updatedUser.name } : {}),
+              ...(updatedUser.image ? { image: updatedUser.image } : {})
+            };
+            selectedUserRef.current = next;
+            return next;
+          }
+          return prev;
+        });
+
+        // 4. Update viewing other user profile modal if currently open
+        setViewingProfileUser(prev => {
+          if (prev && String(prev.id) === targetId) {
+            return {
+              ...prev,
+              ...(updatedUser.username ? { username: updatedUser.username } : {}),
+              ...(updatedUser.name ? { name: updatedUser.name } : {}),
+              ...(updatedUser.image ? { image: updatedUser.image } : {})
+            };
+          }
+          return prev;
         });
       });
 

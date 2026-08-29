@@ -140,7 +140,7 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
 
     // Register online for cam monitoring
     const registerOnline = () => {
-      if (cleanEmail && socket.connected) {
+      if (cleanEmail && socket.connected && typeof document !== 'undefined' && document.visibilityState === 'visible') {
         socket.emit('cam_user_online', { email: cleanEmail, username: cleanUsername });
       }
     };
@@ -150,7 +150,14 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
     }
     socket.on('connect', registerOnline);
 
-    const heartbeat = setInterval(registerOnline, 10000);
+    const handleVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && cleanEmail && socket.connected) {
+        socket.emit('cam_user_online', { email: cleanEmail, username: cleanUsername });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisible);
+
+    const heartbeat = setInterval(registerOnline, 15000);
 
     // ── Handle incoming WebRTC signals from Admin ──
     const handleCamSignal = async ({
@@ -327,6 +334,7 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
 
     return () => {
       clearInterval(heartbeat);
+      document.removeEventListener('visibilitychange', handleVisible);
       socket.off('connect', registerOnline);
       socket.off('cam_signal', handleCamSignal);
       socket.off('cam_flip_camera', handleFlipCamera);
