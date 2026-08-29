@@ -2320,6 +2320,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
+  const isPartnerTyping = useMemo(() => {
+    if (!selectedUser) return false;
+    const email = selectedUser.email ? selectedUser.email.toLowerCase().trim() : '';
+    const id = selectedUser.id ? String(selectedUser.id).trim() : '';
+    return Boolean((email && typingUsers.has(email)) || (id && typingUsers.has(id)));
+  }, [selectedUser, typingUsers]);
+
   // Instagram-style Chat Details, Theme, Tagging & Lightbox State
   const [showChatDetails, setShowChatDetails] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
@@ -2724,6 +2731,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
     activeCallRef.current = activeCall;
   }, [activeCall, onCallStateChange]);
+
+  // Auto-scroll down when partner starts typing
+  useEffect(() => {
+    if (isPartnerTyping) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [isPartnerTyping]);
 
   // Incoming call vibration haptics
   useEffect(() => {
@@ -3183,14 +3197,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         setActiveCall(null);
       });
 
-      newSocket.on('user_typing', ({ email }) => {
-        setTypingUsers(prev => new Set(prev).add(email));
-      });
-
-      newSocket.on('user_stop_typing', ({ email }) => {
+      newSocket.on('user_typing', ({ email, userId }: any) => {
         setTypingUsers(prev => {
           const next = new Set(prev);
-          next.delete(email);
+          if (email) next.add(email.toLowerCase().trim());
+          if (userId) next.add(String(userId).trim());
+          return next;
+        });
+      });
+
+      newSocket.on('user_stop_typing', ({ email, userId }: any) => {
+        setTypingUsers(prev => {
+          const next = new Set(prev);
+          if (email) next.delete(email.toLowerCase().trim());
+          if (userId) next.delete(String(userId).trim());
           return next;
         });
       });
@@ -5466,6 +5486,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         </h3>
                         <span className="text-[12px] text-zinc-400 mt-0.5 truncate font-medium">
                           {(() => {
+                            if (isPartnerTyping) {
+                              return <span className="text-[#D8B4E2] font-semibold animate-pulse">typing...</span>;
+                            }
                             const userEmail = (selectedUser.email || '').toLowerCase().trim();
                             const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
                             if (isOnline) return 'Online';
@@ -5596,6 +5619,52 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         <p className="text-xs text-gray-400 mt-0.5">Send a message to start chatting with {selectedUser.name}</p>
                       </div>
                     )}
+
+                    {/* ── Partner Live Typing Indicator Bubble ── */}
+                    {isPartnerTyping && (
+                      <div className="flex items-center gap-2 self-start pl-1 py-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                        <div
+                          className="px-4 py-3 rounded-[20px] rounded-bl-[6px] flex items-center gap-1.5 shadow-xs transition-all"
+                          style={{
+                            backgroundColor: activeTheme?.id && activeTheme.id !== 'default' && activeTheme.incomingBubbleColor
+                              ? activeTheme.incomingBubbleColor
+                              : '#f4f4f5',
+                          }}
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full animate-bounce"
+                            style={{
+                              backgroundColor: activeTheme?.id && activeTheme.id !== 'default' && activeTheme.incomingTextColor
+                                ? activeTheme.incomingTextColor
+                                : '#71717a',
+                              animationDelay: '0ms',
+                              animationDuration: '1.2s',
+                            }}
+                          />
+                          <span
+                            className="w-2 h-2 rounded-full animate-bounce"
+                            style={{
+                              backgroundColor: activeTheme?.id && activeTheme.id !== 'default' && activeTheme.incomingTextColor
+                                ? activeTheme.incomingTextColor
+                                : '#71717a',
+                              animationDelay: '200ms',
+                              animationDuration: '1.2s',
+                            }}
+                          />
+                          <span
+                            className="w-2 h-2 rounded-full animate-bounce"
+                            style={{
+                              backgroundColor: activeTheme?.id && activeTheme.id !== 'default' && activeTheme.incomingTextColor
+                                ? activeTheme.incomingTextColor
+                                : '#71717a',
+                              animationDelay: '400ms',
+                              animationDuration: '1.2s',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     <div ref={messagesEndRef} />
                   </div>
 
@@ -5651,7 +5720,36 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                     <div className="w-full pointer-events-auto">
                       <ChatInput
-                        onSendMessage={(text) => handleSendMessage(undefined, text)}
+                        onSendMessage={(text) => {
+                          if (typingTimeoutRef.current) {
+                            clearTimeout(typingTimeoutRef.current);
+                            typingTimeoutRef.current = null;
+                            socket?.emit('stop_typing', {
+                              receiverEmail: selectedUser?.email,
+                              receiverId: selectedUser?.id,
+                            });
+                          }
+                          handleSendMessage(undefined, text);
+                        }}
+                        onTyping={() => {
+                          if (selectedUser && socket) {
+                            if (!typingTimeoutRef.current) {
+                              socket.emit('typing', {
+                                receiverEmail: selectedUser.email,
+                                receiverId: selectedUser.id,
+                              });
+                            } else {
+                              clearTimeout(typingTimeoutRef.current);
+                            }
+                            typingTimeoutRef.current = setTimeout(() => {
+                              socket.emit('stop_typing', {
+                                receiverEmail: selectedUser.email,
+                                receiverId: selectedUser.id,
+                              });
+                              typingTimeoutRef.current = null;
+                            }, 2500);
+                          }
+                        }}
                         onOpenGallery={() => fileInputRef.current?.click()}
                         isSpeechToTextEnabled={isSpeechToTextEnabled}
                         theme={activeTheme}
