@@ -8,47 +8,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ tracks: [] });
   }
 
+  // Run Apple iTunes (Primary, ultra-fast Akamai CDN) & Deezer in parallel for blazing speed
   try {
-    // 1. Try Deezer Search API (Primary)
-    const deezerUrl = `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=30`;
-    const deezerRes = await fetch(deezerUrl, {
-      headers: { 'User-Agent': 'ConnectApp/1.0' },
-      next: { revalidate: 3600 }
-    });
-
-    if (deezerRes.ok) {
-      const data = await deezerRes.json();
-      if (Array.isArray(data.data) && data.data.length > 0) {
-        const tracks = data.data
-          .filter((t: any) => t.preview) // Only tracks with playable audio previews
-          .map((t: any) => ({
-            id: `deezer-${t.id}`,
-            title: t.title,
-            artist: t.artist?.name || 'Unknown Artist',
-            artworkUrl: t.album?.cover_big || t.album?.cover_medium || t.album?.cover || '',
-            audioUrl: t.preview,
-            duration: t.duration || 30,
-            source: 'deezer'
-          }));
-
-        if (tracks.length > 0) {
-          return NextResponse.json({ tracks });
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Deezer search error, trying fallback:', err);
-  }
-
-  try {
-    // 2. High-reliability Fallback: Apple iTunes Search API
-    const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=30`;
-    const itunesRes = await fetch(itunesUrl, { next: { revalidate: 3600 } });
-
-    if (itunesRes.ok) {
-      const data = await itunesRes.json();
-      if (Array.isArray(data.results) && data.results.length > 0) {
-        const tracks = data.results
+    const itunesPromise = fetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=30`,
+      { next: { revalidate: 86400 } }
+    ).then(async (res) => {
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (Array.isArray(data.results)) {
+        return data.results
           .filter((t: any) => t.previewUrl)
           .map((t: any) => ({
             id: `itunes-${t.trackId}`,
@@ -59,13 +28,47 @@ export async function GET(req: NextRequest) {
             duration: 30,
             source: 'itunes'
           }));
-
-        return NextResponse.json({ tracks });
       }
-    }
-  } catch (err) {
-    console.error('Music search failed completely:', err);
-  }
+      return [];
+    }).catch(() => []);
 
-  return NextResponse.json({ tracks: [] });
+    const deezerPromise = fetch(
+      `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=30`,
+      { headers: { 'User-Agent': 'ConnectApp/1.0' }, next: { revalidate: 86400 } }
+    ).then(async (res) => {
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (Array.isArray(data.data)) {
+        return data.data
+          .filter((t: any) => t.preview)
+          .map((t: any) => ({
+            id: `deezer-${t.id}`,
+            title: t.title,
+            artist: t.artist?.name || 'Unknown Artist',
+            artworkUrl: t.album?.cover_big || t.album?.cover_medium || t.album?.cover || '',
+            audioUrl: t.preview,
+            duration: t.duration || 30,
+            source: 'deezer'
+          }));
+      }
+      return [];
+    }).catch(() => []);
+
+    const [itunesTracks, deezerTracks] = await Promise.all([itunesPromise, deezerPromise]);
+
+    // Combine tracks with iTunes tracks prioritized (instant Apple Akamai CDN audio playback)
+    const combinedTracks = itunesTracks.length > 0 ? itunesTracks : deezerTracks;
+
+    return NextResponse.json(
+      { tracks: combinedTracks },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+        },
+      }
+    );
+  } catch (err) {
+    console.error('Music search failed:', err);
+    return NextResponse.json({ tracks: [] });
+  }
 }

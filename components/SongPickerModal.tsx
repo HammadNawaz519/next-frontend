@@ -119,13 +119,13 @@ export default function SongPickerModal({
     }
 
     if (audioRef.current) {
+      setIsPlaying(true);
+      setPreviewTrackId(track.id);
       audioRef.current.src = track.audioUrl;
       audioRef.current.currentTime = 0;
-      audioRef.current.play().then(() => {
-        setIsPlaying(true);
-        setPreviewTrackId(track.id);
-      }).catch(err => {
+      audioRef.current.play().catch(err => {
         console.warn('Playback blocked:', err);
+        setIsPlaying(false);
       });
     }
   };
@@ -142,9 +142,10 @@ export default function SongPickerModal({
 
     // Auto-play preview in trimmer
     if (audioRef.current) {
+      setIsPlaying(true);
       audioRef.current.src = track.audioUrl;
       audioRef.current.currentTime = 0;
-      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      audioRef.current.play().catch(() => {});
     }
   };
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { triggerHaptic } from '@/lib/haptics';
-import { Play, Pause, Music, Volume2 } from 'lucide-react';
+import { Play, Pause, Music } from 'lucide-react';
 
 export interface SongMessageData {
   title: string;
@@ -57,9 +57,14 @@ export default function SongMessageBubble({
   const duration = songData.duration || 30;
   const startTime = songData.startTime || 0;
 
+  // Pre-initialize audio offset for instant zero-lag playback on tap
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    if (startTime > 0 && audio.currentTime === 0) {
+      audio.currentTime = startTime;
+    }
 
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime - startTime);
@@ -98,10 +103,10 @@ export default function SongMessageBubble({
       if (audio.currentTime < startTime || audio.currentTime >= startTime + duration) {
         audio.currentTime = startTime;
       }
-      audio.play().then(() => {
-        setIsPlaying(true);
-      }).catch(err => {
+      setIsPlaying(true); // Immediate optimistic UI
+      audio.play().catch(err => {
         console.warn('Playback error:', err);
+        setIsPlaying(false);
       });
     }
   };
@@ -116,7 +121,8 @@ export default function SongMessageBubble({
         height: '260px',
       }}
     >
-      <audio ref={audioRef} src={songData.audioUrl} preload="none" />
+      {/* Preload auto for blazing-fast instant playback */}
+      <audio ref={audioRef} src={songData.audioUrl} preload="auto" />
 
       {/* ── Background Artwork (Blurred when playing, crisp otherwise) ── */}
       {songData.artworkUrl ? (
