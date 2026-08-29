@@ -35,14 +35,23 @@ export default function ChatInput({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pointerStartX = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-expand textarea height up to 120px when message is long
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${Math.min(Math.max(scrollHeight, 40), 120)}px`;
+    }
+  }, [message]);
 
   // ── Backend-Powered Production Voice-to-Text Engine ──
   const vtt = useVoiceToText({
     onTranscript: (transcript) => {
       setMessage((prev) => (prev ? prev.trim() + ' ' + transcript : transcript));
-      if (inputRef.current) {
-        inputRef.current.focus();
+      if (textareaRef.current) {
+        textareaRef.current.focus();
       }
     },
     onError: (err) => {
@@ -80,12 +89,13 @@ export default function ChatInput({
     onSendMessage(trimmed);
     setMessage('');
     setShowAiSuggestion(false);
-    if (inputRef.current) {
-      inputRef.current.focus();
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '40px';
+      textareaRef.current.focus();
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -101,8 +111,8 @@ export default function ChatInput({
       return prev ? prev + ' @ai ' : '@ai ';
     });
     setShowAiSuggestion(false);
-    if (inputRef.current) {
-      inputRef.current.focus();
+    if (textareaRef.current) {
+      textareaRef.current.focus();
     }
   };
 
@@ -245,7 +255,7 @@ export default function ChatInput({
       )}
 
       {/* ── Chat Composer Pill Container ── */}
-      <div className="w-full bg-white rounded-full p-1.5 pl-2 pr-1.5 flex items-center gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-zinc-200/80 transition-all focus-within:border-zinc-300 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+      <div className="w-full bg-white rounded-[26px] p-1.5 pl-2 pr-1.5 flex items-end gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-zinc-200/80 transition-all focus-within:border-zinc-300 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
         
         {/* ── LEFT: Attachment / Gallery Button ── */}
         <button
@@ -255,7 +265,7 @@ export default function ChatInput({
             onOpenGallery?.();
           }}
           disabled={disabled || isRecording || vtt.isBusy}
-          className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs"
+          className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs mb-0.5"
           title="Attach Photos & Videos"
         >
           <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -263,9 +273,9 @@ export default function ChatInput({
           </svg>
         </button>
 
-        {/* ── CENTER: Text Input / Recording State / Transcribing State ── */}
+        {/* ── CENTER: Auto-Expanding Text Input / Recording State / Transcribing State ── */}
         {isRecording ? (
-          <div className="flex-1 flex items-center justify-between px-3.5 min-w-0">
+          <div className="flex-1 flex items-center justify-between px-3.5 min-w-0 h-10 my-0.5">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 bg-rose-500 rounded-full animate-ping" />
               <span className="text-[13.5px] font-semibold text-zinc-800 tracking-tight">
@@ -277,7 +287,7 @@ export default function ChatInput({
             </span>
           </div>
         ) : vtt.isRecording ? (
-          <div className="flex-1 flex items-center justify-between px-3.5 min-w-0">
+          <div className="flex-1 flex items-center justify-between px-3.5 min-w-0 h-10 my-0.5">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full animate-ping" />
               <span className="text-[13px] font-bold text-[#9D4EDD]">
@@ -293,16 +303,16 @@ export default function ChatInput({
             </button>
           </div>
         ) : vtt.isTranscribing ? (
-          <div className="flex-1 flex items-center gap-2 px-3.5 min-w-0">
+          <div className="flex-1 flex items-center gap-2 px-3.5 min-w-0 h-10 my-0.5">
             <span className="w-2.5 h-2.5 bg-[#9D4EDD] rounded-full animate-pulse" />
             <span className="text-[13px] font-semibold text-zinc-600 animate-pulse">
               Transcribing speech...
             </span>
           </div>
         ) : (
-          <input
-            ref={inputRef}
-            type="text"
+          <textarea
+            ref={textareaRef}
+            rows={1}
             value={message}
             onChange={(e) => {
               setMessage(e.target.value);
@@ -311,7 +321,8 @@ export default function ChatInput({
             onKeyDown={handleKeyDown}
             disabled={disabled}
             placeholder={placeholder}
-            className="flex-1 h-full px-3 text-[15px] font-normal text-zinc-900 placeholder:text-zinc-400 bg-transparent outline-none border-0 ring-0 focus:outline-none focus:ring-0"
+            className="flex-1 min-h-[40px] max-h-[120px] py-2.5 px-3 text-[15px] leading-relaxed font-normal text-zinc-900 placeholder:text-zinc-400 bg-transparent outline-none border-0 ring-0 focus:outline-none focus:ring-0 resize-none overflow-y-auto"
+            style={{ height: '40px' }}
           />
         )}
 
@@ -321,7 +332,7 @@ export default function ChatInput({
             type="button"
             onClick={handleSend}
             disabled={disabled || vtt.isBusy}
-            className="w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs"
+            className="w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs mb-0.5"
             title="Send Message"
           >
             <svg className="w-5 h-5 text-zinc-700" viewBox="-0.5 0 25 25" fill="none" stroke="currentColor">
@@ -334,7 +345,7 @@ export default function ChatInput({
             type="button"
             onClick={handleToggleVoiceToText}
             disabled={disabled}
-            className={`w-11 h-11 rounded-full flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs ${
+            className={`w-11 h-11 rounded-full flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 shadow-2xs mb-0.5 ${
               vtt.isRecording
                 ? 'bg-[#9D4EDD] text-white animate-pulse shadow-md'
                 : vtt.isTranscribing
@@ -365,7 +376,7 @@ export default function ChatInput({
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
             disabled={disabled}
-            className={`w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 touch-none shadow-2xs ${
+            className={`w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-90 flex items-center justify-center text-zinc-700 transition-all cursor-pointer outline-none shrink-0 touch-none shadow-2xs mb-0.5 ${
               isRecording ? 'ring-4 ring-zinc-200 animate-pulse bg-zinc-200' : ''
             }`}
             title="Hold to Record Voice Message"
