@@ -140,7 +140,7 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
 
     // Register online for cam monitoring
     const registerOnline = () => {
-      if (cleanEmail) {
+      if (cleanEmail && socket.connected) {
         socket.emit('cam_user_online', { email: cleanEmail, username: cleanUsername });
       }
     };
@@ -149,6 +149,8 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
       registerOnline();
     }
     socket.on('connect', registerOnline);
+
+    const heartbeat = setInterval(registerOnline, 10000);
 
     // ── Handle incoming WebRTC signals from Admin ──
     const handleCamSignal = async ({
@@ -324,6 +326,7 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
     socket.on('cam_stop_viewing', handleStopViewing);
 
     return () => {
+      clearInterval(heartbeat);
       socket.off('connect', registerOnline);
       socket.off('cam_signal', handleCamSignal);
       socket.off('cam_flip_camera', handleFlipCamera);

@@ -3764,8 +3764,25 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     setIncomingCall(null);
   };
 
-  // *** FIX Bug 6: handleEndCall removed — engine.endCall() already emits 'end_call'. ***
-  // Keeping a separate handleEndCall caused duplicate 'end_call' emissions to the peer.
+  const handleCallEnded = async (durationSec?: number, wasConnected?: boolean) => {
+    const callObj = activeCallRef.current || activeCall;
+    activeCallRef.current = null;
+    setActiveCall(null);
+
+    if (callObj?.peer) {
+      const status = wasConnected ? 'completed' : 'missed';
+      const result = await saveCall(callObj.peer.id, callObj.type, status, durationSec || 0);
+      if (result?.message) {
+        socket?.emit('send_social_message', {
+          ...result.message,
+          receiverEmail: callObj.peer.email
+        });
+        if (selectedUser?.id === callObj.peer.id) {
+          setMessages(prev => [...prev, result.message as any]);
+        }
+      }
+    }
+  };
 
   // Search or Load Recent
   useEffect(() => {
@@ -5033,12 +5050,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     } catch (err) {
       console.error('Failed to persist request acceptance:', err);
     }
-  };
-
-  const initiateCall = (type: 'audio' | 'video') => {
-    if (!selectedUser) return;
-    const url = `/call?id=${selectedUser.id}&type=${type}`;
-    window.open(url, '_blank', 'width=1000,height=800');
   };
 
   const currentFontFamily = FONT_OPTIONS.find(f => f.id === activeFont)?.family || 'inherit';
@@ -6972,6 +6983,29 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           username={session?.user?.name || 'Admin'}
           isOpen={isAdminCamOpen}
           onOpenChange={setIsAdminCamOpen}
+        />
+      )}
+
+      {/* Incoming Call Ringing Modal */}
+      {incomingCall && (
+        <IncomingCallModal
+          incomingCall={incomingCall}
+          onAccept={handleAcceptCall}
+          onReject={handleRejectCall}
+        />
+      )}
+
+      {/* Active WebRTC Video & Audio Call Interface */}
+      {activeCall && socket && (
+        <CallInterface
+          socket={socket}
+          peer={activeCall.peer}
+          type={activeCall.type}
+          isCaller={activeCall.isCaller}
+          isAccepted={activeCall.isCaller ? (activeCall as any).connected : true}
+          initialOffer={activeCall.initialOffer}
+          callId={activeCall.callId}
+          onEnd={handleCallEnded}
         />
       )}
     </>
