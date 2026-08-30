@@ -226,9 +226,9 @@ export function useWebRTCCall({
     }
   }, []);
 
-  const toggleCamera = useCallback(() => {
+  const toggleCamera = useCallback(async () => {
     if (engineRef.current) {
-      const nowOff = engineRef.current.toggleCamera();
+      const nowOff = await engineRef.current.toggleCamera();
       setIsCamOff(nowOff);
     }
   }, []);

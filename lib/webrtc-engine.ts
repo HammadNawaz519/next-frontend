@@ -596,14 +596,49 @@ export class WebRTCEngine {
     return false;
   }
 
-  toggleCamera(): boolean {
-    if (!this._localStream || this._callType !== 'video') return false;
-    const videoTrack = this._localStream.getVideoTracks()[0];
+  async enableVideo(): Promise<boolean> {
+    if (!this._localStream) return false;
+    this._callType = 'video';
+
+    let videoTrack = this._localStream.getVideoTracks()[0];
     if (videoTrack) {
-      videoTrack.enabled = !videoTrack.enabled;
-      return !videoTrack.enabled; // returns true if camera now off
+      videoTrack.enabled = true;
+      return true;
     }
-    return false;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+      videoTrack = stream.getVideoTracks()[0];
+      if (!videoTrack) return false;
+
+      this._localStream.addTrack(videoTrack);
+      if (this.pc) {
+        const sender = this.pc.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) {
+          await sender.replaceTrack(videoTrack);
+        } else {
+          this.pc.addTrack(videoTrack, this._localStream);
+        }
+      }
+      this.emit('localStream', this._localStream);
+      return true;
+    } catch (e) {
+      console.warn('[WebRTCEngine] Failed to enable video:', e);
+      return false;
+    }
+  }
+
+  async toggleCamera(): Promise<boolean> {
+    if (!this._localStream) return false;
+    let videoTrack = this._localStream.getVideoTracks()[0];
+    if (!videoTrack) {
+      const enabled = await this.enableVideo();
+      return !enabled;
+    }
+    videoTrack.enabled = !videoTrack.enabled;
+    return !videoTrack.enabled; // returns true if camera now off
   }
 
   async switchCamera(): Promise<void> {
@@ -1037,24 +1072,39 @@ export class WebRTCEngine {
 
       // ─── ICE CANDIDATE ──────────────────────────────────────────────────
       if (signal.candidate !== undefined || signal.sdpMid !== undefined || signal.sdpMLineIndex !== undefined) {
-        const candidateInit: RTCIceCandidateInit =
-          signal.candidate && typeof signal.candidate === 'object'
-            ? signal.candidate
-            : signal.candidate && typeof signal.candidate === 'string'
-              ? JSON.parse(signal.candidate)
-              : signal;
+        let candidateInit: RTCIceCandidateInit | null = null;
+        if (signal.candidate === null || signal.candidate === '') {
+          candidateInit = null;
+        } else if (signal.candidate && typeof signal.candidate === 'object') {
+          candidateInit = signal.candidate;
+        } else if (signal.candidate && typeof signal.candidate === 'string') {
+          try {
+            candidateInit = JSON.parse(signal.candidate);
+          } catch {
+            candidateInit = {
+              candidate: signal.candidate,
+              sdpMid: signal.sdpMid,
+              sdpMLineIndex: signal.sdpMLineIndex,
+            };
+          }
+        } else {
+          candidateInit = signal;
+        }
 
         if (pc.remoteDescription && pc.remoteDescription.type) {
           try {
-            await pc.addIceCandidate(new RTCIceCandidate(candidateInit));
+            if (candidateInit && candidateInit.candidate) {
+              await pc.addIceCandidate(new RTCIceCandidate(candidateInit));
+            } else if (candidateInit === null) {
+              await pc.addIceCandidate(undefined);
+            }
           } catch (e) {
-            // Ignore benign candidate errors (e.g., candidate for ended session)
             if (!this.ignoreOffer) {
               console.warn('[WebRTCEngine] Add ICE candidate error:', e);
             }
           }
-        } else {
-          // Queue for after remote description is set
+        } else if (candidateInit && candidateInit.candidate) {
+          // Queue valid candidate for after remote description is set
           this.iceCandidateQueue.push(candidateInit);
         }
         return;
@@ -1074,7 +1124,9 @@ export class WebRTCEngine {
 
     for (const candidate of queue) {
       try {
-        await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
+        if (candidate && candidate.candidate) {
+          await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
+        }
       } catch (e) {
         console.warn('[WebRTCEngine] Queued ICE candidate error:', e);
       }

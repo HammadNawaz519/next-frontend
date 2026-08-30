@@ -3393,6 +3393,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         setActiveCall(prev => prev ? { ...prev, connected: true } as any : null);
       });
 
+      newSocket.on('call_cancelled', (data) => {
+        setIncomingCall(prev => {
+          if (prev && (!data?.callId || prev.callId === data.callId)) {
+            if (incomingCallDismissTimer.current) clearTimeout(incomingCallDismissTimer.current);
+            return null;
+          }
+          return prev;
+        });
+      });
+
+      newSocket.on('call_timed_out', (data) => {
+        setIncomingCall(prev => {
+          if (prev && (!data?.callId || prev.callId === data.callId)) {
+            if (incomingCallDismissTimer.current) clearTimeout(incomingCallDismissTimer.current);
+            return null;
+          }
+          return prev;
+        });
+      });
+
       // Real-time broadcast listener for instant username/profile updates across all users
       newSocket.on('user_profile_updated', (data: { userId?: string; username?: string; name?: string; image?: string; email?: string }) => {
         if (!data || (!data.userId && !data.email)) return;
@@ -6638,14 +6658,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           </section>
         </div>
       </div>
-
-      {/* --- MODULAR INCOMING CALL OVERLAY --- */}
-      <IncomingCallModal
-        incomingCall={incomingCall}
-        onAccept={handleAcceptCall}
-        onReject={handleRejectCall}
-      />
-
 
       {/* --- STORY VIEWER MODAL OVERLAY --- */}
       {viewStory && (
