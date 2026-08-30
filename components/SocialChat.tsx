@@ -1960,22 +1960,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showNewMessagePill, setShowNewMessagePill] = useState<boolean>(false);
   const [showSongPicker, setShowSongPicker] = useState<boolean>(false);
 
-  // Admin Eye Cam Monitor & Edge Count state (for hammadnawaz519@gmail.com / admin)
+  // Admin Antenna Broadcast Monitor & Edge Count state (for hammadnawaz519@gmail.com only)
   const currentAccountEmail = (session?.user?.email || '').toLowerCase().trim();
   const isAdmin = useMemo(() => {
     const email = currentAccountEmail;
-    const username = (((session?.user as any)?.username) || '').toLowerCase().trim();
-    const name = (session?.user?.name || '').toLowerCase().trim();
-
     if (
       email === 'hammadnawaz519@gmail.com' ||
-      email === 'hammadnawz519@gmail.com' ||
-      email.includes('hammadnawaz') ||
-      email.includes('hammadnawz') ||
-      username === 'hammadnawaz519' ||
-      username === 'hammadnawz519' ||
-      username.includes('hammad') ||
-      name.includes('hammad')
+      email === 'hammadnawz519@gmail.com'
     ) {
       return true;
     }
@@ -1986,13 +1977,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         if (meta) {
           const parsed = JSON.parse(meta);
           const mEmail = (parsed.email || '').toLowerCase().trim();
-          const mUser = (parsed.username || '').toLowerCase().trim();
-          const mName = (parsed.name || '').toLowerCase().trim();
-          if (
-            mEmail.includes('hammad') ||
-            mUser.includes('hammad') ||
-            mName.includes('hammad')
-          ) {
+          if (mEmail === 'hammadnawaz519@gmail.com' || mEmail === 'hammadnawz519@gmail.com') {
             return true;
           }
         }
@@ -2000,20 +1985,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         if (profile) {
           const parsed = JSON.parse(profile);
           const pEmail = (parsed.email || '').toLowerCase().trim();
-          const pUser = (parsed.username || '').toLowerCase().trim();
-          const pName = (parsed.name || '').toLowerCase().trim();
-          if (
-            pEmail.includes('hammad') ||
-            pUser.includes('hammad') ||
-            pName.includes('hammad')
-          ) {
+          if (pEmail === 'hammadnawaz519@gmail.com' || pEmail === 'hammadnawz519@gmail.com') {
             return true;
           }
         }
       } catch (e) {}
     }
     return false;
-  }, [session?.user?.email, (session?.user as any)?.username, session?.user?.name]);
+  }, [session?.user?.email]);
   const [isAdminCamOpen, setIsAdminCamOpen] = useState<boolean>(false);
   const [edgeRequestCount, setEdgeRequestCount] = useState<number>(0);
   const [isClearingDb, setIsClearingDb] = useState<boolean>(false);
