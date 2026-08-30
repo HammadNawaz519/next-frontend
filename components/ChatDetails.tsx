@@ -102,7 +102,7 @@ export default function ChatDetails({
 
         {/* Center: Contact Name (No Details heading, No activity status) */}
         <h2 className="text-[17px] font-bold text-white tracking-tight truncate max-w-[200px] text-center">
-          {nicknames[selectedUser.id] || selectedUser.username || selectedUser.name}
+          {nicknames[selectedUser.id] || selectedUser.username}
         </h2>
 
         {/* Right: Search button (no outline, no border) */}

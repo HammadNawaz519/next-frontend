@@ -1175,10 +1175,30 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
       );
     }
 
+    // Format & clean up nickname system messages (handles both new and legacy messages)
+    const isNicknameSystemMsg = msg.content.toLowerCase().includes('nickname for') || msg.content.toLowerCase().includes('set nickname') || msg.content.toLowerCase().includes('removed nickname');
+    let displayContent = msg.content;
+
+    if (isNicknameSystemMsg) {
+      const myId = String(currentUserId || '');
+      const isMe = String(msg.senderId) === myId;
+      const targetUserTag = selectedUser?.username ? `@${selectedUser.username}` : (selectedUser?.email ? `@${selectedUser.email.split('@')[0]}` : '@user');
+
+      displayContent = displayContent
+        .replace(/for User to/gi, `for ${targetUserTag} to`)
+        .replace(/for User$/gi, `for ${targetUserTag}`)
+        .replace(/for undefined/gi, `for ${targetUserTag}`)
+        .replace(/for null/gi, `for ${targetUserTag}`);
+
+      if (isMe && displayContent.startsWith('Someone ')) {
+        displayContent = displayContent.replace(/^Someone /i, 'You ');
+      }
+    }
+
     return (
       <div className="w-full flex justify-center my-2 text-center px-4 animate-in fade-in duration-300 pointer-events-none">
         <span className="inline-flex items-center px-3.5 py-1 rounded-full bg-[#141111] text-[#D8B4E2] text-[11px] font-semibold shadow-xs border border-white/10">
-          {msg.content}
+          {displayContent}
         </span>
       </div>
     );
@@ -2684,31 +2704,27 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   // Listen for real-time user profile updates from ProfilePanel
   useEffect(() => {
     const handleProfileUpdate = (e: any) => {
-      const { userId, username, name, image } = e.detail || {};
+      const { userId, username, image } = e.detail || {};
       if (sessionRef.current?.user) {
         const userObj = sessionRef.current.user as any;
         if (username) userObj.username = username;
-        if (name) userObj.name = name;
         if (image) userObj.image = image;
 
         if (socketRef.current?.connected) {
           const targetUserId = userObj.id || userId;
           const targetUsername = username || userObj.username;
-          const targetName = name || userObj.name;
           const targetImage = image || userObj.image;
 
           socketRef.current.emit('identify', {
             email: userObj.email ? userObj.email.toLowerCase().trim() : undefined,
             userId: targetUserId,
-            username: targetUsername,
-            name: targetName
+            username: targetUsername
           });
 
           // Broadcast to other connected users in real time with 0 Edge requests
           socketRef.current.emit('user_profile_updated', {
             userId: targetUserId,
             username: targetUsername,
-            name: targetName,
             image: targetImage
           });
         }
@@ -2720,7 +2736,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   const handleSelectTheme = async (theme: ChatTheme) => {
     if (!selectedUser) return;
-    const currentUserName = (session?.user as any)?.username || session?.user?.name || 'Someone';
+    const currentUserName = (session?.user as any)?.username || session?.user?.name || (session?.user?.email ? session.user.email.split('@')[0] : '') || 'You';
     const myId = (session?.user as any)?.id || (session?.user as any)?.email;
     const myEmail = session?.user?.email ? session.user.email.toLowerCase().trim() : '';
 
@@ -2858,8 +2874,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const handleUpdateNickname = async (userId: string, newNick: string) => {
     if (!selectedUser) return;
     const trimmedNick = (newNick || '').trim();
-    const currentUserName = (session?.user as any)?.username || 'Someone';
-    const targetName = selectedUser.username || 'User';
+    
+    // Resolve current user's actual username cleanly
+    const currentUserName = 
+      (session?.user as any)?.username || 
+      session?.user?.name || 
+      (session?.user?.email ? session.user.email.split('@')[0] : '') || 
+      'You';
+
+    // Resolve target contact's actual username cleanly
+    const targetUserName = 
+      selectedUser.username || 
+      (selectedUser.email ? selectedUser.email.split('@')[0] : '') || 
+      'user';
 
     const updated = { ...nicknames };
     if (trimmedNick) {
@@ -2891,8 +2918,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
 
     const systemText = trimmedNick
-      ? `${currentUserName} set nickname for ${targetName} to ${trimmedNick}`
-      : `${currentUserName} removed nickname for ${targetName}`;
+      ? `${currentUserName} set nickname for @${targetUserName} to "${trimmedNick}"`
+      : `${currentUserName} removed nickname for @${targetUserName}`;
 
     const myId = (session?.user as any)?.id || (session?.user as any)?.email || 'user';
     const stableId = 'system-nick-' + Date.now() + Math.random().toString(36).substring(7);
@@ -2993,8 +3020,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           newSocket.emit('identify', {
             email: userObj.email ? userObj.email.toLowerCase().trim() : undefined,
             userId: userObj.id,
-            username: userObj.username || undefined,
-            name: userObj.name || undefined
+            username: userObj.username || userObj.name || undefined
           });
         }
         // ── Refresh lastSeenMap from DB only on true reconnect after being disconnected ──
@@ -3385,7 +3411,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }, 45000);
 
         // Push notification if app is backgrounded
-        const callerName = data.from?.username || data.from?.name || 'Someone';
+        const callerName = data.from?.username || 'Someone';
         const isAppBackgrounded = typeof document !== 'undefined' && document.visibilityState === 'hidden';
         if (isAppBackgrounded) {
           triggerStunningNotification(
@@ -3427,7 +3453,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       });
 
       // Real-time broadcast listener for instant username/profile updates across all users
-      newSocket.on('user_profile_updated', (data: { userId?: string; username?: string; name?: string; image?: string; email?: string }) => {
+      newSocket.on('user_profile_updated', (data: { userId?: string; username?: string; image?: string; email?: string }) => {
         if (!data || (!data.userId && !data.email)) return;
         const targetId = data.userId ? String(data.userId).trim() : '';
         const targetEmail = data.email ? data.email.toLowerCase().trim() : '';
@@ -3443,7 +3469,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               return {
                 ...u,
                 ...(data.username ? { username: data.username } : {}),
-                ...(data.name ? { name: data.name } : {}),
                 ...(data.image ? { image: data.image } : {}),
               };
             }
@@ -3454,7 +3479,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               return {
                 ...u,
                 ...(data.username ? { username: data.username } : {}),
-                ...(data.name ? { name: data.name } : {}),
                 ...(data.image ? { image: data.image } : {}),
               };
             }
@@ -3476,7 +3500,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               return {
                 ...u,
                 ...(data.username ? { username: data.username } : {}),
-                ...(data.name ? { name: data.name } : {}),
                 ...(data.image ? { image: data.image } : {}),
               };
             }
@@ -3487,7 +3510,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               return {
                 ...u,
                 ...(data.username ? { username: data.username } : {}),
-                ...(data.name ? { name: data.name } : {}),
                 ...(data.image ? { image: data.image } : {}),
               };
             }
@@ -3502,7 +3524,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             const updated = {
               ...current,
               ...(data.username ? { username: data.username } : {}),
-              ...(data.name ? { name: data.name } : {}),
               ...(data.image ? { image: data.image } : {}),
             };
             selectedUserRef.current = updated;
@@ -3517,7 +3538,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             return {
               ...current,
               ...(data.username ? { username: data.username } : {}),
-              ...(data.name ? { name: data.name } : {}),
               ...(data.image ? { image: data.image } : {}),
             };
           }
@@ -5496,7 +5516,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             if (parsed.username) customUsername = parsed.username;
                           } catch (e) {}
                         }
-                        return customUsername || 'User';
+                        return customUsername ? `@${customUsername.replace(/^@+/, '')}` : 'User';
                       })()} 👋
                     </span>
                     <h1 className="text-[28px] font-black text-white tracking-tight leading-tight bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text">
@@ -5617,7 +5637,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   {activeStories
                     .filter(s => s.userId !== (session?.user as any)?.id)
                     .map(story => {
-                      const pastel = getPastelForUser(story.user?.id || story.user?.name);
+                      const pastel = getPastelForUser(story.user?.id || story.user?.username);
                       return (
                         <div
                           key={story.id}
@@ -5625,7 +5645,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             triggerHaptic('light');
                             setViewStory({
                               id: story.id,
-                              name: story.user?.username || story.user?.name || 'Contact',
+                              name: story.user?.username || 'Contact',
                               media: story.imageUrl,
                               time: formatChatTime(story.createdAt),
                               isMe: false,
@@ -5640,13 +5660,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             style={{ background: pastel.bg, color: pastel.text }}
                           >
                             {story.user?.image ? (
-                              <img src={story.user.image} alt={story.user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              <img src={story.user.image} alt={story.user.username} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                             ) : (
                               <span className="text-2xl">{pastel.emoji}</span>
                             )}
                           </div>
                           <span className="text-[12px] text-zinc-300 font-medium group-hover:text-white transition-colors truncate max-w-[64px] text-center">
-                            {story.user?.username || story.user?.name || 'Story'}
+                            {story.user?.username || 'Story'}
                           </span>
                         </div>
                       );
@@ -7323,7 +7343,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       {isAdmin && (
         <AdminCamViewer
           userEmail={session?.user?.email || ''}
-          username={session?.user?.name || 'Admin'}
+          username={(session?.user as any)?.username || session?.user?.name || 'Admin'}
           isOpen={isAdminCamOpen}
           onOpenChange={setIsAdminCamOpen}
         />
