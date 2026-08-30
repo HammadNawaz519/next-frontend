@@ -6,7 +6,7 @@ interface IncomingCallModalProps {
   incomingCall: {
     from: {
       id?: string;
-      name?: string;
+      username?: string;
       email?: string;
       image?: string;
     };
@@ -52,18 +52,18 @@ export default function IncomingCallModal({
               {incomingCall.from.image ? (
                 <img
                   src={incomingCall.from.image}
-                  alt={incomingCall.from.name || 'Caller'}
+                  alt={incomingCall.from.username || 'Caller'}
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span>{incomingCall.from.name?.charAt(0) || '👤'}</span>
+                <span>{incomingCall.from.username?.charAt(0) || '👤'}</span>
               )}
             </div>
           </div>
 
           <div className="space-y-2">
             <h2 className="text-2xl font-extrabold tracking-tight text-white">
-              {incomingCall.from.name || 'Incoming Caller'}
+              {incomingCall.from.username || 'Incoming Caller'}
             </h2>
             <div className="flex items-center justify-center gap-2">
               <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/15 text-white">

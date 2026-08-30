@@ -131,8 +131,8 @@ function _loadAccounts(): Record<string, DeviceAccountMeta> {
         migrated[uid] = {
           userId: uid,
           email: acc.email.toLowerCase().trim(),
-          username: acc.username || acc.name || 'User',
-          displayName: acc.username || acc.name || 'User',
+          username: acc.username || 'User',
+          displayName: acc.username || 'User',
           profilePicture: acc.image || acc.profilePicture || '',
           provider: acc.provider || 'credentials',
           isSavedOnDevice: !!acc.password, // migrated as saved if they had a password stored

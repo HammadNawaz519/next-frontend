@@ -8,7 +8,6 @@ datasource db {
 
 model User {
   id                 String    @id @default(cuid())
-  name               String?
   username           String?   @unique
   email              String?   @unique
   emailVerified      DateTime?
@@ -50,6 +49,10 @@ model User {
   comments   Comment[]
   savedPosts SavedPost[]
   stories    Story[]
+
+  // Chat Nicknames
+  assignedNicknames ChatNickname[] @relation("AssignedNicknames")
+  receivedNicknames ChatNickname[] @relation("ReceivedNicknames")
 }
 
 model SocialMessage {
@@ -246,3 +249,19 @@ model Story {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 }
+
+model ChatNickname {
+  id        String   @id @default(cuid())
+  userId    String
+  targetId  String
+  nickname  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User @relation("AssignedNicknames", fields: [userId], references: [id], onDelete: Cascade)
+  targetUser User @relation("ReceivedNicknames", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetId])
+  @@index([userId])
+}
+

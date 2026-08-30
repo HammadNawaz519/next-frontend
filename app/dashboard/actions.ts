@@ -81,7 +81,6 @@ export async function getSocialUser(userId: string) {
     where: { id: userId },
     select: {
       id: true,
-      name: true,
       username: true,
       email: true,
       image: true
@@ -137,7 +136,6 @@ export async function getUserDetails() {
     where: { email: session.user.email },
     select: {
       id: true,
-      name: true,
       username: true,
       email: true,
       createdAt: true,
@@ -821,18 +819,72 @@ export async function updateUsername(newUsername: string) {
   return { success: true, username: updated.username };
 }
 
-export async function updateName(newName: string) {
+export async function saveChatNicknameAction(targetUserId: string, nickname: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return { error: 'Not authenticated' };
 
-  const trimmed = newName.trim();
-  if (!trimmed || trimmed.length < 2) return { error: 'Name must be at least 2 characters' };
-
-  const updated = await prisma.user.update({
+  const currentUser = await prisma.user.findUnique({
     where: { email: session.user.email },
-    data: { name: trimmed }
+    select: { id: true }
   });
-  return { success: true, name: updated.name };
+  if (!currentUser) return { error: 'User not found' };
+
+  const cleanNick = (nickname || '').trim();
+
+  if (!cleanNick) {
+    // Delete custom nickname if empty
+    await prisma.chatNickname.deleteMany({
+      where: {
+        userId: currentUser.id,
+        targetId: targetUserId
+      }
+    });
+    return { success: true, nickname: '' };
+  }
+
+  const saved = await prisma.chatNickname.upsert({
+    where: {
+      userId_targetId: {
+        userId: currentUser.id,
+        targetId: targetUserId
+      }
+    },
+    update: { nickname: cleanNick },
+    create: {
+      userId: currentUser.id,
+      targetId: targetUserId,
+      nickname: cleanNick
+    }
+  });
+
+  return { success: true, nickname: saved.nickname };
+}
+
+export async function getChatNicknamesAction() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return {};
+
+  const currentUser = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true }
+  });
+  if (!currentUser) return {};
+
+  const records = await prisma.chatNickname.findMany({
+    where: { userId: currentUser.id },
+    select: { targetId: true, nickname: true }
+  });
+
+  const nicknameMap: Record<string, string> = {};
+  records.forEach(r => {
+    nicknameMap[r.targetId] = r.nickname;
+  });
+
+  return nicknameMap;
+}
+
+export async function updateName(newName: string) {
+  return await updateUsername(newName);
 }
 
 export async function getProfileDetails() {
@@ -843,17 +895,17 @@ export async function getProfileDetails() {
     where: { email: session.user.email },
     include: {
       followers: {
-        select: { id: true, name: true, username: true, image: true }
+        select: { id: true, username: true, image: true }
       },
       following: {
-        select: { id: true, name: true, username: true, image: true }
+        select: { id: true, username: true, image: true }
       },
       posts: {
         orderBy: { createdAt: 'desc' }
       },
       receivedFollowRequests: {
         include: {
-          sender: { select: { id: true, name: true, username: true, image: true } }
+          sender: { select: { id: true, username: true, image: true } }
         }
       }
     }
@@ -867,13 +919,6 @@ export async function updateProfileDetails(data: { name?: string; username?: str
   if (!session?.user?.email) return { error: 'Not authenticated' };
 
   const updateData: any = {};
-  if (data.name !== undefined) {
-    const trimmedName = data.name.trim();
-    if (trimmedName.length < 2) return { error: 'Display name must be at least 2 characters' };
-    if (trimmedName.length > 50) return { error: 'Display name cannot exceed 50 characters' };
-    updateData.name = trimmedName;
-  }
-
   if (data.bio !== undefined) {
     updateData.bio = data.bio.trim().slice(0, 150);
   }
@@ -886,8 +931,9 @@ export async function updateProfileDetails(data: { name?: string; username?: str
     updateData.image = data.image;
   }
 
-  if (data.username !== undefined) {
-    const trimmedUser = data.username.trim().toLowerCase().replace(/^@+/, '').replace(/\s+/g, '');
+  if (data.username !== undefined || data.name !== undefined) {
+    const rawUser = data.username !== undefined ? data.username : (data.name || '');
+    const trimmedUser = rawUser.trim().toLowerCase().replace(/^@+/, '').replace(/\s+/g, '');
     if (trimmedUser.length < 3) return { error: 'Username must be at least 3 characters' };
     if (trimmedUser.length > 30) return { error: 'Username cannot exceed 30 characters' };
     if (!/^[a-zA-Z0-9_]+$/.test(trimmedUser)) {
@@ -912,7 +958,6 @@ export async function updateProfileDetails(data: { name?: string; username?: str
     data: updateData,
     select: {
       id: true,
-      name: true,
       username: true,
       email: true,
       image: true,
@@ -974,7 +1019,7 @@ export async function getFollowRequests() {
   return await (prisma as any).followRequest.findMany({
     where: { receiverId: currentUser.id },
     include: {
-      sender: { select: { id: true, name: true, username: true, image: true } }
+      sender: { select: { id: true, username: true, image: true } }
     }
   });
 }
@@ -1085,7 +1130,7 @@ export async function getExploreContent() {
     orderBy: { createdAt: 'desc' },
     take: 60,
     include: {
-      user: { select: { id: true, name: true, username: true, email: true, image: true, isPrivate: true } },
+      user: { select: { id: true, username: true, email: true, image: true, isPrivate: true } },
       likes: { select: { userId: true } },
       comments: { select: { id: true } }
     }
@@ -1111,7 +1156,7 @@ export async function searchUsers(query: string) {
       where: {
         id: { not: currentUser.id }
       },
-      select: { id: true, name: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true },
+      select: { id: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true },
       take: 30,
       orderBy: { createdAt: 'desc' }
     });
@@ -1122,11 +1167,10 @@ export async function searchUsers(query: string) {
       id: { not: currentUser.id },
       OR: [
         { username: { contains: cleanQ, mode: 'insensitive' } },
-        { name: { contains: cleanQ, mode: 'insensitive' } },
         { email: { contains: cleanQ, mode: 'insensitive' } }
       ]
     },
-    select: { id: true, name: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true },
+    select: { id: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true },
     take: 40,
   });
 }
@@ -1448,7 +1492,6 @@ export async function createStoryAction(imageUrl: string) {
       user: {
         select: {
           id: true,
-          name: true,
           username: true,
           image: true
         }
@@ -1522,7 +1565,6 @@ export async function getActiveStoriesAction() {
         user: {
           select: {
             id: true,
-            name: true,
             username: true,
             image: true
           }
@@ -1614,7 +1656,7 @@ export async function commentAction(postId: string, content: string) {
     },
     include: {
       user: {
-        select: { id: true, name: true, username: true, image: true }
+        select: { id: true, username: true, image: true }
       }
     }
   });
@@ -1627,7 +1669,7 @@ export async function getCommentsAction(postId: string) {
     where: { postId },
     include: {
       user: {
-        select: { id: true, name: true, username: true, image: true }
+        select: { id: true, username: true, image: true }
       }
     },
     orderBy: { createdAt: 'asc' }
@@ -1682,7 +1724,7 @@ export async function getSavedPostsAction() {
     include: {
       post: {
         include: {
-          user: { select: { id: true, name: true, username: true, image: true } }
+          user: { select: { id: true, username: true, image: true } }
         }
       }
     },
@@ -1711,10 +1753,10 @@ export async function getHomeFeedPostsAction() {
       ]
     },
     include: {
-      user: { select: { id: true, name: true, username: true, image: true, isPrivate: true } },
+      user: { select: { id: true, username: true, image: true, isPrivate: true } },
       likes: { select: { userId: true } },
       comments: {
-        include: { user: { select: { id: true, name: true, username: true, image: true } } },
+        include: { user: { select: { id: true, username: true, image: true } } },
         orderBy: { createdAt: 'asc' }
       },
       savedPosts: { select: { userId: true } }
@@ -1724,7 +1766,7 @@ export async function getHomeFeedPostsAction() {
 
   return posts.map((p: any) => ({
     id: p.id,
-    user: p.user.username || p.user.name || 'user',
+    user: p.user.username || 'user',
     userImage: p.user.image || undefined,
     userId: p.user.id,
     image: p.imageUrl || p.thumbnailUrl || '',
@@ -1734,7 +1776,7 @@ export async function getHomeFeedPostsAction() {
     liked: p.likes.some((l: any) => l.userId === currentUser.id),
     saved: p.savedPosts.some((s: any) => s.userId === currentUser.id),
     comments: p.comments.map((c: any) => ({
-      user: c.user.username || c.user.name || 'user',
+      user: c.user.username || 'user',
       userImage: c.user.image || undefined,
       text: c.content,
       time: formatTimeAgo(c.createdAt)
@@ -1767,10 +1809,10 @@ export async function getReelsAction() {
   const reels = await (prisma as any).post.findMany({
     where: { postType: 'reel' },
     include: {
-      user: { select: { id: true, name: true, username: true, image: true, isPrivate: true } },
+      user: { select: { id: true, username: true, image: true, isPrivate: true } },
       likes: { select: { userId: true } },
       comments: {
-        include: { user: { select: { id: true, name: true, username: true, image: true } } },
+        include: { user: { select: { id: true, username: true, image: true } } },
         orderBy: { createdAt: 'asc' }
       },
       savedPosts: { select: { userId: true } }
@@ -1780,7 +1822,7 @@ export async function getReelsAction() {
 
   return reels.map((p: any) => ({
     id: p.id,
-    user: p.user.username || p.user.name || 'user',
+    user: p.user.username || 'user',
     userImage: p.user.image || undefined,
     userId: p.user.id,
     image: p.imageUrl || p.thumbnailUrl || '',
@@ -1791,7 +1833,7 @@ export async function getReelsAction() {
     saved: p.savedPosts.some((s: any) => s.userId === currentUser.id),
     comments: p.comments.map((c: any) => ({
       id: c.id,
-      user: c.user.username || c.user.name || 'user',
+      user: c.user.username || 'user',
       userImage: c.user.image || undefined,
       text: c.content,
       time: formatTimeAgo(c.createdAt)
@@ -1862,7 +1904,6 @@ export async function getUserPublicProfile(targetUserId: string) {
     where: { id: targetUserId },
     select: {
       id: true,
-      name: true,
       username: true,
       image: true,
       bio: true,

@@ -115,7 +115,7 @@ export default function CallsView({
               status,
               duration: item.duration || 0,
               createdAt: item.createdAt,
-              contactName: partner?.username || partner?.name || 'User',
+              contactName: partner?.username || 'User',
               contactImage: partner?.image || '',
               contactUsername: partner?.username || '',
               partnerUser: partner

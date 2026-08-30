@@ -21,6 +21,8 @@ import {
   deleteStoryAction,
   getGlobalEdgeRequestCount,
   clearAllDatabaseAndBucketsAction,
+  saveChatNicknameAction,
+  getChatNicknamesAction,
 } from '@/app/dashboard/actions';
 import {
   optimizeImageClient,
@@ -103,7 +105,6 @@ export async function fetchRecentChatsCoalesced(force = false): Promise<any[]> {
 interface User {
   id: string;
   username: string;
-  name: string;
   email: string;
   image?: string;
   bio?: string;
@@ -982,7 +983,7 @@ const ChatItem = memo(({
     onSelect(user, e);
   };
 
-  const pastel = getPastelForUser(user.id || user.username || user.name);
+  const pastel = getPastelForUser(user.id || user.username);
   const latestTimeVal = latestCachedMsg?.createdAt || (user as any).lastMessageTime || (user as any).updatedAt || lastSeenVal;
   const timeDisplay = formatChatTime(latestTimeVal);
   const unseen = (user as any).unseenCount || 0;
@@ -1028,7 +1029,7 @@ const ChatItem = memo(({
           style={{ background: pastel.bg, color: pastel.text }}
         >
           {user.image && user.image.length > 5 ? (
-            <img src={user.image} alt={user.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
+            <img src={user.image} alt={user.username} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
           ) : (
             <span>{pastel.emoji}</span>
           )}
@@ -1039,7 +1040,7 @@ const ChatItem = memo(({
       <div className="flex-1 min-w-0 flex flex-col gap-0.5">
         <div className="flex items-center gap-1.5">
           <h4 className="text-[15px] font-semibold text-zinc-900 truncate">
-            {nickname || user.username || user.name}
+            {nickname || user.username}
           </h4>
           {isPinned && <span className="text-[10px] text-[#9D4EDD]">📌</span>}
         </div>
@@ -1691,19 +1692,19 @@ const SidebarItem = memo(({ user, isActive, onClick }: { user: User, isActive: b
     <div className={`item ${isActive ? 'active' : ''}`} onClick={onClick}>
       <div className="user-pfp">
         {user.image && user.image.length > 5 ? (
-          <img src={user.image} alt={user.name} referrerPolicy="no-referrer" />
+          <img src={user.image} alt={user.username} referrerPolicy="no-referrer" />
         ) : (
           <img src="/Avatar.png" alt="avatar" />
         )}
       </div>
       <div className="meta">
         <b>
-          {user.username || user.name}
+          {user.username}
           <div className="side-meta">
             {user.unseenCount && user.unseenCount > 0 ? <span className="unseen-badge">{user.unseenCount}</span> : null}
           </div>
         </b>
-        <small className="truncate">{user.lastMessage || `@${user.username || user.name?.toLowerCase().replace(/\s+/g, '')}`}</small>
+        <small className="truncate">{user.lastMessage || `@${user.username}`}</small>
       </div>
     </div>
   );
@@ -2190,6 +2191,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       const savedNicknames = localStorage.getItem(`chat_nicknames_${currentUserId}`);
       setNicknames(savedNicknames ? JSON.parse(savedNicknames) : {});
+
+      // Sync nicknames from PostgreSQL database
+      getChatNicknamesAction().then((dbNicks) => {
+        if (dbNicks && typeof dbNicks === 'object' && Object.keys(dbNicks).length > 0) {
+          setNicknames((prev) => {
+            const merged = { ...prev, ...dbNicks };
+            try {
+              localStorage.setItem(`chat_nicknames_${currentUserId}`, JSON.stringify(merged));
+            } catch (e) {}
+            return merged;
+          });
+        }
+      }).catch(() => {});
 
       const savedThemes = localStorage.getItem(`chat_themes_${currentUserId}`);
       setChatThemes(savedThemes ? JSON.parse(savedThemes) : {});
@@ -2844,8 +2858,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const handleUpdateNickname = async (userId: string, newNick: string) => {
     if (!selectedUser) return;
     const trimmedNick = (newNick || '').trim();
-    const currentUserName = (session?.user as any)?.username || session?.user?.name || 'Someone';
-    const targetName = selectedUser.username || selectedUser.name || 'User';
+    const currentUserName = (session?.user as any)?.username || 'Someone';
+    const targetName = selectedUser.username || 'User';
 
     const updated = { ...nicknames };
     if (trimmedNick) {
@@ -2858,6 +2872,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       localStorage.setItem(`chat_nicknames_${currentUserId}`, JSON.stringify(updated));
     }
     setEditingNickname(false);
+
+    // 1. Persist to PostgreSQL database
+    try {
+      await saveChatNicknameAction(userId, trimmedNick);
+    } catch (dbErr) {
+      console.error("Failed to save nickname to database:", dbErr);
+    }
 
     if (socket) {
       socket.emit('change_nickname', {
@@ -3978,7 +3999,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   useEffect(() => {
     if (socket && socket.connected && session?.user?.email) {
       const email = session.user.email.toLowerCase().trim();
-      const username = (session.user as any)?.username || session.user.name || 'User';
+      const username = (session.user as any)?.username || 'User';
       socket.emit('identify', { email, userId: (session.user as any).id, username });
     }
   }, [session?.user?.email]); // Only re-run when session email changes, not on every socket state change
@@ -4093,16 +4114,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (cleanQ.length >= 1) {
       setIsSearchingGlobal(true);
 
-      // 1. Instant client-side filter from cached list (checking name, username, email, nickname, and last message)
+      // 1. Instant client-side filter from cached list (checking username, email, nickname, and last message)
       const matchesContact = (u: any) => {
         const nick = (nicknames[u.id] || '').toLowerCase();
-        const name = (u.name || '').toLowerCase();
         const username = (u.username || '').toLowerCase().replace(/^@+/, '');
         const email = (u.email || '').toLowerCase();
         const lastMsg = (u.lastMessage || '').toLowerCase();
         return (
           username.includes(cleanQ) ||
-          name.includes(cleanQ) ||
           email.includes(cleanQ) ||
           nick.includes(cleanQ) ||
           lastMsg.includes(cleanQ)
@@ -4123,7 +4142,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             const currentMyId = (session?.user as any)?.id;
             const validResults = results.filter((u: any) => u.id !== currentMyId);
 
-            // Sync any existing contacts with fresh server data (e.g. updated username, name, avatar)
+            // Sync any existing contacts with fresh server data (e.g. updated username, avatar)
             const resultMap = new Map(validResults.map((u: any) => [u.id, u]));
 
             allContactsRef.current = allContactsRef.current.map(c => {
@@ -4132,7 +4151,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 return {
                   ...c,
                   username: fresh.username || c.username,
-                  name: fresh.name || c.name,
                   image: fresh.image || c.image,
                   bio: fresh.bio ?? c.bio,
                   lastSeen: fresh.lastSeen ?? c.lastSeen,
@@ -4156,7 +4174,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   matchedContactsFromResults.push({
                     ...existingContact,
                     username: u.username || existingContact.username,
-                    name: u.name || existingContact.name,
                     image: u.image || existingContact.image,
                   });
                 }
@@ -5919,14 +5936,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     >
                       {/* Avatar with deterministic matching token */}
                       {(() => {
-                        const pastel = getPastelForUser(selectedUser.id || selectedUser.username || selectedUser.name);
+                        const pastel = getPastelForUser(selectedUser.id || selectedUser.username);
                         return (
                           <div 
                             className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-lg shrink-0 relative"
                             style={{ background: pastel.bg, color: pastel.text }}
                           >
                             {selectedUser.image && selectedUser.image.length > 5 ? (
-                              <img src={selectedUser.image} alt={selectedUser.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
+                              <img src={selectedUser.image} alt={selectedUser.username} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
                             ) : (
                               <span>{pastel.emoji}</span>
                             )}
@@ -5937,7 +5954,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       {/* Contact Name & Presence */}
                       <div className="flex flex-col min-w-0">
                         <h3 className="text-[17px] font-bold text-white truncate leading-tight">
-                          {nicknames[selectedUser.id] || selectedUser.username || selectedUser.name}
+                          {nicknames[selectedUser.id] || selectedUser.username}
                         </h3>
                         <span className="text-[12px] text-zinc-400 mt-0.5 truncate font-medium">
                           {(() => {

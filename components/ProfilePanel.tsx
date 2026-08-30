@@ -88,9 +88,8 @@ export default function ProfilePanel({
   const isSelf = !targetUser || targetUser.id === (session?.user as any)?.id;
 
   const curEmail = (activeUserData?.email || session?.user?.email || '').toLowerCase().trim();
-  const curUsername = activeUserData?.username || (session?.user as any)?.username || activeUserData?.name || session?.user?.name || 'User';
+  const curUsername = activeUserData?.username || (session?.user as any)?.username || 'User';
   const [localUsername, setLocalUsername] = useState(curUsername);
-  const curName = activeUserData?.name || session?.user?.name || 'User';
   const curImage = activeUserData?.image || session?.user?.image || '';
 
   const followersList: any[] = activeUserData?.followers || [];
@@ -104,7 +103,7 @@ export default function ProfilePanel({
       setFollowerCount(followers.length);
       setFollowingCount(following.length);
 
-      const resolvedUsername = activeUserData?.username || (session?.user as any)?.username || activeUserData?.name || session?.user?.name || 'User';
+      const resolvedUsername = activeUserData?.username || (session?.user as any)?.username || 'User';
       setLocalUsername(resolvedUsername);
       setUsernameInput(resolvedUsername);
 
@@ -225,7 +224,6 @@ export default function ProfilePanel({
             detail: {
               userId: updatedUserId,
               username: cleaned,
-              name: res.user?.name,
               image: res.user?.image
             }
           }));

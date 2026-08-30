@@ -43,7 +43,6 @@ export async function POST(req: Request) {
       data: {
         email: pending.email,
         username: pending.username,
-        name: pending.username,
         password: pending.password,
         phone: pending.phone,
         emailVerified: new Date(),

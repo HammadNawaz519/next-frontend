@@ -32,7 +32,6 @@ export const authOptions: NextAuthOptions = {
           select: {
             id: true,
             email: true,
-            name: true,
             username: true,
             image: true,
             password: true,
@@ -59,7 +58,7 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           email: user.email,
-          name: user.name ?? user.username ?? null,
+          name: user.username ?? null,
           image: user.image ?? null,
         };
       },
@@ -96,13 +95,11 @@ export const authOptions: NextAuthOptions = {
           await prisma.user.upsert({
             where: { email: user.email },
             update: {
-              name: user.name ?? undefined,
               image: user.image ?? undefined,
               emailVerified: new Date(),
             },
             create: {
               email: user.email,
-              name: user.name,
               image: user.image,
               emailVerified: new Date(),
               username: user.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, ""),
@@ -134,17 +131,22 @@ export const authOptions: NextAuthOptions = {
           }
         } else {
           token.id = user.id;
-          token.username = (user as any).username ?? null;
+          token.username = (user as any).username ?? (user as any).name ?? null;
         }
         token.email = user.email;
-        token.name = user.name;
+        token.name = token.username || (user as any).name || null;
         token.picture = user.image ?? null;
         token.provider = account?.provider ?? "credentials";
       }
 
       if (trigger === "update" && session) {
-        if (session.name) token.name = session.name;
-        if (session.username) token.username = session.username;
+        if (session.username) {
+          token.username = session.username;
+          token.name = session.username;
+        } else if (session.name) {
+          token.name = session.name;
+          token.username = session.name;
+        }
         if (session.image) token.picture = session.image;
       }
 
@@ -157,7 +159,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).provider = token.provider;
         (session.user as any).username = token.username;
         session.user.email = token.email as string;
-        session.user.name = token.name as string;
+        session.user.name = (token.username || token.name) as string;
         session.user.image = token.picture as string;
       }
       return session;

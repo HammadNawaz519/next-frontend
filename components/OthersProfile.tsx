@@ -164,7 +164,6 @@ export default function OthersProfile({
         setProfileData((prev: any) => ({
           ...prev,
           ...(data.username ? { username: data.username } : {}),
-          ...(data.name ? { name: data.name } : {}),
           ...(data.image ? { image: data.image } : {}),
         }));
       }
@@ -175,7 +174,7 @@ export default function OthersProfile({
     }
   }, [profileData?.id]);
 
-  const displayName = profileData?.username || profileData?.name || 'User';
+  const displayName = profileData?.username || 'User';
   const displayHeadline =
     profileData?.bio || (profileData?.username ? `@${profileData.username}` : 'Connect Member');
   const avatarKey = profileData?.id || profileData?.username || displayName;
