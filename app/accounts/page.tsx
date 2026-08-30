@@ -30,8 +30,8 @@ export default function AccountsPage() {
   const [promptError, setPromptError] = useState('');
 
   // Load accounts on mount
-  const loadAccounts = async () => {
-    const accounts = await DeviceAccountStore.getSavedAccounts();
+  const loadAccounts = () => {
+    const accounts = DeviceAccountStore.getSavedAccounts();
     setSavedAccounts(accounts);
   };
 

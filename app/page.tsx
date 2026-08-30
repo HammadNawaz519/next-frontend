@@ -54,6 +54,14 @@ export default function LoginPage() {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
+  // Check if we previously had an active session to prevent login screen flash
+  const [hasCachedSession] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('has_active_session') === 'true';
+    }
+    return false;
+  });
+
   // Check if user is explicitly logged out to prevent auto-login on app restart
   const [isExplicitlyLoggedOut, setIsExplicitlyLoggedOut] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -62,13 +70,19 @@ export default function LoginPage() {
     return false;
   });
 
-  const [hasSavedAccounts, setHasSavedAccounts] = useState(false);
+  const [hasSavedAccounts, setHasSavedAccounts] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const accs = DeviceAccountStore.getSavedAccounts();
+      return Array.isArray(accs) && accs.length > 0;
+    }
+    return false;
+  });
+
   useEffect(() => {
-    DeviceAccountStore.getSavedAccounts().then(accs => {
-      if (Array.isArray(accs) && accs.length > 0) {
-        setHasSavedAccounts(true);
-      }
-    }).catch(() => {});
+    const accs = DeviceAccountStore.getSavedAccounts();
+    if (Array.isArray(accs) && accs.length > 0) {
+      setHasSavedAccounts(true);
+    }
   }, []);
 
   // Sync active session in localStorage
