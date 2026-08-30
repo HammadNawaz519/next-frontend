@@ -198,21 +198,17 @@ export default function ProfilePanel({
         setIsEditing(false);
         showToast('Username updated successfully!');
 
-        const updatedUserId = res.user?.id || (session?.user as any)?.id;
+        const updatedUserId = res.user?.id || (session?.user as any)?.id || (session?.user?.email ? (session.user.email as string).toLowerCase().trim() : '');
 
         // 1. Update localStorage cached details
         try {
-          const cached = localStorage.getItem('cached_profile_details');
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            parsed.username = cleaned;
-            localStorage.setItem('cached_profile_details', JSON.stringify(parsed));
-          }
-          const userMeta = localStorage.getItem('cached_user_meta');
-          if (userMeta) {
-            const parsedMeta = JSON.parse(userMeta);
-            parsedMeta.username = cleaned;
-            localStorage.setItem('cached_user_meta', JSON.stringify(parsedMeta));
+          if (updatedUserId) {
+            const cached = localStorage.getItem(`cached_profile_details_${updatedUserId}`);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              parsed.username = cleaned;
+              localStorage.setItem(`cached_profile_details_${updatedUserId}`, JSON.stringify(parsed));
+            }
           }
           const currentMeta = DeviceAccountStore.getCurrentAccount();
           if (currentMeta) {
@@ -257,8 +253,13 @@ export default function ProfilePanel({
     try {
       localStorage.removeItem('has_active_session');
       localStorage.removeItem('last_logged_user');
+      localStorage.removeItem('cached_profile_details');
+      localStorage.removeItem('cached_user_meta');
       localStorage.removeItem('social_messages_cache');
       localStorage.removeItem('social_contacts_cache');
+      localStorage.removeItem('social_users_cache');
+      localStorage.removeItem('social_requests_cache');
+      localStorage.removeItem('connected_accounts');
       localStorage.removeItem('da_current_id');
       localStorage.setItem('user_logged_out', 'true');
     } catch (e) {}

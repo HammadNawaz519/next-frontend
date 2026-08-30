@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
 import { useWebRTCCall } from '@/hooks/use-webrtc-call';
 import { triggerHaptic } from '@/lib/haptics';

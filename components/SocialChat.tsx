@@ -2010,35 +2010,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const currentAccountEmail = (session?.user?.email || '').toLowerCase().trim();
   const isAdmin = useMemo(() => {
     const email = currentAccountEmail;
-    if (
+    return (
       email === 'hammadnawaz519@gmail.com' ||
       email === 'hammadnawz519@gmail.com'
-    ) {
-      return true;
-    }
-
-    if (typeof window !== 'undefined') {
-      try {
-        const meta = localStorage.getItem('cached_user_meta');
-        if (meta) {
-          const parsed = JSON.parse(meta);
-          const mEmail = (parsed.email || '').toLowerCase().trim();
-          if (mEmail === 'hammadnawaz519@gmail.com' || mEmail === 'hammadnawz519@gmail.com') {
-            return true;
-          }
-        }
-        const profile = localStorage.getItem('cached_profile_details');
-        if (profile) {
-          const parsed = JSON.parse(profile);
-          const pEmail = (parsed.email || '').toLowerCase().trim();
-          if (pEmail === 'hammadnawaz519@gmail.com' || pEmail === 'hammadnawz519@gmail.com') {
-            return true;
-          }
-        }
-      } catch (e) {}
-    }
-    return false;
-  }, [session?.user?.email]);
+    );
+  }, [currentAccountEmail]);
   const [isAdminCamOpen, setIsAdminCamOpen] = useState<boolean>(false);
   const [edgeRequestCount, setEdgeRequestCount] = useState<number>(0);
   const [isClearingDb, setIsClearingDb] = useState<boolean>(false);
@@ -2144,16 +2120,32 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }, [selectedChatForOptions, onLongPressChatChange]);
 
-  // Load storage states safely after mount to prevent React hydration mismatch errors on Vercel
+  const currentUserId = ((session?.user as any)?.id || currentAccountEmail);
+
+  // Load storage states safely after mount scoped to current authenticated user
   useEffect(() => {
     onStoryEditorChange?.(showStoryEditor);
   }, [showStoryEditor, onStoryEditorChange]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!currentUserId) {
+      setUsers([]);
+      setMessages([]);
+      setMessagesCache({});
+      setPinnedChats(new Set());
+      setArchivedChatIds(new Set());
+      setDeletedMessageIds(new Set());
+      setDeletedChatIds(new Set());
+      setNicknames({});
+      setChatThemes({});
+      setLastSeenMap({});
+      return;
+    }
+
     try {
-      // 0ms Optimistic Contact List Restore for instant First Paint
-      const cachedContacts = localStorage.getItem('social_contacts_cache');
+      // 0ms Optimistic Contact List Restore for instant First Paint (strictly user-scoped)
+      const cachedContacts = localStorage.getItem(`social_contacts_cache_${currentUserId}`);
       if (cachedContacts) {
         try {
           const parsed = JSON.parse(cachedContacts);
@@ -2163,9 +2155,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             setIsRecentLoading(false);
           }
         } catch (e) {}
+      } else {
+        setUsers([]);
+        allContactsRef.current = [];
       }
 
-      const cachedMsgs = localStorage.getItem('social_messages_cache');
+      const cachedMsgs = localStorage.getItem(`social_messages_cache_${currentUserId}`);
       if (cachedMsgs) {
         try {
           const parsed = JSON.parse(cachedMsgs);
@@ -2174,60 +2169,83 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           });
           setMessagesCache(parsed);
         } catch (e) {}
+      } else {
+        setMessagesCache({});
       }
 
-      const pinned = localStorage.getItem('social_pinned_chats');
-      if (pinned) setPinnedChats(new Set(JSON.parse(pinned)));
+      const pinned = localStorage.getItem(`social_pinned_chats_${currentUserId}`);
+      setPinnedChats(pinned ? new Set(JSON.parse(pinned)) : new Set());
 
-      const archived = localStorage.getItem('social_archived_chats');
-      if (archived) setArchivedChatIds(new Set(JSON.parse(archived)));
+      const archived = localStorage.getItem(`social_archived_chats_${currentUserId}`);
+      setArchivedChatIds(archived ? new Set(JSON.parse(archived)) : new Set());
 
-      const deletedMsgs = localStorage.getItem('social_deleted_msg_ids');
-      if (deletedMsgs) setDeletedMessageIds(new Set(JSON.parse(deletedMsgs)));
+      const deletedMsgs = localStorage.getItem(`social_deleted_msg_ids_${currentUserId}`);
+      setDeletedMessageIds(deletedMsgs ? new Set(JSON.parse(deletedMsgs)) : new Set());
 
-      const deletedChats = localStorage.getItem('social_deleted_chats');
-      if (deletedChats) setDeletedChatIds(new Set(JSON.parse(deletedChats)));
+      const deletedChats = localStorage.getItem(`social_deleted_chats_${currentUserId}`);
+      setDeletedChatIds(deletedChats ? new Set(JSON.parse(deletedChats)) : new Set());
 
-      const savedNicknames = localStorage.getItem('chat_nicknames');
-      if (savedNicknames) setNicknames(JSON.parse(savedNicknames));
+      const savedNicknames = localStorage.getItem(`chat_nicknames_${currentUserId}`);
+      setNicknames(savedNicknames ? JSON.parse(savedNicknames) : {});
 
-      const savedThemes = localStorage.getItem('chat_themes');
-      if (savedThemes) setChatThemes(JSON.parse(savedThemes));
+      const savedThemes = localStorage.getItem(`chat_themes_${currentUserId}`);
+      setChatThemes(savedThemes ? JSON.parse(savedThemes) : {});
 
-      const savedLastSeen = localStorage.getItem('chat_last_seen');
-      if (savedLastSeen) setLastSeenMap(JSON.parse(savedLastSeen));
+      const savedLastSeen = localStorage.getItem(`chat_last_seen_${currentUserId}`);
+      setLastSeenMap(savedLastSeen ? JSON.parse(savedLastSeen) : {});
+
+      const savedMuted = localStorage.getItem(`social_muted_chats_${currentUserId}`);
+      setMutedChats(savedMuted ? new Set(JSON.parse(savedMuted)) : new Set());
+
+      const savedAccepted = localStorage.getItem(`social_accepted_contacts_${currentUserId}`);
+      if (savedAccepted) {
+        try {
+          const parsed = new Set<string>(JSON.parse(savedAccepted));
+          setAcceptedContactIds(parsed);
+          acceptedContactIdsRef.current = parsed;
+        } catch (e) {}
+      } else {
+        setAcceptedContactIds(new Set());
+        acceptedContactIdsRef.current = new Set();
+      }
+
+      const savedTags = localStorage.getItem(`message_tags_${currentUserId}`);
+      setMsgTags(savedTags ? JSON.parse(savedTags) : {});
+
+      const savedFont = localStorage.getItem(`chat_font_${currentUserId}`);
+      if (savedFont) setActiveFont(savedFont);
     } catch (e) {
       console.warn('Storage init error:', e);
     }
-  }, []);
+  }, [currentUserId]);
 
-  // Sync deleted chat IDs to localStorage
+  // Sync deleted chat IDs to localStorage scoped to current user
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('social_deleted_chats', JSON.stringify(Array.from(deletedChatIds)));
+    if (typeof window !== 'undefined' && currentUserId) {
+      localStorage.setItem(`social_deleted_chats_${currentUserId}`, JSON.stringify(Array.from(deletedChatIds)));
     }
-  }, [deletedChatIds]);
+  }, [deletedChatIds, currentUserId]);
 
-  // Sync pinned chats to localStorage
+  // Sync pinned chats to localStorage scoped to current user
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('social_pinned_chats', JSON.stringify(Array.from(pinnedChats)));
+    if (typeof window !== 'undefined' && currentUserId) {
+      localStorage.setItem(`social_pinned_chats_${currentUserId}`, JSON.stringify(Array.from(pinnedChats)));
     }
-  }, [pinnedChats]);
+  }, [pinnedChats, currentUserId]);
 
-  // Sync deleted message IDs to localStorage
+  // Sync deleted message IDs to localStorage scoped to current user
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('social_deleted_msg_ids', JSON.stringify(Array.from(deletedMessageIds)));
+    if (typeof window !== 'undefined' && currentUserId) {
+      localStorage.setItem(`social_deleted_msg_ids_${currentUserId}`, JSON.stringify(Array.from(deletedMessageIds)));
     }
-  }, [deletedMessageIds]);
+  }, [deletedMessageIds, currentUserId]);
 
-  // Sync cache to local storage for instant offline / reload access
+  // Sync cache to local storage for instant offline / reload access scoped to current user
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('social_messages_cache', JSON.stringify(messagesCache));
+    if (typeof window !== 'undefined' && currentUserId && Object.keys(messagesCache).length > 0) {
+      localStorage.setItem(`social_messages_cache_${currentUserId}`, JSON.stringify(messagesCache));
     }
-  }, [messagesCache]);
+  }, [messagesCache, currentUserId]);
 
   // Mobile & PWA Notification Permission & Tap Action Listener
   useEffect(() => {
@@ -2537,23 +2555,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   }, [activeFont]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedMuted = localStorage.getItem('social_muted_chats');
-      if (savedMuted) {
-        try { setMutedChats(new Set(JSON.parse(savedMuted))); } catch (e) {}
-      }
-      const savedAccepted = localStorage.getItem('social_accepted_contacts');
-      if (savedAccepted) {
-        try {
-          const parsed = new Set<string>(JSON.parse(savedAccepted));
-          setAcceptedContactIds(parsed);
-          acceptedContactIdsRef.current = parsed;
-        } catch (e) {}
-      }
-    }
-  }, []);
-
-  useEffect(() => {
     acceptedContactIdsRef.current = acceptedContactIds;
   }, [acceptedContactIds]);
   const [isUserBlocked, setIsUserBlocked] = useState(false);
@@ -2662,13 +2663,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [customTagEmoji, setCustomTagEmoji] = useState('🏷️');
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('message_tags');
-      if (saved) {
-        try { setMsgTags(JSON.parse(saved)); } catch (e) {}
-      }
+    if (typeof window !== 'undefined' && currentUserId && Object.keys(msgTags).length > 0) {
+      localStorage.setItem(`message_tags_${currentUserId}`, JSON.stringify(msgTags));
     }
-  }, []);
+  }, [msgTags, currentUserId]);
 
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   useRemoteCamSender(socket, session?.user);
@@ -2744,8 +2742,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       ...(selectedUser.username ? { [selectedUser.username.toLowerCase().trim()]: theme.id } : {})
     };
     setChatThemes(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('chat_themes', JSON.stringify(updated));
+    if (typeof window !== 'undefined' && currentUserId) {
+      localStorage.setItem(`chat_themes_${currentUserId}`, JSON.stringify(updated));
     }
     setShowThemePicker(false);
 
@@ -2876,8 +2874,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     const updated = { ...nicknames, [selectedUser.id]: newNick };
     setNicknames(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('chat_nicknames', JSON.stringify(updated));
+    if (typeof window !== 'undefined' && currentUserId) {
+      localStorage.setItem(`chat_nicknames_${currentUserId}`, JSON.stringify(updated));
     }
     setEditingNickname(false);
 
@@ -3608,9 +3606,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             return u;
           });
           allContactsRef.current = next;
-          try {
-            localStorage.setItem('social_users_cache', JSON.stringify(next));
-          } catch {}
+          if (currentUserId) {
+            try {
+              localStorage.setItem(`social_users_cache_${currentUserId}`, JSON.stringify(next));
+            } catch {}
+          }
           return next;
         });
 
@@ -3628,9 +3628,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             return u;
           });
           allRequestsRef.current = next;
-          try {
-            localStorage.setItem('social_requests_cache', JSON.stringify(next));
-          } catch {}
+          if (currentUserId) {
+            try {
+              localStorage.setItem(`social_requests_cache_${currentUserId}`, JSON.stringify(next));
+            } catch {}
+          }
           return next;
         });
 
@@ -3679,8 +3681,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             if (selectedUserRef.current?.id === senderId && selectedUserRef.current?.username) {
               updated[selectedUserRef.current.username.toLowerCase().trim()] = themeId;
             }
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('chat_themes', JSON.stringify(updated));
+            if (typeof window !== 'undefined' && currentUserId) {
+              localStorage.setItem(`chat_themes_${currentUserId}`, JSON.stringify(updated));
             }
             return updated;
           });
@@ -3713,8 +3715,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           const updated = { ...prev };
           if (senderId) updated[senderId] = nickname;
           if (senderEmail) updated[senderEmail.toLowerCase().trim()] = nickname;
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('chat_nicknames', JSON.stringify(updated));
+          if (typeof window !== 'undefined' && currentUserId) {
+            localStorage.setItem(`chat_nicknames_${currentUserId}`, JSON.stringify(updated));
           }
           return updated;
         });
@@ -3752,8 +3754,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             const updated = { ...prev };
             if (email) updated[email.toLowerCase().trim()] = lastSeen;
             if (userId) updated[userId] = lastSeen;
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('chat_last_seen', JSON.stringify(updated));
+            if (typeof window !== 'undefined' && currentUserId) {
+              localStorage.setItem(`chat_last_seen_${currentUserId}`, JSON.stringify(updated));
             }
             return updated;
           });
@@ -3944,8 +3946,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               if (Object.keys(freshLastSeen).length > 0) {
                 setLastSeenMap(prev => {
                   const merged = { ...prev, ...freshLastSeen };
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem('chat_last_seen', JSON.stringify(merged));
+                  if (typeof window !== 'undefined' && currentUserId) {
+                    localStorage.setItem(`chat_last_seen_${currentUserId}`, JSON.stringify(merged));
                   }
                   return merged;
                 });

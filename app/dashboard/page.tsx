@@ -33,15 +33,21 @@ export default function DashboardPage() {
   const [isCallActive, setIsCallActive] = useState(false);
   const [selectedProfileUser, setSelectedProfileUser] = useState<any>(null);
   
-  const [fullUser, setFullUser] = useState<any>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('cached_profile_details');
-        if (stored) return JSON.parse(stored);
-      } catch {}
+  const currentAuthId = (session?.user as any)?.id || (session?.user?.email ? (session.user.email as string).toLowerCase().trim() : '');
+  const [fullUser, setFullUser] = useState<any>(null);
+
+  useEffect(() => {
+    if (!currentAuthId) {
+      setFullUser(null);
+      return;
     }
-    return null;
-  });
+    try {
+      const stored = localStorage.getItem(`cached_profile_details_${currentAuthId}`);
+      if (stored) {
+        setFullUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, [currentAuthId]);
   const [activeView, setActiveView] = useState<'chat' | 'calls'>('chat');
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
 
@@ -181,12 +187,12 @@ export default function DashboardPage() {
   // Load User Details for Profile Panel on-demand when profile is opened (cached)
   const hasLoadedUser = useRef(false);
   const refreshProfile = () => {
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && currentAuthId) {
       getProfileDetails().then(data => {
         if (data) {
           setFullUser(data);
           try {
-            localStorage.setItem('cached_profile_details', JSON.stringify(data));
+            localStorage.setItem(`cached_profile_details_${currentAuthId}`, JSON.stringify(data));
           } catch {}
         }
       }).catch(() => {});
@@ -215,13 +221,15 @@ export default function DashboardPage() {
           ...(name ? { name } : {}),
           ...(image ? { image } : {}),
         };
-        try { localStorage.setItem('cached_profile_details', JSON.stringify(updated)); } catch {}
+        if (currentAuthId) {
+          try { localStorage.setItem(`cached_profile_details_${currentAuthId}`, JSON.stringify(updated)); } catch {}
+        }
         return updated;
       });
     };
     window.addEventListener('user_profile_updated', handleProfileUpdate);
     return () => window.removeEventListener('user_profile_updated', handleProfileUpdate);
-  }, []);
+  }, [currentAuthId]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -229,19 +237,8 @@ export default function DashboardPage() {
     }
   }, [status, router]);
 
-  // Fast, optimistic session from local storage
-  let displaySession = session;
-  if (hasMounted && status === 'loading' && !session) {
-    try {
-      const stored = localStorage.getItem('connected_accounts');
-      if (stored) {
-        const list = JSON.parse(stored);
-        if (list.length > 0) {
-          displaySession = { user: list[0], expires: '' } as any;
-        }
-      }
-    } catch {}
-  }
+  // Session must be derived strictly from trusted server session
+  const displaySession = session;
 
   if (!hasMounted || (!displaySession && status === 'loading')) {
     return null;
