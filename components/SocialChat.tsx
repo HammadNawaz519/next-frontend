@@ -990,7 +990,7 @@ const ChatItem = memo(({
       <div className="flex-1 min-w-0 flex flex-col gap-0.5">
         <div className="flex items-center gap-1.5">
           <h4 className="text-[15px] font-semibold text-zinc-900 truncate">
-            {nickname || user.name}
+            {nickname || user.username || user.name}
           </h4>
           {isPinned && <span className="text-[10px] text-[#9D4EDD]">📌</span>}
         </div>
@@ -1649,7 +1649,7 @@ const SidebarItem = memo(({ user, isActive, onClick }: { user: User, isActive: b
       </div>
       <div className="meta">
         <b>
-          {user.name}
+          {user.username || user.name}
           <div className="side-meta">
             {user.unseenCount && user.unseenCount > 0 ? <span className="unseen-badge">{user.unseenCount}</span> : null}
           </div>
@@ -2826,7 +2826,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (!selectedUser) return;
     const newNick = nicknameInput.trim();
     const currentUserName = (session?.user as any)?.username || session?.user?.name || 'Someone';
-    const targetName = selectedUser.name || 'User';
+    const targetName = selectedUser.username || selectedUser.name || 'User';
 
     const updated = { ...nicknames, [selectedUser.id]: newNick };
     setNicknames(updated);
@@ -5457,7 +5457,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             triggerHaptic('light');
                             setViewStory({
                               id: story.id,
-                              name: story.user?.name || 'Contact',
+                              name: story.user?.username || story.user?.name || 'Contact',
                               media: story.imageUrl,
                               time: formatChatTime(story.createdAt),
                               isMe: false,
@@ -5478,7 +5478,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             )}
                           </div>
                           <span className="text-[12px] text-zinc-300 font-medium group-hover:text-white transition-colors truncate max-w-[64px] text-center">
-                            {story.user?.name ? story.user.name.split(' ')[0] : 'Story'}
+                            {story.user?.username || story.user?.name || 'Story'}
                           </span>
                         </div>
                       );
@@ -5778,7 +5778,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       {/* Contact Name & Presence */}
                       <div className="flex flex-col min-w-0">
                         <h3 className="text-[17px] font-bold text-white truncate leading-tight">
-                          {nicknames[selectedUser.id] || selectedUser.name}
+                          {nicknames[selectedUser.id] || selectedUser.username || selectedUser.name}
                         </h3>
                         <span className="text-[12px] text-zinc-400 mt-0.5 truncate font-medium">
                           {(() => {
