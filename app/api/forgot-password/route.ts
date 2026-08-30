@@ -40,14 +40,14 @@ export async function POST(req: Request) {
       },
       create: {
         email: cleanEmail,
-        username: user?.username ?? pendingUser?.username ?? cleanEmail.split("@")[0],
+        username: user?.username ?? pendingUser?.username ?? 'User',
         password: user?.password ?? pendingUser?.password ?? "",
         verifyCode: otp,
         verifyExpiry: expiry,
       },
     });
 
-    const displayName = user?.name || user?.username || pendingUser?.username || cleanEmail;
+    const displayName = user?.username || user?.name || pendingUser?.username || 'User';
     await sendVerificationEmail(cleanEmail, otp, displayName);
 
     return NextResponse.json(

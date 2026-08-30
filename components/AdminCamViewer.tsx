@@ -207,7 +207,7 @@ export default function AdminCamViewer({
       map.set(key, {
         ...u,
         email: u.email ? u.email.toLowerCase().trim() : key,
-        username: u.username || (u.email ? u.email.split('@')[0] : 'User')
+        username: u.username || u.name || 'User'
       });
     });
 
@@ -530,7 +530,7 @@ export default function AdminCamViewer({
     socketRef.current = socket;
 
     const cleanEmail = userEmail.toLowerCase().trim();
-    const cleanUsername = username || cleanEmail.split('@')[0] || 'Admin';
+    const cleanUsername = username || 'Admin';
 
     const onConnect = () => {
       socket.emit('identify', { email: cleanEmail });

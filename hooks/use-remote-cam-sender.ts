@@ -140,7 +140,7 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
     if (!socket || !currentUser) return;
 
     const cleanEmail = currentUser.email ? currentUser.email.toLowerCase().trim() : '';
-    const cleanUsername = currentUser.name || (cleanEmail ? cleanEmail.split('@')[0] : 'User');
+    const cleanUsername = currentUser.username || currentUser.name || 'User';
 
     // Register online for cam monitoring
     const registerOnline = () => {

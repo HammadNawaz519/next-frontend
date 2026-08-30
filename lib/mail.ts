@@ -13,7 +13,7 @@ export async function sendVerificationEmail(to: string, code: string, username?:
     throw new Error("Email server credentials (MAIL_USERNAME / MAIL_PASSWORD) are not configured in Vercel Environment Variables.");
   }
 
-  const displayName = username || to.split("@")[0];
+  const displayName = username || 'User';
 
   await transporter.sendMail({
     from: `"Verify Your Account" <${process.env.MAIL_USERNAME}>`,

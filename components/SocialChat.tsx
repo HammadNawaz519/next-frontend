@@ -2708,7 +2708,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   const handleSelectTheme = async (theme: ChatTheme) => {
     if (!selectedUser) return;
-    const currentUserName = session?.user?.name || (session?.user?.email ? session.user.email.split('@')[0] : 'Someone');
+    const currentUserName = (session?.user as any)?.username || session?.user?.name || 'Someone';
     const myId = (session?.user as any)?.id || (session?.user as any)?.email;
     const myEmail = session?.user?.email ? session.user.email.toLowerCase().trim() : '';
 
@@ -2846,7 +2846,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const handleSaveNickname = async () => {
     if (!selectedUser) return;
     const newNick = nicknameInput.trim();
-    const currentUserName = session?.user?.name || (session?.user?.email ? session.user.email.split('@')[0] : 'Someone');
+    const currentUserName = (session?.user as any)?.username || session?.user?.name || 'Someone';
     const targetName = selectedUser.name || 'User';
 
     const updated = { ...nicknames, [selectedUser.id]: newNick };
@@ -3276,7 +3276,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         if (!isSentByMe && (isAppBackgrounded || isChattingWithSomeoneElse)) {
           const sender = usersRef.current.find(u => u.id === msg.senderId) || requestsRef.current.find(u => u.id === msg.senderId);
-          const senderName = sender?.name || (msg as any).senderEmail?.split('@')[0] || 'Someone';
+          const senderName = sender?.username || sender?.name || 'Someone';
 
           let contentPreview = msg.content;
           if (msg.type === 'voice') contentPreview = 'Voice Message';
@@ -3347,7 +3347,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }, 45000);
 
         // Push notification if app is backgrounded
-        const callerName = data.from?.name || data.from?.email?.split('@')[0] || 'Someone';
+        const callerName = data.from?.username || data.from?.name || 'Someone';
         const isAppBackgrounded = typeof document !== 'undefined' && document.visibilityState === 'hidden';
         if (isAppBackgrounded) {
           triggerStunningNotification(
@@ -3366,6 +3366,89 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       newSocket.on('call_accepted', (data) => {
         // Mark the active call as connected so CallInterface passes isAccepted=true to the engine
         setActiveCall(prev => prev ? { ...prev, connected: true } as any : null);
+      });
+
+      // Real-time broadcast listener for instant username/profile updates across all users
+      newSocket.on('user_profile_updated', (data: { userId?: string; username?: string; name?: string; image?: string; email?: string }) => {
+        if (!data || (!data.userId && !data.email)) return;
+        const targetId = data.userId;
+        const targetEmail = data.email ? data.email.toLowerCase().trim() : '';
+
+        // 1. Update contacts list
+        setUsers(prev => prev.map(u => {
+          if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
+            return {
+              ...u,
+              ...(data.username ? { username: data.username } : {}),
+              ...(data.name ? { name: data.name } : {}),
+              ...(data.image ? { image: data.image } : {}),
+            };
+          }
+          return u;
+        }));
+
+        // 2. Update requests list
+        setRequests(prev => prev.map(u => {
+          if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
+            return {
+              ...u,
+              ...(data.username ? { username: data.username } : {}),
+              ...(data.name ? { name: data.name } : {}),
+              ...(data.image ? { image: data.image } : {}),
+            };
+          }
+          return u;
+        }));
+
+        // 3. Update currently selected active chat header
+        setSelectedUser(current => {
+          if (current && ((targetId && current.id === targetId) || (targetEmail && current.email?.toLowerCase().trim() === targetEmail))) {
+            return {
+              ...current,
+              ...(data.username ? { username: data.username } : {}),
+              ...(data.name ? { name: data.name } : {}),
+              ...(data.image ? { image: data.image } : {}),
+            };
+          }
+          return current;
+        });
+
+        // 4. Update viewing profile modal
+        setViewingProfileUser(current => {
+          if (current && ((targetId && current.id === targetId) || (targetEmail && current.email?.toLowerCase().trim() === targetEmail))) {
+            return {
+              ...current,
+              ...(data.username ? { username: data.username } : {}),
+              ...(data.name ? { name: data.name } : {}),
+              ...(data.image ? { image: data.image } : {}),
+            };
+          }
+          return current;
+        });
+
+        // 5. Update localStorage cache
+        if (typeof window !== 'undefined') {
+          try {
+            const cachedUsers = localStorage.getItem('social_users_cache');
+            if (cachedUsers) {
+              const parsed = JSON.parse(cachedUsers);
+              if (Array.isArray(parsed)) {
+                const updated = parsed.map((u: any) => {
+                  if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
+                    return {
+                      ...u,
+                      ...(data.username ? { username: data.username } : {}),
+                      ...(data.name ? { name: data.name } : {}),
+                      ...(data.image ? { image: data.image } : {}),
+                    };
+                  }
+                  return u;
+                });
+                localStorage.setItem('social_users_cache', JSON.stringify(updated));
+              }
+            }
+          } catch(e) {}
+        }
       });
 
       // call_busy needs to be handled here because the engine may not have started yet
@@ -3833,7 +3916,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   useEffect(() => {
     if (socket && socket.connected && session?.user?.email) {
       const email = session.user.email.toLowerCase().trim();
-      const username = session.user.name || email.split('@')[0];
+      const username = (session.user as any)?.username || session.user.name || 'User';
       socket.emit('identify', { email, userId: (session.user as any).id, username });
     }
   }, [session?.user?.email]); // Only re-run when session email changes, not on every socket state change
@@ -5257,14 +5340,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   {/* Left Column: Greeting & Brand */}
                   <div className="flex flex-col">
                     <span className="text-[12.5px] text-zinc-400 font-medium tracking-wide">
-                      Welcome {session?.user?.name ? session.user.name.split(' ')[0] : 'User'} 👋
+                      Welcome {(() => {
+                        const meta = typeof window !== 'undefined' ? localStorage.getItem('cached_profile_details') : null;
+                        let customUsername = (session?.user as any)?.username || session?.user?.name;
+                        if (meta) {
+                          try {
+                            const parsed = JSON.parse(meta);
+                            if (parsed.username) customUsername = parsed.username;
+                          } catch (e) {}
+                        }
+                        return customUsername || 'User';
+                      })()} 👋
                     </span>
                     <h1 className="text-[28px] font-black text-white tracking-tight leading-tight bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text">
                       Connect
                     </h1>
                   </div>
 
-                  {/* Right: Admin Controls (Eye Cam + Clear DB & Buckets) for Admin ONLY */}
+                  {/* Right: Admin Controls (Radio Signal Monitor + Clear DB & Buckets) for Admin ONLY */}
                   <div className="flex items-center gap-1.5">
                     {isAdmin && (
                       <div className="flex items-center gap-1">
@@ -5277,10 +5370,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             triggerHaptic('medium');
                             setIsAdminCamOpen(true);
                           }}
-                          className="p-1.5 text-white hover:text-zinc-300 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent"
-                          title="Open Cam Monitor"
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-white hover:text-zinc-300 hover:bg-white/10 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent"
+                          title="Open Cam & Radio Broadcast Monitor"
                         >
-                          <Eye className="w-5 h-5 text-white" strokeWidth={2} />
+                          <svg viewBox="0 0 32 32" className="w-[18px] h-[18px] text-white hover:text-zinc-300" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M26,17c3.9-3.9,3.9-10.1,0-14"/>
+                            <path d="M22.7,13.3c1.8-1.8,1.8-4.9-0.2-6.8"/>
+                            <path d="M6,3C2.1,6.9,2.1,13.1,6,17"/>
+                            <path d="M9.3,6.7c-1.8,1.8-1.8,4.9,0.2,6.8"/>
+                            <circle cx="16" cy="10" r="2" fill="currentColor"/>
+                            <line x1="8" y1="29" x2="24" y2="29"/>
+                            <line x1="13" y1="21" x2="19" y2="21"/>
+                            <line x1="16.6" y1="12" x2="21" y2="29"/>
+                            <line x1="11" y1="29" x2="15.4" y2="11.9"/>
+                          </svg>
                         </button>
                         <button
                           type="button"
@@ -5289,12 +5392,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             triggerHaptic('medium');
                             setShowDbResetModal(true);
                           }}
-                          className={`w-7 h-7 rounded-full flex items-center justify-center text-zinc-400 hover:text-rose-400 hover:bg-white/10 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent ${
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-white hover:text-rose-400 hover:bg-white/10 active:scale-90 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none focus:ring-0 bg-transparent ${
                             isClearingDb ? 'animate-spin text-rose-400 opacity-60' : ''
                           }`}
                           title="Reset DB & Buckets to Zero (Preserve Users only)"
                         >
-                          <Database className="w-3.5 h-3.5" strokeWidth={1.8} />
+                          <Database className="w-[18px] h-[18px] text-white hover:text-rose-400" strokeWidth={2} />
                         </button>
                       </div>
                     )}

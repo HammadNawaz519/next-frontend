@@ -88,7 +88,7 @@ export default function ProfilePanel({
   const isSelf = !targetUser || targetUser.id === (session?.user as any)?.id;
 
   const curEmail = (activeUserData?.email || session?.user?.email || '').toLowerCase().trim();
-  const curUsername = activeUserData?.username || (session?.user as any)?.username || (curEmail ? curEmail.split('@')[0] : 'user');
+  const curUsername = activeUserData?.username || (session?.user as any)?.username || activeUserData?.name || session?.user?.name || 'User';
   const [localUsername, setLocalUsername] = useState(curUsername);
   const curName = activeUserData?.name || session?.user?.name || 'User';
   const curImage = activeUserData?.image || session?.user?.image || '';
@@ -104,7 +104,7 @@ export default function ProfilePanel({
       setFollowerCount(followers.length);
       setFollowingCount(following.length);
 
-      const resolvedUsername = activeUserData?.username || (session?.user as any)?.username || (curEmail ? curEmail.split('@')[0] : 'user');
+      const resolvedUsername = activeUserData?.username || (session?.user as any)?.username || activeUserData?.name || session?.user?.name || 'User';
       setLocalUsername(resolvedUsername);
       setUsernameInput(resolvedUsername);
 
@@ -484,7 +484,7 @@ export default function ProfilePanel({
                 </div>
               ) : (
                 (listTab === 'followers' ? followersList : followingList).map((userItem: any) => {
-                  const itemUsername = userItem.username || (userItem.email ? userItem.email.split('@')[0] : 'user');
+                  const itemUsername = userItem.username || userItem.name || 'User';
                   const itemName = userItem.name || itemUsername;
                   const itemBg = getPastelAvatarBg(userItem.id || itemUsername);
 

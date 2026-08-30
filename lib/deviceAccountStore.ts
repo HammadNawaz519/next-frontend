@@ -131,8 +131,8 @@ function _loadAccounts(): Record<string, DeviceAccountMeta> {
         migrated[uid] = {
           userId: uid,
           email: acc.email.toLowerCase().trim(),
-          username: acc.username || acc.email.split('@')[0],
-          displayName: acc.name || acc.displayName || acc.username || 'User',
+          username: acc.username || acc.name || 'User',
+          displayName: acc.username || acc.name || 'User',
           profilePicture: acc.image || acc.profilePicture || '',
           provider: acc.provider || 'credentials',
           isSavedOnDevice: !!acc.password, // migrated as saved if they had a password stored
@@ -369,11 +369,12 @@ export const DeviceAccountStore = {
    */
   metaFromSession(sessionUser: any): Omit<DeviceAccountMeta, 'isSavedOnDevice' | 'lastUsedAt'> {
     const email = (sessionUser?.email || '').toLowerCase().trim();
+    const canonicalUser = sessionUser?.username || sessionUser?.name || 'User';
     return {
       userId: sessionUser?.id || sessionUser?.sub || email,
       email,
-      username: sessionUser?.username || email.split('@')[0],
-      displayName: sessionUser?.name || sessionUser?.username || 'User',
+      username: canonicalUser,
+      displayName: canonicalUser,
       profilePicture: sessionUser?.image || '',
       provider: sessionUser?.provider || 'credentials',
     };

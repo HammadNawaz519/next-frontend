@@ -120,8 +120,8 @@ export default function AccountsPage() {
           await DeviceAccountStore.addOrUpdateAccount({
             userId: `pending_${cleanEmail}`,
             email: cleanEmail,
-            username: cleanEmail.split('@')[0],
-            displayName: cleanEmail.split('@')[0],
+            username: cleanEmail,
+            displayName: cleanEmail,
             profilePicture: '',
             provider: 'credentials',
           }, true);

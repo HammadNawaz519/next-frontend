@@ -442,7 +442,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex-1 min-w-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden">
                 <p className="text-[13px] font-normal truncate transition-colors" style={{ color: 'var(--dm-text-primary)' }}>
-                  {displaySession.user?.name || displaySession.user?.email?.split('@')[0] || 'User'}
+                  {(displaySession.user as any)?.username || displaySession.user?.name || 'User'}
                 </p>
                 <p className="text-[10px] truncate uppercase tracking-widest mt-0.5" style={{ color: isProfileOpen ? 'var(--dm-text-secondary)' : 'var(--dm-text-muted)' }}>
                   View Profile

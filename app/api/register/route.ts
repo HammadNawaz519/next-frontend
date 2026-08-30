@@ -26,7 +26,13 @@ export async function POST(req: Request) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const cleanUsername = username?.trim() || cleanEmail.split('@')[0];
+    const cleanUsername = username?.trim();
+    if (!cleanUsername) {
+      return NextResponse.json(
+        { message: "Username is required." },
+        { status: 400 }
+      );
+    }
 
     // Check if email is already a verified account
     const existingUser = await prisma.user.findUnique({ where: { email: cleanEmail } });

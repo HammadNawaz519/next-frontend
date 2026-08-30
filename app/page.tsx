@@ -169,8 +169,8 @@ export default function LoginPage() {
           await DeviceAccountStore.addOrUpdateAccount({
             userId: `pending_${cleanEmail}`,
             email: cleanEmail,
-            username: cleanEmail.split('@')[0],
-            displayName: cleanEmail.split('@')[0],
+            username: cleanEmail,
+            displayName: cleanEmail,
             profilePicture: '',
             provider: 'credentials',
           }, true);
@@ -252,8 +252,8 @@ export default function LoginPage() {
             await DeviceAccountStore.addOrUpdateAccount({
               userId: `pending_${cleanEmail}`,
               email: cleanEmail,
-              username: username || cleanEmail.split('@')[0],
-              displayName: username || cleanEmail.split('@')[0],
+              username: username || 'User',
+              displayName: username || 'User',
               profilePicture: '',
               provider: 'credentials',
             }, true);

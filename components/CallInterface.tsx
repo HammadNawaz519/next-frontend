@@ -219,7 +219,7 @@ export default function CallInterface({
     }
   };
 
-  const callerDisplayName = peer.name || peer.username || peer.email?.split('@')[0] || 'User';
+  const callerDisplayName = peer.username || peer.name || 'User';
   const avatarKey = peer.id || peer.username || callerDisplayName;
   const avatarBg = getDeterministicAvatarBg(avatarKey);
 
