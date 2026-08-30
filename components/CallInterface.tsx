@@ -117,17 +117,19 @@ export default function CallInterface({
     const videoEl = fullScreenVideoRef.current;
     if (!videoEl) return;
 
-    const streamToShow = callStatus === 'active' ? remoteStream : localStream;
+    const hasRemoteVideo = Boolean(remoteStream && remoteStream.getVideoTracks().length > 0);
+    const streamToShow = (callStatus === 'active' && hasRemoteVideo) ? remoteStream : localStream;
+
     if (streamToShow) {
       if (videoEl.srcObject !== streamToShow) {
         videoEl.srcObject = streamToShow;
       }
-      videoEl.muted = true;
+      videoEl.muted = (streamToShow === localStream);
       videoEl.play().catch((e) => console.warn('Full-screen video play error:', e));
     }
   }, [currentCallType, callStatus, remoteStream, localStream]);
 
-  // Wire small floating PiP video stream
+  // Wire small floating PiP video stream (local preview)
   useEffect(() => {
     if (currentCallType !== 'video' || callStatus !== 'active') return;
     const pipEl = localPipVideoRef.current;
@@ -138,7 +140,7 @@ export default function CallInterface({
     }
     pipEl.muted = true;
     pipEl.play().catch((e) => console.warn('PiP video play error:', e));
-  }, [currentCallType, callStatus, localStream]);
+  }, [currentCallType, callStatus, localStream, isCamOff]);
 
   // Wire remote audio stream
   useEffect(() => {
@@ -334,8 +336,8 @@ export default function CallInterface({
               className={`w-full h-full object-cover ${callStatus !== 'active' ? 'mirror' : ''}`}
             />
 
-            {/* Remote Camera Off Fallback */}
-            {callStatus === 'active' && isCamOff && (
+            {/* Remote Camera Waiting / Connecting Indicator (only if remote video not streaming yet) */}
+            {callStatus === 'active' && (!remoteStream || remoteStream.getVideoTracks().length === 0) && (
               <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-zinc-900/90 pointer-events-none">
                 <div
                   className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-2xl font-bold text-zinc-900 shadow-xl border-2 border-white/20 mb-3"
@@ -347,22 +349,29 @@ export default function CallInterface({
                     <span>{callerDisplayName.charAt(0).toUpperCase()}</span>
                   )}
                 </div>
-                <span className="text-xs text-zinc-300 font-medium">Camera is turned off</span>
+                <span className="text-xs text-zinc-300 font-medium">Connecting video...</span>
               </div>
             )}
 
             {/* Floating Local Camera PiP (Self view in bottom-right) */}
             {callStatus === 'active' && (
-              <div className="absolute bottom-4 right-4 w-24 h-36 sm:w-28 sm:h-40 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/80 bg-zinc-900 z-20">
-                <video
-                  ref={localPipVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  controls={false}
-                  disablePictureInPicture
-                  className="w-full h-full object-cover mirror"
-                />
+              <div className="absolute bottom-4 right-4 w-24 h-36 sm:w-28 sm:h-40 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/80 bg-zinc-900 z-20 flex items-center justify-center">
+                {isCamOff ? (
+                  <div className="flex flex-col items-center justify-center text-center p-2">
+                    <span className="text-xl mb-1">📷</span>
+                    <span className="text-[10px] text-zinc-400 font-semibold">Camera Off</span>
+                  </div>
+                ) : (
+                  <video
+                    ref={localPipVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    controls={false}
+                    disablePictureInPicture
+                    className="w-full h-full object-cover mirror"
+                  />
+                )}
               </div>
             )}
 

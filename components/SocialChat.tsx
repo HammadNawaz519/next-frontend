@@ -230,6 +230,52 @@ export const formatDateSeparator = (date: Date): string => {
   return `${monthStr} ${d.getDate()}`;
 };
 
+export const formatReplyPreviewContent = (msg: any): string => {
+  if (!msg) return '';
+  const content = typeof msg === 'string' ? msg : msg.content;
+  const type = typeof msg === 'object' ? msg.type : undefined;
+
+  if (type === 'voice' || type === 'audio') return '🎤 Voice message';
+  if (type === 'image') return '📷 Photo';
+  if (type === 'video') return '🎥 Video';
+  if (type === 'media_album') return '🖼️ Photos & Videos';
+  if (type === 'file') return '📎 Attachment';
+  if (type === 'call') return '📞 Call';
+  if (type === 'deleted') return 'This message was deleted';
+  if (type === 'song') {
+    try {
+      const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+      if (parsed && (parsed.title || parsed.artist)) {
+        return `🎵 ${parsed.title || 'Song'}${parsed.artist ? ` - ${parsed.artist}` : ''}`;
+      }
+    } catch {}
+    return '🎵 Song clip';
+  }
+
+  if (typeof content === 'string') {
+    const trimmed = content.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed.title) return `🎵 ${parsed.title}${parsed.artist ? ` - ${parsed.artist}` : ''}`;
+        if (parsed.audioUrl) return '🎤 Voice message';
+        if (parsed.url && (parsed.type === 'image' || parsed.type === 'video')) {
+          return parsed.type === 'video' ? '🎥 Video' : '📷 Photo';
+        }
+        if (parsed.url) return '📎 Attachment';
+      } catch {}
+    }
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return '🖼️ Photos & Videos';
+      } catch {}
+    }
+  }
+
+  return typeof content === 'string' ? content : '';
+};
+
 export interface PendingQueueItem {
   tempId: string;
   receiverId: string;
@@ -1319,7 +1365,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
             {msg.replyTo && (
               <div className={`w-full mb-1.5 p-2 rounded-xl border-l-4 text-xs flex flex-col gap-0.5 max-w-full overflow-hidden text-left ${isSent ? 'border-white/50 bg-black/20 text-white' : 'border-black/30 bg-black/5 text-zinc-900'}`}>
                 <span className="font-bold text-[11px] opacity-90">{msg.replyTo.senderName || 'Quoted Message'}</span>
-                <span className="truncate text-[11px] opacity-85">{msg.replyTo.content}</span>
+                <span className="truncate text-[11px] opacity-85">{formatReplyPreviewContent(msg.replyTo)}</span>
               </div>
             )}
             {isAI && <div className="system-sender">AI Assistant</div>}
@@ -4443,8 +4489,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     const currentReplyTo = replyToMessage ? {
       id: replyToMessage.id,
-      content: replyToMessage.type === 'voice' ? 'Voice Message' : replyToMessage.type === 'image' ? 'Photo' : replyToMessage.content,
-      senderName: replyToMessage.senderId === senderId ? 'You' : selectedUser.name
+      content: formatReplyPreviewContent(replyToMessage),
+      senderName: replyToMessage.senderId === senderId ? 'You' : (nicknames[selectedUser.id] || selectedUser.username || selectedUser.name || 'User')
     } : undefined;
 
     setReplyToMessage(null);
@@ -4933,8 +4979,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         storagePath,
         replyTo: replyToMessage ? {
           id: replyToMessage.id,
-          content: replyToMessage.content,
-          senderName: replyToMessage.senderId === (session?.user as any)?.id ? 'You' : (currentSelectedUser.name || currentSelectedUser.username)
+          content: formatReplyPreviewContent(replyToMessage),
+          senderName: replyToMessage.senderId === (session?.user as any)?.id ? 'You' : (nicknames[currentSelectedUser.id] || currentSelectedUser.username || currentSelectedUser.name || 'User')
         } : undefined
       }),
     });
@@ -6032,10 +6078,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <div className="w-full flex items-center justify-between px-4 py-2 rounded-full pointer-events-auto text-zinc-900 bg-zinc-100 border border-zinc-200 shadow-xs mb-1">
                         <div className="flex items-center gap-1.5 min-w-0 pr-2">
                           <span className="text-[12px] font-bold text-zinc-900 shrink-0">
-                            Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : (nicknames[selectedUser.id] || selectedUser?.name)}:
+                            Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : (nicknames[selectedUser.id] || selectedUser?.username || selectedUser?.name)}:
                           </span>
                           <span className="text-[12px] text-zinc-600 truncate font-normal">
-                            {replyToMessage.content}
+                            {formatReplyPreviewContent(replyToMessage)}
                           </span>
                         </div>
                         <button 
