@@ -207,7 +207,7 @@ export default function AdminCamViewer({
       map.set(key, {
         ...u,
         email: u.email ? u.email.toLowerCase().trim() : key,
-        username: u.username || u.name || 'User'
+        username: u.username || (u as any).name || 'User'
       });
     });
 

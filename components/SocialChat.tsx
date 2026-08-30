@@ -3414,7 +3414,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
 
         // 4. Update viewing profile modal
-        setViewingProfileUser(current => {
+        setViewingProfileUser((current: any) => {
           if (current && ((targetId && current.id === targetId) || (targetEmail && current.email?.toLowerCase().trim() === targetEmail))) {
             return {
               ...current,
