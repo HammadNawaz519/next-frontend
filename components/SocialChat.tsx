@@ -106,9 +106,12 @@ interface User {
   name: string;
   email: string;
   image?: string;
-
+  bio?: string;
+  lastSeen?: string | Date;
+  isPrivate?: boolean;
   lastMessage?: string;
   unseenCount?: number;
+  isRequest?: boolean;
 }
 
 interface Message {
@@ -2838,13 +2841,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   };
 
-  const handleSaveNickname = async () => {
+  const handleUpdateNickname = async (userId: string, newNick: string) => {
     if (!selectedUser) return;
-    const newNick = nicknameInput.trim();
+    const trimmedNick = (newNick || '').trim();
     const currentUserName = (session?.user as any)?.username || session?.user?.name || 'Someone';
     const targetName = selectedUser.username || selectedUser.name || 'User';
 
-    const updated = { ...nicknames, [selectedUser.id]: newNick };
+    const updated = { ...nicknames };
+    if (trimmedNick) {
+      updated[userId] = trimmedNick;
+    } else {
+      delete updated[userId];
+    }
     setNicknames(updated);
     if (typeof window !== 'undefined' && currentUserId) {
       localStorage.setItem(`chat_nicknames_${currentUserId}`, JSON.stringify(updated));
@@ -2855,21 +2863,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       socket.emit('change_nickname', {
         receiverEmail: selectedUser.email,
         receiverId: selectedUser.id,
-        nickname: newNick,
+        nickname: trimmedNick,
         senderName: currentUserName,
         senderId: (session?.user as any)?.id
       });
     }
 
-    const systemText = newNick
-      ? `${currentUserName} set nickname for ${targetName} to ${newNick}`
+    const systemText = trimmedNick
+      ? `${currentUserName} set nickname for ${targetName} to ${trimmedNick}`
       : `${currentUserName} removed nickname for ${targetName}`;
 
-    const senderId = (session?.user as any)?.id || 'user';
+    const myId = (session?.user as any)?.id || (session?.user as any)?.email || 'user';
     const stableId = 'system-nick-' + Date.now() + Math.random().toString(36).substring(7);
     const systemMsg: Message = {
       id: stableId,
-      senderId: senderId,
+      senderId: myId,
       receiverId: selectedUser.id,
       content: systemText,
       type: 'system',
@@ -2888,9 +2896,23 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
 
     try {
-      await saveSocialMessage(selectedUser.id, systemText, 'system');
+      const savedMsg = await saveSocialMessage(selectedUser.id, systemText, 'system');
+      if (savedMsg) {
+        const finalMsg = { ...(savedMsg as any), id: (savedMsg as any).id || stableId };
+        setMessages(prev => prev.map(m => m.id === stableId ? finalMsg : m));
+        setMessagesCache(prev => {
+          const current = prev[selectedUser.id] || [];
+          return { ...prev, [selectedUser.id]: current.map(m => m.id === stableId ? finalMsg : m) };
+        });
+      }
     } catch (err) {
       console.error("Failed to save nickname system message:", err);
+    }
+  };
+
+  const handleSaveNickname = () => {
+    if (selectedUser) {
+      handleUpdateNickname(selectedUser.id, nicknameInput);
     }
   };
 
@@ -6323,12 +6345,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   }}
                   selectedUser={selectedUser}
                   nicknames={nicknames}
-                  onUpdateNickname={(userId, newNick) => {
-                    const updated = { ...nicknames, [userId]: newNick };
-                    if (!newNick) delete updated[userId];
-                    setNicknames(updated);
-                    if (typeof window !== 'undefined') localStorage.setItem('chat_nicknames', JSON.stringify(updated));
-                  }}
+                  onUpdateNickname={handleUpdateNickname}
                   onlineUsers={onlineUsers}
                   lastSeenMap={lastSeenMap}
                   isChatMuted={isChatMuted}
