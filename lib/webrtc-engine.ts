@@ -110,6 +110,16 @@ const FALLBACK_ICE_CONFIG: RTCConfiguration = {
         'stun:stun.relay.metered.ca:80',
       ],
     },
+    {
+      urls: [
+        'turn:global.relay.metered.ca:80',
+        'turn:global.relay.metered.ca:80?transport=tcp',
+        'turn:global.relay.metered.ca:443',
+        'turns:global.relay.metered.ca:443?transport=tcp',
+      ],
+      username: 'b861bc5468dd05aa2aff283d',
+      credential: 'fJYY96O75HWDNLuH',
+    },
   ],
   iceCandidatePoolSize: 0,
   bundlePolicy: 'max-bundle' as RTCBundlePolicy,
@@ -535,11 +545,18 @@ export class WebRTCEngine {
       await this.pc.setLocalDescription(offer);
 
       const target = this._peer?.email?.toLowerCase().trim();
+      const signalPayload = { type: 'offer', sdp: offer.sdp };
       this.socket?.emit('webrtc_signal', {
         to: target,
         toUserId: this._peer?.id,
         callId: this._callId,
-        signal: { type: 'offer', sdp: offer.sdp },
+        signal: signalPayload,
+      });
+      this.socket?.emit('offer', {
+        to: target,
+        toUserId: this._peer?.id,
+        callId: this._callId,
+        offer: signalPayload,
       });
 
       this.makingOffer = false;
@@ -649,11 +666,18 @@ export class WebRTCEngine {
     pc.onicecandidate = (event) => {
       if (event.candidate && this.socket?.connected) {
         const target = this._peer?.email?.toLowerCase().trim();
+        const candJson = event.candidate.toJSON();
         this.socket.emit('webrtc_signal', {
           to: target,
           toUserId: this._peer?.id,
           callId: this._callId,
-          signal: { candidate: event.candidate.toJSON() },
+          signal: { candidate: candJson },
+        });
+        this.socket.emit('ice_candidate', {
+          to: target,
+          toUserId: this._peer?.id,
+          callId: this._callId,
+          candidate: candJson,
         });
       }
     };
@@ -980,6 +1004,12 @@ export class WebRTCEngine {
           toUserId: this._peer?.id,
           callId: this._callId,
           signal: signalPayload,
+        });
+        this.socket?.emit('answer', {
+          to: target,
+          toUserId: this._peer?.id,
+          callId: this._callId,
+          answer: signalPayload,
         });
         return;
       }
