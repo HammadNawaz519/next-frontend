@@ -1,23 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { signIn, useSession } from 'next-auth/react';
+import React, { useState, useEffect } from 'react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
-  Users,
   UserPlus,
-  Trash2,
   Lock,
   Eye,
   EyeOff,
   ChevronLeft,
   ArrowRight,
-  Check,
   AlertCircle,
-  MoreVertical,
-  LogIn,
-  Mail,
-  User,
 } from 'lucide-react';
 import { DeviceAccountStore, DeviceAccountMeta } from '@/lib/deviceAccountStore';
 import { triggerHaptic } from '@/lib/haptics';
@@ -28,8 +21,6 @@ export default function AccountsPage() {
 
   const [savedAccounts, setSavedAccounts] = useState<DeviceAccountMeta[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'remove'>('list');
-  const [showAddAccountModal, setShowAddAccountModal] = useState(false);
-  const [authTab, setAuthTab] = useState<'signIn' | 'signUp'>('signIn');
 
   // Password Prompt for switching account
   const [selectedAccount, setSelectedAccount] = useState<DeviceAccountMeta | null>(null);
@@ -37,14 +28,6 @@ export default function AccountsPage() {
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   const [promptLoading, setPromptLoading] = useState(false);
   const [promptError, setPromptError] = useState('');
-
-  // Add Account Form Fields
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState('');
 
   // Load accounts on mount
   const loadAccounts = async () => {
@@ -103,59 +86,6 @@ export default function AccountsPage() {
     triggerHaptic('medium');
     await DeviceAccountStore.removeAccount(userId);
     loadAccounts();
-  };
-
-  // Add Account Submit (Sign In or Sign Up)
-  const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    triggerHaptic('medium');
-    setAuthLoading(true);
-    setAuthError('');
-
-    if (authTab === 'signIn') {
-      try {
-        const res = await signIn('credentials', { redirect: false, email, password });
-        if (res?.ok) {
-          const cleanEmail = email.toLowerCase().trim();
-          await DeviceAccountStore.addOrUpdateAccount({
-            userId: `pending_${cleanEmail}`,
-            email: cleanEmail,
-            username: cleanEmail,
-            displayName: cleanEmail,
-            profilePicture: '',
-            provider: 'credentials',
-          }, true);
-          DeviceAccountStore.setCurrentAccountId(`pending_${cleanEmail}`);
-          setShowAddAccountModal(false);
-          router.push('/dashboard');
-        } else {
-          setAuthError(res?.error === 'EMAIL_NOT_VERIFIED' ? 'Email not verified. Please verify on main login screen.' : 'Invalid email or password.');
-          setAuthLoading(false);
-        }
-      } catch (err) {
-        setAuthError('Connection error. Please try again.');
-        setAuthLoading(false);
-      }
-    } else {
-      try {
-        const res = await fetch('/api/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, email, password }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setAuthError(data.message || 'Registration failed.');
-          setAuthLoading(false);
-        } else {
-          // Send to main screen for OTP verification
-          router.push('/?sheet=verify');
-        }
-      } catch (err) {
-        setAuthError('Signup failed. Please try again.');
-        setAuthLoading(false);
-      }
-    }
   };
 
   const curEmail = session?.user?.email?.toLowerCase().trim();
@@ -244,10 +174,10 @@ export default function AccountsPage() {
                 {viewMode === 'remove' ? (
                   <button
                     onClick={(e) => handleRemoveAccount(acc.userId, e)}
-                    className="w-9 h-9 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition-all cursor-pointer"
-                    title="Remove Account"
+                    className="px-4 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-[12px] font-bold border border-zinc-300 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 shadow-2xs"
+                    title="Delete Account"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    Delete
                   </button>
                 ) : (
                   <div className="text-zinc-400">
@@ -258,15 +188,14 @@ export default function AccountsPage() {
             );
           })}
 
-          {/* Add Another Account Button */}
+          {/* Add Another Account Button - redirects directly to login / signup screen */}
           <button
-            onClick={() => {
+            onClick={async () => {
               triggerHaptic('light');
-              setEmail('');
-              setPassword('');
-              setUsername('');
-              setAuthError('');
-              setShowAddAccountModal(true);
+              if (session?.user) {
+                await signOut({ redirect: false });
+              }
+              router.push('/');
             }}
             className="w-full h-14 rounded-full border-2 border-dashed border-zinc-200 hover:border-zinc-400 text-zinc-700 font-bold text-[14px] flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.99] mt-2"
           >
@@ -343,112 +272,6 @@ export default function AccountsPage() {
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
                     <span>Sign In</span>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL B: ADD ACCOUNT (SIGN IN / SIGN UP) ── */}
-      {showAddAccountModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center p-0 md:p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-[440px] bg-white rounded-t-[32px] md:rounded-[32px] p-6 flex flex-col gap-4 shadow-2xl animate-in slide-in-from-bottom-6 max-h-[90vh] overflow-y-auto no-scrollbar">
-            <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-2 mb-1 shrink-0" />
-
-            {/* Segmented Pill Tabs */}
-            <div className="w-full bg-zinc-100 p-1 rounded-full flex items-center">
-              <button
-                type="button"
-                onClick={() => { setAuthTab('signIn'); setAuthError(''); }}
-                className={`flex-1 py-2 rounded-full text-[13px] font-bold transition-all cursor-pointer ${
-                  authTab === 'signIn' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => { setAuthTab('signUp'); setAuthError(''); }}
-                className={`flex-1 py-2 rounded-full text-[13px] font-bold transition-all cursor-pointer ${
-                  authTab === 'signUp' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500'
-                }`}
-              >
-                Create Account
-              </button>
-            </div>
-
-            {authError && (
-              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-[12.5px] font-medium flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                <span>{authError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleAuthSubmit} className="flex flex-col gap-3.5">
-              {authTab === 'signUp' && (
-                <div className="w-full h-14 bg-zinc-50 border border-zinc-200 rounded-full px-5 flex items-center gap-3 focus-within:bg-white focus-within:border-zinc-900 transition-all">
-                  <User className="w-5 h-5 text-zinc-400 shrink-0" />
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Username"
-                    required
-                    className="w-full bg-transparent text-[14.5px] text-zinc-900 placeholder:text-zinc-400 font-normal outline-none"
-                  />
-                </div>
-              )}
-
-              <div className="w-full h-14 bg-zinc-50 border border-zinc-200 rounded-full px-5 flex items-center gap-3 focus-within:bg-white focus-within:border-zinc-900 transition-all">
-                <Mail className="w-5 h-5 text-zinc-400 shrink-0" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email address"
-                  required
-                  className="w-full bg-transparent text-[14.5px] text-zinc-900 placeholder:text-zinc-400 font-normal outline-none"
-                />
-              </div>
-
-              <div className="w-full h-14 bg-zinc-50 border border-zinc-200 rounded-full px-5 flex items-center gap-3 focus-within:bg-white focus-within:border-zinc-900 transition-all">
-                <Lock className="w-5 h-5 text-zinc-400 shrink-0" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
-                  required
-                  className="w-full bg-transparent text-[14.5px] text-zinc-900 placeholder:text-zinc-400 font-normal outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-zinc-400 hover:text-zinc-600 p-1 outline-none"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddAccountModal(false)}
-                  className="flex-1 h-13 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold text-[14px] transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={authLoading}
-                  className="flex-1 h-13 rounded-full bg-[#141111] hover:bg-black text-white font-bold text-[14px] shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {authLoading ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <span>{authTab === 'signIn' ? 'Sign In' : 'Sign Up'}</span>
                   )}
                 </button>
               </div>
