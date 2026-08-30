@@ -80,7 +80,11 @@ export default function IncomingCallModal({
         <div className="absolute bottom-10 flex items-center gap-6 px-8 py-4 backdrop-blur-2xl rounded-full shadow-2xl z-30 bg-[#141111]/90 border border-white/10">
           {/* Decline Button */}
           <button
-            onClick={onReject}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onReject();
+            }}
             className="w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 active:scale-90 transition-all shadow-xl bg-red-500 text-white cursor-pointer outline-none border-0"
             title="Decline Call"
             aria-label="Decline Call"
@@ -92,7 +96,11 @@ export default function IncomingCallModal({
 
           {/* Accept Button */}
           <button
-            onClick={onAccept}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onAccept();
+            }}
             className="w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 active:scale-90 transition-all shadow-xl bg-emerald-500 text-white animate-bounce cursor-pointer outline-none border-0"
             title="Accept Call"
             aria-label="Accept Call"

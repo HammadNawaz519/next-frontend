@@ -322,10 +322,15 @@ export class WebRTCEngine {
           height: { ideal: 480 },
         } : false,
       },
-      // 3. Minimal video constraints (any camera resolution available)
+      // 3. Minimal video constraints
       {
         audio: true,
         video: this._callType === 'video' ? true : false,
+      },
+      // 4. Audio-only fallback if camera is busy or unavailable
+      {
+        audio: true,
+        video: false,
       },
     ];
 
@@ -333,34 +338,12 @@ export class WebRTCEngine {
     for (const attempt of fallbackAttempts) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia(attempt);
-        if (stream) {
-          if (this._callType === 'video' && stream.getVideoTracks().length === 0) {
-            console.warn('[WebRTCEngine] Acquired stream has no video tracks, trying next fallback');
-            continue;
-          }
+        if (stream && stream.getAudioTracks().length > 0) {
           return stream;
         }
       } catch (err: any) {
         lastError = err;
         console.warn('[WebRTCEngine] getUserMedia attempt failed:', err.name, err.message);
-
-        // Don't retry on permission denial
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          throw new Error(
-            this._callType === 'video'
-              ? 'Camera and microphone permission denied'
-              : 'Microphone permission denied'
-          );
-        }
-
-        // Don't retry if no devices found
-        if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-          throw new Error(
-            this._callType === 'video'
-              ? 'Camera or microphone not found'
-              : 'Microphone not found'
-          );
-        }
       }
     }
 

@@ -41,6 +41,17 @@ export default function CallInterface({
 }: CallInterfaceProps) {
   const [currentCallType, setCurrentCallType] = useState<'audio' | 'video'>(initialType);
 
+  const onEndRef = useRef(onEnd);
+  useEffect(() => {
+    onEndRef.current = onEnd;
+  }, [onEnd]);
+
+  const handleEndWrapper = useCallback((dur?: number, wasConnected?: boolean) => {
+    onEndRef.current?.(dur, wasConnected);
+  }, []);
+
+  const mountTimeRef = useRef(Date.now());
+
   const {
     callStatus,
     localStream,
@@ -60,8 +71,16 @@ export default function CallInterface({
     isAccepted,
     initialOffer,
     callId,
-    onEnd: (dur, wasConnected) => onEnd(dur, wasConnected),
+    onEnd: handleEndWrapper,
   });
+
+  const safeHandleEnd = useCallback(() => {
+    if (Date.now() - mountTimeRef.current < 800) {
+      console.warn('[CallInterface] Ignored end call immediately after mount');
+      return;
+    }
+    handleEnd();
+  }, [handleEnd]);
 
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -247,7 +266,7 @@ export default function CallInterface({
           <button
             onClick={() => {
               triggerHaptic('light');
-              handleEnd();
+              safeHandleEnd();
             }}
             className="w-10 h-10 rounded-full flex items-center justify-center bg-zinc-100/90 hover:bg-zinc-200 text-zinc-800 active:scale-90 transition-all cursor-pointer shadow-xs border-0 outline-none"
             title="End / Back"
@@ -484,7 +503,7 @@ export default function CallInterface({
         <button
           onClick={() => {
             triggerHaptic('heavy');
-            handleEnd();
+            safeHandleEnd();
           }}
           className="w-14 h-14 rounded-full flex items-center justify-center bg-red-500 hover:bg-red-600 active:scale-90 text-white transition-all shadow-[0_6px_20px_rgba(239,68,68,0.45)] cursor-pointer border-0 outline-none"
           title="End Call"
