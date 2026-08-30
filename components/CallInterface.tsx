@@ -117,14 +117,17 @@ export default function CallInterface({
     const videoEl = fullScreenVideoRef.current;
     if (!videoEl) return;
 
-    const hasRemoteVideo = Boolean(remoteStream && remoteStream.getVideoTracks().length > 0);
+    const hasRemoteVideo = Boolean(
+      remoteStream && remoteStream.getVideoTracks().some(t => t.readyState === 'live' || t.enabled)
+    );
     const streamToShow = (callStatus === 'active' && hasRemoteVideo) ? remoteStream : localStream;
 
     if (streamToShow) {
       if (videoEl.srcObject !== streamToShow) {
         videoEl.srcObject = streamToShow;
       }
-      videoEl.muted = (streamToShow === localStream);
+      // Video element MUST be muted so browser autoplay policy never blocks it (remote audio is played via remoteAudioRef)
+      videoEl.muted = true;
       videoEl.play().catch((e) => console.warn('Full-screen video play error:', e));
     }
   }, [currentCallType, callStatus, remoteStream, localStream]);

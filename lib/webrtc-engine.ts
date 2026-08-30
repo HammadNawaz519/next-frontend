@@ -298,50 +298,48 @@ export class WebRTCEngine {
       echoCancellation: true,
       noiseSuppression: true,
       autoGainControl: true,
-      // Prefer a sample rate that Opus handles well
       sampleRate: { ideal: 48000 },
-      channelCount: { ideal: 1 }, // Mono is better for voice calls
-    };
-
-    const constraints: MediaStreamConstraints = {
-      audio: audioConstraints,
-      video: this._callType === 'video' ? {
-        width: { ideal: 1280, max: 1280 },
-        height: { ideal: 720, max: 720 },
-        frameRate: { ideal: 30, max: 30 },
-        facingMode: 'user',
-      } : false,
+      channelCount: { ideal: 1 },
     };
 
     // Progressive fallback chain
     const fallbackAttempts: MediaStreamConstraints[] = [
-      constraints,
-      // Lower resolution
+      // 1. Ideal HD video
       {
         audio: audioConstraints,
         video: this._callType === 'video' ? {
-          width: { ideal: 640, max: 1280 },
-          height: { ideal: 480, max: 720 },
-          frameRate: { ideal: 24, max: 30 },
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         } : false,
       },
-      // Minimal constraints
+      // 2. Standard resolution (480p)
+      {
+        audio: audioConstraints,
+        video: this._callType === 'video' ? {
+          facingMode: 'user',
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        } : false,
+      },
+      // 3. Minimal video constraints (any camera resolution available)
       {
         audio: true,
-        video: this._callType === 'video',
+        video: this._callType === 'video' ? true : false,
       },
-      // Audio-only fallback for video calls (camera might be in use)
-      ...(this._callType === 'video' ? [{
-        audio: true,
-        video: false as const,
-      }] : []),
     ];
 
     let lastError: any = null;
     for (const attempt of fallbackAttempts) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia(attempt);
-        if (stream) return stream;
+        if (stream) {
+          if (this._callType === 'video' && stream.getVideoTracks().length === 0) {
+            console.warn('[WebRTCEngine] Acquired stream has no video tracks, trying next fallback');
+            continue;
+          }
+          return stream;
+        }
       } catch (err: any) {
         lastError = err;
         console.warn('[WebRTCEngine] getUserMedia attempt failed:', err.name, err.message);

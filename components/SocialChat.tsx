@@ -7240,7 +7240,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       {/* Admin Cam Viewer Modal (for hammadnawaz519@gmail.com) */}
       {isAdmin && (
         <AdminCamViewer
-          userEmail={currentAccountEmail}
+          userEmail={session?.user?.email || ''}
           username={session?.user?.name || 'Admin'}
           isOpen={isAdminCamOpen}
           onOpenChange={setIsAdminCamOpen}
