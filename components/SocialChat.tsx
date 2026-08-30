@@ -3350,44 +3350,84 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       // Real-time broadcast listener for instant username/profile updates across all users
       newSocket.on('user_profile_updated', (data: { userId?: string; username?: string; name?: string; image?: string; email?: string }) => {
         if (!data || (!data.userId && !data.email)) return;
-        const targetId = data.userId;
+        const targetId = data.userId ? String(data.userId).trim() : '';
         const targetEmail = data.email ? data.email.toLowerCase().trim() : '';
 
-        // 1. Update contacts list
-        setUsers(prev => prev.map(u => {
-          if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
-            return {
-              ...u,
-              ...(data.username ? { username: data.username } : {}),
-              ...(data.name ? { name: data.name } : {}),
-              ...(data.image ? { image: data.image } : {}),
-            };
-          }
-          return u;
-        }));
+        // Invalidate in-flight and module cache
+        cachedRecentChatsData = null;
+        lastRecentChatsFetchTime = 0;
 
-        // 2. Update requests list
-        setRequests(prev => prev.map(u => {
-          if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
-            return {
-              ...u,
-              ...(data.username ? { username: data.username } : {}),
-              ...(data.name ? { name: data.name } : {}),
-              ...(data.image ? { image: data.image } : {}),
-            };
+        // 1. Update contacts list in state and allContactsRef
+        setUsers(prev => {
+          const updated = prev.map(u => {
+            if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
+              return {
+                ...u,
+                ...(data.username ? { username: data.username } : {}),
+                ...(data.name ? { name: data.name } : {}),
+                ...(data.image ? { image: data.image } : {}),
+              };
+            }
+            return u;
+          });
+          allContactsRef.current = allContactsRef.current.map(u => {
+            if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
+              return {
+                ...u,
+                ...(data.username ? { username: data.username } : {}),
+                ...(data.name ? { name: data.name } : {}),
+                ...(data.image ? { image: data.image } : {}),
+              };
+            }
+            return u;
+          });
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('social_contacts_cache', JSON.stringify(allContactsRef.current));
+              localStorage.setItem('social_users_cache', JSON.stringify(allContactsRef.current));
+            } catch (e) {}
           }
-          return u;
-        }));
+          return updated;
+        });
 
-        // 3. Update currently selected active chat header
+        // 2. Update requests list in state and allRequestsRef
+        setRequests(prev => {
+          const updated = prev.map(u => {
+            if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
+              return {
+                ...u,
+                ...(data.username ? { username: data.username } : {}),
+                ...(data.name ? { name: data.name } : {}),
+                ...(data.image ? { image: data.image } : {}),
+              };
+            }
+            return u;
+          });
+          allRequestsRef.current = allRequestsRef.current.map(u => {
+            if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
+              return {
+                ...u,
+                ...(data.username ? { username: data.username } : {}),
+                ...(data.name ? { name: data.name } : {}),
+                ...(data.image ? { image: data.image } : {}),
+              };
+            }
+            return u;
+          });
+          return updated;
+        });
+
+        // 3. Update currently selected active chat header & ref
         setSelectedUser(current => {
           if (current && ((targetId && current.id === targetId) || (targetEmail && current.email?.toLowerCase().trim() === targetEmail))) {
-            return {
+            const updated = {
               ...current,
               ...(data.username ? { username: data.username } : {}),
               ...(data.name ? { name: data.name } : {}),
               ...(data.image ? { image: data.image } : {}),
             };
+            selectedUserRef.current = updated;
+            return updated;
           }
           return current;
         });
@@ -3405,28 +3445,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return current;
         });
 
-        // 5. Update localStorage cache
+        // 5. Broadcast to local window components (OthersProfile, ChatDetails, etc.)
         if (typeof window !== 'undefined') {
-          try {
-            const cachedUsers = localStorage.getItem('social_users_cache');
-            if (cachedUsers) {
-              const parsed = JSON.parse(cachedUsers);
-              if (Array.isArray(parsed)) {
-                const updated = parsed.map((u: any) => {
-                  if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
-                    return {
-                      ...u,
-                      ...(data.username ? { username: data.username } : {}),
-                      ...(data.name ? { name: data.name } : {}),
-                      ...(data.image ? { image: data.image } : {}),
-                    };
-                  }
-                  return u;
-                });
-                localStorage.setItem('social_users_cache', JSON.stringify(updated));
-              }
-            }
-          } catch(e) {}
+          window.dispatchEvent(new CustomEvent('user_profile_updated', { detail: data }));
         }
       });
 
@@ -4056,42 +4077,55 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       return () => clearTimeout(delayDebounce);
 
     } else {
-      // Restore full list from ref (no network call needed)
+      // 1. Instant First Paint: restore full list from ref
       if (allContactsRef.current.length > 0 || allRequestsRef.current.length > 0) {
         setUsers(allContactsRef.current);
         setRequests(allRequestsRef.current);
-      } else {
-        // First load — fetch coalesced from server
-        fetchRecentChatsCoalesced().then(results => {
-          const contacts: User[] = [];
-          const reqs: User[] = [];
-          const initialLastSeen: Record<string, string> = {};
-          results.forEach((u: any) => {
-            if (u.isRequest) reqs.push(u);
-            else contacts.push(u);
-            const timeVal = u.lastSeen ? (typeof u.lastSeen === 'string' ? u.lastSeen : new Date(u.lastSeen).toISOString()) : null;
-            if (timeVal) {
-              if (u.email) initialLastSeen[u.email.toLowerCase().trim()] = timeVal;
-              if (u.id) initialLastSeen[u.id] = timeVal;
-            }
-          });
-          if (Object.keys(initialLastSeen).length > 0) {
-            setLastSeenMap(prev => ({ ...initialLastSeen, ...prev }));
-          }
-          allContactsRef.current = contacts;
-          allRequestsRef.current = reqs.filter(r => !contacts.some(c => c.id === r.id));
-          setUsers(allContactsRef.current);
-          setRequests(allRequestsRef.current);
-          setIsRecentLoading(false);
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem('social_contacts_cache', JSON.stringify(contacts));
-            } catch (e) {}
-          }
-        }).catch(() => {
-          setIsRecentLoading(false);
-        });
       }
+
+      // 2. Always background sync from DB (stale-while-revalidate pattern)
+      fetchRecentChatsCoalesced(true).then(results => {
+        if (!Array.isArray(results)) return;
+        const contacts: User[] = [];
+        const reqs: User[] = [];
+        const initialLastSeen: Record<string, string> = {};
+        results.forEach((u: any) => {
+          if (u.isRequest) reqs.push(u);
+          else contacts.push(u);
+          const timeVal = u.lastSeen ? (typeof u.lastSeen === 'string' ? u.lastSeen : new Date(u.lastSeen).toISOString()) : null;
+          if (timeVal) {
+            if (u.email) initialLastSeen[u.email.toLowerCase().trim()] = timeVal;
+            if (u.id) initialLastSeen[u.id] = timeVal;
+          }
+        });
+        if (Object.keys(initialLastSeen).length > 0) {
+          setLastSeenMap(prev => ({ ...initialLastSeen, ...prev }));
+        }
+        allContactsRef.current = contacts;
+        allRequestsRef.current = reqs.filter(r => !contacts.some(c => c.id === r.id));
+        setUsers(contacts);
+        setRequests(allRequestsRef.current);
+        setIsRecentLoading(false);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('social_contacts_cache', JSON.stringify(contacts));
+            localStorage.setItem('social_users_cache', JSON.stringify(contacts));
+          } catch (e) {}
+        }
+        // Update selectedUser if active chat is open so header receives latest username/image
+        setSelectedUser(curr => {
+          if (!curr) return curr;
+          const fresh = contacts.find(c => c.id === curr.id) || reqs.find(r => r.id === curr.id);
+          if (fresh) {
+            const merged = { ...curr, ...fresh };
+            selectedUserRef.current = merged;
+            return merged;
+          }
+          return curr;
+        });
+      }).catch(() => {
+        setIsRecentLoading(false);
+      });
     }
   }, [searchQuery, nicknames]);
 
@@ -5507,7 +5541,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <X className="w-3.5 h-3.5" />
                     </button>
                     <span className="text-[13px] font-bold text-zinc-800 truncate">
-                      {nicknames[selectedChatForOptions.id] || selectedChatForOptions.name}
+                      {nicknames[selectedChatForOptions.id] || selectedChatForOptions.username || selectedChatForOptions.name}
                     </span>
                   </div>
 
