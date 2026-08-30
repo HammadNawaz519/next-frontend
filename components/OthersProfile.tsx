@@ -157,7 +157,25 @@ export default function OthersProfile({
     }
   };
 
-  const displayName = profileData?.name || profileData?.username || 'User';
+  useEffect(() => {
+    const handleProfileUpdate = (e: any) => {
+      const data = e.detail;
+      if (data && profileData?.id && data.userId === profileData.id) {
+        setProfileData((prev: any) => ({
+          ...prev,
+          ...(data.username ? { username: data.username } : {}),
+          ...(data.name ? { name: data.name } : {}),
+          ...(data.image ? { image: data.image } : {}),
+        }));
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('user_profile_updated', handleProfileUpdate);
+      return () => window.removeEventListener('user_profile_updated', handleProfileUpdate);
+    }
+  }, [profileData?.id]);
+
+  const displayName = profileData?.username || profileData?.name || 'User';
   const displayHeadline =
     profileData?.bio || (profileData?.username ? `@${profileData.username}` : 'Connect Member');
   const avatarKey = profileData?.id || profileData?.username || displayName;
