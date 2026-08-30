@@ -833,7 +833,7 @@ export async function saveChatNicknameAction(targetUserId: string, nickname: str
 
   if (!cleanNick) {
     // Delete custom nickname if empty
-    await prisma.chatNickname.deleteMany({
+    await (prisma as any).chatNickname.deleteMany({
       where: {
         userId: currentUser.id,
         targetId: targetUserId
@@ -842,7 +842,7 @@ export async function saveChatNicknameAction(targetUserId: string, nickname: str
     return { success: true, nickname: '' };
   }
 
-  const saved = await prisma.chatNickname.upsert({
+  const saved = await (prisma as any).chatNickname.upsert({
     where: {
       userId_targetId: {
         userId: currentUser.id,
@@ -870,13 +870,13 @@ export async function getChatNicknamesAction() {
   });
   if (!currentUser) return {};
 
-  const records = await prisma.chatNickname.findMany({
+  const records = await (prisma as any).chatNickname.findMany({
     where: { userId: currentUser.id },
     select: { targetId: true, nickname: true }
   });
 
   const nicknameMap: Record<string, string> = {};
-  records.forEach(r => {
+  records.forEach((r: any) => {
     nicknameMap[r.targetId] = r.nickname;
   });
 

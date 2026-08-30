@@ -260,7 +260,7 @@ export default function DashboardPage() {
         setUsernameError(res.error);
       } else {
         setEditingUsername(false);
-        if (fullUser) setFullUser({ ...fullUser, name: res.name || usernameInput });
+        if (fullUser) setFullUser({ ...fullUser, username: res.username || usernameInput });
       }
     } catch {
       setUsernameError('Failed to save name');

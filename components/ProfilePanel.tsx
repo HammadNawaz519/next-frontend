@@ -304,7 +304,7 @@ export default function ProfilePanel({
               </button>
             )}
             <h1 className="text-[24px] font-black text-white tracking-tight leading-tight">
-              {isSelf ? 'Profile' : (activeUserData?.username || curName)}
+              {isSelf ? 'Profile' : (activeUserData?.username || curUsername)}
             </h1>
           </div>
 
@@ -346,13 +346,13 @@ export default function ProfilePanel({
             {curImage ? (
               <img
                 src={curImage}
-                alt={curName}
+                alt={curUsername}
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
               />
             ) : (
               <span className="text-3xl font-black text-white">
-                {(localUsername || curName).charAt(0).toUpperCase()}
+                {(localUsername || curUsername).charAt(0).toUpperCase()}
               </span>
             )}
             {isUploadingAvatar && (
@@ -377,7 +377,7 @@ export default function ProfilePanel({
 
         {/* User Details (Username displayed under profile pic) */}
         <h2 className="text-[20px] font-bold text-white mt-3 leading-tight text-center tracking-tight">
-          {isSelf ? (localUsername || curUsername) : (activeUserData?.username || curName)}
+          {isSelf ? (localUsername || curUsername) : (activeUserData?.username || curUsername)}
         </h2>
       </div>
 

@@ -3314,7 +3314,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         if (!isSentByMe && (isAppBackgrounded || isChattingWithSomeoneElse)) {
           const sender = usersRef.current.find(u => u.id === msg.senderId) || requestsRef.current.find(u => u.id === msg.senderId);
-          const senderName = sender?.username || sender?.name || 'Someone';
+          const senderName = sender?.username || 'Someone';
 
           let contentPreview = msg.content;
           if (msg.type === 'voice') contentPreview = 'Voice Message';
@@ -4578,7 +4578,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const currentReplyTo = replyToMessage ? {
       id: replyToMessage.id,
       content: formatReplyPreviewContent(replyToMessage),
-      senderName: replyToMessage.senderId === senderId ? 'You' : (nicknames[selectedUser.id] || selectedUser.username || selectedUser.name || 'User')
+      senderName: replyToMessage.senderId === senderId ? 'You' : (nicknames[selectedUser.id] || selectedUser.username || 'User')
     } : undefined;
 
     setReplyToMessage(null);
@@ -5068,7 +5068,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         replyTo: replyToMessage ? {
           id: replyToMessage.id,
           content: formatReplyPreviewContent(replyToMessage),
-          senderName: replyToMessage.senderId === (session?.user as any)?.id ? 'You' : (nicknames[currentSelectedUser.id] || currentSelectedUser.username || currentSelectedUser.name || 'User')
+          senderName: replyToMessage.senderId === (session?.user as any)?.id ? 'You' : (nicknames[currentSelectedUser.id] || currentSelectedUser.username || 'User')
         } : undefined
       }),
     });
@@ -5675,7 +5675,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <X className="w-3.5 h-3.5" />
                     </button>
                     <span className="text-[13px] font-bold text-zinc-800 truncate">
-                      {nicknames[selectedChatForOptions.id] || selectedChatForOptions.username || selectedChatForOptions.name}
+                      {nicknames[selectedChatForOptions.id] || selectedChatForOptions.username}
                     </span>
                   </div>
 
@@ -5804,12 +5804,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     .filter(u => isArchivedView ? archivedChatIds.has(u.id) : (!archivedChatIds.has(u.id) && !deletedChatIds.has(u.id)))
                     .filter(u => {
                       if (!cleanQ) return true;
-                      const uName = (u.name || '').toLowerCase();
                       const uUser = (u.username || '').toLowerCase().replace(/^@+/, '');
                       const uEmail = (u.email || '').toLowerCase();
                       const uNick = (nicknames[u.id] || '').toLowerCase();
                       const uMsg = (u.lastMessage || '').toLowerCase();
-                      return uUser.includes(cleanQ) || uName.includes(cleanQ) || uEmail.includes(cleanQ) || uNick.includes(cleanQ) || uMsg.includes(cleanQ);
+                      return uUser.includes(cleanQ) || uEmail.includes(cleanQ) || uNick.includes(cleanQ) || uMsg.includes(cleanQ);
                     })
                     .sort((a, b) => {
                       const ap = pinnedChats.has(a.id) ? 0 : 1;
@@ -6088,7 +6087,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           👨🏻
                         </div>
                         <h3 className="text-base font-bold text-black">Start a conversation</h3>
-                        <p className="text-xs text-gray-400 mt-0.5">Send a message to start chatting with {selectedUser.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Send a message to start chatting with {selectedUser.username}</p>
                       </div>
                     )}
 
@@ -6174,7 +6173,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <div className="w-full flex items-center justify-between px-4 py-2 rounded-full pointer-events-auto text-zinc-900 bg-zinc-100 border border-zinc-200 shadow-xs mb-1">
                         <div className="flex items-center gap-1.5 min-w-0 pr-2">
                           <span className="text-[12px] font-bold text-zinc-900 shrink-0">
-                            Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : (nicknames[selectedUser.id] || selectedUser?.username || selectedUser?.name)}:
+                            Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : (nicknames[selectedUser.id] || selectedUser?.username)}:
                           </span>
                           <span className="text-[12px] text-zinc-600 truncate font-normal">
                             {formatReplyPreviewContent(replyToMessage)}
@@ -6490,7 +6489,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         <Search className="w-4 h-4 text-zinc-400 flex-shrink-0" strokeWidth={2} />
                         <input
                           type="text"
-                          placeholder={`Search messages with ${nicknames[selectedUser.id] || selectedUser.name}...`}
+                          placeholder={`Search messages with ${nicknames[selectedUser.id] || selectedUser.username}...`}
                           value={chatSearchQuery}
                           onChange={(e) => setChatSearchQuery(e.target.value)}
                           className="w-full bg-transparent text-[13.5px] text-white placeholder:text-zinc-500 outline-none focus:outline-none ring-0 font-normal"
@@ -6535,7 +6534,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               </div>
                               {matches.map((msg) => {
                                 const isMe = msg.senderId === (session?.user as any)?.id;
-                                const senderName = isMe ? 'You' : (nicknames[selectedUser.id] || selectedUser.name);
+                                const senderName = isMe ? 'You' : (nicknames[selectedUser.id] || selectedUser.username);
                                 const timeStr = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                                 return (
@@ -6626,7 +6625,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     <div className="w-full max-w-xs rounded-3xl bg-white text-zinc-900 p-6 text-center shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
                       <h3 className="text-base font-extrabold text-zinc-900">Clear Chat History</h3>
                       <p className="text-xs text-zinc-500 leading-relaxed">
-                        This will clear all messages in your conversation with <span className="font-bold text-zinc-900">{nicknames[selectedUser.id] || selectedUser.name}</span>.
+                        This will clear all messages in your conversation with <span className="font-bold text-zinc-900">{nicknames[selectedUser.id] || selectedUser.username}</span>.
                       </p>
                       <div className="flex items-center gap-3 pt-2">
                         <button
@@ -7229,7 +7228,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             {/* User List */}
             <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2 max-h-[45vh]">
               {users
-                .filter(u => u.name.toLowerCase().includes(forwardSearch.toLowerCase()) || (u.username && u.username.toLowerCase().includes(forwardSearch.toLowerCase())))
+                .filter(u => u.username && u.username.toLowerCase().includes(forwardSearch.toLowerCase()))
                 .map(targetUser => {
                   const isSentToTarget = forwardSentUserIds.has(targetUser.id);
                   return (
@@ -7237,14 +7236,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-[#FFF3CD] flex items-center justify-center font-bold text-xs text-zinc-900">
                           {targetUser.image && targetUser.image.length > 5 ? (
-                            <img src={targetUser.image} alt={targetUser.name} className="w-full h-full object-cover" />
+                            <img src={targetUser.image} alt={targetUser.username} className="w-full h-full object-cover" />
                           ) : (
-                            <span>{targetUser.name.charAt(0)}</span>
+                            <span>{targetUser.username.charAt(0)}</span>
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-zinc-900 truncate">{targetUser.name}</p>
-                          <p className="text-[10px] text-zinc-400 truncate">@{targetUser.username || targetUser.name.toLowerCase().replace(/\s+/g, '')}</p>
+                          <p className="text-xs font-bold text-zinc-900 truncate">{targetUser.username}</p>
+                          <p className="text-[10px] text-zinc-400 truncate">@{targetUser.username}</p>
                         </div>
                       </div>
                       <button
