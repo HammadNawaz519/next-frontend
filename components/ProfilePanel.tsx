@@ -259,6 +259,8 @@ export default function ProfilePanel({
       localStorage.removeItem('last_logged_user');
       localStorage.removeItem('social_messages_cache');
       localStorage.removeItem('social_contacts_cache');
+      localStorage.removeItem('da_current_id');
+      localStorage.setItem('user_logged_out', 'true');
     } catch (e) {}
     signOut({ callbackUrl: '/accounts' });
   };

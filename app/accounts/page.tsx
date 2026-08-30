@@ -69,6 +69,10 @@ export default function AccountsPage() {
       });
 
       if (res?.ok) {
+        try {
+          localStorage.removeItem('user_logged_out');
+          localStorage.setItem('has_active_session', 'true');
+        } catch (e) {}
         DeviceAccountStore.setCurrentAccountId(selectedAccount.userId);
         router.push('/dashboard');
       } else {
@@ -192,6 +196,10 @@ export default function AccountsPage() {
           <button
             onClick={async () => {
               triggerHaptic('light');
+              try {
+                localStorage.setItem('user_logged_out', 'true');
+                localStorage.removeItem('has_active_session');
+              } catch (e) {}
               if (session?.user) {
                 await signOut({ redirect: false });
               }

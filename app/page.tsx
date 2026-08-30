@@ -54,36 +54,45 @@ export default function LoginPage() {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
-  // Check if we previously had an active session to prevent login screen flash
-  const [hasCachedSession] = useState<boolean>(() => {
+  // Check if user is explicitly logged out to prevent auto-login on app restart
+  const [isExplicitlyLoggedOut, setIsExplicitlyLoggedOut] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('has_active_session') === 'true';
+      return localStorage.getItem('user_logged_out') === 'true';
     }
     return false;
   });
 
+  const [hasSavedAccounts, setHasSavedAccounts] = useState(false);
+  useEffect(() => {
+    DeviceAccountStore.getSavedAccounts().then(accs => {
+      if (Array.isArray(accs) && accs.length > 0) {
+        setHasSavedAccounts(true);
+      }
+    }).catch(() => {});
+  }, []);
+
   // Sync active session in localStorage
   useEffect(() => {
-    if (sessStatus === 'authenticated' && session?.user) {
+    if (sessStatus === 'authenticated' && session?.user && !isExplicitlyLoggedOut) {
       try {
         localStorage.setItem('has_active_session', 'true');
         localStorage.setItem('last_logged_user', JSON.stringify(session.user));
       } catch (e) {}
-    } else if (sessStatus === 'unauthenticated') {
+    } else if (sessStatus === 'unauthenticated' || isExplicitlyLoggedOut) {
       try {
         localStorage.removeItem('has_active_session');
         localStorage.removeItem('last_logged_user');
       } catch (e) {}
     }
-  }, [sessStatus, session]);
+  }, [sessStatus, session, isExplicitlyLoggedOut]);
 
-  // If user is already authenticated, show the dashboard directly
-  if (sessStatus === 'authenticated' && session?.user) {
+  // If user is already authenticated AND NOT explicitly logged out, show the dashboard directly
+  if (sessStatus === 'authenticated' && session?.user && !isExplicitlyLoggedOut) {
     return <DashboardPage />;
   }
 
   // When session is resolving, render smooth dark background to prevent flashing the login form
-  if (sessStatus === 'loading' || (hasCachedSession && sessStatus !== 'unauthenticated')) {
+  if (!isExplicitlyLoggedOut && (sessStatus === 'loading' || (hasCachedSession && sessStatus !== 'unauthenticated'))) {
     return (
       <div className="fixed inset-0 bg-[#141111] flex items-center justify-center transition-opacity duration-300 animate-in fade-in" />
     );
@@ -165,6 +174,8 @@ export default function LoginPage() {
         setLoading(false);
       } else if (res?.ok) {
         try {
+          localStorage.removeItem('user_logged_out');
+          localStorage.setItem('has_active_session', 'true');
           const cleanEmail = email.toLowerCase().trim();
           await DeviceAccountStore.addOrUpdateAccount({
             userId: `pending_${cleanEmail}`,
@@ -175,6 +186,7 @@ export default function LoginPage() {
             provider: 'credentials',
           }, true);
         } catch (e) {}
+        setIsExplicitlyLoggedOut(false);
         router.push('/dashboard');
       } else {
         setError('Sign in failed. Please try again.');
@@ -248,6 +260,8 @@ export default function LoginPage() {
         setLoading(false);
         if (signInRes?.ok) {
           try {
+            localStorage.removeItem('user_logged_out');
+            localStorage.setItem('has_active_session', 'true');
             const cleanEmail = email.toLowerCase().trim();
             await DeviceAccountStore.addOrUpdateAccount({
               userId: `pending_${cleanEmail}`,
@@ -258,6 +272,7 @@ export default function LoginPage() {
               provider: 'credentials',
             }, true);
           } catch (e) {}
+          setIsExplicitlyLoggedOut(false);
           setView('success');
         } else {
           setInfo('Email verified! Please sign in.');
@@ -428,7 +443,7 @@ export default function LoginPage() {
       
       {/* ── 1. TOP DARK REGION: BRANDING & HEADLINE ── */}
       <div className="w-full bg-[#141111] pt-12 pb-6 px-6 flex flex-col relative select-none shrink-0">
-        {/* Navigation Action Row */}
+        {/* Navigation Action Row with frameless, borderless, outline-free back button */}
         <div className="w-full flex items-center justify-between min-h-[36px] mb-1">
           {view !== 'main' && view !== 'success' ? (
             <button
@@ -438,8 +453,19 @@ export default function LoginPage() {
                 setInfo('');
                 setView('main');
               }}
-              className="p-1.5 -ml-1.5 text-white/80 hover:text-white active:scale-90 transition-all cursor-pointer outline-none bg-transparent"
+              className="p-1.5 -ml-1.5 text-white/80 hover:text-white active:scale-90 transition-all cursor-pointer outline-none border-0 bg-transparent flex items-center justify-center"
               title="Back"
+            >
+              <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
+            </button>
+          ) : hasSavedAccounts ? (
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                router.push('/accounts');
+              }}
+              className="p-1.5 -ml-1.5 text-white/80 hover:text-white active:scale-90 transition-all cursor-pointer outline-none border-0 bg-transparent flex items-center justify-center"
+              title="Back to Accounts"
             >
               <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
             </button>
