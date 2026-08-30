@@ -2571,34 +2571,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     onSearchActiveChange?.(isSearchFocused || searchQuery.trim().length > 0);
   }, [isSearchFocused, searchQuery, onSearchActiveChange]);
 
-  // Global live user search across entire platform
-  useEffect(() => {
-    const q = searchQuery.trim();
-    if (!q) {
-      setGlobalSearchResults([]);
-      setIsSearchingGlobal(false);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setIsSearchingGlobal(true);
-      try {
-        const results = await searchUsers(q);
-        if (Array.isArray(results)) {
-          const myId = (session?.user as any)?.id;
-          const filtered = results.filter((u: any) => u.id !== myId);
-          setGlobalSearchResults(filtered);
-        }
-      } catch (err) {
-        console.warn('Failed to search users globally:', err);
-      } finally {
-        setIsSearchingGlobal(false);
-      }
-    }, 180);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, session]);
-
   const [showReportModal, setShowReportModal] = useState(false);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
@@ -3445,10 +3417,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             }
             return u;
           });
-          if (typeof window !== 'undefined') {
+          if (typeof window !== 'undefined' && currentUserId) {
             try {
-              localStorage.setItem('social_contacts_cache', JSON.stringify(allContactsRef.current));
-              localStorage.setItem('social_users_cache', JSON.stringify(allContactsRef.current));
+              localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(allContactsRef.current));
+              localStorage.setItem(`social_users_cache_${currentUserId}`, JSON.stringify(allContactsRef.current));
             } catch (e) {}
           }
           return updated;
@@ -4094,17 +4066,25 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   // Search or Load Recent
   useEffect(() => {
     const rawQ = searchQuery.trim().toLowerCase();
-    const q = rawQ.startsWith('@') ? rawQ.substring(1).trim() : rawQ;
+    const cleanQ = rawQ.replace(/^@+/, '').trim();
 
-    if (q.length >= 1) {
+    if (cleanQ.length >= 1) {
+      setIsSearchingGlobal(true);
+
       // 1. Instant client-side filter from cached list (checking name, username, email, nickname, and last message)
       const matchesContact = (u: any) => {
         const nick = (nicknames[u.id] || '').toLowerCase();
         const name = (u.name || '').toLowerCase();
-        const username = (u.username || '').toLowerCase();
+        const username = (u.username || '').toLowerCase().replace(/^@+/, '');
         const email = (u.email || '').toLowerCase();
         const lastMsg = (u.lastMessage || '').toLowerCase();
-        return name.includes(q) || username.includes(q) || email.includes(q) || nick.includes(q) || lastMsg.includes(q);
+        return (
+          username.includes(cleanQ) ||
+          name.includes(cleanQ) ||
+          email.includes(cleanQ) ||
+          nick.includes(cleanQ) ||
+          lastMsg.includes(cleanQ)
+        );
       };
 
       const filteredContacts = allContactsRef.current.filter(matchesContact);
@@ -4113,19 +4093,53 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       setUsers(filteredContacts);
       setRequests(filteredRequests);
 
-      // 2. Background server search (finds people globally not yet in recent chats)
+      // 2. Realtime Server Search (finds people with new usernames / global users)
       const delayDebounce = setTimeout(async () => {
         try {
-          const results = await searchUsers(q);
-          if (Array.isArray(results) && results.length > 0) {
-            const existingIds = new Set(allContactsRef.current.map(c => c.id));
-            const existingReqIds = new Set(allRequestsRef.current.map(r => r.id));
+          const results = await searchUsers(cleanQ);
+          if (Array.isArray(results)) {
+            const currentMyId = (session?.user as any)?.id;
+            const validResults = results.filter((u: any) => u.id !== currentMyId);
 
-            const newPeople: User[] = [];
-            results.forEach((u: any) => {
-              if (u.id === (session?.user as any)?.id) return;
-              if (!existingIds.has(u.id) && !existingReqIds.has(u.id)) {
-                newPeople.push({
+            // Sync any existing contacts with fresh server data (e.g. updated username, name, avatar)
+            const resultMap = new Map(validResults.map((u: any) => [u.id, u]));
+
+            allContactsRef.current = allContactsRef.current.map(c => {
+              const fresh = resultMap.get(c.id);
+              if (fresh) {
+                return {
+                  ...c,
+                  username: fresh.username || c.username,
+                  name: fresh.name || c.name,
+                  image: fresh.image || c.image,
+                  bio: fresh.bio ?? c.bio,
+                  lastSeen: fresh.lastSeen ?? c.lastSeen,
+                };
+              }
+              return c;
+            });
+
+            // Re-run contact match with newly updated usernames
+            const freshFilteredContacts = allContactsRef.current.filter(matchesContact);
+            const freshContactIds = new Set(allContactsRef.current.map(c => c.id));
+            const freshReqIds = new Set(allRequestsRef.current.map(r => r.id));
+
+            const matchedContactsFromResults: User[] = [];
+            const newGlobalPeople: User[] = [];
+
+            validResults.forEach((u: any) => {
+              if (freshContactIds.has(u.id)) {
+                const existingContact = allContactsRef.current.find(c => c.id === u.id);
+                if (existingContact && !freshFilteredContacts.some(fc => fc.id === u.id)) {
+                  matchedContactsFromResults.push({
+                    ...existingContact,
+                    username: u.username || existingContact.username,
+                    name: u.name || existingContact.name,
+                    image: u.image || existingContact.image,
+                  });
+                }
+              } else if (!freshReqIds.has(u.id)) {
+                newGlobalPeople.push({
                   ...u,
                   lastMessage: u.bio || `@${u.username || 'user'}`,
                   unseenCount: 0,
@@ -4134,17 +4148,30 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               }
             });
 
-            // Keep filtered contacts first, followed by new global people
-            setUsers([...filteredContacts, ...newPeople]);
+            // Set the full consolidated results
+            const combined = [...freshFilteredContacts, ...matchedContactsFromResults, ...newGlobalPeople];
+            const seen = new Set<string>();
+            const deduped = combined.filter(u => {
+              if (seen.has(u.id)) return false;
+              seen.add(u.id);
+              return true;
+            });
+
+            setUsers(deduped);
+            setGlobalSearchResults(newGlobalPeople);
           }
         } catch (e) {
           console.error("Search users error:", e);
+        } finally {
+          setIsSearchingGlobal(false);
         }
-      }, 300);
+      }, 150);
 
       return () => clearTimeout(delayDebounce);
 
     } else {
+      setIsSearchingGlobal(false);
+      setGlobalSearchResults([]);
       // 1. Instant First Paint: restore full list from ref
       if (allContactsRef.current.length > 0 || allRequestsRef.current.length > 0) {
         setUsers(allContactsRef.current);
@@ -4174,10 +4201,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         setUsers(contacts);
         setRequests(allRequestsRef.current);
         setIsRecentLoading(false);
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && currentUserId) {
           try {
-            localStorage.setItem('social_contacts_cache', JSON.stringify(contacts));
-            localStorage.setItem('social_users_cache', JSON.stringify(contacts));
+            localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(contacts));
+            localStorage.setItem(`social_users_cache_${currentUserId}`, JSON.stringify(contacts));
           } catch (e) {}
         }
         // Update selectedUser if active chat is open so header receives latest username/image
@@ -4195,7 +4222,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         setIsRecentLoading(false);
       });
     }
-  }, [searchQuery, nicknames]);
+  }, [searchQuery, nicknames, currentUserId]);
 
   // ── Instagram-style Activity Status Lifecycle ─────────────────────────────
   useEffect(() => {
@@ -5731,13 +5758,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               <div className="flex flex-col gap-1 overflow-y-auto flex-1 pr-0.5 no-scrollbar">
                 {(() => {
                   const baseList = view === 'recent' ? users : requests;
-                  const q = searchQuery.toLowerCase().trim();
+                  const rawQ = searchQuery.toLowerCase().trim();
+                  const cleanQ = rawQ.replace(/^@+/, '').trim();
 
                   let filtered = baseList
                     .filter(u => isArchivedView ? archivedChatIds.has(u.id) : (!archivedChatIds.has(u.id) && !deletedChatIds.has(u.id)))
                     .filter(u => {
-                      if (!q) return true;
-                      return (u.name || '').toLowerCase().includes(q) || (u.username || '').toLowerCase().includes(q);
+                      if (!cleanQ) return true;
+                      const uName = (u.name || '').toLowerCase();
+                      const uUser = (u.username || '').toLowerCase().replace(/^@+/, '');
+                      const uEmail = (u.email || '').toLowerCase();
+                      const uNick = (nicknames[u.id] || '').toLowerCase();
+                      const uMsg = (u.lastMessage || '').toLowerCase();
+                      return uUser.includes(cleanQ) || uName.includes(cleanQ) || uEmail.includes(cleanQ) || uNick.includes(cleanQ) || uMsg.includes(cleanQ);
                     })
                     .sort((a, b) => {
                       const ap = pinnedChats.has(a.id) ? 0 : 1;
@@ -5760,10 +5793,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     });
 
                   // If user is searching, merge global registered users seamlessly
-                  if (q && globalSearchResults.length > 0) {
+                  if (cleanQ && globalSearchResults.length > 0) {
                     const existingIds = new Set(filtered.map(u => u.id));
                     const newGlobal = globalSearchResults.filter(u => !existingIds.has(u.id));
-                    filtered = [...filtered, ...newGlobal];
+                    if (newGlobal.length > 0) {
+                      filtered = [...filtered, ...newGlobal];
+                    }
                   }
 
                   if (isRecentLoading && filtered.length === 0) {
@@ -5789,10 +5824,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     return (
                       <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
                         <p className="text-sm font-bold text-zinc-800">
-                          {isSearchingGlobal ? 'Searching users...' : (q ? `No people found for "${searchQuery}"` : (isArchivedView ? 'No archived chats' : 'No conversations yet'))}
+                          {isSearchingGlobal ? 'Searching users...' : (cleanQ ? `No people found for "${searchQuery}"` : (isArchivedView ? 'No archived chats' : 'No conversations yet'))}
                         </p>
                         <p className="text-xs text-zinc-500 mt-0.5">
-                          {q ? 'Try searching by a different name or username' : 'Search to connect with anyone on Connect'}
+                          {cleanQ ? 'Try searching by a different name or username' : 'Search to connect with anyone on Connect'}
                         </p>
                       </div>
                     );

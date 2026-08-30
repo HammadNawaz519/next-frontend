@@ -1097,15 +1097,16 @@ export async function searchUsers(query: string) {
   if (!session?.user?.email) return [];
 
   const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email }
+    where: { email: session.user.email },
+    select: { id: true }
   });
 
   if (!currentUser) return [];
 
   const rawQ = query ? query.trim() : '';
-  const q = rawQ.startsWith('@') ? rawQ.substring(1).trim() : rawQ;
+  const cleanQ = rawQ.replace(/^@+/, '').trim();
 
-  if (!q) {
+  if (!cleanQ) {
     return await (prisma.user as any).findMany({
       where: {
         id: { not: currentUser.id }
@@ -1120,8 +1121,9 @@ export async function searchUsers(query: string) {
     where: {
       id: { not: currentUser.id },
       OR: [
-        { username: { contains: q, mode: 'insensitive' } },
-        { name: { contains: q, mode: 'insensitive' } }
+        { username: { contains: cleanQ, mode: 'insensitive' } },
+        { name: { contains: cleanQ, mode: 'insensitive' } },
+        { email: { contains: cleanQ, mode: 'insensitive' } }
       ]
     },
     select: { id: true, name: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true },
