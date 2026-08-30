@@ -115,7 +115,7 @@ export default function CallsView({
               status,
               duration: item.duration || 0,
               createdAt: item.createdAt,
-              contactName: partner?.name || partner?.username || 'User',
+              contactName: partner?.username || partner?.name || 'User',
               contactImage: partner?.image || '',
               contactUsername: partner?.username || '',
               partnerUser: partner
@@ -163,13 +163,47 @@ export default function CallsView({
       loadData();
     }
     const handleUpdate = () => loadData();
+    const handleProfileUpdate = (e: any) => {
+      const data = e.detail;
+      if (!data?.userId) return;
+      setCalls((prev) =>
+        prev.map((c) => {
+          const isCallerMatch = String(c.callerId) === String(data.userId);
+          const isReceiverMatch = String(c.receiverId) === String(data.userId);
+          const isPartnerMatch = c.partnerUser?.id && String(c.partnerUser.id) === String(data.userId);
+
+          if (isPartnerMatch || (isCallerMatch && String(c.callerId) !== String(currentUserId)) || (isReceiverMatch && String(c.receiverId) !== String(currentUserId))) {
+            const updatedUsername = data.username || c.contactUsername;
+            const updatedName = data.name || c.contactName;
+            return {
+              ...c,
+              contactName: updatedUsername || updatedName || c.contactName,
+              contactUsername: updatedUsername || c.contactUsername,
+              contactImage: data.image !== undefined ? data.image : c.contactImage,
+              partnerUser: c.partnerUser
+                ? {
+                    ...c.partnerUser,
+                    ...(data.username ? { username: data.username } : {}),
+                    ...(data.name ? { name: data.name } : {}),
+                    ...(data.image ? { image: data.image } : {}),
+                  }
+                : c.partnerUser,
+            };
+          }
+          return c;
+        })
+      );
+    };
+
     if (typeof window !== 'undefined') {
       window.addEventListener('connect_call_history_updated', handleUpdate);
+      window.addEventListener('user_profile_updated', handleProfileUpdate);
       window.addEventListener('storage', handleUpdate);
     }
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('connect_call_history_updated', handleUpdate);
+        window.removeEventListener('user_profile_updated', handleProfileUpdate);
         window.removeEventListener('storage', handleUpdate);
       }
     };
