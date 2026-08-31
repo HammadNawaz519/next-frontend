@@ -1156,6 +1156,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         .replace(/\s*Customize chat$/i, '')
         .trim();
       baseText = baseText.replace(/set theme to/i, 'changed the theme to');
+      baseText = baseText.replace(/^@+/g, '');
 
       return (
         <div className="w-full flex justify-center my-2 text-center px-4 animate-in fade-in duration-300 pointer-events-none">
@@ -1182,9 +1183,11 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
     if (isNicknameSystemMsg) {
       const myId = String(currentUserId || '');
       const isMe = String(msg.senderId) === myId;
-      const targetUserTag = selectedUser?.username ? `@${selectedUser.username}` : (selectedUser?.email ? `@${selectedUser.email.split('@')[0]}` : '@user');
+      const targetUserTag = selectedUser?.username ? selectedUser.username.replace(/^@+/, '') : (selectedUser?.email ? selectedUser.email.split('@')[0] : 'user');
 
       displayContent = displayContent
+        .replace(/^@+/g, '')
+        .replace(/for @/gi, 'for ')
         .replace(/for User to/gi, `for ${targetUserTag} to`)
         .replace(/for User$/gi, `for ${targetUserTag}`)
         .replace(/for undefined/gi, `for ${targetUserTag}`)
@@ -2745,7 +2748,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   const handleSelectTheme = async (theme: ChatTheme) => {
     if (!selectedUser) return;
-    const currentUserName = (session?.user as any)?.username || session?.user?.name || (session?.user?.email ? session.user.email.split('@')[0] : '') || 'You';
+    const currentUserName = ((session?.user as any)?.username || session?.user?.name || (session?.user?.email ? session.user.email.split('@')[0] : '') || 'You').replace(/^@+/, '');
     const myId = (session?.user as any)?.id || (session?.user as any)?.email;
     const myEmail = session?.user?.email ? session.user.email.toLowerCase().trim() : '';
 
@@ -2884,18 +2887,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (!selectedUser) return;
     const trimmedNick = (newNick || '').trim();
     
-    // Resolve current user's actual username cleanly
-    const currentUserName = 
+    // Resolve current user's actual username cleanly (simple name without @)
+    const currentUserName = (
       (session?.user as any)?.username || 
       session?.user?.name || 
       (session?.user?.email ? session.user.email.split('@')[0] : '') || 
-      'You';
+      'You'
+    ).replace(/^@+/, '');
 
-    // Resolve target contact's actual username cleanly
-    const targetUserName = 
+    // Resolve target contact's actual username cleanly (simple name without @)
+    const targetUserName = (
       selectedUser.username || 
       (selectedUser.email ? selectedUser.email.split('@')[0] : '') || 
-      'user';
+      'user'
+    ).replace(/^@+/, '');
 
     const updated = { ...nicknames };
     if (trimmedNick) {
@@ -2927,8 +2932,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
 
     const systemText = trimmedNick
-      ? `${currentUserName} set nickname for @${targetUserName} to "${trimmedNick}"`
-      : `${currentUserName} removed nickname for @${targetUserName}`;
+      ? `${currentUserName} set nickname for ${targetUserName} to "${trimmedNick}"`
+      : `${currentUserName} removed nickname for ${targetUserName}`;
 
     const myId = (session?.user as any)?.id || (session?.user as any)?.email || 'user';
     const stableId = 'system-nick-' + Date.now() + Math.random().toString(36).substring(7);
@@ -3733,7 +3738,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
           const themeObj = INSTAGRAM_THEMES.find(t => t.id === themeId);
           const cleanThemeName = (themeName || themeObj?.name || themeId).replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
-          const displayName = senderName || 'Someone';
+          const displayName = (senderName || (senderEmail ? senderEmail.split('@')[0] : 'Someone')).replace(/^@+/, '');
           const systemText = `${displayName} changed the theme to ${cleanThemeName} [theme:${themeId}]. Customize chat`;
           const stableId = 'system-theme-' + Date.now() + Math.random().toString(36).substring(7);
           const systemMsg: Message = {
@@ -5525,7 +5530,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             if (parsed.username) customUsername = parsed.username;
                           } catch (e) {}
                         }
-                        return customUsername ? `@${customUsername.replace(/^@+/, '')}` : 'User';
+                        return customUsername ? customUsername.replace(/^@+/, '') : 'User';
                       })()} 👋
                     </span>
                     <h1 className="text-[28px] font-black text-white tracking-tight leading-tight bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text">
