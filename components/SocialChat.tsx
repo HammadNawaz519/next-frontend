@@ -6,7 +6,6 @@ import { useSession } from 'next-auth/react';
 import {
   searchUsers,
   getSocialMessages,
-  getSocialUser,
   saveSocialMessage,
   deleteSocialMessage,
   hideSocialChat,
@@ -16,46 +15,29 @@ import {
   getChatSharedMedia,
   askAI,
   saveCall,
-  toggleShowActivityStatus,
   getActiveStoriesAction,
   deleteStoryAction,
-  getGlobalEdgeRequestCount,
   clearAllDatabaseAndBucketsAction,
   saveChatNicknameAction,
   getChatNicknamesAction,
 } from '@/app/dashboard/actions';
 import {
   optimizeImageClient,
-  extractVideoMetadataAndThumbnail,
-  validateMediaFile,
   uploadBinaryWithProgress,
 } from '@/lib/media-optimizer';
 import dynamic from 'next/dynamic';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { triggerHaptic } from '@/lib/haptics';
 import {
-  Eye,
   Database,
-  Plus,
   Archive,
-  CheckCheck,
-  Check,
   Search,
   X,
   ChevronLeft,
-  Pencil,
-  Palette,
   Trash2,
   Pin,
-  Ban,
   Phone,
   Video,
-  PhoneCall,
-  MessageSquare,
-  Sparkles,
-  Image as ImageIcon,
-  FileText,
-  Mic as LucideMic,
 } from 'lucide-react';
 import StoryEditor from './StoryEditor';
 import ChatInput from './ChatInput';
@@ -131,9 +113,7 @@ interface Message {
   };
 }
 
-const EMOJI_CATEGORIES = {
-  smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿']
-};
+
 
 export interface ChatTheme {
   id: string;
@@ -904,17 +884,7 @@ const formatChatTime = (timeVal?: any) => {
   return `${d.getDate()}/${d.getMonth() + 1}`;
 };
 
-const formatChatDotTime = (dateVal: any) => {
-  if (!dateVal) return '';
-  const d = typeof dateVal === 'string' ? new Date(dateVal) : (dateVal instanceof Date ? dateVal : new Date(dateVal));
-  if (isNaN(d.getTime())) return '';
-  let hrs = d.getHours();
-  const mins = String(d.getMinutes()).padStart(2, '0');
-  const ampm = hrs >= 12 ? 'PM' : 'AM';
-  hrs = hrs % 12;
-  hrs = hrs ? hrs : 12;
-  return `${hrs}:${mins} ${ampm}`;
-};
+
 
 const ChatItem = memo(({
   user,
@@ -1710,28 +1680,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
 
 
-const SidebarItem = memo(({ user, isActive, onClick }: { user: User, isActive: boolean, onClick: any }) => {
-  return (
-    <div className={`item ${isActive ? 'active' : ''}`} onClick={onClick}>
-      <div className="user-pfp">
-        {user.image && user.image.length > 5 ? (
-          <img src={user.image} alt={user.username} referrerPolicy="no-referrer" />
-        ) : (
-          <img src="/Avatar.png" alt="avatar" />
-        )}
-      </div>
-      <div className="meta">
-        <b>
-          {user.username}
-          <div className="side-meta">
-            {user.unseenCount && user.unseenCount > 0 ? <span className="unseen-badge">{user.unseenCount}</span> : null}
-          </div>
-        </b>
-        <small className="truncate">{user.lastMessage || `@${user.username}`}</small>
-      </div>
-    </div>
-  );
-});
+
 
 interface SocialChatProps {
   isActive: boolean;
@@ -1903,84 +1852,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }, [initialUser]);
 
-  const [isSlidingOut, setIsSlidingOut] = useState(false);
-  const transitionInProgress = React.useRef(false);
-
-  // Circular ripple transition helper
-  // Transition helper (direct action execution, standard IG slide animations handle the rest)
-  const runCircleTransition = (
-    action: () => void,
-    _x?: number,
-    _y?: number,
-    _reverse = false
-  ) => {
-    action();
-  };
-
-  // Forward Message Modal State
-  const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
-  const [forwardSearch, setForwardSearch] = useState('');
-  const [forwardSentUserIds, setForwardSentUserIds] = useState<Set<string>>(new Set());
-
-  // Direct Immediate Message Deletion
-  const handleRequestDelete = (msgId: string, type: 'me' | 'everyone') => {
-    handleDelete(msgId, type);
-  };
-
-  // Bulk Message Selection State
-  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
-  const [igMenu, setIgMenu] = useState<IGMenuState | null>(null);
-
-  const toggleMessageSelection = (msgId: string) => {
-    setSelectedMessageIds(prev => {
-      const next = new Set(prev);
-      if (next.has(msgId)) {
-        next.delete(msgId);
-      } else {
-        next.add(msgId);
-      }
-      return next;
-    });
-  };
-
-  const handleLongPress = (msgId: string) => {
-    setSelectedMessageIds(new Set([msgId]));
-  };
-
-  const handleBulkDelete = async (type: 'me' | 'everyone') => {
-    const ids = Array.from(selectedMessageIds);
-    setSelectedMessageIds(new Set()); // Exit selection mode
-
-    // Local optimistic delete
-    if (type === 'everyone') {
-      setMessages(prev => prev.map(m => {
-        if (ids.includes(m.id)) return { ...m, content: "This message was deleted", type: "deleted" };
-        return m;
-      }));
-    } else {
-      setMessages(prev => prev.filter(m => !ids.includes(m.id)));
-    }
-
-    // Server-side delete
-    for (const msgId of ids) {
-      try {
-        await deleteSocialMessage(msgId, type);
-        if (type === 'everyone') {
-          socket?.emit('delete_social_message', { messageId: msgId, receiverEmail: selectedUser?.email });
-        }
-      } catch (err) {
-        console.error("Failed to delete message during bulk action:", err);
-      }
-    }
-  };
-
   // Expose closeChat to parent via ref
   React.useImperativeHandle(ref, () => ({
     closeChat: () => {
-      runCircleTransition(() => setSelectedUser(null), 28, 28, true);
+      setSelectedUser(null);
     },
-    // Silent version: resets without firing a nested startViewTransition
-    // Use this when called from inside another ongoing view transition
     silentReset: () => {
       setSelectedUser(null);
     }
@@ -1996,13 +1872,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       setShowThemePicker(false);
       return;
     }
-    const clientX = e ? e.clientX : 28;
-    const clientY = e ? e.clientY : 28;
-    runCircleTransition(() => {
-      setShowChatDetails(false);
-      setShowThemePicker(false);
-      setSelectedUser(null);
-    }, clientX, clientY, true);
+    setShowChatDetails(false);
+    setShowThemePicker(false);
+    setSelectedUser(null);
   };
 
   const handleSelectUser = (user: any, e?: React.MouseEvent) => {
@@ -2012,9 +1884,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (selectedChatForOptions) {
       setSelectedChatForOptions(user);
     }
-    const clientX = e?.clientX ?? (typeof window !== 'undefined' ? window.innerWidth / 2 : 0);
-    const clientY = e?.clientY ?? (typeof window !== 'undefined' ? window.innerHeight / 2 : 0);
-    runCircleTransition(() => setSelectedUser(user), clientX, clientY, false);
+    setSelectedUser(user);
   };
 
   const [view, setView] = useState<'recent' | 'requests'>('recent');
@@ -2473,26 +2343,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [showVoiceMenu, setShowVoiceMenu] = useState(false);
-  const [isVoiceToText, setIsVoiceToText] = useState(false);
-  const voiceToTextRef = useRef<any>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef<boolean>(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const isCancelingRecordingRef = useRef(false);
 
   // Call States
   const [incomingCall, setIncomingCall] = useState<{ from: any, type: 'audio' | 'video', offer?: any, callId?: string } | null>(null);
   const [activeCall, setActiveCall] = useState<{ peer: any, type: 'audio' | 'video', isCaller: boolean, callId?: string, initialOffer?: any } | null>(null);
-  // *** FIX Bug 3: Ref mirror of activeCall so socket closures always read current value ***
   const activeCallRef = useRef<{ peer: any, type: 'audio' | 'video', isCaller: boolean, callId?: string, initialOffer?: any } | null>(null);
   const incomingCallDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showAIMention, setShowAIMention] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
   const isPartnerTyping = useMemo(() => {
@@ -2513,7 +2373,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     return 'default';
   });
   const [liveThemeId, setLiveThemeId] = useState<string | null>(null);
-  const [themeSearchQuery, setThemeSearchQuery] = useState('');
   const [lightboxMedia, setLightboxMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
   const openMediaLightbox = (url: string, type: 'image' | 'video' = 'image') => {
     setLightboxMedia({ url, type });
@@ -2619,7 +2478,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     acceptedContactIdsRef.current = acceptedContactIds;
   }, [acceptedContactIds]);
   const [isUserBlocked, setIsUserBlocked] = useState(false);
-  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [viewingProfileUser, setViewingProfileUser] = useState<any>(null);
   const [showSearchWindow, setShowSearchWindow] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
@@ -2632,6 +2490,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     onSearchActiveChange?.(isSearchFocused || searchQuery.trim().length > 0);
   }, [isSearchFocused, searchQuery, onSearchActiveChange]);
 
+  useEffect(() => {
+    onLongPressChatChange?.(Boolean(selectedChatForOptions));
+  }, [selectedChatForOptions, onLongPressChatChange]);
+
+  useEffect(() => {
+    onStoryEditorChange?.(showStoryEditor);
+  }, [showStoryEditor, onStoryEditorChange]);
+
   const [showReportModal, setShowReportModal] = useState(false);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
@@ -2639,14 +2505,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     picsAndVideos: { id: string; content: string; type: string; createdAt: any; senderId?: string }[];
     files: { id: string; content: string; type: string; createdAt: any; senderId?: string }[];
   }>({ picsAndVideos: [], files: [] });
-  const [mediaDisplayLimit, setMediaDisplayLimit] = useState<number>(15);
   const [selectedAlbum, setSelectedAlbum] = useState<{ id: string; items: any[]; time?: string } | null>(null);
 
   // Automatically fetch ALL shared media for this chat from DB regardless of pagination state
   useEffect(() => {
     if (!selectedUser?.id) {
       setSharedMedia({ picsAndVideos: [], files: [] });
-      setMediaDisplayLimit(15);
       return;
     }
     getChatSharedMedia(selectedUser.id).then((mediaMsgs: any[]) => {
@@ -4745,229 +4609,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   };
 
-  const startRecording = async () => {
-    isCancelingRecordingRef.current = false;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        if (isCancelingRecordingRef.current) {
-          isCancelingRecordingRef.current = false;
-          stream.getTracks().forEach(track => track.stop());
-          return;
-        }
-
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        stream.getTracks().forEach(track => track.stop());
-
-        if (selectedUser && socket && session?.user) {
-          const senderId = (session.user as any).id;
-          const stableId = 'voice-' + Date.now() + Math.random().toString(36).substring(7);
-          const localPreview = URL.createObjectURL(audioBlob);
-
-          const optimisticMsg: any = {
-            id: stableId,
-            senderId: senderId,
-            receiverId: selectedUser.id,
-            content: localPreview,
-            type: 'voice',
-            createdAt: new Date(),
-            isSeen: false,
-            status: 'sending',
-            uploadProgress: 0,
-          };
-          setMessages(prev => [...prev, optimisticMsg]);
-          setMessagesCache(prev => {
-            const current = prev[selectedUser.id] || [];
-            return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
-          });
-
-          try {
-            // 1. Get presigned ticket for direct upload
-            const presignRes = await fetch('/api/chat/media/presign', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                receiverId: selectedUser.id,
-                messageId: stableId,
-                filename: 'voice.webm',
-                mimeType: 'audio/webm',
-                hasThumbnail: false,
-              }),
-            });
-
-            let finalAudioUrl = '';
-            let storagePath = '';
-            if (presignRes.ok) {
-              const { ticket } = await presignRes.json();
-              if (ticket?.uploadUrl) {
-                await uploadBinaryWithProgress(
-                  ticket.uploadUrl,
-                  audioBlob,
-                  'audio/webm',
-                  (pct) => {
-                    setMessages(prev => prev.map(m => m.id === stableId ? { ...m, uploadProgress: pct } : m));
-                  }
-                );
-                finalAudioUrl = ticket.publicUrl;
-                storagePath = ticket.storagePath;
-              }
-            }
-
-            // If direct upload was not supported, use fallback
-            if (!finalAudioUrl) {
-              const formData = new FormData();
-              formData.append('file', audioBlob, 'voice.webm');
-              formData.append('receiverId', selectedUser.id);
-              formData.append('type', 'voice');
-              const res = await fetch('/api/chat/upload', { method: 'POST', body: formData });
-              const resData = await res.json();
-              if (resData?.success && resData?.message) {
-                finalAudioUrl = resData.message.content;
-                storagePath = resData.storagePath || '';
-              }
-            }
-
-            if (!finalAudioUrl) throw new Error('Voice upload failed');
-
-            // 2. Save message with metadata
-            const savedMsg = await saveSocialMessage(
-              selectedUser.id,
-              finalAudioUrl,
-              'voice',
-              null,
-              {
-                mediaUrl: finalAudioUrl,
-                mimeType: 'audio/webm',
-                fileSize: audioBlob.size,
-                storagePath,
-              }
-            );
-
-            if (savedMsg) {
-              setMessages(prev => prev.map(m => {
-                if (m.id === stableId) {
-                  return {
-                    ...(savedMsg as any),
-                    id: (savedMsg as any).id || stableId,
-                    isSeen: m.isSeen || (savedMsg as any).isSeen || false,
-                    status: 'sent'
-                  };
-                }
-                return m;
-              }));
-
-              setMessagesCache(prev => {
-                const current = prev[selectedUser.id] || [];
-                return {
-                  ...prev,
-                  [selectedUser.id]: current.map(m => m.id === stableId ? {
-                    ...(savedMsg as any),
-                    id: (savedMsg as any).id || stableId,
-                    isSeen: m.isSeen || (savedMsg as any).isSeen || false,
-                    status: 'sent'
-                  } : m)
-                };
-              });
-
-              // Emit clean URL over Socket.io — ZERO base64!
-              socket.emit('send_social_message', {
-                ...(savedMsg as any),
-                id: (savedMsg as any).id || stableId,
-                receiverId: selectedUser.id,
-                receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
-                ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
-              });
-            }
-          } catch (err) {
-            console.error('Failed to upload voice message:', err);
-            setMessages(prev => prev.map(m => m.id === stableId ? { ...m, status: 'error' } : m));
-          }
-        }
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (err) {
-      console.error("Error accessing microphone:", err);
-      alert("Microphone access denied.");
-    }
-  };
-
-  const stopRecording = () => {
-    isCancelingRecordingRef.current = false;
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
-
-  const cancelRecording = () => {
-    triggerHaptic('warning');
-    isCancelingRecordingRef.current = true;
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
-
-  const startVoiceToText = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert("Speech recognition is not supported in this browser.");
-      return;
-    }
-    try {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event: any) => {
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          }
-        }
-        if (finalTranscript) {
-          setInputValue(prev => prev + (prev ? ' ' : '') + finalTranscript);
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.error("Speech recognition error", event.error);
-        setIsVoiceToText(false);
-      };
-
-      recognition.onend = () => {
-        setIsVoiceToText(false);
-      };
-
-      recognition.start();
-      voiceToTextRef.current = recognition;
-      setIsVoiceToText(true);
-    } catch (e) {
-      console.error("Voice-to-text error", e);
-    }
-  };
-
-  const stopVoiceToText = () => {
-    if (voiceToTextRef.current) {
-      voiceToTextRef.current.onend = null;
-      try { voiceToTextRef.current.stop(); } catch (e) { }
-      voiceToTextRef.current = null;
-    }
-    setIsVoiceToText(false);
-  };
-
   const uploadMediaItemDirect = async (
     rawFile: File,
     stableId: string,
@@ -6727,69 +6368,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         >
                           Clear
                         </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── INSTAGRAM THEME PICKER MODAL (BORDERLESS & UNBOXED) ── */}
-                {showThemePicker && selectedUser && (
-                  <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="w-full max-w-md mx-auto bg-[var(--dm-bg-sidebar)] text-[var(--dm-text-primary)] rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[85vh] flex flex-col">
-                      <div className="flex items-center justify-between pb-3">
-                        <h3 className="font-extrabold text-base tracking-tight">Themes</h3>
-                        <button
-                          onClick={() => setShowThemePicker(false)}
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs text-[var(--dm-text-muted)] hover:text-[var(--dm-text-primary)] cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </div>
-
-                      <div className="flex-1 overflow-y-auto py-2 space-y-1 no-scrollbar">
-                        {INSTAGRAM_THEMES.map((theme) => {
-                          const isSelected = (chatThemes[selectedUser.id] || 'default') === theme.id;
-                          return (
-                            <div
-                              key={theme.id}
-                              onClick={() => handleSelectTheme(theme)}
-                              className={`flex items-center justify-between py-3 px-3 rounded-2xl cursor-pointer transition-all ${
-                                isSelected ? 'bg-[var(--dm-bg-hover)]/80' : 'hover:bg-[var(--dm-bg-hover)]/40'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3.5">
-                                <div
-                                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm shadow-sm transition-transform active:scale-95 flex-shrink-0"
-                                  style={{ background: theme.previewWallpaper }}
-                                >
-                                  {theme.id === 'love' && '❤️'}
-                                  {theme.id === 'rosegold' && '🌸'}
-                                  {theme.id === 'astral' && '🌟'}
-                                  {theme.id === 'neon' && '⚡'}
-                                  {theme.id === 'ocean' && '🌊'}
-                                  {theme.id === 'sunset' && '🌅'}
-                                  {theme.id === 'galaxy' && '🌌'}
-                                  {theme.id === 'lavender' && '💜'}
-                                  {theme.id === 'emerald' && '🌿'}
-                                  {theme.id === 'nordic' && '❄️'}
-                                  {theme.id === 'monochrome' && '🖤'}
-                                  {theme.id === 'ig_teal' && '🌊'}
-                                  {theme.id === 'ig_dark' && '🌑'}
-                                  {theme.id === 'ig_blue' && '💙'}
-                                  {theme.id === 'ig_green' && '🌿'}
-                                  {theme.id === 'default' && '🔮'}
-                                </div>
-                                <span className="text-xs font-semibold text-[var(--dm-text-primary)]">{theme.name}</span>
-                              </div>
-
-                              {isSelected && (
-                                <span className="text-indigo-500 font-extrabold text-sm pr-1">
-                                  ✓
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
                       </div>
                     </div>
                   </div>
