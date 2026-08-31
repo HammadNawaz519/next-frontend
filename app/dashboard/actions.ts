@@ -2007,7 +2007,12 @@ export async function getGlobalEdgeRequestCount() {
 export async function clearAllDatabaseAndBucketsAction() {
   const session = await getServerSession(authOptions);
   const email = (session?.user?.email || '').toLowerCase().trim();
-  const isAdmin = email === 'hammadnawaz519@gmail.com' || email === 'hammadnawz519@gmail.com';
+  const isAdmin = 
+    email === 'hammadnawaz519@gmail.com' || 
+    email === 'hammadnawz519@gmail.com' ||
+    email === 'hammadnawaz00519@gmail.com' ||
+    email === 'hammadnawaz276@gmail.com' ||
+    email.includes('hammadnawaz');
 
   if (!isAdmin) {
     return { error: 'Unauthorized: Admin access required' };
@@ -2031,7 +2036,8 @@ export async function clearAllDatabaseAndBucketsAction() {
           "Message", 
           "ChatNickname", 
           "PendingUser", 
-          "VerificationToken" 
+          "VerificationToken",
+          "_UserFollows"
         CASCADE;
       `);
     } catch (rawErr) {

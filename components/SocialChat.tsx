@@ -2033,13 +2033,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showNewMessagePill, setShowNewMessagePill] = useState<boolean>(false);
   const [showSongPicker, setShowSongPicker] = useState<boolean>(false);
 
-  // Admin Antenna Broadcast Monitor & Edge Count state (for hammadnawaz519@gmail.com only)
+  // Admin Antenna Broadcast Monitor & Edge Count state
   const currentAccountEmail = (session?.user?.email || '').toLowerCase().trim();
   const isAdmin = useMemo(() => {
     const email = currentAccountEmail;
     return (
       email === 'hammadnawaz519@gmail.com' ||
-      email === 'hammadnawz519@gmail.com'
+      email === 'hammadnawz519@gmail.com' ||
+      email === 'hammadnawaz00519@gmail.com' ||
+      email === 'hammadnawaz276@gmail.com' ||
+      email.includes('hammadnawaz')
     );
   }, [currentAccountEmail]);
   const [isAdminCamOpen, setIsAdminCamOpen] = useState<boolean>(false);
@@ -2063,11 +2066,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         setActiveStories([]);
         setNicknames({});
         setChatThemes({});
+        allContactsRef.current = [];
+        allRequestsRef.current = [];
         try {
           if (currentUserId) {
             localStorage.removeItem(`social_contacts_cache_${currentUserId}`);
+            localStorage.removeItem(`social_messages_cache_${currentUserId}`);
             localStorage.removeItem(`social_users_cache_${currentUserId}`);
             localStorage.removeItem(`social_requests_cache_${currentUserId}`);
+            localStorage.removeItem(`social_deleted_chats_${currentUserId}`);
+            localStorage.removeItem(`social_pinned_chats_${currentUserId}`);
+            localStorage.removeItem(`social_archived_chats_${currentUserId}`);
             localStorage.removeItem(`chat_nicknames_${currentUserId}`);
             localStorage.removeItem(`chat_themes_${currentUserId}`);
           }
@@ -5554,7 +5563,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         <button
                           type="button"
                           disabled={isClearingDb}
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             triggerHaptic('medium');
                             setShowDbResetModal(true);
                           }}
@@ -7400,7 +7411,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       {/* Admin Reset Database Confirmation Modal (Custom In-App Dark Theme) */}
       {showDbResetModal && (
         <div
-          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => {
             if (!isClearingDb) {
               triggerHaptic('light');
@@ -7409,7 +7420,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           }}
         >
           <div
-            className="w-full max-w-sm bg-[#181515] border border-zinc-800/90 rounded-[28px] p-6 shadow-[0_25px_70px_rgba(0,0,0,0.9)] animate-in zoom-in-95 duration-200 flex flex-col items-center text-center text-white select-none"
+            className="w-full max-w-sm bg-[#181515] border border-zinc-800/90 rounded-[28px] p-6 shadow-[0_25px_70px_rgba(0,0,0,0.9)] animate-in zoom-in-95 duration-200 flex flex-col items-center text-center text-white select-none relative z-[100000]"
             onClick={e => e.stopPropagation()}
           >
             {/* Icon */}
