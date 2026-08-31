@@ -77,13 +77,24 @@ export async function askAI(prompt: string) {
 }
 
 export async function getSocialUser(userId: string) {
-  return await prisma.user.findUnique({
-    where: { id: userId },
+  if (!userId) return null;
+  const cleanId = String(userId).trim();
+  return await prisma.user.findFirst({
+    where: {
+      OR: [
+        { id: cleanId },
+        { email: cleanId.toLowerCase() },
+        { username: cleanId.toLowerCase() }
+      ]
+    },
     select: {
       id: true,
       username: true,
       email: true,
-      image: true
+      image: true,
+      bio: true,
+      isPrivate: true,
+      lastSeen: true
     }
   });
 }
@@ -270,8 +281,14 @@ export async function saveSocialMessage(
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
 
-  const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email },
+  const email = session.user.email.toLowerCase().trim();
+  const currentUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: session.user.email },
+        { email: email }
+      ]
+    },
     select: { id: true }
   });
 
@@ -506,8 +523,14 @@ export async function getRecentChats() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return [];
 
-  const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email },
+  const email = session.user.email.toLowerCase().trim();
+  const currentUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: session.user.email },
+        { email: email }
+      ]
+    },
     select: { id: true }
   });
 
@@ -1140,8 +1163,14 @@ export async function searchUsers(query: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return [];
 
-  const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email },
+  const email = session.user.email.toLowerCase().trim();
+  const currentUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: session.user.email },
+        { email: email }
+      ]
+    },
     select: { id: true }
   });
 
@@ -1151,7 +1180,7 @@ export async function searchUsers(query: string) {
   const cleanQ = rawQ.replace(/^@+/, '').trim();
 
   if (!cleanQ) {
-    return await (prisma.user as any).findMany({
+    return await prisma.user.findMany({
       where: {
         id: { not: currentUser.id }
       },
@@ -1161,7 +1190,7 @@ export async function searchUsers(query: string) {
     });
   }
 
-  return await (prisma.user as any).findMany({
+  return await prisma.user.findMany({
     where: {
       id: { not: currentUser.id },
       OR: [

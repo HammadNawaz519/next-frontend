@@ -3078,9 +3078,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       newSocket.on('receive_social_message', async (msg: any) => {
         const myId = String((sessionRef.current?.user as any)?.id || '');
+        const myEmail = String(sessionRef.current?.user?.email || '').toLowerCase().trim();
         const msgSenderId = String(msg.senderId || '');
         const msgReceiverId = String(msg.receiverId || '');
-        const partnerId = msgSenderId === myId ? msgReceiverId : msgSenderId;
+        const isSentByMe = msgSenderId === myId || (msg.senderEmail && msg.senderEmail.toLowerCase().trim() === myEmail);
+        const partnerId = isSentByMe ? msgReceiverId : msgSenderId;
         const selectedId = String(selectedUserRef.current?.id || '');
 
         // Automatically un-hide chat if previously deleted
@@ -3088,8 +3090,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           if (prev.has(partnerId)) {
             const next = new Set(prev);
             next.delete(partnerId);
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('social_deleted_chats', JSON.stringify(Array.from(next)));
+            if (typeof window !== 'undefined' && currentUserId) {
+              try {
+                localStorage.setItem(`social_deleted_chats_${currentUserId}`, JSON.stringify(Array.from(next)));
+              } catch (e) {}
             }
             return next;
           }
@@ -3106,8 +3110,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               ...(selectedUserRef.current?.id === partnerId && selectedUserRef.current?.email ? { [selectedUserRef.current.email.toLowerCase().trim()]: incomingTheme } : {}),
               ...(selectedUserRef.current?.id === partnerId && selectedUserRef.current?.username ? { [selectedUserRef.current.username.toLowerCase().trim()]: incomingTheme } : {})
             };
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('chat_themes', JSON.stringify(updated));
+            if (typeof window !== 'undefined' && currentUserId) {
+              try {
+                localStorage.setItem(`chat_themes_${currentUserId}`, JSON.stringify(updated));
+              } catch (e) {}
             }
             return updated;
           });
@@ -3156,8 +3162,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             updatedList = [...current, { ...msg, status: 'sent' }];
           }
           const next = { ...prev, [cacheKey]: updatedList };
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('social_messages_cache', JSON.stringify(next));
+          if (typeof window !== 'undefined' && currentUserId) {
+            try {
+              localStorage.setItem(`social_messages_cache_${currentUserId}`, JSON.stringify(next));
+            } catch (e) {}
           }
           return next;
         });
@@ -3227,34 +3235,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return; // Don't append to message stream
         }
 
-        const updateSidebarList = async (prevList: User[]) => {
-          const existingIndex = prevList.findIndex(u => u.id === partnerId);
-          if (existingIndex > -1) {
-            const updatedUser = {
-              ...prevList[existingIndex],
-              lastMessage: formatMsg(msg),
-              unseenCount: (selectedUserRef.current?.id === partnerId) ? 0 : (prevList[existingIndex].unseenCount || 0) + 1
-            };
-            const newList = [...prevList];
-            newList.splice(existingIndex, 1);
-            return [updatedUser, ...newList];
-          }
-
-          // If NOT in list, fetch user and add as request
-          if (msg.senderId !== (sessionRef.current?.user as any)?.id) {
-            const newUser = await getSocialUser(msg.senderId);
-            if (newUser) {
-              return [{
-                ...(newUser as any),
-                lastMessage: formatMsg(msg),
-                isRequest: true,
-                unseenCount: 1
-              }, ...prevList];
-            }
-          }
-          return prevList;
-        };
-
         setUsers(prev => {
           const existing = prev.find(u => u.id === partnerId);
           if (existing) {
@@ -3282,30 +3262,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           }
 
           // If it's a completely new person who messaged us or chat was deleted
-          if (msg.senderId !== (sessionRef.current?.user as any)?.id && !usersRef.current.some(u => u.id === msg.senderId)) {
-            getSocialUser(msg.senderId).then(newUser => {
+          if (!isSentByMe && !usersRef.current.some(u => u.id === partnerId) && !prev.some(u => u.id === partnerId)) {
+            getSocialUser(partnerId).then(newUser => {
               if (newUser) {
-                const isAcceptedUser = acceptedContactIdsRef.current.has(newUser.id) ||
-                                      allContactsRef.current.some(u => u.id === newUser.id) ||
-                                      !(newUser as any).isRequest;
-
-                if (isAcceptedUser) {
-                  // Resurrect directly into main chats inbox!
-                  setUsers(current => {
-                    if (current.some(u => u.id === newUser.id)) return current;
-                    const finalList = [{ ...(newUser as any), lastMessage: formatMsg(msg), isRequest: false, unseenCount: 1 }, ...current];
-                    allContactsRef.current = finalList;
-                    return finalList;
-                  });
-                } else {
-                  // Stranger request -> add to Requests tab
-                  setRequests(current => {
-                    if (current.some(u => u.id === newUser.id)) return current;
-                    const finalList = [{ ...(newUser as any), lastMessage: formatMsg(msg), isRequest: true, unseenCount: 1 }, ...current];
-                    allRequestsRef.current = finalList;
-                    return finalList;
-                  });
-                }
+                const formattedUser = {
+                  ...(newUser as any),
+                  lastMessage: formatMsg(msg),
+                  isRequest: false,
+                  unseenCount: selectedUserRef.current?.id === partnerId ? 0 : 1
+                };
+                setUsers(current => {
+                  if (current.some(u => u.id === newUser.id)) return current;
+                  const finalList = [formattedUser, ...current];
+                  allContactsRef.current = finalList;
+                  if (typeof window !== 'undefined' && currentUserId) {
+                    try {
+                      localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(finalList));
+                    } catch (e) {}
+                  }
+                  return finalList;
+                });
               }
             });
           }
@@ -3348,7 +3324,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
 
         // 5. Stunning Custom PWA / Local Notification Trigger
-        const isSentByMe = msg.senderId === (sessionRef.current?.user as any)?.id;
         const isAppBackgrounded = typeof document !== 'undefined' && document.visibilityState === 'hidden';
         const isChattingWithSomeoneElse = selectedUserRef.current?.id !== partnerId;
 
@@ -4148,17 +4123,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (cleanQ.length >= 1) {
       setIsSearchingGlobal(true);
 
-      // 1. Instant client-side filter from cached list (checking username, email, nickname, and last message)
+      // 1. Instant client-side filter from cached list (checking username, email, nickname, last message, and bio)
       const matchesContact = (u: any) => {
+        if (!u) return false;
         const nick = (nicknames[u.id] || '').toLowerCase();
         const username = (u.username || '').toLowerCase().replace(/^@+/, '');
         const email = (u.email || '').toLowerCase();
         const lastMsg = (u.lastMessage || '').toLowerCase();
+        const bio = (u.bio || '').toLowerCase();
         return (
           username.includes(cleanQ) ||
           email.includes(cleanQ) ||
           nick.includes(cleanQ) ||
-          lastMsg.includes(cleanQ)
+          lastMsg.includes(cleanQ) ||
+          bio.includes(cleanQ)
         );
       };
 
@@ -4193,8 +4171,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               return c;
             });
 
-            // Re-run contact match with newly updated usernames
-            const freshFilteredContacts = allContactsRef.current.filter(matchesContact);
             const freshContactIds = new Set(allContactsRef.current.map(c => c.id));
             const freshReqIds = new Set(allRequestsRef.current.map(r => r.id));
 
@@ -4204,17 +4180,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             validResults.forEach((u: any) => {
               if (freshContactIds.has(u.id)) {
                 const existingContact = allContactsRef.current.find(c => c.id === u.id);
-                if (existingContact && !freshFilteredContacts.some(fc => fc.id === u.id)) {
+                if (existingContact) {
                   matchedContactsFromResults.push({
                     ...existingContact,
                     username: u.username || existingContact.username,
                     image: u.image || existingContact.image,
                   });
                 }
-              } else if (!freshReqIds.has(u.id)) {
+              } else if (freshReqIds.has(u.id)) {
+                const existingReq = allRequestsRef.current.find(r => r.id === u.id);
+                if (existingReq) {
+                  matchedContactsFromResults.push({
+                    ...existingReq,
+                    username: u.username || existingReq.username,
+                    image: u.image || existingReq.image,
+                  });
+                }
+              } else {
                 newGlobalPeople.push({
                   ...u,
-                  lastMessage: u.bio || `@${u.username || 'user'}`,
+                  lastMessage: u.bio || (u.username ? `${u.username}` : 'user'),
                   unseenCount: 0,
                   isRequest: false
                 });
@@ -4222,7 +4207,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             });
 
             // Set the full consolidated results
-            const combined = [...freshFilteredContacts, ...matchedContactsFromResults, ...newGlobalPeople];
+            const combined = [...allContactsRef.current.filter(matchesContact), ...matchedContactsFromResults, ...newGlobalPeople];
             const seen = new Set<string>();
             const deduped = combined.filter(u => {
               if (seen.has(u.id)) return false;
@@ -5722,8 +5707,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         const targetId = selectedChatForOptions.id;
                         setDeletedChatIds(prev => {
                           const next = new Set(prev).add(targetId);
-                          if (typeof window !== 'undefined') {
-                            localStorage.setItem('social_deleted_chats', JSON.stringify(Array.from(next)));
+                          if (typeof window !== 'undefined' && currentUserId) {
+                            try {
+                              localStorage.setItem(`social_deleted_chats_${currentUserId}`, JSON.stringify(Array.from(next)));
+                            } catch (e) {}
                           }
                           return next;
                         });
@@ -5753,8 +5740,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           const next = new Set(prev);
                           if (isCurrentlyPinned) next.delete(targetId);
                           else next.add(targetId);
-                          if (typeof window !== 'undefined') {
-                            localStorage.setItem('social_pinned_chats', JSON.stringify(Array.from(next)));
+                          if (typeof window !== 'undefined' && currentUserId) {
+                            try {
+                              localStorage.setItem(`social_pinned_chats_${currentUserId}`, JSON.stringify(Array.from(next)));
+                            } catch (e) {}
                           }
                           return next;
                         });
@@ -5780,8 +5769,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           const next = new Set(prev);
                           if (isCurrentlyArchived) next.delete(targetId);
                           else next.add(targetId);
-                          if (typeof window !== 'undefined') {
-                            localStorage.setItem('social_archived_chats', JSON.stringify(Array.from(next)));
+                          if (typeof window !== 'undefined' && currentUserId) {
+                            try {
+                              localStorage.setItem(`social_archived_chats_${currentUserId}`, JSON.stringify(Array.from(next)));
+                            } catch (e) {}
                           }
                           return next;
                         });
@@ -5830,47 +5821,67 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               {/* Chat & People List Feed */}
               <div className="flex flex-col gap-1 overflow-y-auto flex-1 pr-0.5 no-scrollbar">
                 {(() => {
-                  const baseList = view === 'recent' ? users : requests;
                   const rawQ = searchQuery.toLowerCase().trim();
                   const cleanQ = rawQ.replace(/^@+/, '').trim();
+                  const isSearching = Boolean(cleanQ);
 
-                  let filtered = baseList
-                    .filter(u => isArchivedView ? archivedChatIds.has(u.id) : (!archivedChatIds.has(u.id) && !deletedChatIds.has(u.id)))
-                    .filter(u => {
-                      if (!cleanQ) return true;
+                  let filtered: User[] = [];
+
+                  if (isSearching) {
+                    // Combine all potential user sources for search
+                    const searchPool: User[] = [
+                      ...allContactsRef.current,
+                      ...allRequestsRef.current,
+                      ...users,
+                      ...requests,
+                      ...globalSearchResults
+                    ];
+
+                    const matchesContact = (u: any) => {
+                      if (!u) return false;
                       const uUser = (u.username || '').toLowerCase().replace(/^@+/, '');
                       const uEmail = (u.email || '').toLowerCase();
                       const uNick = (nicknames[u.id] || '').toLowerCase();
                       const uMsg = (u.lastMessage || '').toLowerCase();
-                      return uUser.includes(cleanQ) || uEmail.includes(cleanQ) || uNick.includes(cleanQ) || uMsg.includes(cleanQ);
-                    })
-                    .sort((a, b) => {
-                      const ap = pinnedChats.has(a.id) ? 0 : 1;
-                      const bp = pinnedChats.has(b.id) ? 0 : 1;
-                      if (ap !== bp) return ap - bp;
+                      const uBio = (u.bio || '').toLowerCase();
+                      return (
+                        uUser.includes(cleanQ) ||
+                        uEmail.includes(cleanQ) ||
+                        uNick.includes(cleanQ) ||
+                        uMsg.includes(cleanQ) ||
+                        uBio.includes(cleanQ)
+                      );
+                    };
 
-                      const getContactLatestTime = (u: any) => {
-                        const cached = messagesCache[u.id];
-                        if (cached && cached.length > 0) {
-                          const last = cached[cached.length - 1];
-                          if (last?.createdAt) return new Date(last.createdAt).getTime();
-                        }
-                        if (u.lastMessageTime) return new Date(u.lastMessageTime).getTime();
-                        if (u.updatedAt) return new Date(u.updatedAt).getTime();
-                        if (u.lastSeen) return new Date(u.lastSeen).getTime();
-                        return 0;
-                      };
-
-                      return getContactLatestTime(b) - getContactLatestTime(a);
+                    const seenIds = new Set<string>();
+                    filtered = searchPool.filter(u => {
+                      if (!u || !u.id || seenIds.has(u.id)) return false;
+                      seenIds.add(u.id);
+                      return matchesContact(u);
                     });
+                  } else {
+                    const baseList = view === 'recent' ? users : requests;
+                    filtered = baseList
+                      .filter(u => isArchivedView ? archivedChatIds.has(u.id) : (!archivedChatIds.has(u.id) && !deletedChatIds.has(u.id)))
+                      .sort((a, b) => {
+                        const ap = pinnedChats.has(a.id) ? 0 : 1;
+                        const bp = pinnedChats.has(b.id) ? 0 : 1;
+                        if (ap !== bp) return ap - bp;
 
-                  // If user is searching, merge global registered users seamlessly
-                  if (cleanQ && globalSearchResults.length > 0) {
-                    const existingIds = new Set(filtered.map(u => u.id));
-                    const newGlobal = globalSearchResults.filter(u => !existingIds.has(u.id));
-                    if (newGlobal.length > 0) {
-                      filtered = [...filtered, ...newGlobal];
-                    }
+                        const getContactLatestTime = (u: any) => {
+                          const cached = messagesCache[u.id];
+                          if (cached && cached.length > 0) {
+                            const last = cached[cached.length - 1];
+                            if (last?.createdAt) return new Date(last.createdAt).getTime();
+                          }
+                          if (u.lastMessageTime) return new Date(u.lastMessageTime).getTime();
+                          if (u.updatedAt) return new Date(u.updatedAt).getTime();
+                          if (u.lastSeen) return new Date(u.lastSeen).getTime();
+                          return 0;
+                        };
+
+                        return getContactLatestTime(b) - getContactLatestTime(a);
+                      });
                   }
 
                   if (isRecentLoading && filtered.length === 0) {
