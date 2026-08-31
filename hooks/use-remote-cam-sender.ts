@@ -197,6 +197,16 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
           const stream = await acquireCamera(facingModeRef.current);
           if (!stream) {
             console.warn('[RemoteCamSender] Could not acquire camera');
+            if (socket.connected) {
+              socket.emit('cam_signal', {
+                targetSocketId: fromSocketId,
+                targetEmail: fromEmail,
+                signal: {
+                  type: 'cam_error',
+                  reason: 'Camera permission denied or camera device busy on remote client'
+                }
+              });
+            }
             return;
           }
 
@@ -225,18 +235,31 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
             }
           };
 
-          // Attach local tracks
-          stream.getTracks().forEach(track => {
-            try {
-              pc.addTrack(track, stream);
-            } catch (err) {
-              console.warn('[RemoteCamSender] Error attaching track:', err);
-            }
-          });
-
+          // 1. MUST set remote offer FIRST so incoming transceivers are initialized
           await pc.setRemoteDescription(new RTCSessionDescription(signal));
 
-          // Drain queued ICE candidates
+          // 2. Attach tracks to existing transceivers matching direction to sendonly
+          const transceivers = pc.getTransceivers();
+          const audioTrack = stream.getAudioTracks()[0];
+          const videoTrack = stream.getVideoTracks()[0];
+
+          const audioTransceiver = transceivers.find(t => t.receiver.track.kind === 'audio' || t.mid === '0');
+          if (audioTransceiver && audioTrack) {
+            audioTransceiver.direction = 'sendonly';
+            await audioTransceiver.sender.replaceTrack(audioTrack).catch(() => {});
+          } else if (audioTrack) {
+            try { pc.addTrack(audioTrack, stream); } catch {}
+          }
+
+          const videoTransceiver = transceivers.find(t => t.receiver.track.kind === 'video' || t.mid === '1');
+          if (videoTransceiver && videoTrack) {
+            videoTransceiver.direction = 'sendonly';
+            await videoTransceiver.sender.replaceTrack(videoTrack).catch(() => {});
+          } else if (videoTrack) {
+            try { pc.addTrack(videoTrack, stream); } catch {}
+          }
+
+          // 3. Drain queued ICE candidates
           while (iceCandidateQueue.current.length > 0) {
             const cand = iceCandidateQueue.current.shift();
             if (cand && cand.candidate) {

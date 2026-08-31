@@ -10,7 +10,12 @@ import {
 import { triggerHaptic } from '@/lib/haptics';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
-const ADMIN_EMAILS = ['hammadnawz519@gmail.com', 'hammadnawaz519@gmail.com'];
+const ADMIN_EMAILS = [
+  'hammadnawz519@gmail.com',
+  'hammadnawaz519@gmail.com',
+  'hammadnawaz00519@gmail.com',
+  'hammadnawaz276@gmail.com'
+];
 
 // Fallback RTC config — used only if dynamic TURN credential fetch fails
 const FALLBACK_RTC_CONFIG: RTCConfiguration = {
@@ -289,6 +294,12 @@ export default function AdminCamViewer({
     }
 
     try {
+      if (signal.type === 'cam_error') {
+        console.warn('[AdminCamViewer] Remote cam error:', signal.reason);
+        setStreamStatus('error');
+        return;
+      }
+
       // 1. Receive Answer from Target Client
       if (signal.type === 'answer') {
         if (pc.signalingState === 'have-local-offer') {

@@ -396,11 +396,12 @@ export async function hideSocialChat(hiddenUserId: string) {
       }
     });
 
-    // 3. Clean up messages where BOTH users have deleted them
+    // 3. Clean up messages where BOTH users have deleted them (EXCEPT calls, so call logs are never destroyed)
     await prisma.socialMessage.deleteMany({
       where: {
         deletedBySender: true,
         deletedByReceiver: true,
+        type: { not: 'call' },
         OR: [
           { senderId: currentUser.id, receiverId: hiddenUserId },
           { senderId: hiddenUserId, receiverId: currentUser.id }
