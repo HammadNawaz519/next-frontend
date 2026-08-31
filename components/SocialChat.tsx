@@ -1005,7 +1005,7 @@ const ChatItem = memo(({
     <div
       className={`flex items-center gap-3.5 p-2 rounded-2xl transition-all cursor-pointer active:scale-[0.99] select-none ${
         isGreyedOut
-          ? 'bg-zinc-200/80 dark:bg-zinc-800/80 opacity-60 grayscale-[40%] scale-[0.98]'
+          ? 'bg-[#9D4EDD]/10 ring-1.5 ring-[#9D4EDD]/40'
           : (isSelected ? 'bg-zinc-100/80' : 'hover:bg-zinc-50')
       }`}
       onClick={handleClick}
@@ -2009,6 +2009,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     selectedUserRef.current = user;
     setShowChatDetails(false);
     setShowThemePicker(false);
+    if (selectedChatForOptions) {
+      setSelectedChatForOptions(user);
+    }
     const clientX = e?.clientX ?? (typeof window !== 'undefined' ? window.innerWidth / 2 : 0);
     const clientY = e?.clientY ?? (typeof window !== 'undefined' ? window.innerHeight / 2 : 0);
     runCircleTransition(() => setSelectedUser(user), clientX, clientY, false);
@@ -5728,6 +5731,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         setUsers(prev => prev.filter(u => u.id !== targetId));
                         setRequests(prev => prev.filter(u => u.id !== targetId));
                         allContactsRef.current = allContactsRef.current.filter(u => u.id !== targetId);
+                        if (selectedUser?.id === targetId) {
+                          setSelectedUser(null);
+                        }
                         try {
                           await hideSocialChat(targetId);
                         } catch (err) {
@@ -5787,6 +5793,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           }
                           return next;
                         });
+                        if (selectedUser?.id === targetId) {
+                          setSelectedUser(null);
+                        }
                         setSelectedChatForOptions(null);
                       }}
                       className={`p-1.5 rounded-full transition-all cursor-pointer active:scale-90 outline-none border-0 ring-0 ${
