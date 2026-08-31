@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import {
   searchUsers,
   getSocialMessages,
+  getSocialUser,
   saveSocialMessage,
   deleteSocialMessage,
   hideSocialChat,
@@ -23,6 +24,8 @@ import {
 } from '@/app/dashboard/actions';
 import {
   optimizeImageClient,
+  extractVideoMetadataAndThumbnail,
+  validateMediaFile,
   uploadBinaryWithProgress,
 } from '@/lib/media-optimizer';
 import dynamic from 'next/dynamic';
@@ -30,6 +33,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { triggerHaptic } from '@/lib/haptics';
 import {
   Database,
+  Plus,
   Archive,
   Search,
   X,
@@ -1852,6 +1856,32 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }, [initialUser]);
 
+  // Forward Message Modal State
+  const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
+  const [forwardSearch, setForwardSearch] = useState('');
+  const [forwardSentUserIds, setForwardSentUserIds] = useState<Set<string>>(new Set());
+
+  // Direct Immediate Message Deletion
+  const handleRequestDelete = (msgId: string, type: 'me' | 'everyone') => {
+    handleDelete(msgId, type);
+  };
+
+  // Bulk Message Selection State
+  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
+  const [igMenu, setIgMenu] = useState<IGMenuState | null>(null);
+
+  const toggleMessageSelection = (msgId: string) => {
+    setSelectedMessageIds(prev => {
+      const next = new Set(prev);
+      if (next.has(msgId)) {
+        next.delete(msgId);
+      } else {
+        next.add(msgId);
+      }
+      return next;
+    });
+  };
+
   // Expose closeChat to parent via ref
   React.useImperativeHandle(ref, () => ({
     closeChat: () => {
@@ -2539,7 +2569,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       });
 
       setSharedMedia({ picsAndVideos, files });
-      setMediaDisplayLimit(15);
     }).catch(() => {});
   }, [selectedUser?.id]);
 
@@ -3139,7 +3168,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
           // If it's a completely new person who messaged us or chat was deleted
           if (!isSentByMe && !usersRef.current.some(u => u.id === partnerId) && !prev.some(u => u.id === partnerId)) {
-            getSocialUser(partnerId).then(newUser => {
+            getSocialUser(partnerId).then((newUser: any) => {
               if (newUser) {
                 const formattedUser = {
                   ...(newUser as any),
@@ -4436,7 +4465,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const currentContent = textToSend;
     const senderId = (session.user as any).id;
     setInputValue('');
-    setShowAIMention(false);
 
     // Reset textarea element height to single line
     if (typeof document !== 'undefined') {
@@ -6904,7 +6932,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <button
                         disabled={isSentToTarget}
                         onClick={async () => {
-                          setForwardSentUserIds(prev => new Set(prev).add(targetUser.id));
+                          setForwardSentUserIds((prev: Set<string>) => new Set(prev).add(targetUser.id));
                           const newMsg: Message = {
                             id: 'fwd-' + Date.now() + Math.random().toString(36).substring(7),
                             senderId: (session?.user as any)?.id,
