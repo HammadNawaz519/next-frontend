@@ -5806,7 +5806,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               <div className="flex justify-between items-center mt-2 mb-3 px-1 shrink-0 transition-all duration-300">
                 <h2 className="text-[22px] font-bold text-black tracking-tight">
                   {isSearchFocused 
-                    ? (searchQuery.trim() ? 'Search Results' : 'Recent People') 
+                    ? (searchQuery.trim() ? 'Search Results' : 'Search') 
                     : (isArchivedView ? 'Archived Chats' : 'Recent Chat')}
                 </h2>
 
@@ -5835,6 +5835,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   const rawQ = searchQuery.toLowerCase().trim();
                   const cleanQ = rawQ.replace(/^@+/, '').trim();
                   const isSearching = Boolean(cleanQ);
+
+                  if (isSearchFocused && !cleanQ) {
+                    return (
+                      <div className="flex flex-col items-center justify-center py-20 px-4 text-center select-none animate-in fade-in duration-150">
+                        <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-3 text-zinc-400">
+                          <Search className="w-5 h-5" strokeWidth={2} />
+                        </div>
+                        <p className="text-sm font-bold text-zinc-700">Search Connect</p>
+                        <p className="text-xs text-zinc-400 mt-1">Search for any user by username or email</p>
+                      </div>
+                    );
+                  }
 
                   let filtered: User[] = [];
 
@@ -5918,10 +5930,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     return (
                       <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
                         <p className="text-sm font-bold text-zinc-800">
-                          {isSearchingGlobal ? 'Searching users...' : (cleanQ ? `No people found for "${searchQuery}"` : (isArchivedView ? 'No archived chats' : 'No conversations yet'))}
+                          {isSearchingGlobal ? 'Searching users...' : `No people found for "${searchQuery}"`}
                         </p>
                         <p className="text-xs text-zinc-500 mt-0.5">
-                          {cleanQ ? 'Try searching by a different name or username' : 'Search to connect with anyone on Connect'}
+                          Try searching by a different username or email
                         </p>
                       </div>
                     );
