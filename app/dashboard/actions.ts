@@ -182,7 +182,7 @@ export async function getSocialMessages(otherUserId: string, limit: number = 30,
       reactions: {
         include: {
           user: {
-            select: { id: true, name: true, username: true }
+            select: { id: true, username: true }
           }
         }
       }
@@ -534,7 +534,6 @@ export async function getRecentChats() {
   // 2. Fetch recent messages for this user (both sent and received) in parallel with unseen counts
   const userSelect = {
     id: true,
-    name: true,
     username: true,
     email: true,
     image: true,
@@ -695,8 +694,8 @@ export async function getCallHistory() {
           ]
         },
         include: {
-          caller: { select: { id: true, name: true, image: true, username: true } },
-          receiver: { select: { id: true, name: true, image: true, username: true } }
+          caller: { select: { id: true, image: true, username: true } },
+          receiver: { select: { id: true, image: true, username: true } }
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -717,8 +716,8 @@ export async function getCallHistory() {
           type: 'call'
         },
         include: {
-          sender: { select: { id: true, name: true, image: true, username: true } },
-          receiver: { select: { id: true, name: true, image: true, username: true } }
+          sender: { select: { id: true, image: true, username: true } },
+          receiver: { select: { id: true, image: true, username: true } }
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -1215,17 +1214,17 @@ export async function getOtherUserProfile(targetUserId: string) {
     where: { id: targetUserId },
     include: {
       followers: {
-        select: { id: true, name: true, username: true, image: true }
+        select: { id: true, username: true, image: true }
       },
       following: {
-        select: { id: true, name: true, username: true, image: true }
+        select: { id: true, username: true, image: true }
       },
       posts: {
         orderBy: { createdAt: 'desc' }
       },
       receivedFollowRequests: {
         include: {
-          sender: { select: { id: true, name: true, username: true, image: true } }
+          sender: { select: { id: true, username: true, image: true } }
         }
       }
     }
@@ -1400,7 +1399,6 @@ export async function getFollowNotificationsAction() {
       followers: {
         select: {
           id: true,
-          name: true,
           username: true,
           image: true
         }
@@ -1410,7 +1408,6 @@ export async function getFollowNotificationsAction() {
           sender: {
             select: {
               id: true,
-              name: true,
               username: true,
               image: true
             }
@@ -1427,7 +1424,7 @@ export async function getFollowNotificationsAction() {
 
   // Add received follow requests
   (currentUser.receivedFollowRequests || []).forEach((req: any) => {
-    const senderName = req.sender?.name || req.sender?.username || 'Someone';
+    const senderName = req.sender?.username || 'Someone';
     notifications.push({
       id: req.id,
       title: `${senderName} requested to follow you`,
@@ -1989,19 +1986,42 @@ export async function clearAllDatabaseAndBucketsAction() {
 
   try {
     // 1. Delete all relational data in order, leaving ONLY User (and Auth) records
-    await (prisma as any).socialReaction.deleteMany({}).catch(() => {});
-    await (prisma as any).socialMessage.deleteMany({}).catch(() => {});
-    await (prisma as any).hiddenSocialChat.deleteMany({}).catch(() => {});
-    await (prisma as any).socialCall.deleteMany({}).catch(() => {});
-    await (prisma as any).followRequest.deleteMany({}).catch(() => {});
-    await (prisma as any).like.deleteMany({}).catch(() => {});
-    await (prisma as any).comment.deleteMany({}).catch(() => {});
-    await (prisma as any).savedPost.deleteMany({}).catch(() => {});
-    await (prisma as any).post.deleteMany({}).catch(() => {});
-    await (prisma as any).story.deleteMany({}).catch(() => {});
-    await (prisma as any).message.deleteMany({}).catch(() => {}); // Grok AI messages
-    await (prisma as any).pendingUser.deleteMany({}).catch(() => {});
-    await (prisma as any).verificationToken.deleteMany({}).catch(() => {});
+    try {
+      await (prisma as any).$executeRawUnsafe(`
+        TRUNCATE TABLE 
+          "SocialReaction", 
+          "SocialMessage", 
+          "HiddenSocialChat", 
+          "SocialCall", 
+          "FollowRequest", 
+          "Like", 
+          "Comment", 
+          "SavedPost", 
+          "Post", 
+          "Story", 
+          "Message", 
+          "ChatNickname", 
+          "PendingUser", 
+          "VerificationToken" 
+        CASCADE;
+      `);
+    } catch (rawErr) {
+      // Fallback to Prisma deleteMany in strict foreign-key order
+      await (prisma as any).socialReaction.deleteMany({}).catch(() => {});
+      await (prisma as any).chatNickname.deleteMany({}).catch(() => {});
+      await (prisma as any).comment.deleteMany({}).catch(() => {});
+      await (prisma as any).like.deleteMany({}).catch(() => {});
+      await (prisma as any).savedPost.deleteMany({}).catch(() => {});
+      await (prisma as any).post.deleteMany({}).catch(() => {});
+      await (prisma as any).story.deleteMany({}).catch(() => {});
+      await (prisma as any).socialCall.deleteMany({}).catch(() => {});
+      await (prisma as any).hiddenSocialChat.deleteMany({}).catch(() => {});
+      await (prisma as any).socialMessage.deleteMany({}).catch(() => {});
+      await (prisma as any).followRequest.deleteMany({}).catch(() => {});
+      await (prisma as any).message.deleteMany({}).catch(() => {});
+      await (prisma as any).pendingUser.deleteMany({}).catch(() => {});
+      await (prisma as any).verificationToken.deleteMany({}).catch(() => {});
+    }
 
     // 2. Empty Supabase Storage Buckets
     try {

@@ -2058,7 +2058,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         setSelectedUser(null);
         setUserStory(null);
         setActiveStories([]);
+        setNicknames({});
+        setChatThemes({});
         try {
+          if (currentUserId) {
+            localStorage.removeItem(`social_contacts_cache_${currentUserId}`);
+            localStorage.removeItem(`social_users_cache_${currentUserId}`);
+            localStorage.removeItem(`social_requests_cache_${currentUserId}`);
+            localStorage.removeItem(`chat_nicknames_${currentUserId}`);
+            localStorage.removeItem(`chat_themes_${currentUserId}`);
+          }
           localStorage.removeItem('social_messages_cache');
           localStorage.removeItem('social_users_cache');
           localStorage.removeItem('social_requests_cache');
