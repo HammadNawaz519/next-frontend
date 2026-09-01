@@ -5984,43 +5984,47 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                     {/* ── Partner Live Typing Indicator Bubble ── */}
                     {isPartnerTyping && (
-                      <div className="flex items-center gap-2 self-start pl-1 py-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                      <div className="flex items-center gap-2 self-start pl-1 py-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
                         <div
-                          className="px-4 py-3 rounded-[20px] rounded-bl-[6px] flex items-center gap-1.5 shadow-xs transition-all"
+                          className="px-5 py-3.5 !rounded-[26px] min-h-[44px] flex items-center gap-1.5 shadow-2xs transition-all select-none"
                           style={{
-                            backgroundColor: activeTheme?.id && activeTheme.id !== 'default' && activeTheme.incomingBubbleColor
+                            borderRadius: '26px',
+                            backgroundColor: activeTheme?.incomingBubbleColor
                               ? activeTheme.incomingBubbleColor
-                              : '#f4f4f5',
+                              : '#FFF3CD',
                           }}
                         >
                           <span
                             className="w-2 h-2 rounded-full animate-bounce"
                             style={{
-                              backgroundColor: activeTheme?.id && activeTheme.id !== 'default' && activeTheme.incomingTextColor
+                              backgroundColor: activeTheme?.incomingTextColor
                                 ? activeTheme.incomingTextColor
-                                : '#71717a',
+                                : '#18181b',
+                              opacity: 0.8,
                               animationDelay: '0ms',
-                              animationDuration: '1.2s',
+                              animationDuration: '1.1s',
                             }}
                           />
                           <span
                             className="w-2 h-2 rounded-full animate-bounce"
                             style={{
-                              backgroundColor: activeTheme?.id && activeTheme.id !== 'default' && activeTheme.incomingTextColor
+                              backgroundColor: activeTheme?.incomingTextColor
                                 ? activeTheme.incomingTextColor
-                                : '#71717a',
-                              animationDelay: '200ms',
-                              animationDuration: '1.2s',
+                                : '#18181b',
+                              opacity: 0.8,
+                              animationDelay: '180ms',
+                              animationDuration: '1.1s',
                             }}
                           />
                           <span
                             className="w-2 h-2 rounded-full animate-bounce"
                             style={{
-                              backgroundColor: activeTheme?.id && activeTheme.id !== 'default' && activeTheme.incomingTextColor
+                              backgroundColor: activeTheme?.incomingTextColor
                                 ? activeTheme.incomingTextColor
-                                : '#71717a',
-                              animationDelay: '400ms',
-                              animationDuration: '1.2s',
+                                : '#18181b',
+                              opacity: 0.8,
+                              animationDelay: '360ms',
+                              animationDuration: '1.1s',
                             }}
                           />
                         </div>
