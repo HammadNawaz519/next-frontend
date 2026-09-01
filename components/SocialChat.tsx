@@ -2206,6 +2206,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [requests, setRequests] = useState<User[]>([]);
   const isFlushingRef = useRef(false);
   const socketRef = useRef<any>(null);
+  const inFlightMsgIdsRef = useRef<Set<string>>(new Set());
+
+  // Clean stale pending messages on init
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const queue = getPendingQueue();
+        const now = Date.now();
+        const fresh = queue.filter(item => {
+          const created = new Date(item.createdAt).getTime();
+          return !isNaN(created) && now - created < 5 * 60 * 1000;
+        });
+        savePendingQueue(fresh);
+      } catch (e) {}
+    }
+  }, []);
 
   const flushPendingQueue = React.useCallback(async () => {
     if (isFlushingRef.current) return;
@@ -2213,25 +2229,42 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (queue.length === 0) return;
 
     isFlushingRef.current = true;
-    for (const item of queue) {
+    const now = Date.now();
+
+    // Filter out in-flight items and expired items (> 5 min)
+    const toFlush = queue.filter(item => {
+      if (inFlightMsgIdsRef.current.has(item.tempId)) return false;
+      const created = new Date(item.createdAt).getTime();
+      if (!isNaN(created) && now - created > 5 * 60 * 1000) {
+        removeFromPendingQueue(item.tempId);
+        return false;
+      }
+      return true;
+    });
+
+    for (const item of toFlush) {
+      // Mark in-flight and dequeue immediately to avoid double-processing on rapid reconnect
+      inFlightMsgIdsRef.current.add(item.tempId);
+      removeFromPendingQueue(item.tempId);
+
       try {
-        if (socketRef.current) {
-          socketRef.current.emit('send_social_message', {
-            id: item.tempId,
-            senderId: (sessionRef.current?.user as any)?.id,
+        let savedMsg: any = null;
+        try {
+          const savedRes = await renderApiClient.sendSocialMessage({
             receiverId: item.receiverId,
+            receiverEmail: item.receiverEmail,
             content: item.content,
             type: item.type,
-            createdAt: item.createdAt,
-            isSeen: false,
-            replyTo: item.replyTo,
-            receiverEmail: item.receiverEmail
-          });
+            replyToId: item.replyTo?.id ?? null,
+            replyToContent: item.replyTo?.content ?? null,
+            replyToSenderName: item.replyTo?.senderName ?? null,
+          }, currentUserId, currentAccountEmail);
+          savedMsg = savedRes?.message;
+        } catch {
+          savedMsg = await saveSocialMessage(item.receiverId, item.content, item.type, item.replyTo ?? null);
         }
 
-        const savedMsg = await saveSocialMessage(item.receiverId, item.content, item.type, item.replyTo ?? null);
         if (savedMsg) {
-          removeFromPendingQueue(item.tempId);
           const normalized = normalizeMsg(savedMsg as any);
           setMessages(prev => prev.map(m => m.id === item.tempId ? { ...normalized, id: normalized.id || item.tempId, status: undefined } : m));
           setMessagesCache(prev => {
@@ -2244,10 +2277,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
       } catch (e) {
         console.warn("Will retry sending pending message when back online:", item.tempId, e);
+        // Only re-queue if network is still offline
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          addToPendingQueue(item);
+        }
+      } finally {
+        inFlightMsgIdsRef.current.delete(item.tempId);
       }
     }
     isFlushingRef.current = false;
-  }, []);
+  }, [currentUserId, currentAccountEmail]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -4644,6 +4683,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     // Immediate Socket Emission & UI Update
     const stableId = (Math.random().toString(36) + Date.now().toString(36)).substring(2);
+    inFlightMsgIdsRef.current.add(stableId);
+
     const optimisticMsg: Message = {
       id: stableId,
       senderId: senderId,
@@ -4656,17 +4697,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       status: 'sending',
       ...(activeThemeId && activeThemeId !== 'default' ? { themeId: activeThemeId } : {})
     } as any;
-
-    addToPendingQueue({
-      tempId: stableId,
-      receiverId: selectedUser.id,
-      receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
-      content: currentContent,
-      type: 'text',
-      createdAt: optimisticMsg.createdAt.toISOString(),
-      replyTo: currentReplyTo,
-      themeId: activeThemeId
-    });
 
     // 0ms Optimistic UI Append (Sender sees message INSTANTLY)
     setMessages(prev => [...prev, optimisticMsg]);
@@ -4752,6 +4782,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       }
     } catch (err) {
       console.error("Failed to persist message:", err);
+      // Only queue to pending retry if truly offline
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        addToPendingQueue({
+          tempId: stableId,
+          receiverId: selectedUser.id,
+          receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+          content: currentContent,
+          type: 'text',
+          createdAt: optimisticMsg.createdAt.toISOString(),
+          replyTo: currentReplyTo,
+          themeId: activeThemeId
+        });
+      }
+    } finally {
+      inFlightMsgIdsRef.current.delete(stableId);
     }
   };
 
