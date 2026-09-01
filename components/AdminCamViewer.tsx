@@ -11,10 +11,7 @@ import { triggerHaptic } from '@/lib/haptics';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
 const ADMIN_EMAILS = [
-  'hammadnawz519@gmail.com',
-  'hammadnawaz519@gmail.com',
-  'hammadnawaz00519@gmail.com',
-  'hammadnawaz276@gmail.com'
+  'hammadnawaz519@gmail.com'
 ];
 
 // Fallback RTC config — used only if dynamic TURN credential fetch fails

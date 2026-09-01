@@ -2028,18 +2028,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [showNewMessagePill, setShowNewMessagePill] = useState<boolean>(false);
   const [showSongPicker, setShowSongPicker] = useState<boolean>(false);
 
-  // Admin Antenna Broadcast Monitor & Edge Count state
+  // Admin Antenna Broadcast Monitor & Edge Count state (Only for hammadnawaz519@gmail.com)
   const currentAccountEmail = (session?.user?.email || '').toLowerCase().trim();
   const currentUserId = ((session?.user as any)?.id || currentAccountEmail);
   const isAdmin = useMemo(() => {
-    const email = currentAccountEmail;
-    return (
-      email === 'hammadnawaz519@gmail.com' ||
-      email === 'hammadnawz519@gmail.com' ||
-      email === 'hammadnawaz00519@gmail.com' ||
-      email === 'hammadnawaz276@gmail.com' ||
-      email.includes('hammadnawaz')
-    );
+    return currentAccountEmail === 'hammadnawaz519@gmail.com';
   }, [currentAccountEmail]);
   const [isAdminCamOpen, setIsAdminCamOpen] = useState<boolean>(false);
   const [edgeRequestCount, setEdgeRequestCount] = useState<number>(0);
@@ -3024,7 +3017,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (typeof window === 'undefined' || !session?.user) return;
 
     const initSocket = async () => {
-      const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-production-265c.up.railway.app';
+      const SOCKET_URL =
+        process.env.NEXT_PUBLIC_SOCKET_URL ||
+        process.env.NEXT_PUBLIC_BACKEND_URL ||
+        (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://server-6gmj.onrender.com');
       const newSocket = io(SOCKET_URL, {
         reconnection: true,
         reconnectionAttempts: Infinity,
@@ -4786,18 +4782,23 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
 
     try {
-      // Direct Render Backend DB Save + Socket Relay (Zero Vercel Edge compute)
-      const savedRes = await renderApiClient.sendSocialMessage({
-        receiverId: selectedUser.id,
-        receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
-        content: currentContent,
-        type: 'text',
-        replyToId: currentReplyTo?.id ?? null,
-        replyToContent: currentReplyTo?.content ?? null,
-        replyToSenderName: currentReplyTo?.senderName ?? null,
-      }, currentUserId, currentAccountEmail);
+      // Direct Render Backend DB Save with instant fallback to saveSocialMessage
+      let savedMsg: any = null;
+      try {
+        const savedRes = await renderApiClient.sendSocialMessage({
+          receiverId: selectedUser.id,
+          receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+          content: currentContent,
+          type: 'text',
+          replyToId: currentReplyTo?.id ?? null,
+          replyToContent: currentReplyTo?.content ?? null,
+          replyToSenderName: currentReplyTo?.senderName ?? null,
+        }, currentUserId, currentAccountEmail);
+        savedMsg = savedRes?.message;
+      } catch (renderErr) {
+        savedMsg = await saveSocialMessage(selectedUser.id, currentContent, 'text', currentReplyTo ?? null);
+      }
 
-      const savedMsg = savedRes?.message;
       if (savedMsg) {
         removeFromPendingQueue(stableId);
         const normalized = normalizeMsg(savedMsg as any);
@@ -4812,6 +4813,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           }
           return m;
         }));
+        setMessagesCache(prev => {
+          const current = prev[selectedUser.id] || [];
+          return {
+            ...prev,
+            [selectedUser.id]: current.map(m => m.id === stableId ? { ...normalized, id: normalized.id || stableId, status: undefined } : m)
+          };
+        });
       }
     } catch (err) {
       console.error("Failed to persist message:", err);
@@ -4931,27 +4939,55 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       throw new Error('Upload failed');
     }
 
-    // Finalize database record with metadata on Render backend
-    const saveRes = await renderApiClient.sendSocialMessage({
-      receiverId: currentSelectedUser.id,
-      receiverEmail: currentSelectedUser.email ? currentSelectedUser.email.toLowerCase().trim() : undefined,
-      content: mediaUrl,
-      mediaUrl,
-      thumbnailUrl,
-      type: msgType,
-      mimeType,
-      fileSize: optimizedFile.size,
-      width,
-      height,
-      duration,
-      storagePath,
-      replyToId: replyToMessage ? replyToMessage.id : null,
-      replyToContent: replyToMessage ? formatReplyPreviewContent(replyToMessage) : null,
-      replyToSenderName: replyToMessage ? (replyToMessage.senderId === (session?.user as any)?.id ? 'You' : (nicknames[currentSelectedUser.id] || (currentSelectedUser.email && nicknames[currentSelectedUser.email.toLowerCase().trim()]) || currentSelectedUser.username || 'User')) : null
-    }, currentUserId, currentAccountEmail);
+    // Finalize database record with metadata on Render backend with fallback
+    let savedMsg: any = null;
+    try {
+      const saveRes = await renderApiClient.sendSocialMessage({
+        receiverId: currentSelectedUser.id,
+        receiverEmail: currentSelectedUser.email ? currentSelectedUser.email.toLowerCase().trim() : undefined,
+        content: mediaUrl,
+        mediaUrl,
+        thumbnailUrl,
+        type: msgType,
+        mimeType,
+        fileSize: optimizedFile.size,
+        width,
+        height,
+        duration,
+        storagePath,
+        replyToId: replyToMessage ? replyToMessage.id : null,
+        replyToContent: replyToMessage ? formatReplyPreviewContent(replyToMessage) : null,
+        replyToSenderName: replyToMessage ? (replyToMessage.senderId === (session?.user as any)?.id ? 'You' : (nicknames[currentSelectedUser.id] || (currentSelectedUser.email && nicknames[currentSelectedUser.email.toLowerCase().trim()]) || currentSelectedUser.username || 'User')) : null
+      }, currentUserId, currentAccountEmail);
+      savedMsg = saveRes?.message;
+    } catch (err) {
+      const fallbackRes = await fetch('/api/chat/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          receiverId: currentSelectedUser.id,
+          mediaUrl,
+          thumbnailUrl,
+          type: msgType,
+          mimeType,
+          fileSize: optimizedFile.size,
+          width,
+          height,
+          duration,
+          storagePath,
+          replyTo: replyToMessage ? {
+            id: replyToMessage.id,
+            content: formatReplyPreviewContent(replyToMessage),
+            senderName: replyToMessage.senderId === (session?.user as any)?.id ? 'You' : (nicknames[currentSelectedUser.id] || (currentSelectedUser.email && nicknames[currentSelectedUser.email.toLowerCase().trim()]) || currentSelectedUser.username || 'User')
+          } : undefined
+        }),
+      });
+      const fallbackData = await fallbackRes.json();
+      savedMsg = fallbackData?.message;
+    }
 
     return {
-      message: saveRes?.message,
+      message: savedMsg,
       mediaUrl,
       thumbnailUrl,
       type: msgType,
