@@ -44,6 +44,14 @@ import {
   Pin,
   Phone,
   Video,
+  Reply,
+  Copy,
+  Forward,
+  Tag,
+  Share2,
+  Smile,
+  Check,
+  CornerUpLeft,
 } from 'lucide-react';
 import StoryEditor from './StoryEditor';
 import ChatInput from './ChatInput';
@@ -492,13 +500,12 @@ const IGMessageOverlay = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // Animate in on mount
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
   }, []);
 
-  // Escape key dismiss
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleClose();
@@ -509,10 +516,9 @@ const IGMessageOverlay = ({
 
   const handleClose = () => {
     setMounted(false);
-    setTimeout(onClose, 220);
+    setTimeout(onClose, 200);
   };
 
-  // Swipe-down-to-dismiss on the menu panel
   const swipeStartY = useRef(0);
   const handleMenuTouchStart = (e: React.TouchEvent) => {
     swipeStartY.current = e.touches[0].clientY;
@@ -523,18 +529,17 @@ const IGMessageOverlay = ({
   };
 
   // Smart layout: reaction bar & action menu positioning without collision/overlap
-  const REACTION_BAR_H = 50;
-  const MENU_ITEMS_H = isSent ? 245 : 195;
-  const GAP = 8;
-  const PAD = 14;
+  const REACTION_BAR_H = 54;
+  const MENU_ITEMS_H = isSent ? 260 : 210;
+  const GAP = 10;
+  const PAD = 16;
   const vw = typeof window !== 'undefined' ? window.innerWidth : 400;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
 
-  // Clamp bubble rect to viewport
   const bTop = Math.max(PAD, bubbleRect.top);
   const bBottom = Math.min(vh - PAD, bubbleRect.bottom);
-  const bLeft = Math.max(10, bubbleRect.left);
-  const bRight = Math.min(vw - 10, bubbleRect.right);
+  const bLeft = Math.max(12, bubbleRect.left);
+  const bRight = Math.min(vw - 12, bubbleRect.right);
   const bCenterX = (bLeft + bRight) / 2;
 
   const spaceBelow = vh - bBottom;
@@ -544,152 +549,98 @@ const IGMessageOverlay = ({
   let menuTop: number;
 
   if (spaceBelow >= MENU_ITEMS_H + PAD && spaceAbove >= REACTION_BAR_H + PAD) {
-    // Normal Case: Reaction Bar directly above bubble, Menu directly below bubble
     reactionBarTop = Math.max(PAD, bTop - REACTION_BAR_H - GAP);
     menuTop = Math.min(vh - MENU_ITEMS_H - PAD, bBottom + GAP);
   } else if (spaceBelow < MENU_ITEMS_H + PAD) {
-    // Message is down / near the bottom: Both reaction bar and menu go ABOVE the bubble
-    // Stack: Menu -> Gap -> Reaction Bar -> Gap -> Bubble
     reactionBarTop = Math.max(PAD + MENU_ITEMS_H + GAP, bTop - REACTION_BAR_H - GAP);
     menuTop = reactionBarTop - MENU_ITEMS_H - GAP;
-
-    // Safety: if whole stack hits the top of viewport, clamp from top
     if (menuTop < PAD) {
       menuTop = PAD;
       reactionBarTop = menuTop + MENU_ITEMS_H + GAP;
     }
   } else {
-    // Message is near the top: Both reaction bar and menu go BELOW the bubble
-    // Stack: Bubble -> Gap -> Reaction Bar -> Gap -> Menu
     reactionBarTop = Math.min(vh - REACTION_BAR_H - MENU_ITEMS_H - GAP - PAD, bBottom + GAP);
     menuTop = reactionBarTop + REACTION_BAR_H + GAP;
-
-    // Safety: if whole stack hits the bottom of viewport, clamp from bottom
     if (menuTop + MENU_ITEMS_H > vh - PAD) {
       menuTop = vh - MENU_ITEMS_H - PAD;
       reactionBarTop = Math.max(PAD, menuTop - REACTION_BAR_H - GAP);
     }
   }
 
-  // Horizontal Sizing & Centering
   const reactionBarW = Math.min(390, vw - 24);
   let reactionBarLeft = bCenterX - reactionBarW / 2;
   reactionBarLeft = Math.max(12, Math.min(reactionBarLeft, vw - reactionBarW - 12));
 
-  const MENU_W = Math.min(280, vw - 24);
+  const MENU_W = Math.min(270, vw - 28);
   let menuLeft = isSent ? bRight - MENU_W : bLeft;
-  menuLeft = Math.max(12, Math.min(menuLeft, vw - MENU_W - 12));
+  menuLeft = Math.max(14, Math.min(menuLeft, vw - MENU_W - 14));
 
-  // Check if user already reacted with an emoji
   const myReactions = new Set<string>(
     (msg.reactions || [])
       .filter((r: any) => String(r.userId) === String(currentUserId))
       .map((r: any) => r.emoji)
   );
 
-  const accentColor = activeTheme?.accentColor || '#6366f1';
-  const outgoingGradient = activeTheme?.outgoingGradient || 'linear-gradient(135deg, #3797F0 0%, #833AB4 50%, #C13584 100%)';
-  const incomingBubbleColor = activeTheme?.incomingBubbleColor || 'rgba(39, 39, 42, 0.9)';
-
-  const isDark = typeof document !== 'undefined' &&
-    document.documentElement.getAttribute('data-theme') === 'dark';
-
-  const menuBg = isDark
-    ? 'rgba(20, 20, 24, 0.94)'
-    : 'rgba(255, 255, 255, 0.96)';
-  const menuBorder = activeTheme?.id !== 'default'
-    ? `${accentColor}50`
-    : (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)');
-  const menuText = isDark ? '#ffffff' : '#09090b';
-  const menuMuted = isDark ? 'rgba(255,255,255,0.48)' : 'rgba(0,0,0,0.42)';
-  const dividerColor = activeTheme?.id !== 'default'
-    ? `${accentColor}25`
-    : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)');
-  const hoverBg = activeTheme?.id !== 'default'
-    ? `${accentColor}20`
-    : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)');
-  const dangerColor = '#ef4444';
-
-  const reactionBg = isDark
-    ? 'rgba(22, 22, 26, 0.94)'
-    : 'rgba(255, 255, 255, 0.96)';
+  const accentColor = activeTheme?.accentColor || '#a855f7';
 
   const animStyle = (extraTransform = '') => ({
     opacity: mounted ? 1 : 0,
-    transform: mounted ? `scale(1) ${extraTransform}` : `scale(0.95) translateY(8px) ${extraTransform}`,
-    transition: 'opacity 0.22s ease-out, transform 0.22s ease-out',
+    transform: mounted ? `scale(1) ${extraTransform}` : `scale(0.94) translateY(6px) ${extraTransform}`,
+    transition: 'opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
   });
 
-  const menuItem = (
+  const renderMenuItem = (
     icon: React.ReactNode,
     label: string,
     onClick: () => void,
-    danger = false,
-    hint = ''
+    isDanger = false,
+    badge = ''
   ) => (
     <button
       key={label}
-      onClick={() => { onClick(); handleClose(); }}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '14px',
-        width: '100%',
-        padding: '0 16px',
-        height: '48px',
-        background: 'transparent',
-        border: 'none',
-        cursor: 'pointer',
-        color: danger ? dangerColor : menuText,
-        fontSize: '14px',
-        fontWeight: 600,
-        textAlign: 'left',
-        borderRadius: '0',
-        flexShrink: 0,
-        transition: 'background 0.15s ease, color 0.15s ease',
+      onClick={() => {
+        triggerHaptic(isDanger ? 'heavy' : 'light');
+        onClick();
+        if (!badge) handleClose();
       }}
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.background = danger ? 'rgba(239, 68, 68, 0.12)' : hoverBg;
-        if (!danger && activeTheme?.id !== 'default') {
-          (e.currentTarget as HTMLElement).style.color = accentColor;
-        }
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.background = 'transparent';
-        (e.currentTarget as HTMLElement).style.color = danger ? dangerColor : menuText;
-      }}
+      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all cursor-pointer select-none text-left outline-none border-0 group active:scale-[0.98] ${
+        isDanger
+          ? 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/12'
+          : 'text-zinc-200 hover:text-white hover:bg-white/8'
+      }`}
     >
-      <span style={{ width: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: danger ? dangerColor : (activeTheme?.id !== 'default' ? accentColor : 'inherit'), opacity: danger ? 1 : 0.9 }}>{icon}</span>
-      <span style={{ flex: 1 }}>{label}</span>
-      {hint && <span style={{ fontSize: '12px', color: menuMuted, flexShrink: 0 }}>{hint}</span>}
+      <div className="flex items-center gap-3">
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+          isDanger
+            ? 'bg-rose-500/15 text-rose-400 group-hover:bg-rose-500/25'
+            : 'bg-zinc-800/80 text-zinc-300 group-hover:bg-zinc-700/80 group-hover:text-white'
+        }`}>
+          {icon}
+        </div>
+        <span className="text-[13.5px] font-semibold tracking-tight">{label}</span>
+      </div>
+      {badge && (
+        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+          {badge}
+        </span>
+      )}
     </button>
   );
 
   return (
     <div
       ref={overlayRef}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        pointerEvents: 'all',
-      }}
+      className="fixed inset-0 z-[99999] pointer-events-auto select-none font-sans"
     >
-      {/* Dim overlay */}
+      {/* Sleek Dim Backdrop with blur */}
       <div
         onClick={handleClose}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(0,0,0,0.45)',
-          opacity: mounted ? 1 : 0,
-          transition: 'opacity 0.22s ease-out',
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
-        }}
+        className={`absolute inset-0 bg-black/65 backdrop-blur-md transition-opacity duration-200 ${
+          mounted ? 'opacity-100' : 'opacity-0'
+        }`}
       />
 
-      {/* Message bubble highlight outline (transparent interior so text is never covered or faded) */}
+      {/* Focused message highlight contour */}
       <div
         style={{
           position: 'absolute',
@@ -698,126 +649,75 @@ const IGMessageOverlay = ({
           width: bubbleRect.width,
           height: bubbleRect.height,
           pointerEvents: 'none',
-          borderRadius: '1.25rem',
-          boxShadow: `0 0 0 2px ${activeTheme?.id !== 'default' ? accentColor : (isSent ? '#3797F0' : 'rgba(255,255,255,0.4)')}, 0 8px 25px rgba(0,0,0,0.3)`,
-          background: 'transparent',
+          borderRadius: '26px',
+          boxShadow: `0 0 0 2px rgba(255,255,255,0.35), 0 12px 35px rgba(0,0,0,0.6)`,
           opacity: mounted ? 1 : 0,
           transition: 'opacity 0.2s ease-out',
           zIndex: 1,
         }}
       />
 
-      {/* Reaction Bar */}
+      {/* Floating Quick Reactions Capsule */}
       <div
         ref={reactionBarRef}
         style={{
           position: 'absolute',
           top: reactionBarTop,
           left: reactionBarLeft,
-          maxWidth: 'min(390px, calc(100vw - 24px))',
-          width: 'fit-content',
-          height: '48px',
-          background: reactionBg,
-          borderRadius: '24px',
-          border: `1.5px solid ${menuBorder}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '2px',
-          padding: '0 8px',
-          boxShadow: `0 14px 38px rgba(0,0,0,0.3), 0 0 20px ${accentColor}30`,
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
           zIndex: 3,
-          overflowX: 'auto',
-          scrollbarWidth: 'none',
-          whiteSpace: 'nowrap',
-          ...animStyle('translateY(0px)'),
+          ...animStyle(),
         }}
+        className="bg-[#181515]/95 border border-zinc-800/90 shadow-[0_16px_45px_rgba(0,0,0,0.85)] backdrop-blur-2xl rounded-full px-2.5 py-1.5 flex items-center gap-1 max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar"
       >
         {IG_QUICK_REACTIONS.map(emoji => {
           const alreadyReacted = myReactions.has(emoji);
           return (
             <button
               key={emoji}
-              onClick={() => { onReact(msg.id, emoji); handleClose(); }}
-              title={emoji}
-              style={{
-                background: alreadyReacted ? (activeTheme?.id !== 'default' ? outgoingGradient : 'rgba(99,102,241,0.25)') : 'transparent',
-                border: alreadyReacted ? `1.5px solid ${accentColor}` : '1.5px solid transparent',
-                color: alreadyReacted ? '#ffffff' : 'inherit',
-                borderRadius: '50%',
-                width: '36px',
-                height: '36px',
-                fontSize: '18px',
-                lineHeight: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'transform 0.18s cubic-bezier(0.18, 0.89, 0.32, 1.28), background 0.15s',
-                flexShrink: 0,
-                boxShadow: alreadyReacted ? `0 4px 12px ${accentColor}50` : 'none',
+              onClick={() => {
+                triggerHaptic('light');
+                onReact(msg.id, emoji);
+                handleClose();
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
-              onTouchStart={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)'; }}
-              onTouchEnd={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
+              title={emoji}
+              className={`w-9 h-9 rounded-full flex items-center justify-center text-[19px] cursor-pointer transition-all active:scale-90 hover:scale-125 select-none ${
+                alreadyReacted
+                  ? 'bg-purple-500/25 border border-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]'
+                  : 'hover:bg-white/10'
+              }`}
             >
               {emoji}
             </button>
           );
         })}
-        {/* More emoji picker button */}
+
+        {/* More Emojis Trigger */}
         <button
-          onClick={() => setShowPicker(p => !p)}
-          style={{
-            background: showPicker ? `${accentColor}30` : 'transparent',
-            border: showPicker ? `1.5px solid ${accentColor}` : '1.5px solid transparent',
-            borderRadius: '50%',
-            width: '36px',
-            height: '36px',
-            fontSize: '18px',
-            lineHeight: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            color: menuMuted,
-            transition: 'transform 0.15s ease-out',
-            flexShrink: 0,
+          onClick={() => {
+            triggerHaptic('light');
+            setShowPicker(p => !p);
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.18)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
+          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer ml-0.5 ${
+            showPicker
+              ? 'bg-purple-500/30 text-purple-300 border border-purple-500/40'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
+          }`}
           title="More reactions"
         >
-          ＋
+          <Plus className="w-4 h-4" strokeWidth={2.4} />
         </button>
       </div>
 
-      {/* Extended Emoji Picker Grid Modal */}
+      {/* Extended Emoji Grid Popup */}
       {showPicker && (
         <div
           style={{
             position: 'absolute',
-            top: reactionBarTop + REACTION_BAR_H + 8 > vh - 220 ? Math.max(10, reactionBarTop - 215) : reactionBarTop + REACTION_BAR_H + 8,
+            top: reactionBarTop + REACTION_BAR_H + 8 > vh - 240 ? Math.max(10, reactionBarTop - 225) : reactionBarTop + REACTION_BAR_H + 8,
             left: Math.max(12, Math.min(reactionBarLeft, vw - 312)),
-            width: '300px',
-            maxHeight: '210px',
-            background: menuBg,
-            borderRadius: '20px',
-            border: `1.5px solid ${menuBorder}`,
-            boxShadow: `0 20px 50px rgba(0,0,0,0.35), 0 0 20px ${accentColor}25`,
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            padding: '10px',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, 1fr)',
-            gap: '6px',
-            overflowY: 'auto',
             zIndex: 10,
           }}
-          className="no-scrollbar animate-in zoom-in-95 duration-150"
+          className="w-[300px] max-h-[220px] bg-[#181515]/98 border border-zinc-800 shadow-[0_25px_70px_rgba(0,0,0,0.9)] backdrop-blur-2xl rounded-[24px] p-2.5 grid grid-cols-7 gap-1.5 overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-150"
         >
           {[
             '❤️', '😂', '😮', '😢', '😡', '👍', '🙏', '🔥',
@@ -831,30 +731,11 @@ const IGMessageOverlay = ({
             <button
               key={emoji}
               onClick={() => {
+                triggerHaptic('light');
                 onReact(msg.id, emoji);
                 handleClose();
               }}
-              style={{
-                width: '36px',
-                height: '36px',
-                fontSize: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '50%',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'transform 0.15s ease, background 0.15s',
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)';
-                (e.currentTarget as HTMLElement).style.background = hoverBg;
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
-                (e.currentTarget as HTMLElement).style.background = 'transparent';
-              }}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[20px] hover:bg-white/10 hover:scale-125 active:scale-95 transition-all cursor-pointer"
             >
               {emoji}
             </button>
@@ -862,7 +743,7 @@ const IGMessageOverlay = ({
         </div>
       )}
 
-      {/* Action Menu */}
+      {/* High-End Glassmorphic Action Menu Card */}
       <div
         ref={menuRef}
         onTouchStart={handleMenuTouchStart}
@@ -872,73 +753,66 @@ const IGMessageOverlay = ({
           top: menuTop,
           left: menuLeft,
           width: MENU_W,
-          background: menuBg,
-          borderRadius: '20px',
-          border: `1.5px solid ${menuBorder}`,
-          boxShadow: `0 24px 64px rgba(0,0,0,0.38), 0 0 25px ${accentColor}25`,
-          backdropFilter: 'blur(28px)',
-          WebkitBackdropFilter: 'blur(28px)',
-          overflow: 'hidden',
           zIndex: 2,
-          display: 'flex',
-          flexDirection: 'column',
           ...animStyle(),
         }}
+        className="bg-[#181515]/95 border border-zinc-800/90 shadow-[0_24px_65px_rgba(0,0,0,0.85)] backdrop-blur-2xl rounded-[24px] p-1.5 flex flex-col gap-0.5 select-none"
       >
         {/* Reply */}
-        {menuItem(
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>,
+        {renderMenuItem(
+          <Reply className="w-3.5 h-3.5" strokeWidth={2.4} />,
           'Reply',
           () => onReply(msg)
         )}
 
-        <div style={{ height: '1px', background: dividerColor, margin: '0 16px' }} />
-
         {/* Copy (text only) */}
-        {msg.type === 'text' && menuItem(
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>,
+        {msg.type === 'text' && renderMenuItem(
+          copied ? <Check className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2.4} /> : <Copy className="w-3.5 h-3.5" strokeWidth={2.4} />,
           'Copy Text',
           () => {
-            try { navigator.clipboard.writeText(msg.content); } catch { }
-          }
+            try {
+              navigator.clipboard.writeText(msg.content);
+              setCopied(true);
+              setTimeout(() => {
+                setCopied(false);
+                handleClose();
+              }, 600);
+            } catch {}
+          },
+          false,
+          copied ? 'Copied!' : ''
         )}
 
         {/* Forward */}
-        {menuItem(
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M14 9V5l7 7-7 7v-4.1c-5-.13-8.5 1.57-11 5.1.97-4.97 3.97-9.87 11-11z"/></svg>,
+        {renderMenuItem(
+          <Share2 className="w-3.5 h-3.5" strokeWidth={2.4} />,
           'Forward',
           () => onForward(msg)
         )}
 
-        {/* Tag */}
-        {menuItem(
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>,
+        {/* Tag Message */}
+        {renderMenuItem(
+          <Tag className="w-3.5 h-3.5" strokeWidth={2.4} />,
           'Tag Message',
           () => onOpenTagPicker(msg)
         )}
 
-        <div style={{ height: '1px', background: dividerColor, margin: '0 16px' }} />
+        <div className="h-[1px] bg-zinc-800/80 my-1 mx-2" />
 
-        {/* Destructive: Delete for me */}
-        {menuItem(
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>,
+        {/* Delete for Me */}
+        {renderMenuItem(
+          <Trash2 className="w-3.5 h-3.5 text-rose-400" strokeWidth={2.4} />,
           'Delete for Me',
           () => onRequestDelete(msg.id, 'me'),
           true
         )}
 
-        {/* Destructive: Delete for everyone (sent only) */}
-        {isSent && (
-          <>
-            <div style={{ height: '1px', background: dividerColor, margin: '0 16px' }} />
-            {menuItem(
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>,
-              'Delete for Everyone',
-              () => onRequestDelete(msg.id, 'everyone'),
-              true,
-              ''
-            )}
-          </>
+        {/* Delete for Everyone (sent only) */}
+        {isSent && renderMenuItem(
+          <Trash2 className="w-3.5 h-3.5 text-rose-400" strokeWidth={2.4} />,
+          'Delete for Everyone',
+          () => onRequestDelete(msg.id, 'everyone'),
+          true
         )}
       </div>
     </div>
