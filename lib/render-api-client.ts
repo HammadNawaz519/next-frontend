@@ -232,9 +232,9 @@ class RenderApiClient {
   /**
    * Global Indexed Trigram User Search (debounced on client)
    */
-  async searchUsers(query: string, userId: string, userEmail?: string): Promise<{ users: RenderUser[] }> {
+  async searchUsers(query: string, userId?: string, userEmail?: string): Promise<{ users: RenderUser[] }> {
     const cleanQ = query.replace(/^@+/, '').trim();
-    if (cleanQ.length < 2) return { users: [] };
+    if (!cleanQ) return { users: [] };
 
     const queryParams = new URLSearchParams({ q: cleanQ });
     return this.coalescedGet(`/api/social/search?${queryParams.toString()}`, userId, userEmail);

@@ -4182,13 +4182,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       // 2. Realtime Server Search (finds people with new usernames / global users directly on Render)
       const delayDebounce = setTimeout(async () => {
-        if (cleanQ.length < 2) {
+        if (!cleanQ) {
           setIsSearchingGlobal(false);
           return;
         }
         try {
-          const res = await renderApiClient.searchUsers(cleanQ, currentUserId, currentAccountEmail);
-          const results = res.users || [];
+          let results: any[] = [];
+          try {
+            const res = await renderApiClient.searchUsers(cleanQ, currentUserId, currentAccountEmail);
+            results = res?.users || [];
+          } catch (apiErr) {
+            results = (await searchUsers(cleanQ)) as any[];
+          }
+
           if (Array.isArray(results)) {
             const currentMyId = (session?.user as any)?.id;
             const validResults = results.filter((u: any) => u.id !== currentMyId);
@@ -4262,7 +4268,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         } finally {
           setIsSearchingGlobal(false);
         }
-      }, 300);
+      }, 250);
 
       return () => clearTimeout(delayDebounce);
 
