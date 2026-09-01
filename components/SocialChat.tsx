@@ -4435,8 +4435,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, unseenCount: 0 } : u));
 
       try {
-        const msgRes = await renderApiClient.getSocialMessages(targetUserId, currentUserId, 30, undefined, currentAccountEmail);
-        const history = msgRes?.messages || [];
+        let history: any[] = [];
+        try {
+          const msgRes = await renderApiClient.getSocialMessages(targetUserId, currentUserId, 30, undefined, currentAccountEmail);
+          history = msgRes?.messages || [];
+        } catch (apiErr) {
+          history = (await getSocialMessages(targetUserId, 30)) as any[];
+        }
         if (isCancelled || selectedUserRef.current?.id !== targetUserId) return;
 
         // Filter out messages the user deleted locally (persisted in localStorage)
@@ -4517,8 +4522,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const prevScrollHeight = container ? container.scrollHeight : 0;
 
     try {
-      const olderRes = await renderApiClient.getSocialMessages(selectedUser.id, currentUserId, 30, firstMsg.id, currentAccountEmail);
-      const olderHistory = olderRes?.messages || [];
+      let olderHistory: any[] = [];
+      try {
+        const olderRes = await renderApiClient.getSocialMessages(selectedUser.id, currentUserId, 30, firstMsg.id, currentAccountEmail);
+        olderHistory = olderRes?.messages || [];
+      } catch (apiErr) {
+        olderHistory = (await getSocialMessages(selectedUser.id, 30, firstMsg.id)) as any[];
+      }
+
       if (!olderHistory || olderHistory.length === 0) {
         setHasMoreMessages(false);
         setIsLoadingOlder(false);

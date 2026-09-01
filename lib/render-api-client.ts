@@ -75,11 +75,19 @@ const inFlightRequests = new Map<string, Promise<any>>();
 
 class RenderApiClient {
   private getBaseUrl(): string {
-    return (
+    const configured =
       process.env.NEXT_PUBLIC_SOCKET_URL ||
-      process.env.NEXT_PUBLIC_BACKEND_URL ||
-      'https://server-production-265c.up.railway.app'
-    ).replace(/\/+$/, '');
+      process.env.NEXT_PUBLIC_BACKEND_URL;
+
+    if (configured) {
+      return configured.replace(/\/+$/, '');
+    }
+
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      return 'http://localhost:5000';
+    }
+
+    return '';
   }
 
   private getAuthHeaders(currentUserId?: string, currentUserEmail?: string): Record<string, string> {
@@ -98,17 +106,19 @@ class RenderApiClient {
   }
 
   /**
-   * Execute fetch with automatic cold-start exponential backoff retry.
+   * Execute fetch with fast cold-start retry and immediate 4xx short-circuit.
    */
   private async fetchWithRetry<T>(
     endpoint: string,
     options: RequestInit = {},
     userId?: string,
     userEmail?: string,
-    retries = 3
+    retries = 1
   ): Promise<T> {
     const baseUrl = this.getBaseUrl();
-    const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    const url = baseUrl
+      ? `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
+      : endpoint;
 
     const headers = {
       ...this.getAuthHeaders(userId, userEmail),
@@ -116,12 +126,12 @@ class RenderApiClient {
     };
 
     let lastError: any = null;
-    let delayMs = 500;
+    let delayMs = 300;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s fast timeout
 
         const response = await fetch(url, {
           ...options,
@@ -133,16 +143,24 @@ class RenderApiClient {
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error || `HTTP ${response.status}: ${response.statusText}`);
+          const err = new Error(errData.error || `HTTP ${response.status}: ${response.statusText}`);
+          // Do not retry 4xx errors (e.g. 404, 401, 403, 400)
+          if (response.status >= 400 && response.status < 500) {
+            throw err;
+          }
+          throw err;
         }
 
         return (await response.json()) as T;
       } catch (err: any) {
         lastError = err;
+        // Don't retry client errors
+        if (err.message && err.message.startsWith('HTTP 4')) {
+          break;
+        }
         if (attempt < retries) {
-          // Wait and retry for cold starts or temporary network hiccups
           await new Promise(resolve => setTimeout(resolve, delayMs));
-          delayMs *= 2; // exponential backoff (500ms, 1000ms, 2000ms)
+          delayMs *= 1.5;
         }
       }
     }
