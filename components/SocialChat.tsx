@@ -4794,6 +4794,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       themeId: activeThemeId
     });
 
+    // 0ms Optimistic UI Append (Sender sees message INSTANTLY)
+    setMessages(prev => [...prev, optimisticMsg]);
+    setMessagesCache(prev => {
+      const current = prev[selectedUser.id] || [];
+      return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
+    });
+
     // 0ms Optimistic Contact List Update
     setUsers(prev => {
       const existing = prev.find(u => u.id === selectedUser.id);
@@ -4814,9 +4821,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       return next;
     });
 
+    requestAnimationFrame(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+    });
+
+    // Instant Socket Broadcast (Receiver sees message with 0ms delay)
     if (socket) {
       socket.emit('send_social_message', {
         ...optimisticMsg,
+        receiverId: selectedUser.id,
         receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined
       });
     }
