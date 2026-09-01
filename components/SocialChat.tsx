@@ -3047,14 +3047,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         setMessages((prev) => {
           // Only update messages state if this message belongs to the active conversation
           if (selectedId && selectedId !== partnerId && selectedId !== msgSenderId && selectedId !== msgReceiverId) return prev;
+          // Dedup: only match by exact ID or by replacing an in-flight optimistic placeholder.
+          // DO NOT use content+time-window matching — that silently drops valid repeated messages (e.g. "ok" sent twice).
           const isDup = prev.some(m =>
             // Exact ID match
             (msg.id && m.id === msg.id) ||
-            // Optimistic message match — replace sending placeholder
-            ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type) ||
-            // Already-committed duplicate (server echo of our own sent msg)
-            (String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type &&
-              Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 10000)
+            // Optimistic placeholder match — replace the 'sending' bubble with the confirmed message
+            ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type)
           );
           if (isDup) {
             return prev.map(m =>
@@ -3066,13 +3065,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return [...prev, { ...msg, status: 'sent' }];
         });
 
-        // Sync to cache immediately so reload preserves received photos
+        // Sync to cache immediately so reload preserves received messages.
+        // IMPORTANT: Only dedup by exact ID or optimistic placeholder — never by content+time-window.
+        // Content-based dedup causes rapid messages (e.g. 5 in a row) to all collapse into the first one.
         setMessagesCache((prev) => {
           const cacheKey = partnerId || msgSenderId;
-          if (!cacheKey) return prev;
+          if (!cacheKey || cacheKey === '') return prev;
           const current = prev[cacheKey] || [];
           const isDup = current.some(m =>
-            m.id === msg.id ||
+            // Exact ID match only
+            (msg.id && m.id === msg.id) ||
+            // Optimistic placeholder replacement
             ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type)
           );
           let updatedList;
@@ -3179,10 +3182,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(newRefList));
             } catch (e) {}
           }
-          // Only update visible users list if contact is already in it (avoid overwriting search filter state)
+          // Always bubble the contact to the top of the chat list with latest message + badge.
+          // Even if the contact isn't currently visible in state (e.g. loading), add them so the
+          // user can see the incoming message preview and unseen badge without opening the chat.
           setUsers(prev => {
-            const existingInState = prev.find(u => u.id === partnerId);
-            if (!existingInState) return prev;
             const next = prev.filter(u => u.id !== partnerId);
             return [updated, ...next];
           });
@@ -3235,22 +3238,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           }
         }
 
-        // 3. Update Cache safely without duplicates
+        // 3. Update Cache (secondary cache path — ID-based dedup only, no content+time-window)
         setMessagesCache(prev => {
+          if (!partnerId) return prev;
           const current = prev[partnerId] || [];
-          const isDup = current.some(m =>
-            m.id === msg.id ||
-            (m.content === msg.content && String(m.senderId) === String(msg.senderId) && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 15000)
-          );
-          if (isDup) {
-            return {
-              ...prev,
-              [partnerId]: current.map(m =>
-                (m.id === msg.id || (m.content === msg.content && String(m.senderId) === String(msg.senderId) && m.type === msg.type && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 15000))
-                  ? { ...msg, id: msg.id || m.id }
-                  : m
-              )
-            };
+          // Only dedup by exact ID — never by content+time-window
+          if (msg.id && current.some(m => m.id === msg.id)) {
+            return prev; // Already in cache with this ID
           }
           return { ...prev, [partnerId]: [...current, msg] };
         });
@@ -3299,29 +3293,28 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return m;
         }));
 
-        // Update cache as well
+        // Update only the active chat's cache entry — don't iterate all chats unnecessarily
         setMessagesCache(prev => {
-          const newCache = { ...prev };
-          Object.keys(newCache).forEach(userId => {
-            newCache[userId] = newCache[userId].map(m =>
-              m.id === messageId ? { ...m, content: "This message was deleted", type: "deleted" } : m
-            );
-          });
-          return newCache;
+          const activeId = selectedUserRef.current?.id;
+          if (!activeId || !prev[activeId]) return prev;
+          const updated = prev[activeId].map(m =>
+            m.id === messageId ? { ...m, content: "This message was deleted", type: "deleted" } : m
+          );
+          return { ...prev, [activeId]: updated };
         });
       });
 
       newSocket.on('messages_seen', (data?: { seenAt?: string }) => {
         const nowIso = data?.seenAt || new Date().toISOString();
+        // Mark active message stream as seen
         setMessages(prev => prev.map(m => (m.isSeen ? m : { ...m, isSeen: true, seenAt: nowIso })));
 
-        // Update cache as well
+        // Only update the active chat's cache — not every single chat
         setMessagesCache(prev => {
-          const newCache = { ...prev };
-          Object.keys(newCache).forEach(userId => {
-            newCache[userId] = newCache[userId].map(m => (m.isSeen ? m : { ...m, isSeen: true, seenAt: nowIso }));
-          });
-          return newCache;
+          const activeId = selectedUserRef.current?.id;
+          if (!activeId || !prev[activeId]) return prev;
+          const updated = prev[activeId].map(m => (m.isSeen ? m : { ...m, isSeen: true, seenAt: nowIso }));
+          return { ...prev, [activeId]: updated };
         });
       });
 
@@ -3559,82 +3552,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
       });
 
-      newSocket.on('user_profile_updated', (updatedUser: { userId: string; username?: string; name?: string; image?: string }) => {
-        if (!updatedUser || !updatedUser.userId) return;
-        const targetId = String(updatedUser.userId);
-
-        // 1. Update contacts list state and localStorage cache
-        setUsers((prev: any[]) => {
-          const next = prev.map((u: any) => {
-            if (String(u.id) === targetId) {
-              return {
-                ...u,
-                ...(updatedUser.username ? { username: updatedUser.username } : {}),
-                ...(updatedUser.name ? { name: updatedUser.name } : {}),
-                ...(updatedUser.image ? { image: updatedUser.image } : {})
-              };
-            }
-            return u;
-          });
-          allContactsRef.current = next;
-          if (currentUserId) {
-            try {
-              localStorage.setItem(`social_users_cache_${currentUserId}`, JSON.stringify(next));
-            } catch {}
-          }
-          return next;
-        });
-
-        // 2. Update requests list state and localStorage cache
-        setRequests((prev: any[]) => {
-          const next = prev.map((u: any) => {
-            if (String(u.id) === targetId) {
-              return {
-                ...u,
-                ...(updatedUser.username ? { username: updatedUser.username } : {}),
-                ...(updatedUser.name ? { name: updatedUser.name } : {}),
-                ...(updatedUser.image ? { image: updatedUser.image } : {})
-              };
-            }
-            return u;
-          });
-          allRequestsRef.current = next;
-          if (currentUserId) {
-            try {
-              localStorage.setItem(`social_requests_cache_${currentUserId}`, JSON.stringify(next));
-            } catch {}
-          }
-          return next;
-        });
-
-        // 3. Update active conversation header if currently selected
-        setSelectedUser((prev: any) => {
-          if (prev && String(prev.id) === targetId) {
-            const next = {
-              ...prev,
-              ...(updatedUser.username ? { username: updatedUser.username } : {}),
-              ...(updatedUser.name ? { name: updatedUser.name } : {}),
-              ...(updatedUser.image ? { image: updatedUser.image } : {})
-            };
-            selectedUserRef.current = next;
-            return next;
-          }
-          return prev;
-        });
-
-        // 4. Update viewing other user profile modal if currently open
-        setViewingProfileUser((prev: any) => {
-          if (prev && String(prev.id) === targetId) {
-            return {
-              ...prev,
-              ...(updatedUser.username ? { username: updatedUser.username } : {}),
-              ...(updatedUser.name ? { name: updatedUser.name } : {}),
-              ...(updatedUser.image ? { image: updatedUser.image } : {})
-            };
-          }
-          return prev;
-        });
-      });
+      // NOTE: Duplicate 'user_profile_updated' listener removed — the handler at line ~3392
+      // (registered above) already covers all state updates (contacts, requests, selectedUser,
+      // viewingProfileUser, allContactsRef, allRequestsRef, localStorage, window event dispatch).
+      // Having two listeners caused double state mutations and allContactsRef corruption.
 
       newSocket.on('server_edge_count', (count: number) => {
         if (typeof count === 'number') {
@@ -4354,11 +4275,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
         }
 
-        // If we already have cached history and there are no unread messages,
-        // and socket is connected, avoid downloading the exact same 30 messages again!
-        if (!hasUnseen && socketRef.current?.connected) {
-          return;
-        }
+        // Always fetch from DB after showing the cached first-paint.
+        // The old shortcircuit (!hasUnseen && socketConnected → skip) caused messages received
+        // while in another chat to never be fetched — they stayed invisible until a page refresh.
+        // The DB fetch is fast (renderApiClient with 30 msg limit) and ensures correctness.
       } else {
         setIsLoadingMessages(true);
         setMessages([]); // Clear while loading if no cache
@@ -4597,24 +4517,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return next;
         });
       }
-      // Update allContactsRef directly (not from prev which may be search-filtered)
-      const existingInRef = allContactsRef.current.find(u => u.id === selectedUser.id);
-      const updatedForRef = {
-        ...(existingInRef || selectedUser),
-        lastMessage: currentContent.length > 30 ? currentContent.substring(0, 30) + '...' : currentContent,
-        unseenCount: 0
-      };
-      allContactsRef.current = [updatedForRef, ...allContactsRef.current.filter(u => u.id !== selectedUser.id)];
-      setUsers(prev => {
-        const existing = prev.find(u => u.id === selectedUser.id);
-        const updatedUser = {
-          ...(existing || selectedUser),
-          lastMessage: currentContent.length > 30 ? currentContent.substring(0, 30) + '...' : currentContent,
-          unseenCount: 0
-        };
-        const filtered = prev.filter(u => u.id !== selectedUser.id);
-        return [updatedUser, ...filtered];
-      });
+      // Early sidebar update removed — the optimistic update below (after stableId is created)
+      // handles this more accurately with the full content string. No need to update twice.
     }
 
     const currentReplyTo = replyToMessage ? {
