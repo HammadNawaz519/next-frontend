@@ -1,0 +1,95 @@
+================================================================================
+CONNECT APPLICATION — ARCHITECTURE AUDIT & VERCEL-TO-RENDER MIGRATION MAP
+================================================================================
+Document: ARCHITECTURE_AUDIT.txt
+Date: 2026-09-01
+Scope: Fullstack Next.js (Vercel) -> Render (Node.js REST/Socket.IO) Migration
+
+--------------------------------------------------------------------------------
+1. CURRENT VERCEL REQUEST INVENTORY & DESTINATION MAPPING
+--------------------------------------------------------------------------------
+
+| Operation / Feature | Current Path (Vercel) | Trigger / Mechanism | Can Move to Render? | New Destination | Reason / Benefit |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Initial Dashboard Data** | `getInitialSocialData()` | Dashboard mount | YES | `GET /api/social/initial-data` (Render) | Consolidates recent chats, active stories, and nicknames in 1 round-trip directly from PostgreSQL to Render. Eliminates initial Vercel Serverless invocation. |
+| **Recent Chats List** | `getRecentChats()` | Chat list refresh | YES | `GET /api/social/recent-chats` (Render) | Fetches conversation list directly with unread counts. ZERO Vercel compute. |
+| **Message History** | `getSocialMessages()` | Chat open / scroll up | YES | `GET /api/social/messages` (Render) | 30-message cursor pagination directly over pooled PostgreSQL connection on Render. |
+| **Send Message** | `saveSocialMessage()` | User sends DM | YES | `POST /api/social/messages` (Render) | Saves message to PostgreSQL AND immediately broadcasts over Socket.IO in a single atomic operation on Render. Eliminates dual-hop. |
+| **Delete Message** | `deleteSocialMessage()` | User deletes message | YES | `DELETE /api/social/messages/:id` (Render) | Soft-deletes or hard-deletes in DB and broadcasts deletion event over Socket.IO. |
+| **Emoji Reaction** | `reactToSocialMessage()` | User reacts to msg | YES | `POST /api/social/messages/react` (Render) | Upserts `SocialReaction` and broadcasts over Socket.IO. |
+| **Global User Search** | `searchUsers()` | User types in search bar | YES | `GET /api/social/search` (Render) | Direct PostgreSQL trigram query on Render. Zero Vercel compute per keystroke. |
+| **User Profile View** | `getOtherUserProfile()` | User clicks profile | YES | `GET /api/social/profile/:userId` (Render) | Fetches profile, follower counts, and posts (`take: 36`) directly from DB. |
+| **Current User Profile**| `getProfileDetails()` | Profile tab open | YES | `GET /api/social/profile` (Render) | Fetches caller profile and posts directly from DB. |
+| **Update Profile Details**| `updateProfileDetails()` | Edit profile save | YES | `PUT /api/social/profile` (Render) | Updates DB and broadcasts `user_profile_updated` to all connected sockets. |
+| **Update Canonical Username**| `updateUsernameAction()` | Edit username save | YES | `PUT /api/social/username` (Render) | Validates unique username, updates DB, invalidates cache, broadcasts socket event. |
+| **Active 24h Stories** | `getActiveStoriesAction()`| Stories bar mount | YES | `GET /api/social/stories` (Render) | Fetches 24-hour stories for user + following list from DB. |
+| **Post / Delete Story** | `postStoryAction()`, `deleteStoryAction()` | User posts/deletes story | YES | `POST/DELETE /api/social/stories` (Render) | Creates or deletes story metadata in DB. |
+| **Chat Nicknames** | `getChatNicknamesAction()`, `saveChatNicknameAction()` | Nickname assign | YES | `GET/PUT /api/social/nicknames` (Render) | Reads/writes `ChatNickname` directly from DB. |
+| **Call History** | `getCallHistory()`, `saveCall()` | Call completed | YES | `GET/POST /api/social/calls` (Render) | Logs audio/video calls in `SocialCall` table. |
+| **Shared Media Drawer** | `getChatSharedMedia()` | Details panel open | YES | `GET /api/social/media/:otherUserId` (Render) | Queries media attachments directly from DB. |
+| **Accounts Center Validation**| `validateSavedAccountsAction()`| Accounts Center open | YES | `POST /api/accounts/validate` (Render) | Validates multi-account credentials in bulk against DB. |
+| **Presence Heartbeat** | Socket `heartbeat` | Every 15s interval | ALREADY RENDER | Socket.IO `heartbeat` (Render) | In-memory presence map. Zero Vercel invocations. |
+| **Typing Indicator** | Socket `typing` | Keystrokes | ALREADY RENDER | Socket.IO `typing` (Render) | Relayed in-memory. Zero Vercel invocations. |
+| **WebRTC Signaling** | Socket `call_user`, `webrtc_signal` | During call | ALREADY RENDER | Socket.IO WebRTC (Render) | Relayed in-memory. Zero Vercel invocations. |
+| **Media File Upload** | Supabase Storage Direct | Direct S3 stream | DIRECT STORAGE | Supabase Cloud S3 Bucket | Streams binary data directly to Supabase S3 via signed tickets. Zero Vercel bandwidth. |
+| **Media Presign Ticket**| `POST /api/chat/media/presign` | Before file upload | YES (Can move or keep) | Render `POST /api/media/presign` or Vercel | Issues signed S3 upload ticket. |
+| **Speech-to-Text STT** | `POST /api/transcribe` | Voice note recording | VERCEL / GROQ | Groq Cloud AI API | Executes Groq Whisper STT API request. |
+| **Login / Credentials** | `POST /api/auth/[...nextauth]`| User sign-in | VERCEL (NextAuth) | Vercel NextAuth JWT | Issues encrypted HTTP-only session cookie. |
+| **Signup & Email OTP** | `POST /api/register`, `/verify-email` | User registration | VERCEL / SMTP | Vercel Serverless | Nodemailer Gmail SMTP OTP dispatch. |
+
+--------------------------------------------------------------------------------
+2. REQUESTS THAT REMAIN ON VERCEL & JUSTIFICATION
+--------------------------------------------------------------------------------
+1. `GET /`, `GET /dashboard`, `GET /accounts`, `GET /security`: Static and Client-Side Next.js route delivery. Served directly from Vercel Global Edge CDN.
+2. `POST /api/auth/[...nextauth]`: NextAuth credentials and Google OAuth authentication provider. Manages secure cryptographic session signing and JWT issuance.
+3. `POST /api/register`, `POST /api/verify-email`, `POST /api/resend-code`, `POST /api/forgot-password`, `POST /api/reset-password`: Email OTP validation and password resets using Nodemailer Gmail SMTP.
+4. `POST /api/transcribe`: Speech-to-text audio transcription gateway to Groq Cloud Whisper API.
+5. `GET /api/music/search`: Music clip preview search proxying Apple iTunes and Deezer APIs with 24-hour ISR caching.
+
+--------------------------------------------------------------------------------
+3. RENDER API SUITE TO BE IMPLEMENTED (`Web/Server/index.js`)
+--------------------------------------------------------------------------------
+- Base URL: `process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://server-production-265c.up.railway.app'`
+- Authentication: `verifyAuth` middleware extracting and validating JWT tokens or session authorization headers.
+- Endpoints:
+  1. `GET /api/health` & `GET /ping`
+  2. `GET /api/turn-credentials`
+  3. `GET /api/social/initial-data`
+  4. `GET /api/social/recent-chats`
+  5. `GET /api/social/messages` (query: `otherUserId`, `limit`, `beforeId`)
+  6. `POST /api/social/messages` (body: `{ receiverId, content, type, ... }`)
+  7. `DELETE /api/social/messages/:id` (body: `{ deleteFor: 'me' | 'everyone' }`)
+  8. `POST /api/social/messages/react` (body: `{ messageId, emoji }`)
+  9. `GET /api/social/search` (query: `q`)
+  10. `GET /api/social/profile/:userId` & `GET /api/social/profile`
+  11. `PUT /api/social/profile` (body: `{ name, bio, website, image, phone, isPrivate }`)
+  12. `PUT /api/social/username` (body: `{ username }`)
+  13. `GET /api/social/stories` & `POST /api/social/stories` & `DELETE /api/social/stories/:id`
+  14. `GET /api/social/nicknames` & `PUT /api/social/nicknames` (body: `{ targetId, nickname }`)
+  15. `GET /api/social/calls` & `POST /api/social/calls` (body: `{ receiverId, type, status, duration }`)
+  16. `GET /api/social/media/:otherUserId`
+  17. `POST /api/accounts/validate` (body: `{ accounts: [...] }`)
+
+--------------------------------------------------------------------------------
+4. DATABASE CONNECTION & INDEXING STRATEGY ON RENDER
+--------------------------------------------------------------------------------
+- Database Engine: PostgreSQL on Aiven Cloud / Supabase.
+- Connection: Singleton `pg.Pool` with `max: 10`, `idleTimeoutMillis: 300000`, `connectionTimeoutMillis: 8000`.
+- Composite Indexes:
+  * `SocialMessage`: `(senderId, receiverId, createdAt)`, `(receiverId, senderId, createdAt)`, `(receiverId, isSeen, deletedByReceiver)`, `(senderId, deletedBySender, createdAt)`, `(senderId, receiverId, type, createdAt)`
+  * `SocialCall`: `(callerId, createdAt)`, `(receiverId, createdAt)`
+  * `Story`: `(userId, createdAt)`
+  * `Post`: `(userId, createdAt)`, `(postType, createdAt)`
+  * `User`: GIN Trigram indexes on `username` and `email` (`idx_user_username_trgm`, `idx_user_email_trgm`)
+
+--------------------------------------------------------------------------------
+5. FRONTEND CENTRALIZED CLIENT (`Web/Frontend/lib/render-api-client.ts`)
+--------------------------------------------------------------------------------
+- Purpose: Directs all client requests from `SocialChat`, `ProfilePanel`, `SongPickerModal`, etc., directly to the Render backend.
+- Cold-Start Resilience: Configured with exponential backoff retries (3 attempts: 500ms, 1500ms, 3000ms) with idempotency keys for mutations.
+- Request Coalescing: In-flight deduplication prevents redundant parallel GET queries for the same resources.
+- Zero UI Modifications: Strict UI preservation across all components.
+
+================================================================================
+END OF ARCHITECTURE AUDIT (ARCHITECTURE_AUDIT.txt)
+================================================================================

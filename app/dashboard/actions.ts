@@ -842,65 +842,160 @@ export async function updateUsername(newUsername: string) {
   return { success: true, username: updated.username };
 }
 
+export async function deleteAccountAction() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { error: 'Not authenticated' };
+
+  const email = session.user.email.toLowerCase().trim();
+  const currentUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: session.user.email },
+        { email: email }
+      ]
+    },
+    select: { id: true, email: true }
+  });
+
+  if (!currentUser) return { error: 'User not found' };
+
+  try {
+    const userId = currentUser.id;
+    const userEmail = currentUser.email;
+
+    // Delete user from DB (Prisma cascade deletes messages, calls, posts, stories, followers, etc.)
+    await prisma.user.delete({
+      where: { id: userId }
+    });
+
+    // Also remove any pending verification records for this email if any
+    if (userEmail) {
+      await prisma.pendingUser.deleteMany({
+        where: { email: userEmail }
+      }).catch(() => {});
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('[DELETE_ACCOUNT_ERROR]', error);
+    return { error: error?.message || 'Failed to delete account from database' };
+  }
+}
+
 export async function saveChatNicknameAction(targetUserId: string, nickname: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return { error: 'Not authenticated' };
 
-  const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email },
+  const email = session.user.email.toLowerCase().trim();
+  const currentUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: session.user.email },
+        { email: email }
+      ]
+    },
     select: { id: true }
   });
   if (!currentUser) return { error: 'User not found' };
 
   const cleanNick = (nickname || '').trim();
 
+  // Resolve target user id if an email or id was passed
+  let resolvedTargetId = targetUserId;
+  const targetUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { id: targetUserId },
+        { email: targetUserId },
+        { email: targetUserId.toLowerCase().trim() }
+      ]
+    },
+    select: { id: true, email: true }
+  });
+  if (targetUser) {
+    resolvedTargetId = targetUser.id;
+  }
+
   if (!cleanNick) {
     // Delete custom nickname if empty
     await (prisma as any).chatNickname.deleteMany({
       where: {
         userId: currentUser.id,
-        targetId: targetUserId
+        OR: [
+          { targetId: resolvedTargetId },
+          { targetId: targetUserId }
+        ]
       }
     });
-    return { success: true, nickname: '' };
+    return { success: true, nickname: '', targetId: resolvedTargetId };
   }
 
   const saved = await (prisma as any).chatNickname.upsert({
     where: {
       userId_targetId: {
         userId: currentUser.id,
-        targetId: targetUserId
+        targetId: resolvedTargetId
       }
     },
     update: { nickname: cleanNick },
     create: {
       userId: currentUser.id,
-      targetId: targetUserId,
+      targetId: resolvedTargetId,
       nickname: cleanNick
     }
   });
 
-  return { success: true, nickname: saved.nickname };
+  return { success: true, nickname: saved.nickname, targetId: resolvedTargetId };
+}
+
+export async function getInitialSocialData() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { recentChats: [], activeStories: [], nicknames: {} };
+
+  const [recentChats, activeStories, nicknames] = await Promise.all([
+    getRecentChats(),
+    getActiveStoriesAction(),
+    getChatNicknamesAction()
+  ]);
+
+  return {
+    recentChats,
+    activeStories,
+    nicknames
+  };
 }
 
 export async function getChatNicknamesAction() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return {};
 
-  const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email },
+  const email = session.user.email.toLowerCase().trim();
+  const currentUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: session.user.email },
+        { email: email }
+      ]
+    },
     select: { id: true }
   });
   if (!currentUser) return {};
 
   const records = await (prisma as any).chatNickname.findMany({
     where: { userId: currentUser.id },
-    select: { targetId: true, nickname: true }
+    include: {
+      targetUser: {
+        select: { id: true, email: true }
+      }
+    }
   });
 
   const nicknameMap: Record<string, string> = {};
   records.forEach((r: any) => {
-    nicknameMap[r.targetId] = r.nickname;
+    if (r.targetId) nicknameMap[r.targetId] = r.nickname;
+    if (r.targetUser?.email) {
+      nicknameMap[r.targetUser.email.toLowerCase().trim()] = r.nickname;
+    }
   });
 
   return nicknameMap;
@@ -924,7 +1019,8 @@ export async function getProfileDetails() {
         select: { id: true, username: true, image: true }
       },
       posts: {
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
+        take: 36
       },
       receivedFollowRequests: {
         include: {
@@ -1185,7 +1281,7 @@ export async function searchUsers(query: string) {
       where: {
         id: { not: currentUser.id }
       },
-      select: { id: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true },
+      select: { id: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true, lastHeartbeat: true, isOnline: true },
       take: 30,
       orderBy: { createdAt: 'desc' }
     });
@@ -1199,7 +1295,7 @@ export async function searchUsers(query: string) {
         { email: { contains: cleanQ, mode: 'insensitive' } }
       ]
     },
-    select: { id: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true },
+    select: { id: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true, lastHeartbeat: true, isOnline: true },
     take: 40,
   });
 }
@@ -1208,11 +1304,17 @@ export async function updateUserLastSeenAction(timestampIso?: string) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return { error: 'Not authenticated' };
 
+  const email = session.user.email.toLowerCase().trim();
   const targetDate = timestampIso ? new Date(timestampIso) : new Date();
 
-  await (prisma.user as any).update({
-    where: { email: session.user.email },
-    data: { lastSeen: targetDate }
+  await (prisma.user as any).updateMany({
+    where: {
+      OR: [
+        { email: session.user.email },
+        { email: email }
+      ]
+    },
+    data: { lastSeen: targetDate, lastHeartbeat: targetDate }
   });
 
   return { success: true, lastSeen: targetDate.toISOString() };
@@ -1250,7 +1352,8 @@ export async function getOtherUserProfile(targetUserId: string) {
         select: { id: true, username: true, image: true }
       },
       posts: {
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
+        take: 36
       },
       receivedFollowRequests: {
         include: {

@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { DeviceAccountStore, DeviceAccountMeta } from '@/lib/deviceAccountStore';
+import { validateSavedAccountsAction } from '@/app/accounts/actions';
 import { triggerHaptic } from '@/lib/haptics';
 
 export default function AccountsPage() {
@@ -29,10 +30,22 @@ export default function AccountsPage() {
   const [promptLoading, setPromptLoading] = useState(false);
   const [promptError, setPromptError] = useState('');
 
-  // Load accounts on mount
-  const loadAccounts = () => {
+  // Load accounts on mount & validate against database
+  const loadAccounts = async () => {
     const accounts = DeviceAccountStore.getSavedAccounts();
     setSavedAccounts(accounts);
+
+    if (accounts.length > 0) {
+      try {
+        const payload = accounts.map(a => ({ userId: a.userId, email: a.email }));
+        const res = await validateSavedAccountsAction(payload);
+        if (res && Array.isArray(res.validUserIds)) {
+          await DeviceAccountStore.syncWithValidAccounts(res.validUserIds, res.validEmails || []);
+          const refreshed = DeviceAccountStore.getSavedAccounts();
+          setSavedAccounts(refreshed);
+        }
+      } catch (e) {}
+    }
   };
 
   useEffect(() => {

@@ -7,6 +7,7 @@ import {
   Camera,
   ChevronLeft,
   LogOut,
+  Trash2,
   Check,
   Edit3,
   UserPlus,
@@ -18,7 +19,9 @@ import {
   updateProfileImageAction,
   updateProfileDetails,
   toggleFollowUser,
+  deleteAccountAction,
 } from '@/app/dashboard/actions';
+import { renderApiClient } from '@/lib/render-api-client';
 import { optimizeImageClient } from '@/lib/media-optimizer';
 import { DeviceAccountStore } from '@/lib/deviceAccountStore';
 
@@ -188,7 +191,16 @@ export default function ProfilePanel({
     setUsernameError(null);
 
     try {
-      const res = await updateProfileDetails({ username: cleaned });
+      const myId = (session?.user as any)?.id || (session?.user?.email ? (session.user.email as string).toLowerCase().trim() : '');
+      const myEmail = session?.user?.email ? (session.user.email as string).toLowerCase().trim() : undefined;
+      
+      let res: any;
+      try {
+        res = await renderApiClient.updateProfile({ username: cleaned }, myId, myEmail);
+      } catch (err) {
+        res = await updateProfileDetails({ username: cleaned });
+      }
+
       if (res.error) {
         setUsernameError(res.error);
         showToast(res.error);
@@ -246,6 +258,9 @@ export default function ProfilePanel({
     }
   };
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
   const handleLogout = async () => {
     triggerHaptic('medium');
     try {
@@ -262,6 +277,63 @@ export default function ProfilePanel({
       localStorage.setItem('user_logged_out', 'true');
     } catch (e) {}
     signOut({ callbackUrl: '/accounts' });
+  };
+
+  const handleDeleteAccount = async () => {
+    triggerHaptic('heavy');
+    setIsDeletingAccount(true);
+    try {
+      const res = await deleteAccountAction();
+      if (res && res.error) {
+        showToast(res.error || 'Failed to delete account');
+        setIsDeletingAccount(false);
+        setShowDeleteConfirm(false);
+        return;
+      }
+
+      // Successfully removed from PostgreSQL DB
+      const myId = (session?.user as any)?.id;
+      const myEmail = session?.user?.email;
+      if (myId) {
+        await DeviceAccountStore.removeAccount(myId).catch(() => {});
+      }
+      if (myEmail) {
+        await DeviceAccountStore.removeAccount(myEmail).catch(() => {});
+      }
+
+      try {
+        localStorage.removeItem('has_active_session');
+        localStorage.removeItem('last_logged_user');
+        localStorage.removeItem('cached_profile_details');
+        localStorage.removeItem('cached_user_meta');
+        localStorage.removeItem('social_messages_cache');
+        localStorage.removeItem('social_contacts_cache');
+        localStorage.removeItem('social_users_cache');
+        localStorage.removeItem('social_requests_cache');
+        localStorage.removeItem('connected_accounts');
+        localStorage.removeItem('da_current_id');
+        if (myId) {
+          localStorage.removeItem(`chat_nicknames_${myId}`);
+          localStorage.removeItem(`chat_themes_${myId}`);
+          localStorage.removeItem(`chat_last_seen_${myId}`);
+          localStorage.removeItem(`social_deleted_chats_${myId}`);
+          localStorage.removeItem(`social_pinned_chats_${myId}`);
+          localStorage.removeItem(`social_archived_chats_${myId}`);
+          localStorage.removeItem(`social_contacts_cache_${myId}`);
+          localStorage.removeItem(`social_messages_cache_${myId}`);
+          localStorage.removeItem(`social_users_cache_${myId}`);
+          localStorage.removeItem(`social_requests_cache_${myId}`);
+        }
+        localStorage.setItem('user_logged_out', 'true');
+      } catch (e) {}
+
+      signOut({ callbackUrl: '/accounts' });
+    } catch (err: any) {
+      console.error('Delete account error:', err);
+      showToast('Failed to delete account');
+      setIsDeletingAccount(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -573,9 +645,9 @@ export default function ProfilePanel({
               </div>
             </div>
 
-            {/* Log Out Button directly under followers and following for Self */}
+            {/* Log Out & Delete Account Buttons directly under followers and following for Self */}
             {isSelf && (
-              <div className="w-full mt-1">
+              <div className="w-full mt-1 flex flex-col gap-2.5">
                 <button
                   onClick={handleLogout}
                   className="w-full py-3 px-6 rounded-full bg-rose-50/80 hover:bg-rose-100 text-rose-600 border border-rose-100/60 font-semibold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] outline-none"
@@ -583,6 +655,18 @@ export default function ProfilePanel({
                 >
                   <LogOut className="w-4 h-4" strokeWidth={2} />
                   <span>Log Out</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    triggerHaptic('medium');
+                    setShowDeleteConfirm(true);
+                  }}
+                  className="w-full py-3 px-6 rounded-full bg-rose-50/80 hover:bg-rose-100 text-rose-600 border border-rose-100/60 font-semibold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] outline-none"
+                  aria-label="Delete Account"
+                >
+                  <Trash2 className="w-4 h-4" strokeWidth={2} />
+                  <span>Delete Account</span>
                 </button>
               </div>
             )}
@@ -631,6 +715,45 @@ export default function ProfilePanel({
           </>
         )}
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-xs rounded-3xl bg-white text-zinc-900 p-6 text-center shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center">
+              <Trash2 className="w-6 h-6" strokeWidth={2} />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-base font-extrabold text-zinc-900">Delete Account?</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                This will permanently delete your account, email, password, phone number, and all associated data from the database. This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingAccount}
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2.5 rounded-full bg-zinc-100 text-xs font-bold text-zinc-700 hover:bg-zinc-200 transition-colors cursor-pointer outline-none"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingAccount}
+                onClick={handleDeleteAccount}
+                className="flex-1 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-xs font-bold text-white transition-colors cursor-pointer outline-none shadow-xs flex items-center justify-center gap-1.5"
+              >
+                {isDeletingAccount ? (
+                  <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <span>Delete</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

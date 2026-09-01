@@ -14,7 +14,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const pending = await prisma.pendingUser.findUnique({ where: { email } });
+    const cleanEmail = email.trim().toLowerCase();
+    const pending = await prisma.pendingUser.findUnique({ where: { email: cleanEmail } });
 
     if (!pending) {
       return NextResponse.json(
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     if (new Date() > pending.verifyExpiry) {
-      await prisma.pendingUser.delete({ where: { email } });
+      await prisma.pendingUser.delete({ where: { email: cleanEmail } });
       return NextResponse.json(
         { message: "Verification code expired. Please sign up again." },
         { status: 400 }
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
     // Promote PendingUser → real User
     await prisma.user.create({
       data: {
-        email: pending.email,
+        email: cleanEmail,
         username: pending.username,
         password: pending.password,
         phone: pending.phone,
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
     });
 
     // Clean up pending record
-    await prisma.pendingUser.delete({ where: { email } });
+    await prisma.pendingUser.delete({ where: { email: cleanEmail } });
 
     return NextResponse.json({ message: "Email verified successfully." }, { status: 200 });
   } catch (error) {

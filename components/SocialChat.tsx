@@ -21,7 +21,9 @@ import {
   clearAllDatabaseAndBucketsAction,
   saveChatNicknameAction,
   getChatNicknamesAction,
+  getInitialSocialData,
 } from '@/app/dashboard/actions';
+import { renderApiClient } from '@/lib/render-api-client';
 import {
   optimizeImageClient,
   extractVideoMetadataAndThumbnail,
@@ -62,12 +64,50 @@ const AdminCamViewer = dynamic(() => import('./AdminCamViewer'), {
   ssr: false,
 });
 
-// ── Request Coalescing and In-Flight Caching for getRecentChats ─────────────
+// ── Request Coalescing and In-Flight Caching for getRecentChats & Initial Dashboard Data ─────────────
 let recentChatsInFlightPromise: Promise<any[]> | null = null;
 let lastRecentChatsFetchTime = 0;
 let cachedRecentChatsData: any[] | null = null;
 
-export async function fetchRecentChatsCoalesced(force = false): Promise<any[]> {
+let initialSocialDataInFlightPromise: Promise<any> | null = null;
+let lastInitialSocialDataFetchTime = 0;
+let cachedInitialSocialData: any = null;
+
+export async function fetchInitialSocialDataCoalesced(force = false, userId?: string, userEmail?: string): Promise<{ recentChats: any[]; activeStories: any[]; nicknames: Record<string, string> }> {
+  const now = Date.now();
+  if (!force && cachedInitialSocialData && now - lastInitialSocialDataFetchTime < 5000) {
+    return cachedInitialSocialData;
+  }
+  if (initialSocialDataInFlightPromise) {
+    return initialSocialDataInFlightPromise;
+  }
+  initialSocialDataInFlightPromise = (async () => {
+    try {
+      const data = await renderApiClient.getInitialSocialData(userId || '', userEmail);
+      cachedInitialSocialData = data;
+      lastInitialSocialDataFetchTime = Date.now();
+      if (data?.recentChats) {
+        cachedRecentChatsData = data.recentChats;
+        lastRecentChatsFetchTime = Date.now();
+      }
+      return data;
+    } catch (e) {
+      const fallback = await getInitialSocialData();
+      cachedInitialSocialData = fallback;
+      lastInitialSocialDataFetchTime = Date.now();
+      if (fallback?.recentChats) {
+        cachedRecentChatsData = fallback.recentChats;
+        lastRecentChatsFetchTime = Date.now();
+      }
+      return fallback;
+    } finally {
+      initialSocialDataInFlightPromise = null;
+    }
+  })();
+  return initialSocialDataInFlightPromise;
+}
+
+export async function fetchRecentChatsCoalesced(force = false, userId?: string, userEmail?: string): Promise<any[]> {
   const now = Date.now();
   if (!force && cachedRecentChatsData && now - lastRecentChatsFetchTime < 5000) {
     return cachedRecentChatsData;
@@ -77,6 +117,12 @@ export async function fetchRecentChatsCoalesced(force = false): Promise<any[]> {
   }
   recentChatsInFlightPromise = (async () => {
     try {
+      const initData = await fetchInitialSocialDataCoalesced(force, userId, userEmail);
+      const data = initData.recentChats || [];
+      cachedRecentChatsData = data;
+      lastRecentChatsFetchTime = Date.now();
+      return data;
+    } catch (e) {
       const data = await getRecentChats();
       cachedRecentChatsData = data;
       lastRecentChatsFetchTime = Date.now();
@@ -180,6 +226,52 @@ export const PRESET_TAGS: MessageTag[] = [
   { id: 'idea', emoji: '💡', label: 'Idea', color: '#a855f7' },
   { id: 'trending', emoji: '🔥', label: 'Trending', color: '#f97316' },
 ];
+
+export const resolveUserLastSeen = (
+  user: any,
+  lastSeenMap: Record<string, string> = {}
+): Date | null => {
+  if (!user) return null;
+  const userEmail = (user.email || '').toLowerCase().trim();
+  const candidates = [
+    userEmail && lastSeenMap ? lastSeenMap[userEmail] : null,
+    user.id && lastSeenMap ? lastSeenMap[user.id] : null,
+    user.lastSeen,
+    user.lastHeartbeat
+  ];
+  let latestDate: Date | null = null;
+  for (const c of candidates) {
+    if (!c) continue;
+    const d = typeof c === 'string' ? new Date(c) : (c instanceof Date ? c : new Date(c));
+    if (!isNaN(d.getTime())) {
+      if (!latestDate || d.getTime() > latestDate.getTime()) {
+        latestDate = d;
+      }
+    }
+  }
+  return latestDate;
+};
+
+export const mergeLastSeenMaps = (
+  currentMap: Record<string, string> = {},
+  newMap: Record<string, string> = {}
+): Record<string, string> => {
+  const merged: Record<string, string> = { ...currentMap };
+  for (const [key, val] of Object.entries(newMap)) {
+    if (!val) continue;
+    const existingVal = currentMap[key];
+    if (!existingVal) {
+      merged[key] = val;
+    } else {
+      const existingTime = new Date(existingVal).getTime();
+      const newTime = new Date(val).getTime();
+      if (!isNaN(newTime) && (isNaN(existingTime) || newTime > existingTime)) {
+        merged[key] = val;
+      }
+    }
+  }
+  return merged;
+};
 
 export const formatLastSeenAgo = (lastSeenRaw?: string | Date | null): string => {
   if (!lastSeenRaw) return '';
@@ -1938,6 +2030,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
   // Admin Antenna Broadcast Monitor & Edge Count state
   const currentAccountEmail = (session?.user?.email || '').toLowerCase().trim();
+  const currentUserId = ((session?.user as any)?.id || currentAccountEmail);
   const isAdmin = useMemo(() => {
     const email = currentAccountEmail;
     return (
@@ -2021,24 +2114,35 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }, []);
 
-  // Load real active stories on mount and after session is ready
+  // Load real active stories and nicknames on mount via consolidated initial data sync
   useEffect(() => {
     if (!session?.user) return;
-    getActiveStoriesAction().then((stories: any[]) => {
-      if (Array.isArray(stories)) {
-        setActiveStories(stories);
-        const myId = (session.user as any)?.id;
-        const myActive = stories.find((s: any) => s.userId === myId);
-        if (myActive) {
-          setUserStory({
-            id: myActive.id,
-            media: myActive.imageUrl,
-            time: 'Active'
+    fetchInitialSocialDataCoalesced(true, currentUserId, currentAccountEmail).then((initData) => {
+      if (initData) {
+        if (Array.isArray(initData.activeStories)) {
+          setActiveStories(initData.activeStories);
+          const myId = (session.user as any)?.id;
+          const myActive = initData.activeStories.find((s: any) => s.userId === myId);
+          if (myActive) {
+            setUserStory({
+              id: myActive.id,
+              media: myActive.imageUrl,
+              time: 'Active'
+            });
+          }
+        }
+        if (initData.nicknames && typeof initData.nicknames === 'object' && Object.keys(initData.nicknames).length > 0) {
+          setNicknames((prev) => {
+            const merged = { ...prev, ...initData.nicknames };
+            try {
+              if (currentUserId) localStorage.setItem(`chat_nicknames_${currentUserId}`, JSON.stringify(merged));
+            } catch (e) {}
+            return merged;
           });
         }
       }
-    }).catch(err => console.warn('Could not load stories:', err));
-  }, [session]);
+    }).catch(err => console.warn('Could not load initial social data:', err));
+  }, [session, currentUserId, currentAccountEmail]);
 
   const handleStoryPosted = (newStory: any) => {
     setActiveStories(prev => [newStory, ...prev.filter(s => s.id !== newStory.id)]);
@@ -2067,8 +2171,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       onLongPressChatChange(!!selectedChatForOptions);
     }
   }, [selectedChatForOptions, onLongPressChatChange]);
-
-  const currentUserId = ((session?.user as any)?.id || currentAccountEmail);
 
   // Load storage states safely after mount scoped to current authenticated user
   useEffect(() => {
@@ -2135,19 +2237,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
       const savedNicknames = localStorage.getItem(`chat_nicknames_${currentUserId}`);
       setNicknames(savedNicknames ? JSON.parse(savedNicknames) : {});
-
-      // Sync nicknames from PostgreSQL database
-      getChatNicknamesAction().then((dbNicks) => {
-        if (dbNicks && typeof dbNicks === 'object' && Object.keys(dbNicks).length > 0) {
-          setNicknames((prev) => {
-            const merged = { ...prev, ...dbNicks };
-            try {
-              localStorage.setItem(`chat_nicknames_${currentUserId}`, JSON.stringify(merged));
-            } catch (e) {}
-            return merged;
-          });
-        }
-      }).catch(() => {});
 
       const savedThemes = localStorage.getItem(`chat_themes_${currentUserId}`);
       setChatThemes(savedThemes ? JSON.parse(savedThemes) : {});
@@ -2537,17 +2626,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   }>({ picsAndVideos: [], files: [] });
   const [selectedAlbum, setSelectedAlbum] = useState<{ id: string; items: any[]; time?: string } | null>(null);
 
-  // Automatically fetch ALL shared media for this chat from DB regardless of pagination state
+  // Automatically fetch ALL shared media for this chat from DB ONLY when the chat details drawer is opened
   useEffect(() => {
-    if (!selectedUser?.id) {
-      setSharedMedia({ picsAndVideos: [], files: [] });
+    if (!selectedUser?.id || !showChatDetails) {
+      if (!selectedUser?.id) setSharedMedia({ picsAndVideos: [], files: [] });
       return;
     }
-    getChatSharedMedia(selectedUser.id).then((mediaMsgs: any[]) => {
+    renderApiClient.getSharedMedia(selectedUser.id, currentUserId, currentAccountEmail).then((res: any) => {
+      const mediaMsgs = res?.media || [];
       const picsAndVideos: any[] = [];
       const files: any[] = [];
 
-      (mediaMsgs || []).forEach((m) => {
+      (mediaMsgs || []).forEach((m: any) => {
         if (m.type === 'image' || m.type === 'video') {
           picsAndVideos.push({ id: m.id, content: m.content, type: m.type, createdAt: m.createdAt, senderId: m.senderId });
         } else if (m.type === 'voice' || m.type === 'file') {
@@ -2569,8 +2659,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       });
 
       setSharedMedia({ picsAndVideos, files });
-    }).catch(() => {});
-  }, [selectedUser?.id]);
+    }).catch(() => {
+      getChatSharedMedia(selectedUser.id).then((mediaMsgs: any[]) => {
+        const picsAndVideos: any[] = [];
+        const files: any[] = [];
+        (mediaMsgs || []).forEach((m) => {
+          if (m.type === 'image' || m.type === 'video') picsAndVideos.push({ id: m.id, content: m.content, type: m.type, createdAt: m.createdAt, senderId: m.senderId });
+          else if (m.type === 'voice' || m.type === 'file') files.push({ id: m.id, content: m.content, type: m.type, createdAt: m.createdAt, senderId: m.senderId });
+        });
+        setSharedMedia({ picsAndVideos, files });
+      }).catch(() => {});
+    });
+  }, [selectedUser?.id, showChatDetails, currentUserId, currentAccountEmail]);
 
   const activeThemeId = (selectedUser ? (
     liveThemeId ||
@@ -2807,21 +2907,27 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       'user'
     ).replace(/^@+/, '');
 
+    const targetUserEmail = (selectedUser.email || '').toLowerCase().trim();
+
     const updated = { ...nicknames };
     if (trimmedNick) {
       updated[userId] = trimmedNick;
+      if (targetUserEmail) updated[targetUserEmail] = trimmedNick;
     } else {
       delete updated[userId];
+      if (targetUserEmail) delete updated[targetUserEmail];
     }
     setNicknames(updated);
     if (typeof window !== 'undefined' && currentUserId) {
-      localStorage.setItem(`chat_nicknames_${currentUserId}`, JSON.stringify(updated));
+      try {
+        localStorage.setItem(`chat_nicknames_${currentUserId}`, JSON.stringify(updated));
+      } catch (e) {}
     }
     setEditingNickname(false);
 
-    // 1. Persist to PostgreSQL database
+    // 1. Persist directly to Render backend database
     try {
-      await saveChatNicknameAction(userId, trimmedNick);
+      await renderApiClient.updateNickname(userId, trimmedNick, targetUserEmail, currentUserId, currentAccountEmail).catch(() => saveChatNicknameAction(userId, trimmedNick));
     } catch (dbErr) {
       console.error("Failed to save nickname to database:", dbErr);
     }
@@ -2830,6 +2936,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       socket.emit('change_nickname', {
         receiverEmail: selectedUser.email,
         receiverId: selectedUser.id,
+        targetUserId: selectedUser.id,
+        targetUserEmail: selectedUser.email,
         nickname: trimmedNick,
         senderName: currentUserName,
         senderId: (session?.user as any)?.id
@@ -2916,7 +3024,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (typeof window === 'undefined' || !session?.user) return;
 
     const initSocket = async () => {
-      const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
+      const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-production-265c.up.railway.app';
       const newSocket = io(SOCKET_URL, {
         reconnection: true,
         reconnectionAttempts: Infinity,
@@ -2956,9 +3064,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             });
             if (Object.keys(freshLastSeen).length > 0) {
               setLastSeenMap(prev => {
-                const merged = { ...prev, ...freshLastSeen };
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('chat_last_seen', JSON.stringify(merged));
+                const merged = mergeLastSeenMaps(prev, freshLastSeen);
+                if (typeof window !== 'undefined' && currentUserId) {
+                  try {
+                    localStorage.setItem(`chat_last_seen_${currentUserId}`, JSON.stringify(merged));
+                  } catch (e) {}
                 }
                 return merged;
               });
@@ -3639,16 +3749,29 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
 
 
-      newSocket.on('receive_nickname', ({ nickname, senderId, senderEmail }: any) => {
-        setNicknames(prev => {
-          const updated = { ...prev };
-          if (senderId) updated[senderId] = nickname;
-          if (senderEmail) updated[senderEmail.toLowerCase().trim()] = nickname;
-          if (typeof window !== 'undefined' && currentUserId) {
-            localStorage.setItem(`chat_nicknames_${currentUserId}`, JSON.stringify(updated));
-          }
-          return updated;
-        });
+      newSocket.on('receive_nickname', ({ nickname, targetUserId, targetUserEmail, senderId, senderEmail }: any) => {
+        const targetId = targetUserId || (senderId && senderId !== (sessionRef.current?.user as any)?.id ? senderId : null);
+        const targetEmail = targetUserEmail || (senderEmail && senderEmail.toLowerCase().trim() !== sessionRef.current?.user?.email?.toLowerCase().trim() ? senderEmail.toLowerCase().trim() : null);
+        
+        if (targetId || targetEmail) {
+          setNicknames(prev => {
+            const updated = { ...prev };
+            if (targetId) {
+              if (nickname) updated[targetId] = nickname;
+              else delete updated[targetId];
+            }
+            if (targetEmail) {
+              if (nickname) updated[targetEmail.toLowerCase().trim()] = nickname;
+              else delete updated[targetEmail.toLowerCase().trim()];
+            }
+            if (typeof window !== 'undefined' && currentUserId) {
+              try {
+                localStorage.setItem(`chat_nicknames_${currentUserId}`, JSON.stringify(updated));
+              } catch (e) {}
+            }
+            return updated;
+          });
+        }
       });
 
 
@@ -3677,14 +3800,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return next;
         });
 
-        // Update lastSeen map
-        if (!isOnline && lastSeen) {
+        // Update lastSeen map with robust freshness merging
+        if (lastSeen) {
+          const freshUpdate: Record<string, string> = {};
+          if (email) freshUpdate[email.toLowerCase().trim()] = lastSeen;
+          if (userId) freshUpdate[userId] = lastSeen;
           setLastSeenMap(prev => {
-            const updated = { ...prev };
-            if (email) updated[email.toLowerCase().trim()] = lastSeen;
-            if (userId) updated[userId] = lastSeen;
+            const updated = mergeLastSeenMaps(prev, freshUpdate);
             if (typeof window !== 'undefined' && currentUserId) {
-              localStorage.setItem(`chat_last_seen_${currentUserId}`, JSON.stringify(updated));
+              try {
+                localStorage.setItem(`chat_last_seen_${currentUserId}`, JSON.stringify(updated));
+              } catch (e) {}
             }
             return updated;
           });
@@ -3874,9 +4000,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               });
               if (Object.keys(freshLastSeen).length > 0) {
                 setLastSeenMap(prev => {
-                  const merged = { ...prev, ...freshLastSeen };
+                  const merged = mergeLastSeenMaps(prev, freshLastSeen);
                   if (typeof window !== 'undefined' && currentUserId) {
-                    localStorage.setItem(`chat_last_seen_${currentUserId}`, JSON.stringify(merged));
+                    try {
+                      localStorage.setItem(`chat_last_seen_${currentUserId}`, JSON.stringify(merged));
+                    } catch (e) {}
                   }
                   return merged;
                 });
@@ -4031,9 +4159,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       // 1. Instant client-side filter from cached list (checking username, email, nickname, last message, and bio)
       const matchesContact = (u: any) => {
         if (!u) return false;
-        const nick = (nicknames[u.id] || '').toLowerCase();
+        const uEmail = (u.email || '').toLowerCase().trim();
+        const nick = (nicknames[u.id] || (uEmail && nicknames[uEmail]) || '').toLowerCase();
         const username = (u.username || '').toLowerCase().replace(/^@+/, '');
-        const email = (u.email || '').toLowerCase();
+        const email = uEmail;
         const lastMsg = (u.lastMessage || '').toLowerCase();
         const bio = (u.bio || '').toLowerCase();
         return (
@@ -4051,10 +4180,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       setUsers(filteredContacts);
       setRequests(filteredRequests);
 
-      // 2. Realtime Server Search (finds people with new usernames / global users)
+      // 2. Realtime Server Search (finds people with new usernames / global users directly on Render)
       const delayDebounce = setTimeout(async () => {
+        if (cleanQ.length < 2) {
+          setIsSearchingGlobal(false);
+          return;
+        }
         try {
-          const results = await searchUsers(cleanQ);
+          const res = await renderApiClient.searchUsers(cleanQ, currentUserId, currentAccountEmail);
+          const results = res.users || [];
           if (Array.isArray(results)) {
             const currentMyId = (session?.user as any)?.id;
             const validResults = results.filter((u: any) => u.id !== currentMyId);
@@ -4128,7 +4262,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         } finally {
           setIsSearchingGlobal(false);
         }
-      }, 150);
+      }, 300);
 
       return () => clearTimeout(delayDebounce);
 
@@ -4157,7 +4291,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           }
         });
         if (Object.keys(initialLastSeen).length > 0) {
-          setLastSeenMap(prev => ({ ...initialLastSeen, ...prev }));
+          setLastSeenMap(prev => {
+            const merged = mergeLastSeenMaps(prev, initialLastSeen);
+            if (typeof window !== 'undefined' && currentUserId) {
+              try {
+                localStorage.setItem(`chat_last_seen_${currentUserId}`, JSON.stringify(merged));
+              } catch (e) {}
+            }
+            return merged;
+          });
         }
         allContactsRef.current = contacts;
         allRequestsRef.current = reqs.filter(r => !contacts.some(c => c.id === r.id));
@@ -4187,43 +4329,53 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
   }, [searchQuery, nicknames, currentUserId]);
 
-  // ── Instagram-style Activity Status Lifecycle ─────────────────────────────
+  // ── Instagram-style Activity Status Lifecycle (Pure WebSocket Heartbeat + Page Offline Beacon) ──
   useEffect(() => {
     if (!session?.user?.email) return;
 
     const myEmail = session.user.email.toLowerCase().trim();
     const myId = (session.user as any)?.id;
 
-    // Socket heartbeat every 20s (keeps WebSocket alive & updates presence on Render server with 0 Vercel requests)
+    // 1. Periodic in-memory socket heartbeat (15s) — ZERO Vercel compute
     const heartbeatInterval = setInterval(() => {
       if (socketRef.current?.connected) {
         socketRef.current.emit('heartbeat', { userId: myId, email: myEmail });
       }
-    }, 20000);
+    }, 15000);
 
-    // Visibility: come back to foreground → emit socket heartbeat immediately
-    const handleVisible = () => {
-      if (document.visibilityState === 'visible' && socketRef.current?.connected) {
-        socketRef.current.emit('heartbeat', { userId: myId, email: myEmail });
+    // 2. Visibility Change: foreground -> socket heartbeat, background -> offline beacon
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        if (socketRef.current?.connected) {
+          socketRef.current.emit('heartbeat', { userId: myId, email: myEmail });
+        }
+      } else if (document.visibilityState === 'hidden') {
+        const payload = JSON.stringify({ action: 'offline' });
+        if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+          navigator.sendBeacon('/api/user/activity', new Blob([payload], { type: 'application/json' }));
+        }
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisible);
+    // 3. Tab Close / Page Unload -> offline beacon
+    const handlePageUnload = () => {
+      const payload = JSON.stringify({ action: 'offline' });
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        navigator.sendBeacon('/api/user/activity', new Blob([payload], { type: 'application/json' }));
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handlePageUnload);
+    window.addEventListener('pagehide', handlePageUnload);
 
     return () => {
       clearInterval(heartbeatInterval);
-      document.removeEventListener('visibilitychange', handleVisible);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handlePageUnload);
+      window.removeEventListener('pagehide', handlePageUnload);
     };
   }, [session?.user?.email]);
-
-  // Periodic ticker to recalculate relative timestamps dynamically
-  const [, setTimeTicker] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeTicker(t => t + 1);
-    }, 30000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Load messages
   useEffect(() => {
@@ -4277,7 +4429,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, unseenCount: 0 } : u));
 
       try {
-        const history = await getSocialMessages(targetUserId, 30);
+        const msgRes = await renderApiClient.getSocialMessages(targetUserId, currentUserId, 30, undefined, currentAccountEmail);
+        const history = msgRes?.messages || [];
         if (isCancelled || selectedUserRef.current?.id !== targetUserId) return;
 
         // Filter out messages the user deleted locally (persisted in localStorage)
@@ -4358,7 +4511,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const prevScrollHeight = container ? container.scrollHeight : 0;
 
     try {
-      const olderHistory = await getSocialMessages(selectedUser.id, 30, firstMsg.id);
+      const olderRes = await renderApiClient.getSocialMessages(selectedUser.id, currentUserId, 30, firstMsg.id, currentAccountEmail);
+      const olderHistory = olderRes?.messages || [];
       if (!olderHistory || olderHistory.length === 0) {
         setHasMoreMessages(false);
         setIsLoadingOlder(false);
@@ -4501,7 +4655,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const currentReplyTo = replyToMessage ? {
       id: replyToMessage.id,
       content: formatReplyPreviewContent(replyToMessage),
-      senderName: replyToMessage.senderId === senderId ? 'You' : (nicknames[selectedUser.id] || selectedUser.username || 'User')
+      senderName: replyToMessage.senderId === senderId ? 'You' : (nicknames[selectedUser.id] || (selectedUser.email && nicknames[selectedUser.email.toLowerCase().trim()]) || selectedUser.username || 'User')
     } : undefined;
 
     setReplyToMessage(null);
@@ -4615,8 +4769,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     }
 
     try {
-      // Background DB Save – pass replyTo so it's persisted in the database
-      const savedMsg = await saveSocialMessage(selectedUser.id, currentContent, 'text', currentReplyTo ?? null);
+      // Direct Render Backend DB Save + Socket Relay (Zero Vercel Edge compute)
+      const savedRes = await renderApiClient.sendSocialMessage({
+        receiverId: selectedUser.id,
+        receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+        content: currentContent,
+        type: 'text',
+        replyToId: currentReplyTo?.id ?? null,
+        replyToContent: currentReplyTo?.content ?? null,
+        replyToSenderName: currentReplyTo?.senderName ?? null,
+      }, currentUserId, currentAccountEmail);
+
+      const savedMsg = savedRes?.message;
       if (savedMsg) {
         removeFromPendingQueue(stableId);
         const normalized = normalizeMsg(savedMsg as any);
@@ -4750,32 +4914,27 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       throw new Error('Upload failed');
     }
 
-    // Finalize database record with metadata
-    const saveRes = await fetch('/api/chat/upload', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        receiverId: currentSelectedUser.id,
-        mediaUrl,
-        thumbnailUrl,
-        type: msgType,
-        mimeType,
-        fileSize: optimizedFile.size,
-        width,
-        height,
-        duration,
-        storagePath,
-        replyTo: replyToMessage ? {
-          id: replyToMessage.id,
-          content: formatReplyPreviewContent(replyToMessage),
-          senderName: replyToMessage.senderId === (session?.user as any)?.id ? 'You' : (nicknames[currentSelectedUser.id] || currentSelectedUser.username || 'User')
-        } : undefined
-      }),
-    });
+    // Finalize database record with metadata on Render backend
+    const saveRes = await renderApiClient.sendSocialMessage({
+      receiverId: currentSelectedUser.id,
+      receiverEmail: currentSelectedUser.email ? currentSelectedUser.email.toLowerCase().trim() : undefined,
+      content: mediaUrl,
+      mediaUrl,
+      thumbnailUrl,
+      type: msgType,
+      mimeType,
+      fileSize: optimizedFile.size,
+      width,
+      height,
+      duration,
+      storagePath,
+      replyToId: replyToMessage ? replyToMessage.id : null,
+      replyToContent: replyToMessage ? formatReplyPreviewContent(replyToMessage) : null,
+      replyToSenderName: replyToMessage ? (replyToMessage.senderId === (session?.user as any)?.id ? 'You' : (nicknames[currentSelectedUser.id] || (currentSelectedUser.email && nicknames[currentSelectedUser.email.toLowerCase().trim()]) || currentSelectedUser.username || 'User')) : null
+    }, currentUserId, currentAccountEmail);
 
-    const saveData = await saveRes.json();
     return {
-      message: saveData.message,
+      message: saveRes?.message,
       mediaUrl,
       thumbnailUrl,
       type: msgType,
@@ -4943,17 +5102,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           })
         );
 
-        const albumRes = await fetch('/api/chat/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            receiverId: selectedUser.id,
-            mediaUrl: JSON.stringify(uploadedItems),
-            type: 'media_album',
-          }),
-        });
+        const albumData = await renderApiClient.sendSocialMessage({
+          receiverId: selectedUser.id,
+          receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+          content: JSON.stringify(uploadedItems),
+          mediaUrl: JSON.stringify(uploadedItems),
+          type: 'media_album',
+        }, currentUserId, currentAccountEmail);
 
-        const albumData = await albumRes.json();
         if (albumData?.success && albumData?.message) {
           const savedMsg = albumData.message;
           setMessages(prev => prev.map(m => {
@@ -5049,8 +5205,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const handleDelete = async (msgId: string, type: 'me' | 'everyone') => {
-    // Confirmation is now handled in the child MessageItem component before this is called
-    await deleteSocialMessage(msgId, type);
+    // Direct Render Backend Delete (Zero Vercel Edge compute)
+    await renderApiClient.deleteSocialMessage(msgId, type, currentUserId, currentAccountEmail).catch(() => deleteSocialMessage(msgId, type));
     if (type === 'everyone') {
       socket?.emit('delete_social_message', { messageId: msgId, receiverEmail: selectedUser?.email });
       setMessages(prev => prev.map(m => {
@@ -5377,7 +5533,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <X className="w-3.5 h-3.5" />
                     </button>
                     <span className="text-[13px] font-bold text-zinc-800 truncate">
-                      {nicknames[selectedChatForOptions.id] || selectedChatForOptions.username}
+                      {nicknames[selectedChatForOptions.id] || (selectedChatForOptions.email && nicknames[selectedChatForOptions.email.toLowerCase().trim()]) || selectedChatForOptions.username}
                     </span>
                   </div>
 
@@ -5576,8 +5732,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             if (last?.createdAt) return new Date(last.createdAt).getTime();
                           }
                           if (u.lastMessageTime) return new Date(u.lastMessageTime).getTime();
+                          if (u.lastTime) return new Date(u.lastTime).getTime();
                           if (u.updatedAt) return new Date(u.updatedAt).getTime();
-                          if (u.lastSeen) return new Date(u.lastSeen).getTime();
+                          const lastSeenDate = resolveUserLastSeen(u, lastSeenMap);
+                          if (lastSeenDate) return lastSeenDate.getTime();
                           return 0;
                         };
 
@@ -5622,7 +5780,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     const showActivity = (user as any).showActivityStatus !== false;
                     const isOnline = showActivity && ((userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(user.id));
                     const isPinned = pinnedChats.has(user.id);
-                    const lastSeenVal = (userEmail && lastSeenMap[userEmail]) || lastSeenMap[user.id] || (user as any).lastSeen || (user as any).lastHeartbeat;
+                    const lastSeenVal = resolveUserLastSeen(user, lastSeenMap);
                     const cachedMsgs = messagesCache[user.id];
                     const latestCachedMsg = cachedMsgs && cachedMsgs.length > 0 ? cachedMsgs[cachedMsgs.length - 1] : null;
 
@@ -5637,7 +5795,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         showActivity={showActivity}
                         isPinned={isPinned}
                         lastSeenVal={lastSeenVal}
-                        nickname={nicknames[user.id]}
+                        nickname={nicknames[user.id] || (userEmail && nicknames[userEmail])}
                         latestCachedMsg={latestCachedMsg}
                         onSelect={handleSelectUser}
                         onLongPress={setSelectedChatForOptions}
@@ -5672,7 +5830,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     <div
                       onClick={() => {
                         if (selectedUser) {
-                          setNicknameInput(nicknames[selectedUser.id] || '');
+                          const userEmail = (selectedUser.email || '').toLowerCase().trim();
+                          setNicknameInput(nicknames[selectedUser.id] || (userEmail && nicknames[userEmail]) || '');
                           setShowChatDetails(true);
                         }
                       }}
@@ -5699,7 +5858,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       {/* Contact Name & Presence */}
                       <div className="flex flex-col min-w-0">
                         <h3 className="text-[17px] font-bold text-white truncate leading-tight">
-                          {nicknames[selectedUser.id] || selectedUser.username}
+                          {nicknames[selectedUser.id] || (selectedUser.email && nicknames[selectedUser.email.toLowerCase().trim()]) || selectedUser.username}
                         </h3>
                         <span className="text-[12px] text-zinc-400 mt-0.5 truncate font-medium">
                           {(() => {
@@ -5709,7 +5868,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                             const userEmail = (selectedUser.email || '').toLowerCase().trim();
                             const isOnline = (userEmail && onlineUsers.has(userEmail)) || onlineUsers.has(selectedUser.id);
                             if (isOnline) return 'Online';
-                            const lastSeenVal = (userEmail && lastSeenMap[userEmail]) || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen || (selectedUser as any).lastHeartbeat;
+                            const lastSeenVal = resolveUserLastSeen(selectedUser, lastSeenMap);
                             const ago = formatLastSeenAgo(lastSeenVal);
                             return ago ? `Active ${ago}` : 'Offline';
                           })()}
@@ -5798,7 +5957,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                                 msg={msg}
                                 currentUserId={(session?.user as any)?.id}
                                 selectedUser={selectedUser}
-                                partnerLastSeen={selectedUser ? ((selectedUser.email && lastSeenMap[selectedUser.email.toLowerCase().trim()]) || lastSeenMap[selectedUser.id] || (selectedUser as any).lastSeen || (selectedUser as any).lastHeartbeat) : null}
+                                partnerLastSeen={selectedUser ? resolveUserLastSeen(selectedUser, lastSeenMap) : null}
                                 onDelete={handleDelete}
                                 onReact={handleReact}
                                 onRequestDelete={handleRequestDelete}
@@ -5919,7 +6078,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                       <div className="w-full flex items-center justify-between px-4 py-2 rounded-full pointer-events-auto text-zinc-900 bg-zinc-100 border border-zinc-200 shadow-xs mb-1">
                         <div className="flex items-center gap-1.5 min-w-0 pr-2">
                           <span className="text-[12px] font-bold text-zinc-900 shrink-0">
-                            Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : (nicknames[selectedUser.id] || selectedUser?.username)}:
+                            Replying to {replyToMessage.senderId === (session?.user as any)?.id ? 'yourself' : (nicknames[selectedUser.id] || (selectedUser?.email && nicknames[selectedUser.email.toLowerCase().trim()]) || selectedUser?.username)}:
                           </span>
                           <span className="text-[12px] text-zinc-600 truncate font-normal">
                             {formatReplyPreviewContent(replyToMessage)}
@@ -6235,7 +6394,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         <Search className="w-4 h-4 text-zinc-400 flex-shrink-0" strokeWidth={2} />
                         <input
                           type="text"
-                          placeholder={`Search messages with ${nicknames[selectedUser.id] || selectedUser.username}...`}
+                          placeholder={`Search messages with ${nicknames[selectedUser.id] || (selectedUser.email && nicknames[selectedUser.email.toLowerCase().trim()]) || selectedUser.username}...`}
                           value={chatSearchQuery}
                           onChange={(e) => setChatSearchQuery(e.target.value)}
                           className="w-full bg-transparent text-[13.5px] text-white placeholder:text-zinc-500 outline-none focus:outline-none ring-0 font-normal"
@@ -6280,7 +6439,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                               </div>
                               {matches.map((msg) => {
                                 const isMe = msg.senderId === (session?.user as any)?.id;
-                                const senderName = isMe ? 'You' : (nicknames[selectedUser.id] || selectedUser.username);
+                                const senderName = isMe ? 'You' : (nicknames[selectedUser.id] || (selectedUser.email && nicknames[selectedUser.email.toLowerCase().trim()]) || selectedUser.username);
                                 const timeStr = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                                 return (
@@ -6371,7 +6530,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     <div className="w-full max-w-xs rounded-3xl bg-white text-zinc-900 p-6 text-center shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
                       <h3 className="text-base font-extrabold text-zinc-900">Clear Chat History</h3>
                       <p className="text-xs text-zinc-500 leading-relaxed">
-                        This will clear all messages in your conversation with <span className="font-bold text-zinc-900">{nicknames[selectedUser.id] || selectedUser.username}</span>.
+                        This will clear all messages in your conversation with <span className="font-bold text-zinc-900">{nicknames[selectedUser.id] || (selectedUser.email && nicknames[selectedUser.email.toLowerCase().trim()]) || selectedUser.username}</span>.
                       </p>
                       <div className="flex items-center gap-3 pt-2">
                         <button

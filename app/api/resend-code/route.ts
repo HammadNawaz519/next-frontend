@@ -16,16 +16,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Email is required." }, { status: 400 });
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
     // If already verified, nothing to resend
     const verifiedUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: cleanEmail },
       select: { id: true },
     });
     if (verifiedUser) {
       return NextResponse.json({ message: "Email already verified." }, { status: 400 });
     }
 
-    const pending = await prisma.pendingUser.findUnique({ where: { email } });
+    const pending = await prisma.pendingUser.findUnique({ where: { email: cleanEmail } });
     if (!pending) {
       return NextResponse.json(
         { message: "No pending registration found." },
@@ -52,11 +54,11 @@ export async function POST(req: Request) {
     const expiry = new Date(Date.now() + OTP_TTL_MS);
 
     await prisma.pendingUser.update({
-      where: { email },
+      where: { email: cleanEmail },
       data: { verifyCode: otp, verifyExpiry: expiry },
     });
 
-    await sendVerificationEmail(email, otp, pending.username);
+    await sendVerificationEmail(cleanEmail, otp, pending.username || 'User');
 
     return NextResponse.json({ message: "Verification code resent." }, { status: 200 });
   } catch (error) {

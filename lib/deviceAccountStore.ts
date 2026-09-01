@@ -332,18 +332,58 @@ export const DeviceAccountStore = {
 
   /**
    * Completely removes an account from this device (metadata + credential).
-   * The backend account is NOT deleted — only the device record.
+   * Checks key, userId, and email to ensure total removal.
    */
-  async removeAccount(userId: string): Promise<void> {
-    await _secureDel(credKey(userId));
+  async removeAccount(identifier: string): Promise<void> {
+    if (!identifier) return;
+    const clean = identifier.toLowerCase().trim();
     const accounts = _loadAccounts();
-    delete accounts[userId];
+    for (const [key, acc] of Object.entries(accounts)) {
+      if (
+        key === identifier ||
+        key.toLowerCase().trim() === clean ||
+        acc.userId === identifier ||
+        acc.userId.toLowerCase().trim() === clean ||
+        (acc.email && acc.email.toLowerCase().trim() === clean)
+      ) {
+        await _secureDel(credKey(key));
+        await _secureDel(credKey(acc.userId));
+        delete accounts[key];
+      }
+    }
     _saveAccounts(accounts);
 
     // If this was the current account, clear current
     const currentId = DeviceAccountStore.getCurrentAccountId();
-    if (currentId === userId) {
+    if (currentId === identifier || currentId?.toLowerCase().trim() === clean) {
       localStorage.removeItem(KEY_CURRENT);
+    }
+  },
+
+  /**
+   * Automatically purges accounts from the device if they no longer exist in the DB.
+   */
+  async syncWithValidAccounts(validUserIds: string[], validEmails: string[]): Promise<void> {
+    const validIdSet = new Set(validUserIds);
+    const validEmailSet = new Set(validEmails.map(e => e.toLowerCase().trim()));
+    const accounts = _loadAccounts();
+    let hasChanged = false;
+
+    for (const [key, acc] of Object.entries(accounts)) {
+      const emailClean = (acc.email || '').toLowerCase().trim();
+      const isIdValid = validIdSet.has(acc.userId) || validIdSet.has(key);
+      const isEmailValid = validEmailSet.has(emailClean);
+
+      if (!isIdValid && !isEmailValid) {
+        await _secureDel(credKey(key));
+        await _secureDel(credKey(acc.userId));
+        delete accounts[key];
+        hasChanged = true;
+      }
+    }
+
+    if (hasChanged) {
+      _saveAccounts(accounts);
     }
   },
 

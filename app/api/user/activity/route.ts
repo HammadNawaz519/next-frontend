@@ -14,6 +14,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    const email = session.user.email.toLowerCase().trim();
+    const currentUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: session.user.email },
+          { email: email }
+        ]
+      },
+      select: { id: true, email: true }
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     let action: string = "heartbeat";
     try {
       const body = await req.json();
@@ -24,17 +39,16 @@ export async function POST(req: NextRequest) {
 
     const now = new Date();
 
-    let data: any = { lastHeartbeat: now };
+    let data: any = { lastHeartbeat: now, lastSeen: now };
 
     if (action === "online") {
       data = { isOnline: true, lastSeen: now, lastHeartbeat: now };
     } else if (action === "offline") {
       data = { isOnline: false, lastSeen: now, lastHeartbeat: now };
     }
-    // heartbeat: only updates lastHeartbeat (lightweight)
 
     const user = await (prisma.user as any).update({
-      where: { email: session.user.email },
+      where: { id: currentUser.id },
       data,
       select: {
         id: true,
@@ -46,12 +60,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, user });
+    return NextResponse.json({ success: true, user }, { headers });
   } catch (error: any) {
     console.error("[ACTIVITY_UPDATE_ERROR]", error);
     return NextResponse.json(
       { error: error?.message || "Failed to update activity" },
-      { status: 500 }
+      { status: 500, headers }
     );
   }
 }

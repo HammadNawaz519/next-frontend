@@ -19,9 +19,24 @@ export async function POST(req: NextRequest) {
     }
 
     const targetDate = timestampIso ? new Date(timestampIso) : new Date();
+    const email = session.user.email.toLowerCase().trim();
+
+    const currentUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: session.user.email },
+          { email }
+        ]
+      },
+      select: { id: true }
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     const user = await prisma.user.update({
-      where: { email: session.user.email },
+      where: { id: currentUser.id },
       data: { lastSeen: targetDate },
       select: { id: true, email: true, lastSeen: true }
     });

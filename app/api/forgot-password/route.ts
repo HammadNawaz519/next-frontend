@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       },
     });
 
-    const displayName = user?.username || user?.name || pendingUser?.username || 'User';
+    const displayName = user?.username || pendingUser?.username || 'User';
     await sendVerificationEmail(cleanEmail, otp, displayName);
 
     return NextResponse.json(

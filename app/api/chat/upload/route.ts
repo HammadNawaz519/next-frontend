@@ -40,8 +40,14 @@ export async function POST(req: NextRequest) {
 
       let userId = (session.user as any)?.id as string | undefined;
       if (!userId) {
-        const found = await prisma.user.findUnique({
-          where: { email: session.user.email },
+        const cleanEmail = session.user.email.toLowerCase().trim();
+        const found = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { email: session.user.email },
+              { email: cleanEmail }
+            ]
+          },
           select: { id: true },
         });
         if (!found) return NextResponse.json({ error: "User not found" }, { status: 404 });

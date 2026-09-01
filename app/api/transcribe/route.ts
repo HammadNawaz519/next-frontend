@@ -31,8 +31,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    const cleanEmail = session.user.email.toLowerCase().trim();
+    const currentUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: session.user.email },
+          { email: cleanEmail }
+        ]
+      },
       select: { id: true, email: true },
     });
 

@@ -27,8 +27,18 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Email and password are required.");
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+        const input = credentials.email.trim();
+        const cleanEmail = input.toLowerCase();
+
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { email: cleanEmail },
+              { email: input },
+              { username: input },
+              { username: cleanEmail }
+            ]
+          },
           select: {
             id: true,
             email: true,
@@ -40,7 +50,7 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user || !user.password) {
-          throw new Error("No account found with this email.");
+          throw new Error("No account found with this email or username.");
         }
 
         if (!user.emailVerified) {

@@ -102,7 +102,7 @@ export default function ChatDetails({
 
         {/* Center: Contact Name (No Details heading, No activity status) */}
         <h2 className="text-[17px] font-bold text-white tracking-tight truncate max-w-[200px] text-center">
-          {nicknames[selectedUser.id] || selectedUser.username}
+          {nicknames[selectedUser.id] || (selectedUser.email && nicknames[selectedUser.email.toLowerCase().trim()]) || selectedUser.username}
         </h2>
 
         {/* Right: Search button (no outline, no border) */}
@@ -167,12 +167,13 @@ export default function ChatDetails({
                 {!editingNickname ? (
                   <button
                     onClick={() => {
-                      setNicknameInput(nicknames[selectedUser.id] || '');
+                      const currentNick = nicknames[selectedUser.id] || (selectedUser.email && nicknames[selectedUser.email.toLowerCase().trim()]) || '';
+                      setNicknameInput(currentNick);
                       setEditingNickname(true);
                     }}
                     className="text-[13px] font-bold text-[#9D4EDD] hover:underline cursor-pointer outline-none"
                   >
-                    {nicknames[selectedUser.id] || 'Set Nickname'}
+                    {nicknames[selectedUser.id] || (selectedUser.email && nicknames[selectedUser.email.toLowerCase().trim()]) || 'Set Nickname'}
                   </button>
                 ) : null}
               </div>
@@ -183,6 +184,15 @@ export default function ChatDetails({
                     placeholder="Enter nickname..."
                     value={nicknameInput}
                     onChange={(e) => setNicknameInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        onUpdateNickname(selectedUser.id, nicknameInput.trim());
+                        setEditingNickname(false);
+                      } else if (e.key === 'Escape') {
+                        setEditingNickname(false);
+                      }
+                    }}
                     className="flex-1 px-3.5 py-2 text-xs bg-white border border-zinc-200 rounded-full outline-none text-zinc-900 focus:border-[#9D4EDD]"
                     autoFocus
                   />

@@ -56,7 +56,6 @@ export async function POST(req: Request) {
         data: {
           email: pending.email,
           username: pending.username,
-          name: pending.username,
           password: newPassword,
           phone: pending.phone,
           emailVerified: new Date(),

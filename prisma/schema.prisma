@@ -88,7 +88,9 @@ model SocialMessage {
 
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, senderId, createdAt])
-  @@index([receiverId, isSeen])
+  @@index([receiverId, isSeen, deletedByReceiver])
+  @@index([senderId, deletedBySender, createdAt])
+  @@index([senderId, receiverId, type, createdAt])
 }
 
 model SocialReaction {
@@ -181,6 +183,9 @@ model SocialCall {
 
   caller   User @relation("CallsMade", fields: [callerId], references: [id], onDelete: Cascade)
   receiver User @relation("CallsReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([callerId, createdAt])
+  @@index([receiverId, createdAt])
 }
 
 model FollowRequest {
@@ -193,6 +198,7 @@ model FollowRequest {
   receiver User @relation("ReceivedFollowRequests", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
+  @@index([receiverId, createdAt])
 }
 
 model Post {
@@ -208,6 +214,9 @@ model Post {
   likes      Like[]
   comments   Comment[]
   savedPosts SavedPost[]
+
+  @@index([userId, createdAt])
+  @@index([postType, createdAt])
 }
 
 model Like {
@@ -229,6 +238,8 @@ model Comment {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  @@index([postId, createdAt])
 }
 
 model SavedPost {
@@ -240,6 +251,7 @@ model SavedPost {
   createdAt DateTime @default(now())
 
   @@unique([postId, userId])
+  @@index([userId, createdAt])
 }
 
 model Story {
@@ -248,6 +260,8 @@ model Story {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model ChatNickname {

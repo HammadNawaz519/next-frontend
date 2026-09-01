@@ -1,0 +1,21 @@
+# User-agent rules for Connect
+User-agent: *
+Allow: /$
+Disallow: /dashboard
+Disallow: /accounts
+Disallow: /security
+Disallow: /api/
+Disallow: /api/*
+
+# Block aggressive AI crawlers from private endpoints
+User-agent: GPTBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
