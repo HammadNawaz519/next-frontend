@@ -3982,21 +3982,40 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const handleCallEnded = async (durationSec?: number, wasConnected?: boolean) => {
+    if (incomingCallDismissTimer.current) {
+      clearTimeout(incomingCallDismissTimer.current);
+      incomingCallDismissTimer.current = null;
+    }
     const callObj = activeCallRef.current || activeCall;
     activeCallRef.current = null;
     setActiveCall(null);
+    setIncomingCall(null);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('connect_call_history_updated'));
+    }
 
     if (callObj?.peer) {
       const status = wasConnected ? 'completed' : 'missed';
-      const result = await saveCall(callObj.peer.id, callObj.type, status, durationSec || 0);
-      if (result?.message) {
-        socket?.emit('send_social_message', {
-          ...result.message,
-          receiverEmail: callObj.peer.email
-        });
-        if (selectedUser?.id === callObj.peer.id) {
-          setMessages(prev => [...prev, result.message as any]);
+      try {
+        const result = await saveCall(callObj.peer.id, callObj.type, status, durationSec || 0);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('connect_call_history_updated'));
         }
+        if (result?.message) {
+          socket?.emit('send_social_message', {
+            ...result.message,
+            receiverEmail: callObj.peer.email
+          });
+          if (selectedUser?.id === callObj.peer.id) {
+            setMessages(prev => {
+              if (prev.some(m => m.id === (result.message as any).id)) return prev;
+              return [...prev, result.message as any];
+            });
+          }
+        }
+      } catch (err) {
+        console.error('[Call] Error saving call record:', err);
       }
     }
   };
@@ -6612,51 +6631,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             </div>
           )}
         </div>
-      )}
-
-      {activeCall && socket && (
-        <CallInterface
-          socket={socket}
-          peer={activeCall.peer}
-          type={activeCall.type}
-          isCaller={activeCall.isCaller}
-          isAccepted={(activeCall as any).connected}
-          initialOffer={(activeCall as any).initialOffer}
-          callId={(activeCall as any).callId}
-          onEnd={(duration, wasConnected) => {
-            // Clear any pending dismiss timer
-            if (incomingCallDismissTimer.current) {
-              clearTimeout(incomingCallDismissTimer.current);
-              incomingCallDismissTimer.current = null;
-            }
-            const callData = activeCall;
-            setActiveCall(null);
-            setIncomingCall(null);
-
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(new Event('connect_call_history_updated'));
-            }
-
-            if (callData && callData.isCaller) {
-              (async () => {
-                try {
-                  const status = wasConnected ? 'completed' : 'missed';
-                  const result = await saveCall(callData.peer.id, callData.type, status, duration);
-                  if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new Event('connect_call_history_updated'));
-                  }
-                  if (result?.message && socket) {
-                    socket.emit('send_social_message', { receiverEmail: callData.peer.email, ...result.message });
-                    setMessages(prev => {
-                      if (prev.some(m => m.id === (result.message as any).id)) return prev;
-                      return [...prev, result.message as any];
-                    });
-                  }
-                } catch (e) { console.error("Call background save error:", e); }
-              })();
-            }
-          }}
-        />
       )}
 
 
