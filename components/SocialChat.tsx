@@ -3246,56 +3246,72 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return; // Don't append to message stream
         }
 
+        // 2. Update Sidebar (Users / Contacts list)
         setUsers(prev => {
           const existing = prev.find(u => u.id === partnerId);
           if (existing) {
             const index = prev.indexOf(existing);
-            const updated = { ...existing, lastMessage: formatMsg(msg), unseenCount: (selectedUserRef.current?.id === partnerId) ? 0 : (existing.unseenCount || 0) + 1 };
+            const updated = {
+              ...existing,
+              lastMessage: formatMsg(msg),
+              lastMessageTime: msg.createdAt || new Date().toISOString(),
+              unseenCount: (selectedUserRef.current?.id === partnerId) ? 0 : (existing.unseenCount || 0) + (isSentByMe ? 0 : 1)
+            };
             const next = [...prev];
             next.splice(index, 1);
             const finalList = [updated, ...next];
             allContactsRef.current = finalList;
-            return finalList;
-          }
-          return prev;
-        });
-
-        setRequests(prev => {
-          const existing = prev.find(u => u.id === partnerId);
-          if (existing) {
-            const index = prev.indexOf(existing);
-            const updated = { ...existing, lastMessage: formatMsg(msg), unseenCount: (selectedUserRef.current?.id === partnerId) ? 0 : (existing.unseenCount || 0) + 1 };
-            const next = [...prev];
-            next.splice(index, 1);
-            const finalList = [updated, ...next];
-            allRequestsRef.current = finalList;
+            if (typeof window !== 'undefined' && currentUserId) {
+              try {
+                localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(finalList));
+              } catch (e) {}
+            }
             return finalList;
           }
 
-          // If it's a completely new person who messaged us or chat was deleted
-          if (!isSentByMe && !usersRef.current.some(u => u.id === partnerId) && !prev.some(u => u.id === partnerId)) {
-            getSocialUser(partnerId).then((newUser: any) => {
-              if (newUser) {
-                const formattedUser = {
-                  ...(newUser as any),
-                  lastMessage: formatMsg(msg),
-                  isRequest: false,
-                  unseenCount: selectedUserRef.current?.id === partnerId ? 0 : 1
-                };
-                setUsers(current => {
-                  if (current.some(u => u.id === newUser.id)) return current;
-                  const finalList = [formattedUser, ...current];
-                  allContactsRef.current = finalList;
-                  if (typeof window !== 'undefined' && currentUserId) {
-                    try {
-                      localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(finalList));
-                    } catch (e) {}
-                  }
-                  return finalList;
-                });
-              }
-            });
+          // If partner is not yet in contacts list, add immediately
+          const fallbackUser = isSentByMe ? selectedUserRef.current : null;
+          if (fallbackUser && fallbackUser.id === partnerId) {
+            const formattedUser = {
+              ...fallbackUser,
+              lastMessage: formatMsg(msg),
+              lastMessageTime: msg.createdAt || new Date().toISOString(),
+              isRequest: false,
+              unseenCount: 0
+            };
+            const finalList = [formattedUser, ...prev];
+            allContactsRef.current = finalList;
+            if (typeof window !== 'undefined' && currentUserId) {
+              try {
+                localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(finalList));
+              } catch (e) {}
+            }
+            return finalList;
           }
+
+          getSocialUser(partnerId).then((newUser: any) => {
+            if (newUser) {
+              const formattedUser = {
+                ...(newUser as any),
+                lastMessage: formatMsg(msg),
+                lastMessageTime: msg.createdAt || new Date().toISOString(),
+                isRequest: false,
+                unseenCount: selectedUserRef.current?.id === partnerId ? 0 : 1
+              };
+              setUsers(current => {
+                if (current.some(u => u.id === newUser.id)) return current;
+                const finalList = [formattedUser, ...current];
+                allContactsRef.current = finalList;
+                if (typeof window !== 'undefined' && currentUserId) {
+                  try {
+                    localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(finalList));
+                  } catch (e) {}
+                }
+                return finalList;
+              });
+            }
+          }).catch(() => {});
+
           return prev;
         });
 
@@ -4450,17 +4466,22 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           setHasMoreMessages(true);
         }
 
-        const currentSenderId = (sessionRef.current?.user as any)?.id || '';
-        const pendingMsgs = getPendingMessagesForUser(targetUserId, currentSenderId);
-        const freshIds = new Set(fresh.map(m => m.id));
-        const uncommittedPending = pendingMsgs.filter(p => !freshIds.has(p.id));
+        const cachedExisting = messagesCache[targetUserId] || [];
+        const combined = fresh.length > 0
+          ? [...fresh, ...uncommittedPending]
+          : (cachedExisting.length > 0 ? cachedExisting : uncommittedPending);
 
-        const merged = [...fresh, ...uncommittedPending].sort(
+        const merged = combined.sort(
           (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
 
         setMessages(merged);
         setMessagesCache(prev => ({ ...prev, [targetUserId]: merged }));
+        if (typeof window !== 'undefined' && currentUserId) {
+          try {
+            localStorage.setItem(`social_messages_cache_${currentUserId}`, JSON.stringify({ ...messagesCache, [targetUserId]: merged }));
+          } catch (e) {}
+        }
 
         const detectedFreshTheme = detectThemeIdFromMessages(fresh);
         if (detectedFreshTheme && selectedUser) {
@@ -4768,10 +4789,24 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       themeId: activeThemeId
     });
 
-    setMessages(prev => [...prev, optimisticMsg]);
-    setMessagesCache(prev => {
-      const current = prev[selectedUser.id] || [];
-      return { ...prev, [selectedUser.id]: [...current, optimisticMsg] };
+    // 0ms Optimistic Contact List Update
+    setUsers(prev => {
+      const existing = prev.find(u => u.id === selectedUser.id);
+      const updatedUser = {
+        ...(existing || selectedUser),
+        lastMessage: currentContent || 'Message',
+        lastMessageTime: new Date().toISOString(),
+        unseenCount: 0
+      };
+      const filtered = prev.filter(u => u.id !== selectedUser.id);
+      const next = [updatedUser, ...filtered];
+      allContactsRef.current = next;
+      if (typeof window !== 'undefined' && currentUserId) {
+        try {
+          localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(next));
+        } catch (e) {}
+      }
+      return next;
     });
 
     if (socket) {
