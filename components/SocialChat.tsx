@@ -3160,29 +3160,34 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
 
         // 2. Update Sidebar (Users / Contacts list)
-        setUsers(prev => {
-          const existing = prev.find(u => u.id === partnerId);
-          if (existing) {
-            const index = prev.indexOf(existing);
-            const updated = {
-              ...existing,
-              lastMessage: formatMsg(msg),
-              lastMessageTime: msg.createdAt || new Date().toISOString(),
-              unseenCount: (selectedUserRef.current?.id === partnerId) ? 0 : (existing.unseenCount || 0) + (isSentByMe ? 0 : 1)
-            };
-            const next = [...prev];
-            next.splice(index, 1);
-            const finalList = [updated, ...next];
-            allContactsRef.current = finalList;
-            if (typeof window !== 'undefined' && currentUserId) {
-              try {
-                localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(finalList));
-              } catch (e) {}
-            }
-            return finalList;
+        // IMPORTANT: Always update allContactsRef.current from its OWN data (not from `prev` which may be
+        // a filtered subset when search is active). This prevents the full contact list from being
+        // corrupted/truncated to only the search-filtered results.
+        const existingInRef = allContactsRef.current.find(u => u.id === partnerId);
+        if (existingInRef) {
+          const updated = {
+            ...existingInRef,
+            lastMessage: formatMsg(msg),
+            lastMessageTime: msg.createdAt || new Date().toISOString(),
+            unseenCount: (selectedUserRef.current?.id === partnerId) ? 0 : (existingInRef.unseenCount || 0) + (isSentByMe ? 0 : 1)
+          };
+          const refWithoutPartner = allContactsRef.current.filter(u => u.id !== partnerId);
+          const newRefList = [updated, ...refWithoutPartner];
+          allContactsRef.current = newRefList;
+          if (typeof window !== 'undefined' && currentUserId) {
+            try {
+              localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(newRefList));
+            } catch (e) {}
           }
-
-          // If partner is not yet in contacts list, add immediately
+          // Only update visible users list if contact is already in it (avoid overwriting search filter state)
+          setUsers(prev => {
+            const existingInState = prev.find(u => u.id === partnerId);
+            if (!existingInState) return prev;
+            const next = prev.filter(u => u.id !== partnerId);
+            return [updated, ...next];
+          });
+        } else {
+          // Partner is not yet in contacts ref — add them
           const fallbackUser = isSentByMe ? selectedUserRef.current : null;
           if (fallbackUser && fallbackUser.id === partnerId) {
             const formattedUser = {
@@ -3192,41 +3197,43 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               isRequest: false,
               unseenCount: 0
             };
-            const finalList = [formattedUser, ...prev];
-            allContactsRef.current = finalList;
+            const newRefList = [formattedUser, ...allContactsRef.current];
+            allContactsRef.current = newRefList;
             if (typeof window !== 'undefined' && currentUserId) {
               try {
-                localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(finalList));
+                localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(newRefList));
               } catch (e) {}
             }
-            return finalList;
-          }
-
-          getSocialUser(partnerId).then((newUser: any) => {
-            if (newUser) {
-              const formattedUser = {
-                ...(newUser as any),
-                lastMessage: formatMsg(msg),
-                lastMessageTime: msg.createdAt || new Date().toISOString(),
-                isRequest: false,
-                unseenCount: selectedUserRef.current?.id === partnerId ? 0 : 1
-              };
-              setUsers(current => {
-                if (current.some(u => u.id === newUser.id)) return current;
-                const finalList = [formattedUser, ...current];
-                allContactsRef.current = finalList;
-                if (typeof window !== 'undefined' && currentUserId) {
-                  try {
-                    localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(finalList));
-                  } catch (e) {}
+            setUsers(prev => {
+              if (prev.some(u => u.id === partnerId)) return prev;
+              return [formattedUser, ...prev];
+            });
+          } else {
+            getSocialUser(partnerId).then((newUser: any) => {
+              if (newUser) {
+                const formattedUser = {
+                  ...(newUser as any),
+                  lastMessage: formatMsg(msg),
+                  lastMessageTime: msg.createdAt || new Date().toISOString(),
+                  isRequest: false,
+                  unseenCount: selectedUserRef.current?.id === partnerId ? 0 : 1
+                };
+                if (!allContactsRef.current.some(u => u.id === newUser.id)) {
+                  allContactsRef.current = [formattedUser, ...allContactsRef.current];
+                  if (typeof window !== 'undefined' && currentUserId) {
+                    try {
+                      localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(allContactsRef.current));
+                    } catch (e) {}
+                  }
                 }
-                return finalList;
-              });
-            }
-          }).catch(() => {});
-
-          return prev;
-        });
+                setUsers(current => {
+                  if (current.some(u => u.id === newUser.id)) return current;
+                  return [formattedUser, ...current];
+                });
+              }
+            }).catch(() => {});
+          }
+        }
 
         // 3. Update Cache safely without duplicates
         setMessagesCache(prev => {
@@ -4590,6 +4597,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return next;
         });
       }
+      // Update allContactsRef directly (not from prev which may be search-filtered)
+      const existingInRef = allContactsRef.current.find(u => u.id === selectedUser.id);
+      const updatedForRef = {
+        ...(existingInRef || selectedUser),
+        lastMessage: currentContent.length > 30 ? currentContent.substring(0, 30) + '...' : currentContent,
+        unseenCount: 0
+      };
+      allContactsRef.current = [updatedForRef, ...allContactsRef.current.filter(u => u.id !== selectedUser.id)];
       setUsers(prev => {
         const existing = prev.find(u => u.id === selectedUser.id);
         const updatedUser = {
@@ -4598,9 +4613,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           unseenCount: 0
         };
         const filtered = prev.filter(u => u.id !== selectedUser.id);
-        const nextList = [updatedUser, ...filtered];
-        allContactsRef.current = nextList;
-        return nextList;
+        return [updatedUser, ...filtered];
       });
     }
 
@@ -4706,6 +4719,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     });
 
     // 0ms Optimistic Contact List Update
+    // Update ref directly from ref data (not from prev which may be search-filtered)
+    const existingRefEntry = allContactsRef.current.find(u => u.id === selectedUser.id);
+    const optimisticRefUser = {
+      ...(existingRefEntry || selectedUser),
+      lastMessage: currentContent || 'Message',
+      lastMessageTime: new Date().toISOString(),
+      unseenCount: 0
+    };
+    allContactsRef.current = [optimisticRefUser, ...allContactsRef.current.filter(u => u.id !== selectedUser.id)];
+    if (typeof window !== 'undefined' && currentUserId) {
+      try {
+        localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(allContactsRef.current));
+      } catch (e) {}
+    }
     setUsers(prev => {
       const existing = prev.find(u => u.id === selectedUser.id);
       const updatedUser = {
@@ -4715,14 +4742,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         unseenCount: 0
       };
       const filtered = prev.filter(u => u.id !== selectedUser.id);
-      const next = [updatedUser, ...filtered];
-      allContactsRef.current = next;
-      if (typeof window !== 'undefined' && currentUserId) {
-        try {
-          localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(next));
-        } catch (e) {}
-      }
-      return next;
+      return [updatedUser, ...filtered];
     });
 
     requestAnimationFrame(() => {
@@ -5790,16 +5810,32 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   }
 
                   if (filtered.length === 0) {
-                    return (
-                      <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                        <p className="text-sm font-bold text-zinc-800">
-                          {isSearchingGlobal ? 'Searching users...' : `No people found for "${searchQuery}"`}
-                        </p>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          Try searching by a different username or email
-                        </p>
-                      </div>
-                    );
+                    // Only show a "no results" search message when the user is actively searching with a non-empty query
+                    if (isSearchFocused && cleanQ) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                          <p className="text-sm font-bold text-zinc-800">
+                            {isSearchingGlobal ? 'Searching users...' : `No results for "${cleanQ}"`}
+                          </p>
+                          <p className="text-xs text-zinc-500 mt-0.5">
+                            Try searching by a different username or email
+                          </p>
+                        </div>
+                      );
+                    }
+                    // Not searching — just no chats yet or still loading
+                    if (!isRecentLoading) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-20 px-4 text-center select-none">
+                          <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-3 text-zinc-400">
+                            <Search className="w-5 h-5" strokeWidth={2} />
+                          </div>
+                          <p className="text-sm font-bold text-zinc-700">{isArchivedView ? 'No archived chats' : 'No chats yet'}</p>
+                          <p className="text-xs text-zinc-400 mt-1">Search for someone to start a conversation</p>
+                        </div>
+                      );
+                    }
+                    return null;
                   }
 
                   return filtered.map((user, idx) => {
