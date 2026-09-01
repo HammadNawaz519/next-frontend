@@ -4466,13 +4466,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           setHasMoreMessages(true);
         }
 
+        const currentSenderId = (sessionRef.current?.user as any)?.id || '';
+        const pendingMsgs = getPendingMessagesForUser(targetUserId, currentSenderId);
+        const freshIds = new Set(fresh.map(m => m.id));
+        const uncommittedPending = pendingMsgs.filter(p => !freshIds.has(p.id));
+
         const cachedExisting = messagesCache[targetUserId] || [];
         const combined = fresh.length > 0
           ? [...fresh, ...uncommittedPending]
           : (cachedExisting.length > 0 ? cachedExisting : uncommittedPending);
 
         const merged = combined.sort(
-          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
 
         setMessages(merged);
