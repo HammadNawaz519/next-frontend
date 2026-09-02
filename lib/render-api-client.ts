@@ -200,6 +200,25 @@ class RenderApiClient {
   }
 
   /**
+   * Fetch a single user's profile from the Render backend (fast path, no Vercel round-trip).
+   * Used by the realtime message handler to immediately build a new Recent Chat entry.
+   */
+  async getSocialUser(userIdOrEmail: string, callerUserId?: string, callerEmail?: string): Promise<RenderUser | null> {
+    try {
+      const encoded = encodeURIComponent(userIdOrEmail.trim());
+      const data = await this.fetchWithRetry<{ user: RenderUser }>(
+        `/api/social/user/${encoded}`,
+        { method: 'GET' },
+        callerUserId,
+        callerEmail
+      );
+      return data?.user ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Fetch 30-message cursor page between current user and other user
    */
   async getSocialMessages(

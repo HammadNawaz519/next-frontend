@@ -2959,27 +2959,49 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             username: userObj.username || userObj.name || undefined
           });
         }
-        // ── Refresh lastSeenMap from DB only on true reconnect after being disconnected ──
+        // ── Re-sync recent chats + lastSeenMap after a true disconnect/reconnect ──
+        // This catches any messages received while the socket was offline.
         if (wasSocketDisconnectedRef.current) {
           wasSocketDisconnectedRef.current = false;
-          fetchRecentChatsCoalesced(true).then(results => {
+          fetchRecentChatsCoalesced(true, currentUserId, currentAccountEmail).then(results => {
+            if (!Array.isArray(results)) return;
             const freshLastSeen: Record<string, string> = {};
+            const contacts: any[] = [];
+            const reqs: any[] = [];
             results.forEach((u: any) => {
+              if (u.isRequest) reqs.push(u);
+              else contacts.push(u);
               const timeVal = u.lastSeen ? (typeof u.lastSeen === 'string' ? u.lastSeen : new Date(u.lastSeen).toISOString()) : null;
               if (timeVal) {
                 if (u.email) freshLastSeen[u.email.toLowerCase().trim()] = timeVal;
                 if (u.id) freshLastSeen[u.id] = timeVal;
               }
             });
+
+            // Merge: server results are authoritative for items in the list;
+            // but we must also keep any realtime-added contacts from allContactsRef that
+            // haven't hit the DB yet (e.g. optimistic messages still in flight).
+            const serverIds = new Set(contacts.map((c: any) => c.id));
+            const localOnlyContacts = allContactsRef.current.filter(c => !serverIds.has(c.id));
+            const merged = [...contacts, ...localOnlyContacts];
+            allContactsRef.current = merged;
+            setUsers(merged);
+            setRequests(reqs.filter(r => !serverIds.has(r.id)));
+            if (typeof window !== 'undefined' && currentUserId) {
+              try {
+                localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(merged));
+              } catch (e) {}
+            }
+
             if (Object.keys(freshLastSeen).length > 0) {
               setLastSeenMap(prev => {
-                const merged = mergeLastSeenMaps(prev, freshLastSeen);
+                const mergedLS = mergeLastSeenMaps(prev, freshLastSeen);
                 if (typeof window !== 'undefined' && currentUserId) {
                   try {
-                    localStorage.setItem(`chat_last_seen_${currentUserId}`, JSON.stringify(merged));
+                    localStorage.setItem(`chat_last_seen_${currentUserId}`, JSON.stringify(mergedLS));
                   } catch (e) {}
                 }
-                return merged;
+                return mergedLS;
               });
             }
           }).catch(() => {});
@@ -3190,66 +3212,93 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             return [updated, ...next];
           });
         } else {
-          // Partner is not yet in contacts ref — add them
-          const fallbackUser = isSentByMe ? selectedUserRef.current : null;
-          if (fallbackUser && fallbackUser.id === partnerId) {
+          // Partner is not yet in contacts ref — add them IMMEDIATELY using enriched payload data.
+          // The Render backend now includes sender profile in every message event so we can build
+          // the Recent Chat entry with zero extra network round-trips.
+
+          // 1. Try to construct profile from the enriched msg payload (fast, zero latency)
+          const payloadSender = isSentByMe
+            ? selectedUserRef.current // sender = me, partner = receiver whose profile we may know
+            : (msg.sender ?? null);   // sender = other user, server now embeds their profile
+
+          const senderUsername: string =
+            (!isSentByMe && (msg.senderUsername || msg.sender?.username)) ||
+            (isSentByMe && selectedUserRef.current?.username) ||
+            '';
+          const senderImage: string | undefined =
+            (!isSentByMe && (msg.senderImage || msg.sender?.image)) ||
+            (isSentByMe && selectedUserRef.current?.image) ||
+            undefined;
+          const senderEmail: string =
+            (!isSentByMe && (msg.senderEmail || msg.sender?.email)) ||
+            (isSentByMe && selectedUserRef.current?.email) ||
+            '';
+
+          if (senderUsername) {
+            // Fast path — build contact from payload immediately (0ms, no network)
             const formattedUser = {
-              ...fallbackUser,
+              id: partnerId,
+              username: senderUsername,
+              email: senderEmail,
+              image: senderImage,
               lastMessage: formatMsg(msg),
               lastMessageTime: msg.createdAt || new Date().toISOString(),
               isRequest: false,
-              unseenCount: 0
+              unseenCount: selectedUserRef.current?.id === partnerId ? 0 : (isSentByMe ? 0 : 1),
             };
-            const newRefList = [formattedUser, ...allContactsRef.current];
-            allContactsRef.current = newRefList;
-            if (typeof window !== 'undefined' && currentUserId) {
-              try {
-                localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(newRefList));
-              } catch (e) {}
+            if (!allContactsRef.current.some(u => u.id === partnerId)) {
+              const newRefList = [formattedUser, ...allContactsRef.current];
+              allContactsRef.current = newRefList;
+              if (typeof window !== 'undefined' && currentUserId) {
+                try {
+                  localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(newRefList));
+                } catch (e) {}
+              }
             }
             setUsers(prev => {
               if (prev.some(u => u.id === partnerId)) return prev;
               return [formattedUser, ...prev];
             });
           } else {
-            getSocialUser(partnerId).then((newUser: any) => {
+            // Slow path — fetch from Render backend (fast, ~200ms) then fall back to Server Action
+            const fetchAndInsert = async () => {
+              let newUser: any = null;
+              try {
+                // Prefer fast Render API call over Vercel Server Action
+                newUser = await renderApiClient.getSocialUser(partnerId, currentUserId, currentAccountEmail);
+              } catch {
+                try {
+                  newUser = await getSocialUser(partnerId);
+                } catch {}
+              }
               if (newUser) {
                 const formattedUser = {
                   ...(newUser as any),
                   lastMessage: formatMsg(msg),
                   lastMessageTime: msg.createdAt || new Date().toISOString(),
                   isRequest: false,
-                  unseenCount: selectedUserRef.current?.id === partnerId ? 0 : 1
+                  unseenCount: selectedUserRef.current?.id === partnerId ? 0 : (isSentByMe ? 0 : 1),
                 };
-                if (!allContactsRef.current.some(u => u.id === newUser.id)) {
-                  allContactsRef.current = [formattedUser, ...allContactsRef.current];
+                if (!allContactsRef.current.some(u => u.id === (newUser as any).id)) {
+                  const newRefList = [formattedUser, ...allContactsRef.current];
+                  allContactsRef.current = newRefList;
                   if (typeof window !== 'undefined' && currentUserId) {
                     try {
-                      localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(allContactsRef.current));
+                      localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(newRefList));
                     } catch (e) {}
                   }
                 }
                 setUsers(current => {
-                  if (current.some(u => u.id === newUser.id)) return current;
+                  if (current.some(u => u.id === (newUser as any).id)) return current;
                   return [formattedUser, ...current];
                 });
               }
-            }).catch(() => {});
+            };
+            fetchAndInsert().catch(() => {});
           }
         }
 
-        // 3. Update Cache (secondary cache path — ID-based dedup only, no content+time-window)
-        setMessagesCache(prev => {
-          if (!partnerId) return prev;
-          const current = prev[partnerId] || [];
-          // Only dedup by exact ID — never by content+time-window
-          if (msg.id && current.some(m => m.id === msg.id)) {
-            return prev; // Already in cache with this ID
-          }
-          return { ...prev, [partnerId]: [...current, msg] };
-        });
-
-        // 4. Mark as seen if active chat is open and this message is incoming
+        // 3. Mark as seen if active chat is open and this message is incoming
         if (selectedUserRef.current?.id === partnerId && msgSenderId !== String((sessionRef.current?.user as any)?.id || '')) {
           if (!isNearBottomRef.current) {
             setShowNewMessagePill(true);
@@ -3270,7 +3319,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         if (!isSentByMe && (isAppBackgrounded || isChattingWithSomeoneElse)) {
           const sender = usersRef.current.find(u => u.id === msg.senderId) || requestsRef.current.find(u => u.id === msg.senderId);
-          const senderName = sender?.username || 'Someone';
+          // Prefer payload-embedded sender name (works for brand-new contacts not yet in usersRef)
+          const senderName = msg.senderUsername || msg.sender?.username || sender?.username || 'Someone';
 
           let contentPreview = msg.content;
           if (msg.type === 'voice') contentPreview = 'Voice Message';
