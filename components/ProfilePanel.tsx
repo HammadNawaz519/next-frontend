@@ -72,6 +72,8 @@ export default function ProfilePanel({
   // Edit Username State
   const [isEditing, setIsEditing] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
+  const [bioInput, setBioInput] = useState('');
+  const [websiteInput, setWebsiteInput] = useState('');
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
 
@@ -109,6 +111,8 @@ export default function ProfilePanel({
       const resolvedUsername = activeUserData?.username || (session?.user as any)?.username || 'User';
       setLocalUsername(resolvedUsername);
       setUsernameInput(resolvedUsername);
+      setBioInput(activeUserData.bio || '');
+      setWebsiteInput(activeUserData.website || '');
 
       if (!isSelf && session?.user) {
         const myId = (session.user as any)?.id;
@@ -171,7 +175,7 @@ export default function ProfilePanel({
     }
   };
 
-  const handleSaveUsername = async () => {
+  const handleSaveProfile = async () => {
     const cleaned = usernameInput.trim().toLowerCase().replace(/^@+/, '').replace(/\s+/g, '');
     if (!cleaned || cleaned.length < 3) {
       setUsernameError('Username must be at least 3 characters');
@@ -193,12 +197,17 @@ export default function ProfilePanel({
     try {
       const myId = (session?.user as any)?.id || (session?.user?.email ? (session.user.email as string).toLowerCase().trim() : '');
       const myEmail = session?.user?.email ? (session.user.email as string).toLowerCase().trim() : undefined;
+      const profileData = {
+        username: cleaned,
+        bio: bioInput.trim().slice(0, 150),
+        website: websiteInput.trim().slice(0, 100),
+      };
       
       let res: any;
       try {
-        res = await renderApiClient.updateProfile({ username: cleaned }, myId, myEmail);
+        res = await renderApiClient.updateProfile(profileData, myId, myEmail);
       } catch (err) {
-        res = await updateProfileDetails({ username: cleaned });
+        res = await updateProfileDetails(profileData);
       }
 
       if (res.error) {
@@ -236,7 +245,9 @@ export default function ProfilePanel({
             detail: {
               userId: updatedUserId,
               username: cleaned,
-              image: res.user?.image
+              image: res.user?.image,
+              bio: profileData.bio,
+              website: profileData.website,
             }
           }));
         }
@@ -388,17 +399,19 @@ export default function ProfilePanel({
                 onClick={() => {
                   triggerHaptic('light');
                   if (isEditing) {
-                    handleSaveUsername();
+                    handleSaveProfile();
                   } else {
                     setListTab(null);
                     setUsernameInput(localUsername || curUsername);
+                    setBioInput(activeUserData?.bio || '');
+                    setWebsiteInput(activeUserData?.website || '');
                     setUsernameError(null);
                     setIsEditing(true);
                   }
                 }}
                 className="p-2 text-white hover:text-zinc-300 active:scale-95 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none bg-transparent flex items-center justify-center"
                 title={isEditing ? 'Save' : 'Edit'}
-                aria-label={isEditing ? 'Save Username' : 'Edit Username'}
+                aria-label={isEditing ? 'Save Profile' : 'Edit Profile'}
               >
                 {isEditing ? (
                   <span className="text-sm font-bold text-white hover:text-zinc-200">
@@ -475,7 +488,7 @@ export default function ProfilePanel({
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      handleSaveUsername();
+                      handleSaveProfile();
                     }
                   }}
                   placeholder="Enter username"
@@ -490,14 +503,45 @@ export default function ProfilePanel({
               )}
             </div>
 
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="profile-bio" className="text-[13px] font-bold text-zinc-700 uppercase tracking-wider">
+                  Bio
+                </label>
+                <span className="text-[11px] font-medium text-zinc-400">{bioInput.length}/150</span>
+              </div>
+              <textarea
+                id="profile-bio"
+                value={bioInput}
+                onChange={(e) => setBioInput(e.target.value.slice(0, 150))}
+                placeholder="Tell people a little about you"
+                rows={3}
+                className="w-full resize-none px-4 py-3 rounded-2xl bg-zinc-50 border border-zinc-200 focus:border-zinc-900 outline-none text-[15px] font-medium text-zinc-900 transition-all placeholder:text-zinc-400"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="profile-website" className="text-[13px] font-bold text-zinc-700 uppercase tracking-wider">
+                Website
+              </label>
+              <input
+                id="profile-website"
+                type="url"
+                value={websiteInput}
+                onChange={(e) => setWebsiteInput(e.target.value.slice(0, 100))}
+                placeholder="https://yourwebsite.com"
+                className="w-full px-4 py-3.5 rounded-2xl bg-zinc-50 border border-zinc-200 focus:border-zinc-900 outline-none text-[15px] font-medium text-zinc-900 transition-all placeholder:text-zinc-400"
+              />
+            </div>
+
             <div className="flex items-center gap-3 mt-2">
               <button
                 type="button"
-                onClick={handleSaveUsername}
+                onClick={handleSaveProfile}
                 disabled={isSavingUsername}
                 className="flex-1 py-3.5 px-6 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-[13.5px] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 outline-none border-0 ring-0 shadow-sm"
               >
-                {isSavingUsername ? 'Saving...' : 'Save Username'}
+                {isSavingUsername ? 'Saving...' : 'Save Profile'}
               </button>
 
               <button

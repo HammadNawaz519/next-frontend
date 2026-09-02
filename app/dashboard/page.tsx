@@ -212,7 +212,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const handleProfileUpdate = (e: any) => {
-      const { username, name, image } = e.detail || {};
+      const { username, name, image, bio, website } = e.detail || {};
       setFullUser((prev: any) => {
         if (!prev) return prev;
         const updated = {
@@ -220,6 +220,8 @@ export default function DashboardPage() {
           ...(username ? { username } : {}),
           ...(name ? { name } : {}),
           ...(image ? { image } : {}),
+          ...(bio !== undefined ? { bio } : {}),
+          ...(website !== undefined ? { website } : {}),
         };
         if (currentAuthId) {
           try { localStorage.setItem(`cached_profile_details_${currentAuthId}`, JSON.stringify(updated)); } catch {}
