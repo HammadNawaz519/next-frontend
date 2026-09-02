@@ -137,7 +137,10 @@ export async function fetchIceConfig(): Promise<RTCConfiguration> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-    const serverUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
+    const serverUrl =
+      process.env.NEXT_PUBLIC_SOCKET_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://server-6gmj.onrender.com');
     let res: Response | null = await fetch(`${serverUrl}/api/turn-credentials`, {
       signal: controller.signal,
     }).catch(() => null);
@@ -338,7 +341,7 @@ export class WebRTCEngine {
     for (const attempt of fallbackAttempts) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia(attempt);
-        if (stream && stream.getAudioTracks().length > 0) {
+        if (stream && stream.getTracks().length > 0) {
           return stream;
         }
       } catch (err: any) {
@@ -487,7 +490,7 @@ export class WebRTCEngine {
   // This is where the caller creates and sends the SDP offer (only once).
 
   async onCallAccepted(): Promise<void> {
-    if (this._state !== 'ringing' && this._state !== 'outgoing') {
+    if (this._state !== 'ringing' && this._state !== 'outgoing' && this._state !== 'connecting') {
       console.log('[WebRTCEngine] onCallAccepted called in state:', this._state, '— ignoring');
       return;
     }
