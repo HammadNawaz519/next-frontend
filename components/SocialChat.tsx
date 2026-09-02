@@ -3023,13 +3023,34 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       });
 
       newSocket.on('receive_social_message', async (msg: any) => {
-        const myId = String((sessionRef.current?.user as any)?.id || '');
-        const myEmail = String(sessionRef.current?.user?.email || '').toLowerCase().trim();
-        const msgSenderId = String(msg.senderId || '');
-        const msgReceiverId = String(msg.receiverId || '');
-        const isSentByMe = msgSenderId === myId || (msg.senderEmail && msg.senderEmail.toLowerCase().trim() === myEmail);
-        const partnerId = isSentByMe ? msgReceiverId : msgSenderId;
-        const selectedId = String(selectedUserRef.current?.id || '');
+        const myId = String((sessionRef.current?.user as any)?.id || currentUserId || '').trim();
+        const myEmail = String(sessionRef.current?.user?.email || currentAccountEmail || '').toLowerCase().trim();
+        const msgSenderId = String(msg.senderId || msg.sender?.id || '').trim();
+        const msgReceiverId = String(msg.receiverId || msg.receiver?.id || '').trim();
+        const msgSenderEmail = String(msg.senderEmail || msg.sender?.email || '').toLowerCase().trim();
+        const msgReceiverEmail = String(msg.receiverEmail || msg.receiver?.email || '').toLowerCase().trim();
+
+        // Accurately determine if this message was sent by the currently logged-in user
+        const isSentByMe = Boolean(
+          (myId && msgSenderId && (msgSenderId === myId || msgSenderId === currentUserId)) ||
+          (myEmail && msgSenderEmail && msgSenderEmail === myEmail) ||
+          (myId && msg.sender?.id && String(msg.sender.id) === myId) ||
+          (myEmail && msg.sender?.email && String(msg.sender.email).toLowerCase().trim() === myEmail)
+        );
+
+        // The other participant in the conversation
+        const partnerId = isSentByMe ? (msgReceiverId || msgReceiverEmail) : (msgSenderId || msgSenderEmail);
+        const partnerEmail = isSentByMe ? msgReceiverEmail : msgSenderEmail;
+        const selectedId = String(selectedUserRef.current?.id || '').trim();
+        const selectedEmail = String(selectedUserRef.current?.email || '').toLowerCase().trim();
+
+        // Is the current active open chat this conversation?
+        const isChatOpen = Boolean(
+          (selectedId && partnerId && selectedId === partnerId) ||
+          (selectedEmail && partnerEmail && selectedEmail === partnerEmail) ||
+          (selectedId && msgSenderId && selectedId === msgSenderId) ||
+          (selectedId && msgReceiverId && selectedId === msgReceiverId)
+        );
 
         // Automatically un-hide chat if previously deleted
         setDeletedChatIds(prev => {
@@ -3068,9 +3089,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         // 1. Update Message Stream safely without duplicates
         setMessages((prev) => {
           // Only update messages state if this message belongs to the active conversation
-          if (selectedId && selectedId !== partnerId && selectedId !== msgSenderId && selectedId !== msgReceiverId) return prev;
+          if (!isChatOpen && selectedId) return prev;
           // Dedup: only match by exact ID or by replacing an in-flight optimistic placeholder.
-          // DO NOT use content+time-window matching — that silently drops valid repeated messages (e.g. "ok" sent twice).
           const isDup = prev.some(m =>
             // Exact ID match
             (msg.id && m.id === msg.id) ||
@@ -3088,16 +3108,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         });
 
         // Sync to cache immediately so reload preserves received messages.
-        // IMPORTANT: Only dedup by exact ID or optimistic placeholder — never by content+time-window.
-        // Content-based dedup causes rapid messages (e.g. 5 in a row) to all collapse into the first one.
         setMessagesCache((prev) => {
           const cacheKey = partnerId || msgSenderId;
           if (!cacheKey || cacheKey === '') return prev;
           const current = prev[cacheKey] || [];
           const isDup = current.some(m =>
-            // Exact ID match only
             (msg.id && m.id === msg.id) ||
-            // Optimistic placeholder replacement
             ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type)
           );
           let updatedList;
@@ -3181,22 +3197,31 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             }
             return prev;
           });
-          return; // Don't append to message stream
+          return;
         }
 
         // 2. Update Sidebar (Users / Contacts list)
-        // IMPORTANT: Always update allContactsRef.current from its OWN data (not from `prev` which may be
-        // a filtered subset when search is active). This prevents the full contact list from being
-        // corrupted/truncated to only the search-filtered results.
-        const existingInRef = allContactsRef.current.find(u => u.id === partnerId);
+        // Find existing contact by either ID or Email to prevent duplicate entries
+        const existingInRef = allContactsRef.current.find(u =>
+          (partnerId && String(u.id).trim() === partnerId) ||
+          (partnerEmail && u.email && u.email.toLowerCase().trim() === partnerEmail)
+        );
+
         if (existingInRef) {
           const updated = {
             ...existingInRef,
             lastMessage: formatMsg(msg),
             lastMessageTime: msg.createdAt || new Date().toISOString(),
-            unseenCount: (selectedUserRef.current?.id === partnerId) ? 0 : (existingInRef.unseenCount || 0) + (isSentByMe ? 0 : 1)
+            // When I send a message, unseenCount is NEVER incremented (stays 0 or existing).
+            // When someone else sends a message, unseenCount is 0 if chat is currently open, else incremented by 1.
+            unseenCount: isSentByMe
+              ? (existingInRef.unseenCount || 0)
+              : (isChatOpen ? 0 : ((existingInRef.unseenCount || 0) + 1))
           };
-          const refWithoutPartner = allContactsRef.current.filter(u => u.id !== partnerId);
+          const refWithoutPartner = allContactsRef.current.filter(u =>
+            !(partnerId && String(u.id).trim() === partnerId) &&
+            !(partnerEmail && u.email && u.email.toLowerCase().trim() === partnerEmail)
+          );
           const newRefList = [updated, ...refWithoutPartner];
           allContactsRef.current = newRefList;
           if (typeof window !== 'undefined' && currentUserId) {
@@ -3204,23 +3229,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(newRefList));
             } catch (e) {}
           }
-          // Always bubble the contact to the top of the chat list with latest message + badge.
-          // Even if the contact isn't currently visible in state (e.g. loading), add them so the
-          // user can see the incoming message preview and unseen badge without opening the chat.
+          // Always bubble the contact to the top of the chat list with latest message + badge
           setUsers(prev => {
-            const next = prev.filter(u => u.id !== partnerId);
+            const next = prev.filter(u =>
+              !(partnerId && String(u.id).trim() === partnerId) &&
+              !(partnerEmail && u.email && u.email.toLowerCase().trim() === partnerEmail)
+            );
             return [updated, ...next];
           });
         } else {
-          // Partner is not yet in contacts ref — add them IMMEDIATELY using enriched payload data.
-          // The Render backend now includes sender profile in every message event so we can build
-          // the Recent Chat entry with zero extra network round-trips.
-
-          // 1. Try to construct profile from the enriched msg payload (fast, zero latency)
-          const payloadSender = isSentByMe
-            ? selectedUserRef.current // sender = me, partner = receiver whose profile we may know
-            : (msg.sender ?? null);   // sender = other user, server now embeds their profile
-
+          // Partner is not yet in contacts ref — add them IMMEDIATELY using enriched payload data
           const senderUsername: string =
             (!isSentByMe && (msg.senderUsername || msg.sender?.username)) ||
             (isSentByMe && selectedUserRef.current?.username) ||
@@ -3235,7 +3253,6 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             '';
 
           if (senderUsername) {
-            // Fast path — build contact from payload immediately (0ms, no network)
             const formattedUser = {
               id: partnerId,
               username: senderUsername,
@@ -3244,9 +3261,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               lastMessage: formatMsg(msg),
               lastMessageTime: msg.createdAt || new Date().toISOString(),
               isRequest: false,
-              unseenCount: selectedUserRef.current?.id === partnerId ? 0 : (isSentByMe ? 0 : 1),
+              unseenCount: isSentByMe ? 0 : (isChatOpen ? 0 : 1),
             };
-            if (!allContactsRef.current.some(u => u.id === partnerId)) {
+            if (!allContactsRef.current.some(u => u.id === partnerId || (senderEmail && u.email === senderEmail))) {
               const newRefList = [formattedUser, ...allContactsRef.current];
               allContactsRef.current = newRefList;
               if (typeof window !== 'undefined' && currentUserId) {
@@ -3256,15 +3273,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               }
             }
             setUsers(prev => {
-              if (prev.some(u => u.id === partnerId)) return prev;
+              if (prev.some(u => u.id === partnerId || (senderEmail && u.email === senderEmail))) return prev;
               return [formattedUser, ...prev];
             });
           } else {
-            // Slow path — fetch from Render backend (fast, ~200ms) then fall back to Server Action
+            // Slow path — fetch from Render backend then fall back to Server Action
             const fetchAndInsert = async () => {
               let newUser: any = null;
               try {
-                // Prefer fast Render API call over Vercel Server Action
                 newUser = await renderApiClient.getSocialUser(partnerId, currentUserId, currentAccountEmail);
               } catch {
                 try {
@@ -3277,9 +3293,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   lastMessage: formatMsg(msg),
                   lastMessageTime: msg.createdAt || new Date().toISOString(),
                   isRequest: false,
-                  unseenCount: selectedUserRef.current?.id === partnerId ? 0 : (isSentByMe ? 0 : 1),
+                  unseenCount: isSentByMe ? 0 : (isChatOpen ? 0 : 1),
                 };
-                if (!allContactsRef.current.some(u => u.id === (newUser as any).id)) {
+                if (!allContactsRef.current.some(u => u.id === (newUser as any).id || (newUser.email && u.email === newUser.email))) {
                   const newRefList = [formattedUser, ...allContactsRef.current];
                   allContactsRef.current = newRefList;
                   if (typeof window !== 'undefined' && currentUserId) {
@@ -3289,7 +3305,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   }
                 }
                 setUsers(current => {
-                  if (current.some(u => u.id === (newUser as any).id)) return current;
+                  if (current.some(u => u.id === (newUser as any).id || (newUser.email && u.email === newUser.email))) return current;
                   return [formattedUser, ...current];
                 });
               }
@@ -4565,7 +4581,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (!textToSend || !selectedUser || !session?.user) return;
 
     const currentContent = textToSend;
-    const senderId = (session.user as any).id;
+    const senderId = (session.user as any)?.id || currentUserId || currentAccountEmail;
+    const senderEmail = currentAccountEmail;
+    const senderUsername = (session.user as any)?.username || (session.user as any)?.name || 'User';
+    const senderImage = (session.user as any)?.image;
     setInputValue('');
 
     // Reset textarea element height to single line
@@ -4674,7 +4693,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     const optimisticMsg: Message = {
       id: stableId,
       senderId: senderId,
+      senderEmail: senderEmail,
+      senderUsername: senderUsername,
+      senderImage: senderImage,
       receiverId: selectedUser.id,
+      receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
       content: currentContent,
       type: 'text',
       createdAt: new Date(),
@@ -4728,6 +4751,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (socket) {
       socket.emit('send_social_message', {
         ...optimisticMsg,
+        senderId,
+        senderEmail,
+        senderUsername,
+        senderImage,
         receiverId: selectedUser.id,
         receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined
       });
