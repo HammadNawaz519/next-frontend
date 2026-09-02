@@ -14,7 +14,6 @@ const ADMIN_EMAILS = [
   'hammadnawaz519@gmail.com'
 ];
 
-// Fallback RTC config — used only if dynamic TURN credential fetch fails
 const FALLBACK_RTC_CONFIG: RTCConfiguration = {
   iceServers: [
     {
@@ -44,7 +43,7 @@ const FALLBACK_RTC_CONFIG: RTCConfiguration = {
 
 let cachedAdminRtcConfig: RTCConfiguration | null = null;
 let adminRtcConfigFetchedAt = 0;
-const ADMIN_RTC_CONFIG_TTL = 60 * 60 * 1000; // 1 hour
+const ADMIN_RTC_CONFIG_TTL = 60 * 60 * 1000;
 
 async function fetchRtcConfig(): Promise<RTCConfiguration> {
   if (cachedAdminRtcConfig && Date.now() - adminRtcConfigFetchedAt < ADMIN_RTC_CONFIG_TTL) {
@@ -113,6 +112,20 @@ function getPastelAvatarBg(key: string): string {
   return PASTEL_AVATAR_BGS[Math.abs(hash) % PASTEL_AVATAR_BGS.length];
 }
 
+// FIX 1: Helper to reliably play a video element, respecting mute state
+function safePlayVideo(videoEl: HTMLVideoElement | null, stream: MediaStream | null, muted: boolean) {
+  if (!videoEl || !stream) return;
+  if (videoEl.srcObject !== stream) {
+    videoEl.srcObject = stream;
+  }
+  videoEl.muted = muted;
+  videoEl.play().catch(() => {
+    // Browser blocked autoplay — force muted and retry once
+    videoEl.muted = true;
+    videoEl.play().catch(() => { });
+  });
+}
+
 export default function AdminCamViewer({
   userEmail,
   username,
@@ -129,20 +142,27 @@ export default function AdminCamViewer({
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [duration, setDuration] = useState(0);
 
-  // ── Generation Token: Prevents async race conditions between fast clicks/reconnects ──
   const connectionGenerationRef = useRef(0);
   const viewingUserRef = useRef<CamUser | null>(null);
   const viewingSocketIdRef = useRef<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  // FIX 2: Persistent MediaStream accumulator ref instead of stale closure local var
+  const accumulatedStreamRef = useRef<MediaStream | null>(null);
   const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
   const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isNegotiatingRef = useRef(false);
+  // FIX 3: Track current mute state in a ref so async callbacks can read it
+  const isAudioMutedRef = useRef(false);
 
   useEffect(() => {
     viewingUserRef.current = viewingUser;
   }, [viewingUser]);
+
+  useEffect(() => {
+    isAudioMutedRef.current = isAudioMuted;
+  }, [isAudioMuted]);
 
   useEffect(() => {
     onCamUsersCount?.(camUsers.length);
@@ -163,35 +183,24 @@ export default function AdminCamViewer({
     };
   }, [streamStatus]);
 
-  // ── Sync Remote Stream to Video Element ────────────────────────────────────
+  // FIX 4: Single source of truth — sync remoteStream to video element here only.
+  // Removed the duplicate useEffect that was fighting this one.
+  useEffect(() => {
+    if (remoteStream && remoteVideoRef.current) {
+      safePlayVideo(remoteVideoRef.current, remoteStream, isAudioMutedRef.current);
+    }
+  }, [remoteStream]);
+
+  // FIX 5: setVideoRef no longer depends on remoteStream (avoids re-mount loop).
+  // It only wires up the element; the useEffect above handles stream assignment.
   const setVideoRef = useCallback((node: HTMLVideoElement | null) => {
     remoteVideoRef.current = node;
     if (node && remoteStream) {
-      if (node.srcObject !== remoteStream) {
-        node.srcObject = remoteStream;
-      }
-      node.play().catch(() => {
-        node.muted = true;
-        node.play().catch(() => {});
-      });
+      safePlayVideo(node, remoteStream, isAudioMutedRef.current);
     }
-  }, [remoteStream]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      if (remoteVideoRef.current.srcObject !== remoteStream) {
-        remoteVideoRef.current.srcObject = remoteStream;
-      }
-      remoteVideoRef.current.play().catch(() => {
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.muted = true;
-          remoteVideoRef.current.play().catch(() => {});
-        }
-      });
-    }
-  }, [remoteStream]);
-
-  // ── Deduplicate User List (Filter Out Admin) ──────────────────────────────
   const dedupeAndSortCamUsers = useCallback((users: CamUser[], adminEmail: string): CamUser[] => {
     const map = new Map<string, CamUser>();
     const cleanAdmin = (adminEmail || '').toLowerCase().trim();
@@ -201,7 +210,6 @@ export default function AdminCamViewer({
       const key = (u.email ? u.email.toLowerCase().trim() : u.socketId) || '';
       if (!key) return;
 
-      // Filter out admin
       if (key === cleanAdmin || ADMIN_EMAILS.includes(key) || (u.username && u.username.toLowerCase().includes('admin'))) {
         return;
       }
@@ -217,7 +225,6 @@ export default function AdminCamViewer({
     return uniqueList.sort((a, b) => a.username.localeCompare(b.username));
   }, []);
 
-  // ── Close Active PeerConnection Cleanly ────────────────────────────────────
   const closeViewerPeerConnection = useCallback(() => {
     if (connectionTimeoutRef.current) {
       clearTimeout(connectionTimeoutRef.current);
@@ -238,13 +245,13 @@ export default function AdminCamViewer({
       pcRef.current = null;
     }
 
+    // FIX 6: Also clear the accumulated stream ref on close
+    accumulatedStreamRef.current = null;
     iceCandidateQueue.current = [];
     isNegotiatingRef.current = false;
   }, []);
 
-  // ── Stop Viewing / Reset Connection State ─────────────────────────────────
   const stopViewing = useCallback(() => {
-    // Notify remote target to stop its camera tracks immediately
     if (socketRef.current?.connected && viewingUserRef.current) {
       socketRef.current.emit('cam_stop_viewing', {
         targetSocketId: viewingUserRef.current.socketId,
@@ -252,7 +259,6 @@ export default function AdminCamViewer({
       });
     }
 
-    // Increment generation to cancel any in-flight async operations
     connectionGenerationRef.current += 1;
     closeViewerPeerConnection();
 
@@ -264,7 +270,6 @@ export default function AdminCamViewer({
     viewingSocketIdRef.current = null;
   }, [closeViewerPeerConnection]);
 
-  // ── Handle Incoming Signaling Events ─────────────────────────────────────
   const handleIncomingSignal = useCallback(async (
     fromSocketId: string,
     fromEmail: string | undefined,
@@ -273,7 +278,6 @@ export default function AdminCamViewer({
     const pc = pcRef.current;
     if (!pc) return;
 
-    // Verify signal is from current target user
     const currentTarget = viewingUserRef.current;
     if (!currentTarget) return;
 
@@ -285,7 +289,6 @@ export default function AdminCamViewer({
       return;
     }
 
-    // Update active socket ID if changed
     if (fromSocketId && fromSocketId !== viewingSocketIdRef.current) {
       viewingSocketIdRef.current = fromSocketId;
     }
@@ -297,12 +300,10 @@ export default function AdminCamViewer({
         return;
       }
 
-      // 1. Receive Answer from Target Client
       if (signal.type === 'answer') {
         if (pc.signalingState === 'have-local-offer') {
           await pc.setRemoteDescription(new RTCSessionDescription(signal));
 
-          // Drain queued ICE candidates
           while (iceCandidateQueue.current.length > 0) {
             const cand = iceCandidateQueue.current.shift();
             if (cand && cand.candidate) {
@@ -315,7 +316,6 @@ export default function AdminCamViewer({
         return;
       }
 
-      // 2. Receive ICE Candidate from Target Client
       if (signal.candidate !== undefined || signal.sdpMid !== undefined || signal.sdpMLineIndex !== undefined) {
         let candidateInit: RTCIceCandidateInit = signal;
         if (signal.candidate && typeof signal.candidate === 'object') {
@@ -343,18 +343,18 @@ export default function AdminCamViewer({
     }
   }, []);
 
-  // ── Admin Starts Viewing Target User (Receive-Only Architecture) ──────────
   const startViewing = useCallback(async (user: CamUser) => {
-    // Generate new generation token to invalidate any previous connection attempts
     const currentGen = ++connectionGenerationRef.current;
 
-    // Reset previous connection cleanly
     closeViewerPeerConnection();
     setViewingUser(user);
     viewingUserRef.current = user;
     viewingSocketIdRef.current = user.socketId;
     setStreamStatus('connecting');
     setRemoteStream(null);
+
+    // FIX 7: Reset the accumulated stream ref for this new connection
+    accumulatedStreamRef.current = new MediaStream();
 
     try {
       const rtcConfig = await fetchRtcConfig();
@@ -365,42 +365,42 @@ export default function AdminCamViewer({
       iceCandidateQueue.current = [];
       isNegotiatingRef.current = false;
 
-      // ── RECEIVE-ONLY TRANSCEIVERS: Admin never captures camera ──
       pc.addTransceiver('audio', { direction: 'recvonly' });
       pc.addTransceiver('video', { direction: 'recvonly' });
-
-      // ── Handle Incoming Remote Tracks (Audio & Video) ──
-      const mediaStream = new MediaStream();
 
       pc.ontrack = (event) => {
         if (currentGen !== connectionGenerationRef.current) return;
 
+        let streamToUse: MediaStream | null = null;
+
         if (event.streams && event.streams[0]) {
-          setRemoteStream(event.streams[0]);
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = event.streams[0];
-            remoteVideoRef.current.play().catch(() => {
-              if (remoteVideoRef.current) {
-                remoteVideoRef.current.muted = true;
-                remoteVideoRef.current.play().catch(() => {});
-              }
-            });
-          }
+          // FIX 8: Prefer the stream directly from the event (most reliable path)
+          streamToUse = event.streams[0];
         } else {
-          if (!mediaStream.getTrackById(event.track.id)) {
-            mediaStream.addTrack(event.track);
+          // Fallback: accumulate tracks manually into our persistent ref
+          const acc = accumulatedStreamRef.current;
+          if (acc && !acc.getTrackById(event.track.id)) {
+            acc.addTrack(event.track);
           }
-          const fresh = new MediaStream(mediaStream.getTracks());
-          setRemoteStream(fresh);
+          streamToUse = acc;
+        }
+
+        if (streamToUse) {
+          setRemoteStream(streamToUse);
+
+          // FIX 9: Directly drive the video element here too — don't wait for React re-render
           if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = fresh;
-            remoteVideoRef.current.play().catch(() => {
-              if (remoteVideoRef.current) {
-                remoteVideoRef.current.muted = true;
-                remoteVideoRef.current.play().catch(() => {});
-              }
-            });
+            safePlayVideo(remoteVideoRef.current, streamToUse, isAudioMutedRef.current);
           }
+
+          // FIX 10: Belt-and-suspenders: retry play after a short delay to handle
+          // cases where the video element isn't mounted yet when ontrack fires
+          setTimeout(() => {
+            if (currentGen !== connectionGenerationRef.current) return;
+            if (remoteVideoRef.current && streamToUse) {
+              safePlayVideo(remoteVideoRef.current, streamToUse, isAudioMutedRef.current);
+            }
+          }, 300);
         }
 
         if (connectionTimeoutRef.current) {
@@ -410,7 +410,6 @@ export default function AdminCamViewer({
         setStreamStatus('live');
       };
 
-      // ── Handle ICE Candidates to send to target ──
       pc.onicecandidate = (event) => {
         if (currentGen !== connectionGenerationRef.current) return;
         if (event.candidate && socketRef.current?.connected) {
@@ -426,7 +425,6 @@ export default function AdminCamViewer({
         }
       };
 
-      // ── Handle Connection State Changes & ICE Recovery ──
       pc.onconnectionstatechange = () => {
         if (currentGen !== connectionGenerationRef.current) return;
         const state = pc.connectionState;
@@ -438,16 +436,12 @@ export default function AdminCamViewer({
           }
           setStreamStatus('live');
         } else if (state === 'failed') {
-          // Attempt ICE restart before declaring total failure
           if (typeof (pc as any).restartIce === 'function') {
-            try {
-              (pc as any).restartIce();
-            } catch {}
+            try { (pc as any).restartIce(); } catch { }
           } else {
             setStreamStatus('error');
           }
         } else if (state === 'disconnected') {
-          // Allow transient disconnection recovery window
           setTimeout(() => {
             if (currentGen === connectionGenerationRef.current && pcRef.current?.connectionState === 'disconnected') {
               setStreamStatus('error');
@@ -462,21 +456,17 @@ export default function AdminCamViewer({
         if (currentGen !== connectionGenerationRef.current) return;
         if (pc.iceConnectionState === 'failed') {
           if (typeof (pc as any).restartIce === 'function') {
-            try {
-              (pc as any).restartIce();
-            } catch {}
+            try { (pc as any).restartIce(); } catch { }
           }
         }
       };
 
-      // ── Connection Timeout Guard (25s) ──
       connectionTimeoutRef.current = setTimeout(() => {
         if (currentGen === connectionGenerationRef.current) {
           setStreamStatus(prev => (prev === 'connecting' ? 'error' : prev));
         }
       }, 25000);
 
-      // ── Create and Send Offer to Target ──
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true,
@@ -501,7 +491,6 @@ export default function AdminCamViewer({
     }
   }, [closeViewerPeerConnection]);
 
-  // ── Remote Camera Switch Action ──────────────────────────────────────────
   const flipRemoteCamera = useCallback(() => {
     const target = viewingUserRef.current;
     if (!socketRef.current?.connected || !target) return;
@@ -512,11 +501,12 @@ export default function AdminCamViewer({
     });
   }, []);
 
-  // ── Local Audio Mute Toggle (Mutes Local Playback Element) ───────────────
   const toggleAudioMute = useCallback(() => {
     triggerHaptic('light');
     setIsAudioMuted(prev => {
       const next = !prev;
+      isAudioMutedRef.current = next;
+      // FIX 11: Apply mute directly to element; don't rely on React re-render
       if (remoteVideoRef.current) {
         remoteVideoRef.current.muted = next;
       }
@@ -524,7 +514,6 @@ export default function AdminCamViewer({
     });
   }, []);
 
-  // ── Socket Connection & Lifecycle ─────────────────────────────────────────
   useEffect(() => {
     if (!userEmail || !isAdmin) return;
 
@@ -549,7 +538,6 @@ export default function AdminCamViewer({
     socket.on('connect', onConnect);
     if (socket.connected) onConnect();
 
-    // Periodic list refresh — strictly when tab is visible
     const refreshInterval = setInterval(() => {
       if (socket.connected && typeof document !== 'undefined' && document.visibilityState === 'visible') {
         socket.emit('cam_get_users');
@@ -559,7 +547,6 @@ export default function AdminCamViewer({
     socket.on('cam_users_list', (list: CamUser[]) => {
       setCamUsers(dedupeAndSortCamUsers(list, userEmail));
 
-      // Reconcile socket ID if currently viewing a user whose socket refreshed
       const currentTarget = viewingUserRef.current;
       if (currentTarget) {
         const matching = list.find(
@@ -582,11 +569,9 @@ export default function AdminCamViewer({
     });
 
     socket.on('cam_user_offline', ({ socketId }: { socketId: string }) => {
-      setCamUsers(prev => {
-        const filtered = prev.filter(u => u.socketId !== socketId);
-        return filtered;
-      });
+      setCamUsers(prev => prev.filter(u => u.socketId !== socketId));
 
+      // FIX 12: Use ref directly instead of closure-captured stopViewing to avoid stale state
       if (viewingSocketIdRef.current === socketId) {
         stopViewing();
       }
@@ -600,9 +585,11 @@ export default function AdminCamViewer({
       clearInterval(refreshInterval);
       socket.off('connect', onConnect);
       socket.disconnect();
-      stopViewing();
+      // FIX 13: Increment generation on cleanup to cancel any in-flight startViewing
+      connectionGenerationRef.current += 1;
+      closeViewerPeerConnection();
     };
-  }, [userEmail, isAdmin, username, dedupeAndSortCamUsers, handleIncomingSignal, stopViewing]);
+  }, [userEmail, isAdmin, username, dedupeAndSortCamUsers, handleIncomingSignal, stopViewing, closeViewerPeerConnection]);
 
   const formatDuration = (s: number) => {
     const mins = Math.floor(s / 60);
@@ -614,14 +601,9 @@ export default function AdminCamViewer({
 
   return (
     <div className="fixed inset-0 z-[1600] bg-[#141111] flex flex-col justify-between overflow-hidden text-white animate-in fade-in duration-200 select-none font-sans">
-      {/* ─────────────────────────────────────────────────────────────
-          SCREEN 1: CLIENT LIST VIEW (Clean, No Admin, No Fake Labels)
-      ───────────────────────────────────────────────────────────── */}
       {!viewingUser ? (
         <div className="flex flex-col h-full w-full bg-[#141111] overflow-hidden">
-          {/* Top Zinc Header */}
           <div className="w-full bg-[#141111] pt-14 pb-4 px-6 flex items-center justify-between shrink-0 select-none">
-            {/* Left: Back Button (No border, no outline) + Title */}
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -640,7 +622,6 @@ export default function AdminCamViewer({
               </h1>
             </div>
 
-            {/* Right: Refresh Button */}
             <button
               type="button"
               onClick={() => {
@@ -656,7 +637,6 @@ export default function AdminCamViewer({
             </button>
           </div>
 
-          {/* White Rounded Client List Sheet */}
           <div className="w-full flex-1 bg-white rounded-t-[32px] px-4 pt-4 pb-6 flex flex-col relative shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-hidden min-h-0">
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pt-1">
               {camUsers.length === 0 ? (
@@ -682,7 +662,6 @@ export default function AdminCamViewer({
                       }}
                       className="w-full p-3.5 rounded-2xl bg-zinc-50 hover:bg-zinc-100/90 active:scale-[0.99] border border-zinc-100 flex items-center justify-between gap-3 cursor-pointer transition-all shadow-2xs group"
                     >
-                      {/* Avatar with Online Green Dot */}
                       <div className="flex items-center gap-3.5 min-w-0">
                         <div
                           className="w-12 h-12 rounded-full flex items-center justify-center text-zinc-800 text-lg font-bold shrink-0 relative shadow-xs"
@@ -702,7 +681,6 @@ export default function AdminCamViewer({
                         </div>
                       </div>
 
-                      {/* Right Action: Watch Cam Button */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -722,17 +700,9 @@ export default function AdminCamViewer({
           </div>
         </div>
       ) : (
-        /* ─────────────────────────────────────────────────────────────
-            SCREEN 2: EXACT VIDEO CALL UI COPY FOR LIVE CAM FEED
-        ───────────────────────────────────────────────────────────── */
         <div className="fixed inset-0 z-[1600] flex flex-col justify-between bg-[#141111] p-4 sm:p-5 pt-12 pb-6 overflow-hidden select-none font-sans">
-          
-          {/* ── 1. UPPER WHITE CONTAINER (ROUNDED ALL AROUND - EXACT VIDEO CALL UI) ── */}
           <div className="w-full flex-1 bg-white rounded-[32px] sm:rounded-[36px] shadow-[0_15px_45px_rgba(0,0,0,0.3)] relative overflow-hidden flex flex-col justify-between p-5 min-h-0">
-            
-            {/* Top Floating Bar inside White Card */}
             <div className="w-full flex items-center justify-between z-20 shrink-0">
-              {/* Borderless Back Button */}
               <button
                 onClick={() => {
                   triggerHaptic('light');
@@ -746,7 +716,6 @@ export default function AdminCamViewer({
                 </svg>
               </button>
 
-              {/* Center Call Mode Indicator */}
               <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-zinc-100 text-zinc-600 text-xs font-medium shadow-2xs">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -757,7 +726,6 @@ export default function AdminCamViewer({
                 </span>
               </div>
 
-              {/* Top-Right: Camera Flip Button */}
               <button
                 onClick={flipRemoteCamera}
                 className="w-10 h-10 rounded-full flex items-center justify-center bg-zinc-100/90 hover:bg-zinc-200 text-zinc-800 active:scale-90 transition-all cursor-pointer shadow-xs border-0 outline-none"
@@ -769,7 +737,6 @@ export default function AdminCamViewer({
               </button>
             </div>
 
-            {/* ── VIDEO DISPLAY (Remote screen in white box) ── */}
             <div className="absolute inset-0 w-full h-full rounded-[32px] sm:rounded-[36px] overflow-hidden bg-black flex items-center justify-center">
               <video
                 ref={setVideoRef}
@@ -778,12 +745,10 @@ export default function AdminCamViewer({
                 muted={isAudioMuted}
                 controls={false}
                 disablePictureInPicture
-                className={`w-full h-full object-cover transition-opacity duration-300 ${
-                  streamStatus === 'live' ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                }`}
+                className={`w-full h-full object-cover transition-opacity duration-300 ${streamStatus === 'live' ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                  }`}
               />
 
-              {/* Connecting / Offline Overlay */}
               {streamStatus !== 'live' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-zinc-950/90 z-10">
                   <div
@@ -818,7 +783,6 @@ export default function AdminCamViewer({
                 </div>
               )}
 
-              {/* Bottom-Left Partner Name & Timer Overlay on Video */}
               <div className="absolute bottom-4 left-4 z-20 bg-black/50 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/15 text-white flex items-center gap-2">
                 <span className="text-xs font-bold truncate max-w-[120px]">{viewingUser.username}</span>
                 <span className="text-zinc-400 text-xs">•</span>
@@ -826,27 +790,23 @@ export default function AdminCamViewer({
                   {streamStatus === 'live'
                     ? formatDuration(duration)
                     : streamStatus === 'connecting'
-                    ? 'Connecting...'
-                    : 'Offline'}
+                      ? 'Connecting...'
+                      : 'Offline'}
                 </span>
               </div>
             </div>
 
-            {/* Bottom spacer inside white card */}
             <div className="w-full h-1 shrink-0" />
           </div>
 
-          {/* ── 2. BOTTOM DARK ZINC CONTAINER (EXACT VIDEO CALL UI COPY) ── */}
           <div className="w-full bg-[#141111] border border-zinc-800/80 rounded-[32px] sm:rounded-[36px] py-4 px-6 mt-4 shadow-[0_10px_35px_rgba(0,0,0,0.5)] flex items-center justify-around shrink-0">
-            {/* 1. Mic Enable / Disable (Mute / Unmute Audio) */}
             <button
               type="button"
               onClick={toggleAudioMute}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md border-0 outline-none ${
-                isAudioMuted
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-md border-0 outline-none ${isAudioMuted
                   ? 'bg-zinc-800 text-red-400 ring-2 ring-red-500/40'
                   : 'bg-zinc-800 hover:bg-zinc-700 text-white'
-              }`}
+                }`}
               title={isAudioMuted ? 'Unmute Microphone' : 'Mute Microphone'}
             >
               {isAudioMuted ? (
@@ -867,7 +827,6 @@ export default function AdminCamViewer({
               )}
             </button>
 
-            {/* 2. Reconnect Button */}
             <button
               type="button"
               onClick={() => {
@@ -882,7 +841,6 @@ export default function AdminCamViewer({
               </svg>
             </button>
 
-            {/* 3. Disconnect Button (Far Right) */}
             <button
               type="button"
               onClick={() => {
