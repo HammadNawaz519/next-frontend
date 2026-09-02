@@ -13,6 +13,16 @@
  *   9. Improved cleanup: null all handlers before close
  *  10. Audio bitrate set to a stable 40kbps Opus target (not just max)
  *
+ * Additional fixes (2026-09-02):
+ *  11. Fixed ice_candidate socket handler — was passing `data` to itself instead of
+ *      extracting the nested candidate object, causing ICE candidates to silently fail
+ *  12. Fixed onnegotiationneeded guard — now allows renegotiation in 'connecting' state
+ *      so video tracks added before ICE completes are properly signaled to the peer
+ *  13. Removed premature setAudioPriority() call in onCallAccepted() — encodings don't
+ *      exist until after the full O/A exchange; the correct calls in handleSignal() remain
+ *  14. Fixed prevAudioBytesReceived — promoted from broken local variable to class field
+ *      so audio bitrate delta is computed correctly across intervals
+ *
  * This module runs ONLY on the client (browser). Never import at SSR time.
  */
 
@@ -33,18 +43,18 @@ export type CallState =
   | 'timeout';       // No answer timeout
 
 const VALID_TRANSITIONS: Record<CallState, CallState[]> = {
-  idle:         ['outgoing', 'connecting'],
-  outgoing:     ['ringing', 'connecting', 'ending', 'ended', 'rejected', 'busy', 'failed', 'timeout'],
-  ringing:      ['connecting', 'ending', 'ended', 'rejected', 'busy', 'failed', 'timeout'],
-  connecting:   ['connected', 'reconnecting', 'ending', 'ended', 'failed'],
-  connected:    ['reconnecting', 'ending', 'ended', 'failed'],
+  idle: ['outgoing', 'connecting'],
+  outgoing: ['ringing', 'connecting', 'ending', 'ended', 'rejected', 'busy', 'failed', 'timeout'],
+  ringing: ['connecting', 'ending', 'ended', 'rejected', 'busy', 'failed', 'timeout'],
+  connecting: ['connected', 'reconnecting', 'ending', 'ended', 'failed'],
+  connected: ['reconnecting', 'ending', 'ended', 'failed'],
   reconnecting: ['connected', 'ending', 'ended', 'failed'],
-  ending:       ['ended'],
-  ended:        ['idle'],
-  rejected:     ['idle'],
-  busy:         ['idle'],
-  failed:       ['idle'],
-  timeout:      ['idle'],
+  ending: ['ended'],
+  ended: ['idle'],
+  rejected: ['idle'],
+  busy: ['idle'],
+  failed: ['idle'],
+  timeout: ['idle'],
 };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -92,13 +102,6 @@ let cachedIceConfig: RTCConfiguration | null = null;
 let iceConfigFetchedAt = 0;
 let iceConfigCacheTtl = 3600 * 1000; // 1 hour default
 
-/**
- * STUN-only fallback — we do NOT embed TURN credentials in client code.
- * If the /api/turn-credentials fetch fails, we try STUN-only first.
- * Most calls on the same ISP or same NAT type will still work with STUN.
- * Only truly symmetric NAT scenarios require TURN, and those will fail gracefully
- * rather than silently leaking credentials.
- */
 const FALLBACK_ICE_CONFIG: RTCConfiguration = {
   iceServers: [
     {
@@ -128,7 +131,6 @@ const FALLBACK_ICE_CONFIG: RTCConfiguration = {
 };
 
 export async function fetchIceConfig(): Promise<RTCConfiguration> {
-  // Return cached config if still valid
   if (cachedIceConfig && Date.now() - iceConfigFetchedAt < iceConfigCacheTtl) {
     return cachedIceConfig;
   }
@@ -140,7 +142,10 @@ export async function fetchIceConfig(): Promise<RTCConfiguration> {
     const serverUrl =
       process.env.NEXT_PUBLIC_SOCKET_URL ||
       process.env.NEXT_PUBLIC_BACKEND_URL ||
-      (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://server-6gmj.onrender.com');
+      (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+        ? 'http://localhost:5000'
+        : 'https://server-6gmj.onrender.com');
+
     let res: Response | null = await fetch(`${serverUrl}/api/turn-credentials`, {
       signal: controller.signal,
     }).catch(() => null);
@@ -186,7 +191,7 @@ export async function fetchIceConfig(): Promise<RTCConfiguration> {
 
     return cachedIceConfig;
   } catch (err) {
-    console.warn('[WebRTCEngine] Failed to fetch TURN credentials, using STUN-only fallback:', err);
+    console.warn('[WebRTCEngine] Failed to fetch TURN credentials, using fallback:', err);
     return FALLBACK_ICE_CONFIG;
   }
 }
@@ -231,6 +236,7 @@ export class WebRTCEngine {
   private _stats: CallStats | null = null;
   private prevBytesSent = 0;
   private prevBytesReceived = 0;
+  private prevAudioBytesReceived = 0; // FIX 14: class field, not local variable
   private prevTimestamp = 0;
 
   // Bitrate adaptation state
@@ -305,9 +311,7 @@ export class WebRTCEngine {
       channelCount: { ideal: 1 },
     };
 
-    // Progressive fallback chain
     const fallbackAttempts: MediaStreamConstraints[] = [
-      // 1. Ideal HD video
       {
         audio: audioConstraints,
         video: this._callType === 'video' ? {
@@ -316,7 +320,6 @@ export class WebRTCEngine {
           height: { ideal: 720 },
         } : false,
       },
-      // 2. Standard resolution (480p)
       {
         audio: audioConstraints,
         video: this._callType === 'video' ? {
@@ -325,12 +328,10 @@ export class WebRTCEngine {
           height: { ideal: 480 },
         } : false,
       },
-      // 3. Minimal video constraints
       {
         audio: true,
         video: this._callType === 'video' ? true : false,
       },
-      // 4. Audio-only fallback if camera is busy or unavailable
       {
         audio: true,
         video: false,
@@ -377,38 +378,23 @@ export class WebRTCEngine {
     this.setupSocketListeners();
 
     try {
-      // Acquire media first
       const stream = await this.acquireMedia();
       if (this.isDestroyed) { stream.getTracks().forEach(t => t.stop()); return; }
 
       this._localStream = stream;
       this.emit('localStream', stream);
 
-      // Fetch ICE config and create peer connection (but don't offer yet)
       const iceConfig = await fetchIceConfig();
       if (this.isDestroyed) return;
 
       this.createPeerConnection(iceConfig);
 
-      // Add local tracks to the peer connection
       stream.getTracks().forEach(track => {
         this.pc!.addTrack(track, stream);
       });
 
-      // Move to ringing state — inform the UI
       this.setState('ringing');
 
-      // *** FIX Bug 1: Do NOT create an SDP offer here ***
-      // The offer is created ONLY in onCallAccepted() once the peer picks up.
-      // Creating an offer now and sending it before the peer has accepted causes:
-      // - The receiver may not have getUserMedia ready yet
-      // - Double-offer race conditions
-      // - Invalid signaling state errors on both sides
-      //
-      // The call_user socket event (emitted by SocialChat) tells the peer to ring.
-      // We wait for call_accepted before touching SDP.
-
-      // Process any signals that arrived before PC was ready
       await this.drainPendingSignals();
     } catch (err: any) {
       console.error('[WebRTCEngine] Start call error:', err);
@@ -443,25 +429,21 @@ export class WebRTCEngine {
     this.setupSocketListeners();
 
     try {
-      // Acquire media
       const stream = await this.acquireMedia();
       if (this.isDestroyed) { stream.getTracks().forEach(t => t.stop()); return; }
 
       this._localStream = stream;
       this.emit('localStream', stream);
 
-      // Fetch ICE config and create peer connection
       const iceConfig = await fetchIceConfig();
       if (this.isDestroyed) return;
 
       this.createPeerConnection(iceConfig);
 
-      // Add local tracks
       stream.getTracks().forEach(track => {
         this.pc!.addTrack(track, stream);
       });
 
-      // Connection timeout — if not connected within 30s, fail
       this.connectionTimeout = setTimeout(() => {
         if (this._state === 'connecting') {
           console.warn('[WebRTCEngine] Connection timeout');
@@ -471,12 +453,10 @@ export class WebRTCEngine {
         }
       }, 30000);
 
-      // Process initial offer if provided (receiver gets caller's offer)
       if (initialOffer) {
         await this.handleSignal(initialOffer);
       }
 
-      // Process any signals that arrived during setup
       await this.drainPendingSignals();
     } catch (err: any) {
       console.error('[WebRTCEngine] Accept call error:', err);
@@ -487,7 +467,6 @@ export class WebRTCEngine {
   }
 
   // ── Called when remote peer accepts (caller side) ──────────────────────
-  // This is where the caller creates and sends the SDP offer (only once).
 
   async onCallAccepted(): Promise<void> {
     if (this._state !== 'ringing' && this._state !== 'outgoing' && this._state !== 'connecting') {
@@ -502,7 +481,6 @@ export class WebRTCEngine {
       return;
     }
 
-    // Connection timeout
     this.clearConnectionTimeout();
     this.connectionTimeout = setTimeout(() => {
       if (this._state === 'connecting') {
@@ -514,7 +492,6 @@ export class WebRTCEngine {
     }, 30000);
 
     try {
-      // Guard against duplicate offers (makingOffer flag)
       if (this.makingOffer) {
         console.warn('[WebRTCEngine] Already making offer, skipping duplicate');
         return;
@@ -543,13 +520,15 @@ export class WebRTCEngine {
         offer: signalPayload,
       });
 
-      this.makingOffer = false;
-
-      // Set audio priority after SDP exchange (FIX Bug 17)
-      this.setAudioPriority();
+      // FIX 13: Do NOT call setAudioPriority() here.
+      // Encodings don't exist until after the full O/A exchange.
+      // setAudioPriority() is correctly called in handleSignal() after
+      // the answer is received and setRemoteDescription() completes.
     } catch (e) {
-      this.makingOffer = false;
       console.error('[WebRTCEngine] Offer creation error:', e);
+    } finally {
+      // FIX: always clear makingOffer even on error
+      this.makingOffer = false;
     }
   }
 
@@ -560,7 +539,6 @@ export class WebRTCEngine {
 
     this.setState('ending');
 
-    // Notify peer via socket
     if (this.socket?.connected && this._peer) {
       const target = this._peer.email?.toLowerCase().trim();
       this.socket.emit('end_call', { to: target, toUserId: this._peer.id, callId: this._callId });
@@ -577,7 +555,7 @@ export class WebRTCEngine {
     const audioTrack = this._localStream.getAudioTracks()[0];
     if (audioTrack) {
       audioTrack.enabled = !audioTrack.enabled;
-      return !audioTrack.enabled; // returns true if now muted
+      return !audioTrack.enabled;
     }
     return false;
   }
@@ -624,7 +602,7 @@ export class WebRTCEngine {
       return !enabled;
     }
     videoTrack.enabled = !videoTrack.enabled;
-    return !videoTrack.enabled; // returns true if camera now off
+    return !videoTrack.enabled;
   }
 
   async switchCamera(): Promise<void> {
@@ -650,11 +628,9 @@ export class WebRTCEngine {
       const newTrack = newStream.getVideoTracks()[0];
       if (!newTrack) return;
 
-      // Replace in local stream
       this._localStream.removeTrack(currentTrack);
       this._localStream.addTrack(newTrack);
 
-      // Replace in peer connection sender — no renegotiation needed
       if (this.pc) {
         const sender = this.pc.getSenders().find(s => s.track?.kind === 'video');
         if (sender) {
@@ -702,23 +678,19 @@ export class WebRTCEngine {
     };
 
     pc.onicecandidateerror = (event: RTCPeerConnectionIceErrorEvent) => {
-      // Only log — ICE candidate errors are common and non-fatal
       console.warn('[WebRTCEngine] ICE candidate error:', event.errorCode, event.errorText);
     };
 
     // ── Remote tracks ────────────────────────────────────────────────────
-    // Build a single persistent MediaStream for the remote side
     const remoteStream = new MediaStream();
 
     pc.ontrack = (event) => {
       console.log('[WebRTCEngine] Remote track received:', event.track.kind, event.track.id);
 
-      // Add track if not already in stream (deduplicate)
       if (!remoteStream.getTrackById(event.track.id)) {
         remoteStream.addTrack(event.track);
       }
 
-      // Also add any tracks from the event's streams array
       if (event.streams?.[0]) {
         event.streams[0].getTracks().forEach(t => {
           if (!remoteStream.getTrackById(t.id)) {
@@ -727,7 +699,6 @@ export class WebRTCEngine {
         });
       }
 
-      // Handle track ending (e.g., remote camera turned off and back on)
       event.track.onunmute = () => {
         if (!remoteStream.getTrackById(event.track.id)) {
           remoteStream.addTrack(event.track);
@@ -738,7 +709,6 @@ export class WebRTCEngine {
       this._remoteStream = remoteStream;
       this.emit('remoteStream', this._remoteStream);
 
-      // Mark as connected if we were waiting
       if (this._state === 'connecting' || this._state === 'reconnecting') {
         this.setState('connected');
         this.clearConnectionTimeout();
@@ -763,10 +733,8 @@ export class WebRTCEngine {
           break;
 
         case 'disconnected':
-          // Network might recover — wait before acting
           if (this._state === 'connected') {
             this.setState('reconnecting');
-            // Give it 3 seconds to self-recover before forcing ICE restart
             this.reconnectTimer = setTimeout(() => {
               if (this._state === 'reconnecting') {
                 this.attemptIceRestart();
@@ -786,7 +754,6 @@ export class WebRTCEngine {
           break;
 
         case 'closed':
-          // Normal — no action needed
           break;
       }
     };
@@ -829,20 +796,32 @@ export class WebRTCEngine {
       console.log('[WebRTCEngine] Signaling state:', pc.signalingState);
     };
 
-    // ── Negotiation needed (triggered after addTrack, renegotiation, etc.) ──
-    // Guard against spurious triggers — we control negotiation explicitly
+    // ── Negotiation needed ───────────────────────────────────────────────
+    // FIX 12: Allow renegotiation in 'connecting' and 'reconnecting' states too,
+    // not just 'connected'. This is critical for video tracks added via
+    // enableVideo() before ICE handshake completes — without this fix, the
+    // video track is added to the PC but never signaled to the remote peer.
     pc.onnegotiationneeded = async () => {
-      // Only the caller triggers negotiation, and only when connected (renegotiation)
-      if (!this._isCaller || this._state !== 'connected' || this.makingOffer) return;
+      if (!this._isCaller || this.makingOffer) return;
+
+      const activeState =
+        this._state === 'connected' ||
+        this._state === 'connecting' ||
+        this._state === 'reconnecting';
+      if (!activeState) return;
+
+      if (pc.signalingState !== 'stable') return;
 
       try {
         this.makingOffer = true;
         const offer = await pc.createOffer();
+
+        // Re-check after the async gap
         if (pc.signalingState !== 'stable') {
-          // State changed while we were async — abort
           this.makingOffer = false;
           return;
         }
+
         await pc.setLocalDescription(offer);
 
         const target = this._peer?.email?.toLowerCase().trim();
@@ -861,7 +840,6 @@ export class WebRTCEngine {
   }
 
   // ── Audio Priority ─────────────────────────────────────────────────────
-  // Called AFTER setLocalDescription() so encodings exist
 
   private setAudioPriority(): void {
     if (!this.pc) return;
@@ -874,7 +852,7 @@ export class WebRTCEngine {
           if (params.encodings && params.encodings.length > 0) {
             params.encodings[0].priority = 'high';
             (params.encodings[0] as any).networkPriority = 'high';
-            sender.setParameters(params).catch(() => {});
+            sender.setParameters(params).catch(() => { });
           }
         }
       }
@@ -908,7 +886,6 @@ export class WebRTCEngine {
       this.setState('reconnecting');
     }
 
-    // Exponential backoff: 1s, 2s, 4s, 8s
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 8000);
 
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
@@ -916,14 +893,12 @@ export class WebRTCEngine {
       if (this.isDestroyed || !this.pc) return;
 
       try {
-        // *** FIX Bug 12: Guard ICE restart with signalingState check ***
         if (this.pc.signalingState !== 'stable') {
           console.warn('[WebRTCEngine] ICE restart skipped — signaling state is not stable:', this.pc.signalingState);
           return;
         }
 
         if (this._isCaller) {
-          // Caller: send ICE restart offer
           this.makingOffer = true;
           const offer = await this.pc.createOffer({ iceRestart: true });
           await this.pc.setLocalDescription(offer);
@@ -937,8 +912,6 @@ export class WebRTCEngine {
             signal: { type: 'offer', sdp: offer.sdp },
           });
         } else {
-          // Receiver: request ICE restart from the caller side
-          // (restartIce() signals the caller to create a new offer)
           this.pc.restartIce();
         }
       } catch (e) {
@@ -947,7 +920,6 @@ export class WebRTCEngine {
       }
     }, delay);
 
-    // Overall reconnection timeout
     if (this.connectionTimeout) clearTimeout(this.connectionTimeout);
     this.connectionTimeout = setTimeout(() => {
       if (this._state === 'reconnecting') {
@@ -967,7 +939,6 @@ export class WebRTCEngine {
       return;
     }
 
-    // *** FIX Bug 5/8: Reject signals from unrelated calls ***
     if (signal.callId && this._callId && signal.callId !== this._callId) {
       console.warn('[WebRTCEngine] Signal rejected — callId mismatch:', signal.callId, '!=', this._callId);
       return;
@@ -989,13 +960,9 @@ export class WebRTCEngine {
           sdp: raw.sdp || (typeof raw === 'string' ? raw : undefined),
         };
 
-        // Perfect Negotiation pattern:
-        // Determine if we should "politely" yield when there's a collision
         const offerCollision =
           this.makingOffer || pc.signalingState !== 'stable';
 
-        // Caller is the "impolite" peer — it never yields
-        // Receiver is the "polite" peer — it yields on collision
         this.ignoreOffer = !this._isCaller && offerCollision;
 
         if (this.ignoreOffer) {
@@ -1003,7 +970,6 @@ export class WebRTCEngine {
           return;
         }
 
-        // If impolite peer and collision: rollback our offer
         if (offerCollision && this._isCaller) {
           await pc.setLocalDescription({ type: 'rollback' } as any);
         }
@@ -1014,7 +980,6 @@ export class WebRTCEngine {
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
 
-        // *** FIX Bug 17: Set audio priority after SDP exchange ***
         this.setAudioPriority();
 
         const signalPayload = { type: 'answer', sdp: answer.sdp };
@@ -1048,7 +1013,6 @@ export class WebRTCEngine {
           await pc.setRemoteDescription(new RTCSessionDescription(sdpObj));
           await this.drainIceCandidateQueue();
 
-          // *** FIX Bug 17: Set audio priority after receiving answer too ***
           this.setAudioPriority();
         } else {
           console.warn('[WebRTCEngine] Received answer in wrong signaling state:', pc.signalingState);
@@ -1090,7 +1054,6 @@ export class WebRTCEngine {
             }
           }
         } else if (candidateInit && candidateInit.candidate) {
-          // Queue valid candidate for after remote description is set
           this.iceCandidateQueue.push(candidateInit);
         }
         return;
@@ -1137,31 +1100,44 @@ export class WebRTCEngine {
 
       // ─── Primary unified signal channel ────────────────────────────────
       'webrtc_signal': (data: any) => {
-        // *** FIX Bug 5/8: Reject signals for other calls ***
-        if (data.callId && this._callId && data.callId !== this._callId) {
-          return; // Signal for a different call — ignore silently
-        }
+        if (data.callId && this._callId && data.callId !== this._callId) return;
         this.handleSignal(data.signal || data);
       },
 
-      // ─── Backward-compat: offer sent via dedicated 'offer' event ───────
-      // FIX Bug 10/11: Engine must also listen to these legacy channels
+      // ─── Backward-compat: offer via dedicated 'offer' event ────────────
       'offer': (data: any) => {
         if (data.callId && this._callId && data.callId !== this._callId) return;
         this.handleSignal(data.offer || data);
       },
 
-      // ─── Backward-compat: answer sent via dedicated 'answer' event ─────
+      // ─── Backward-compat: answer via dedicated 'answer' event ──────────
       'answer': (data: any) => {
         if (data.callId && this._callId && data.callId !== this._callId) return;
         this.handleSignal(data.answer || data);
       },
 
-      // ─── Backward-compat: ICE candidate via dedicated event ────────────
-      // FIX Bug 10: Handle ice_candidate socket event
+      // ─── Backward-compat: ICE candidate via dedicated event ─────────────
+      // FIX 11: Extract nested candidate fields correctly.
+      // Server sends: { callId, candidate: { candidate, sdpMid, sdpMLineIndex } }
+      // OR flat:      { callId, candidate, sdpMid, sdpMLineIndex }
+      // Old code did: this.handleSignal(data.candidate ? data : data)  ← passed data either way
+      // which caused sdpMid/sdpMLineIndex to be lost when shape was nested.
       'ice_candidate': (data: any) => {
         if (data.callId && this._callId && data.callId !== this._callId) return;
-        this.handleSignal(data.candidate ? data : data);
+
+        const nested = data.candidate;
+        if (nested && typeof nested === 'object' && 'candidate' in nested) {
+          // Nested shape — hoist inner fields so handleSignal sees a flat candidate
+          this.handleSignal({
+            callId: data.callId,
+            candidate: nested.candidate,
+            sdpMid: nested.sdpMid,
+            sdpMLineIndex: nested.sdpMLineIndex,
+          });
+        } else {
+          // Flat shape or null end-of-candidates — pass as-is
+          this.handleSignal(data);
+        }
       },
 
       // ─── Call termination events ────────────────────────────────────────
@@ -1236,6 +1212,7 @@ export class WebRTCEngine {
 
     this.prevBytesSent = 0;
     this.prevBytesReceived = 0;
+    this.prevAudioBytesReceived = 0; // FIX 14: reset the class field
     this.prevTimestamp = performance.now();
 
     this.statsInterval = setInterval(() => this.collectStats(), 3000);
@@ -1265,7 +1242,6 @@ export class WebRTCEngine {
       let totalBytesSent = 0;
       let totalBytesReceived = 0;
       let audioBytesReceived = 0;
-      let prevAudioBytesReceived = 0;
       let candidateType = 'unknown';
 
       stats.forEach((report: any) => {
@@ -1295,7 +1271,6 @@ export class WebRTCEngine {
 
         if (report.type === 'candidate-pair' && report.state === 'succeeded' && report.nominated) {
           rtt = Math.round((report.currentRoundTripTime || 0) * 1000);
-          // Determine relay vs direct
           const localCandidate = stats.get(report.localCandidateId);
           if (localCandidate) {
             candidateType = (localCandidate as any).candidateType || 'unknown';
@@ -1304,10 +1279,12 @@ export class WebRTCEngine {
       });
 
       const videoBitrate = Math.round(((totalBytesSent - this.prevBytesSent) * 8) / elapsed / 1000);
-      const audioBitrate = Math.round(((audioBytesReceived - prevAudioBytesReceived) * 8) / elapsed / 1000);
+      // FIX 14: use class-level this.prevAudioBytesReceived for correct delta
+      const audioBitrate = Math.round(((audioBytesReceived - this.prevAudioBytesReceived) * 8) / elapsed / 1000);
 
       this.prevBytesSent = totalBytesSent;
       this.prevBytesReceived = totalBytesReceived;
+      this.prevAudioBytesReceived = audioBytesReceived; // FIX 14: persist for next interval
       this.prevTimestamp = now;
 
       this._stats = {
@@ -1326,12 +1303,10 @@ export class WebRTCEngine {
 
       this.emit('stats', this._stats);
 
-      // Dev diagnostics
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[WebRTCEngine Stats] RTT:${rtt}ms Loss:${packetLoss}% Jitter:${jitter}ms Video:${videoBitrate}kbps Candidate:${candidateType}`);
+        console.log(`[WebRTCEngine Stats] RTT:${rtt}ms Loss:${packetLoss}% Jitter:${jitter}ms Video:${videoBitrate}kbps Audio:${audioBitrate}kbps Candidate:${candidateType}`);
       }
 
-      // Adaptive bitrate adjustment
       this.adaptBitrate(packetLoss, rtt, jitter);
     } catch {
       // Stats collection can fail during state transitions — non-critical
@@ -1341,7 +1316,6 @@ export class WebRTCEngine {
   private async adaptBitrate(packetLoss: number, rtt: number, jitter: number): Promise<void> {
     if (!this.pc || this._callType !== 'video') return;
 
-    // Thresholds for poor/good network
     const isPoor = packetLoss > 5 || rtt > 400 || jitter > 100;
     const isGood = packetLoss < 2 && rtt < 150 && jitter < 30;
 
@@ -1352,12 +1326,10 @@ export class WebRTCEngine {
       this.consecutiveGoodStats++;
       this.consecutivePoorStats = 0;
     } else {
-      // Neutral — don't oscillate
       this.consecutivePoorStats = Math.max(0, this.consecutivePoorStats - 1);
       this.consecutiveGoodStats = Math.max(0, this.consecutiveGoodStats - 1);
     }
 
-    // Act only after multiple consistent readings (prevent oscillation)
     if (this.consecutivePoorStats >= 2) {
       this.currentMaxBitrate = Math.max(
         this.currentMaxBitrate * 0.6,
@@ -1366,7 +1338,6 @@ export class WebRTCEngine {
       await this.applyVideoEncodingParams();
       this.consecutivePoorStats = 0;
     } else if (this.consecutiveGoodStats >= 4) {
-      // Restore gradually
       this.currentMaxBitrate = Math.min(
         this.currentMaxBitrate * 1.25,
         this.MAX_VIDEO_BITRATE
@@ -1388,9 +1359,8 @@ export class WebRTCEngine {
             params.encodings = [{}];
           }
           params.encodings[0].maxBitrate = this.currentMaxBitrate;
-          // Scale down resolution on very poor network
           if (this.currentMaxBitrate < 300000) {
-            params.encodings[0].scaleResolutionDownBy = 2; // Half resolution
+            params.encodings[0].scaleResolutionDownBy = 2;
           } else if (this.currentMaxBitrate < 600000) {
             params.encodings[0].scaleResolutionDownBy = 1.5;
           } else {
@@ -1399,13 +1369,12 @@ export class WebRTCEngine {
           await sender.setParameters(params);
         }
 
-        // Audio: always enforce stable bitrate — never sacrifice audio for video
         if (sender.track?.kind === 'audio') {
           const params = sender.getParameters();
           if (params.encodings && params.encodings.length > 0) {
             params.encodings[0].maxBitrate = this.AUDIO_BITRATE_BPS;
             params.encodings[0].priority = 'high';
-            await sender.setParameters(params).catch(() => {});
+            await sender.setParameters(params).catch(() => { });
           }
         }
       }
@@ -1434,14 +1403,13 @@ export class WebRTCEngine {
       this.pc.onsignalingstatechange = null;
       this.pc.onnegotiationneeded = null;
       this.pc.close();
-    } catch {}
+    } catch { }
     this.pc = null;
   }
 
   private cleanup(): void {
     this.isDestroyed = true;
 
-    // Clear all timers
     this.clearConnectionTimeout();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
@@ -1453,38 +1421,31 @@ export class WebRTCEngine {
     }
     this.stopStatsMonitoring();
 
-    // Remove socket listeners
     this.removeSocketListeners();
-
-    // Close peer connection
     this.closePeerConnection();
 
-    // Stop all local tracks
     if (this._localStream) {
       this._localStream.getTracks().forEach(t => {
-        try { t.stop(); } catch {}
+        try { t.stop(); } catch { }
       });
       this._localStream = null;
     }
 
-    // Clear remote stream reference (don't stop remote tracks — we don't own them)
     this._remoteStream = null;
 
-    // Clear queues and flags
     this.iceCandidateQueue = [];
     this.pendingSignals = [];
     this.makingOffer = false;
     this.ignoreOffer = false;
 
-    // Reset adaptation state
     this.reconnectAttempts = 0;
     this.consecutivePoorStats = 0;
     this.consecutiveGoodStats = 0;
     this.currentMaxBitrate = 1200000;
     this._stats = null;
+    this.prevAudioBytesReceived = 0; // FIX 14: reset on cleanup
   }
 
-  // Full reset to idle (for reuse after a call ends)
   reset(): void {
     this.cleanup();
     this._state = 'idle';
