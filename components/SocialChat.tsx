@@ -3202,10 +3202,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         // 2. Update Sidebar (Users / Contacts list)
         // Find existing contact by either ID or Email to prevent duplicate entries
-        const existingInRef = allContactsRef.current.find(u =>
+        // Search results live in usersRef before they are opened. Include them
+        // in the lookup so the first incoming message promotes them to Recent.
+        const matchesPartner = (u: any) => Boolean(u && (
           (partnerId && String(u.id).trim() === partnerId) ||
           (partnerEmail && u.email && u.email.toLowerCase().trim() === partnerEmail)
-        );
+        ));
+        const existingInRef = allContactsRef.current.find(matchesPartner)
+          || usersRef.current.find(matchesPartner);
 
         if (existingInRef) {
           const updated = {
@@ -3304,10 +3308,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     } catch (e) {}
                   }
                 }
-                setUsers(current => {
-                  if (current.some(u => u.id === (newUser as any).id || (newUser.email && u.email === newUser.email))) return current;
-                  return [formattedUser, ...current];
-                });
+                    setUsers(current => {
+                      const matches = (u: any) =>
+                        String(u.id) === String(formattedUser.id) ||
+                        (formattedUser.email && u.email?.toLowerCase().trim() === formattedUser.email.toLowerCase().trim());
+                      return [formattedUser, ...current.filter(u => !matches(u))];
+                    });
               }
             };
             fetchAndInsert().catch(() => {});
