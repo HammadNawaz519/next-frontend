@@ -4226,7 +4226,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       }
 
       // 2. Always background sync from DB (stale-while-revalidate pattern)
-      fetchRecentChatsCoalesced(true).then(results => {
+      fetchRecentChatsCoalesced(true, currentUserId, currentAccountEmail).then(results => {
         if (!Array.isArray(results)) return;
         const contacts: User[] = [];
         const reqs: User[] = [];
@@ -4251,15 +4251,34 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             return merged;
           });
         }
-        allContactsRef.current = contacts;
-        allRequestsRef.current = reqs.filter(r => !contacts.some(c => c.id === r.id));
-        setUsers(contacts);
+        // Keep newer realtime/optimistic entries when this background request
+        // started before a socket message arrived.
+        const contactById = new Map<string, User>();
+        [...contacts, ...allContactsRef.current].forEach(contact => {
+          const key = String(contact.id);
+          const existing = contactById.get(key);
+          if (!existing) {
+            contactById.set(key, contact);
+            return;
+          }
+          const existingTime = new Date(existing.lastMessageTime || 0).getTime();
+          const incomingTime = new Date(contact.lastMessageTime || 0).getTime();
+          contactById.set(key, incomingTime >= existingTime ? { ...existing, ...contact } : { ...contact, ...existing });
+        });
+        const mergedContacts = Array.from(contactById.values()).sort((a, b) => {
+          const aTime = new Date(a.lastMessageTime || 0).getTime();
+          const bTime = new Date(b.lastMessageTime || 0).getTime();
+          return bTime - aTime;
+        });
+        allContactsRef.current = mergedContacts;
+        allRequestsRef.current = reqs.filter(r => !mergedContacts.some(c => c.id === r.id));
+        setUsers(mergedContacts);
         setRequests(allRequestsRef.current);
         setIsRecentLoading(false);
         if (typeof window !== 'undefined' && currentUserId) {
           try {
-            localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(contacts));
-            localStorage.setItem(`social_users_cache_${currentUserId}`, JSON.stringify(contacts));
+            localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(mergedContacts));
+            localStorage.setItem(`social_users_cache_${currentUserId}`, JSON.stringify(mergedContacts));
           } catch (e) {}
         }
         // Update selectedUser if active chat is open so header receives latest username/image
