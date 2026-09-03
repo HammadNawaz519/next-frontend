@@ -513,12 +513,6 @@ export class WebRTCEngine {
         callId: this._callId,
         signal: signalPayload,
       });
-      this.socket?.emit('offer', {
-        to: target,
-        toUserId: this._peer?.id,
-        callId: this._callId,
-        offer: signalPayload,
-      });
 
       // FIX 13: Do NOT call setAudioPriority() here.
       // Encodings don't exist until after the full O/A exchange.
@@ -667,12 +661,6 @@ export class WebRTCEngine {
           toUserId: this._peer?.id,
           callId: this._callId,
           signal: { candidate: candJson },
-        });
-        this.socket.emit('ice_candidate', {
-          to: target,
-          toUserId: this._peer?.id,
-          callId: this._callId,
-          candidate: candJson,
         });
       }
     };
@@ -988,12 +976,6 @@ export class WebRTCEngine {
           toUserId: this._peer?.id,
           callId: this._callId,
           signal: signalPayload,
-        });
-        this.socket?.emit('answer', {
-          to: target,
-          toUserId: this._peer?.id,
-          callId: this._callId,
-          answer: signalPayload,
         });
         return;
       }
