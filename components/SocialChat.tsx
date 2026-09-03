@@ -4753,22 +4753,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       }
     });
 
-    // Instant Socket Broadcast (Receiver sees message with 0ms delay)
-    if (socket) {
-      socket.emit('send_social_message', {
-        ...optimisticMsg,
-        senderId,
-        senderEmail,
-        senderUsername,
-        senderImage,
-        receiverId: selectedUser.id,
-        receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined
-      });
-    }
-
     try {
       // Direct Render Backend DB Save with instant fallback to saveSocialMessage
       let savedMsg: any = null;
+      let persistedByRenderBackend = false;
       try {
         const savedRes = await renderApiClient.sendSocialMessage({
           receiverId: selectedUser.id,
@@ -4780,6 +4768,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           replyToSenderName: currentReplyTo?.senderName ?? null,
         }, currentUserId, currentAccountEmail);
         savedMsg = savedRes?.message;
+        persistedByRenderBackend = Boolean(savedMsg);
       } catch (renderErr) {
         savedMsg = await saveSocialMessage(selectedUser.id, currentContent, 'text', currentReplyTo ?? null);
       }
@@ -4805,6 +4794,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             [selectedUser.id]: current.map(m => m.id === stableId ? { ...normalized, id: normalized.id || stableId, status: undefined } : m)
           };
         });
+
+        // The Render endpoint broadcasts after its database insert. The
+        // Next.js server-action fallback does not, so broadcast only there.
+        // Never emit the optimistic message before persistence succeeds.
+        if (!persistedByRenderBackend && socket) {
+          socket.emit('send_social_message', {
+            ...normalized,
+            senderId,
+            senderEmail,
+            senderUsername,
+            senderImage,
+            receiverId: selectedUser.id,
+            receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+          });
+        }
       }
     } catch (err) {
       console.error("Failed to persist message:", err);
