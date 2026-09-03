@@ -72,6 +72,10 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
   const generationRef = useRef(0);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const refreshUsers = useCallback(() => {
+    socketRef.current?.emit('cam_get_users');
+  }, []);
+
   const closePeer = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = null;
@@ -171,7 +175,6 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     socketRef.current = socket;
     const email = userEmail.toLowerCase().trim();
 
-    const refreshUsers = () => socket.emit('cam_get_users');
     const onConnect = () => {
       socket.emit('identify', { email, username: username || 'Admin' });
       socket.emit('cam_user_online', { email, username: username || 'Admin' });
