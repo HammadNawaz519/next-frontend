@@ -146,7 +146,7 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
 
     // Register online for cam monitoring
     const registerOnline = () => {
-      if (cleanEmail && socket.connected && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      if (cleanEmail && socket.connected) {
         socket.emit('cam_user_online', { email: cleanEmail, username: cleanUsername });
       }
     };
