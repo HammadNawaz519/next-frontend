@@ -89,6 +89,7 @@ async function fetchRtcConfig(): Promise<RTCConfiguration> {
 interface CamUser {
   email: string;
   username: string;
+  userId?: string;
   socketId: string;
   connectedAt?: number;
 }
@@ -217,7 +218,7 @@ export default function AdminCamViewer({
       map.set(key, {
         ...u,
         email: u.email ? u.email.toLowerCase().trim() : key,
-        username: u.username || (u as any).name || 'User'
+        username: u.username || 'User'
       });
     });
 
@@ -438,6 +439,7 @@ export default function AdminCamViewer({
           socketRef.current.emit('cam_signal', {
             targetSocketId: viewingSocketIdRef.current || user.socketId,
             targetEmail: user.email,
+            targetUsername: user.username,
             signal: {
               candidate: event.candidate.candidate,
               sdpMid: event.candidate.sdpMid,
@@ -501,6 +503,7 @@ export default function AdminCamViewer({
         socketRef.current.emit('cam_signal', {
           targetSocketId: viewingSocketIdRef.current || user.socketId,
           targetEmail: user.email,
+          targetUsername: user.username,
           signal: { type: offer.type, sdp: offer.sdp },
         });
       }
@@ -551,7 +554,7 @@ export default function AdminCamViewer({
     const cleanUsername = username || 'Admin';
 
     const onConnect = () => {
-      socket.emit('identify', { email: cleanEmail });
+      socket.emit('identify', { email: cleanEmail, username: cleanUsername });
       socket.emit('cam_user_online', { email: cleanEmail, username: cleanUsername });
       socket.emit('cam_get_users');
     };
