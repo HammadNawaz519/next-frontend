@@ -225,7 +225,6 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
           }
           const pc = new RTCPeerConnection(rtcConfig);
           pcRef.current = pc;
-          iceCandidateQueue.current = [];
 
           pc.onicecandidate = (e) => {
             if (e.candidate && socket.connected) {
