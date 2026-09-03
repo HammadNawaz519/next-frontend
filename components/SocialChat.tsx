@@ -2934,7 +2934,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         process.env.NEXT_PUBLIC_SOCKET_URL ||
         process.env.NEXT_PUBLIC_BACKEND_URL ||
         (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://server-6gmj.onrender.com');
-      const newSocket = io(SOCKET_URL, {
+      const isNativeApp = typeof window !== 'undefined' &&
+        typeof (window as any).Capacitor?.isNativePlatform === 'function' &&
+        (window as any).Capacitor.isNativePlatform();
+      const socketUrl = isNativeApp && /localhost|127\.0\.0\.1/.test(SOCKET_URL)
+        ? 'https://server-6gmj.onrender.com'
+        : SOCKET_URL;
+      const newSocket = io(socketUrl, {
         reconnection: true,
         reconnectionAttempts: Infinity,
         reconnectionDelay: 500,
@@ -3946,7 +3952,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     // Render free tier sleeps after 15 minutes of inactivity. A cold start takes
     // 30-60s — long enough to silently drop any call initiation during that window.
     // This lightweight HTTP ping keeps the server warm at near-zero cost.
-    const SOCKET_URL_FOR_PING = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
+    const configuredPingUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
+    const isNativeApp = typeof window !== 'undefined' &&
+      typeof (window as any).Capacitor?.isNativePlatform === 'function' &&
+      (window as any).Capacitor.isNativePlatform();
+    const SOCKET_URL_FOR_PING = isNativeApp && /localhost|127\.0\.0\.1/.test(configuredPingUrl)
+      ? 'https://server-6gmj.onrender.com'
+      : configuredPingUrl;
     const keepAliveInterval = setInterval(() => {
       fetch(`${SOCKET_URL_FOR_PING}/ping`, { method: 'GET', cache: 'no-store' })
         .catch(() => {}); // fire-and-forget, never throw

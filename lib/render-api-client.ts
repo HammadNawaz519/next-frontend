@@ -79,6 +79,13 @@ class RenderApiClient {
       process.env.NEXT_PUBLIC_SOCKET_URL ||
       process.env.NEXT_PUBLIC_BACKEND_URL;
 
+    const isNativeApp = typeof window !== 'undefined' &&
+      typeof (window as any).Capacitor?.isNativePlatform === 'function' &&
+      (window as any).Capacitor.isNativePlatform();
+    if (isNativeApp && configured && /localhost|127\.0\.0\.1/.test(configured)) {
+      return 'https://server-6gmj.onrender.com';
+    }
+
     if (configured) {
       return configured.replace(/\/+$/, '');
     }
