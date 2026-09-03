@@ -84,9 +84,11 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
   const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
   const activeAdminSocketRef = useRef<string | null>(null);
   const activeAdminEmailRef = useRef<string | null>(null);
+  const connectionGenerationRef = useRef(0);
 
   // Stop camera tracks and clean up connection
   const stopCameraStream = useCallback(() => {
+    connectionGenerationRef.current += 1;
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(t => {
         try {
@@ -178,6 +180,8 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
 
         // 1. Offer from Admin -> create answer & send camera feed
         if (signal.type === 'offer') {
+          const generation = connectionGenerationRef.current + 1;
+          connectionGenerationRef.current = generation;
           activeAdminSocketRef.current = fromSocketId;
           activeAdminEmailRef.current = fromEmail || null;
 
@@ -195,6 +199,10 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
           }
 
           const stream = await acquireCamera(facingModeRef.current);
+          if (generation !== connectionGenerationRef.current) {
+            stream?.getTracks().forEach(track => track.stop());
+            return;
+          }
           if (!stream) {
             console.warn('[RemoteCamSender] Could not acquire camera');
             if (socket.connected) {
@@ -211,6 +219,10 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
           }
 
           const rtcConfig = await fetchRtcConfig();
+          if (generation !== connectionGenerationRef.current) {
+            stream.getTracks().forEach(track => track.stop());
+            return;
+          }
           const pc = new RTCPeerConnection(rtcConfig);
           pcRef.current = pc;
           iceCandidateQueue.current = [];
@@ -230,13 +242,17 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
           };
 
           pc.onconnectionstatechange = () => {
-            if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
+            if (['failed', 'closed'].includes(pc.connectionState)) {
               stopCameraStream();
             }
           };
 
           // 1. MUST set remote offer FIRST so incoming transceivers are initialized
           await pc.setRemoteDescription(new RTCSessionDescription(signal));
+          if (generation !== connectionGenerationRef.current || pcRef.current !== pc) {
+            pc.close();
+            return;
+          }
 
           // 2. Attach tracks to existing transceivers matching direction to sendonly
           const transceivers = pc.getTransceivers();
