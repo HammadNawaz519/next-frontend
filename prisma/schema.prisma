@@ -46,6 +46,8 @@ model User {
   // Media & Stories
   posts      Post[]
   likes      Like[]
+  profileLikesGiven    ProfileLike[] @relation("ProfileLikesGiven")
+  profileLikesReceived ProfileLike[] @relation("ProfileLikesReceived")
   comments   Comment[]
   savedPosts SavedPost[]
   stories    Story[]
@@ -228,6 +230,19 @@ model Like {
   createdAt DateTime @default(now())
 
   @@unique([postId, userId])
+}
+
+model ProfileLike {
+  id        String   @id @default(cuid())
+  likerId   String
+  profileId String
+  createdAt DateTime @default(now())
+
+  liker   User @relation("ProfileLikesGiven", fields: [likerId], references: [id], onDelete: Cascade)
+  profile User @relation("ProfileLikesReceived", fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([likerId, profileId])
+  @@index([profileId, createdAt])
 }
 
 model Comment {

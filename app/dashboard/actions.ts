@@ -2046,7 +2046,7 @@ export async function getUserPublicProfile(targetUserId: string) {
           followers: true,
           following: true,
           posts: true,
-          likes: true
+          profileLikesReceived: true
         }
       }
     }
@@ -2080,14 +2080,25 @@ export async function getUserPublicProfile(targetUserId: string) {
     }
   }
 
+  const profileLikesCount = user._count?.profileLikesReceived ?? 0;
+  let isLiked = false;
+  if (currentUserId && currentUserId !== targetUserId) {
+    isLiked = Boolean(await (prisma as any).profileLike.findUnique({
+      where: {
+        likerId_profileId: {
+          likerId: currentUserId,
+          profileId: targetUserId
+        }
+      },
+      select: { id: true }
+    }));
+  }
+
   // Real authoritative database counts
   const followersCount = user._count?.followers ?? 0;
   const followingCount = user._count?.following ?? 0;
   const postsCount = user._count?.posts ?? 0;
-  const likesCount = user._count?.likes ?? 0;
-
-  // Real rating: Displays empty state '—' when no reviews exist rather than fake score
-  const ratingStr = '—';
+  const likesCount = profileLikesCount;
 
   return {
     ...user,
@@ -2095,13 +2106,45 @@ export async function getUserPublicProfile(targetUserId: string) {
     hasSentRequest,
     isSelf: currentUserId === targetUserId,
     stats: {
-      rating: ratingStr,
       followers: followersCount,
       following: followingCount,
       posts: postsCount,
       likes: likesCount
-    }
+    },
+    isLiked
   };
+}
+
+export async function toggleProfileLike(profileId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return { error: 'Not authenticated' };
+
+  const me = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true }
+  });
+  if (!me) return { error: 'User not found' };
+  if (!profileId || me.id === profileId) return { error: 'Invalid profile' };
+
+  const profile = await prisma.user.findUnique({
+    where: { id: profileId },
+    select: { id: true }
+  });
+  if (!profile) return { error: 'Profile not found' };
+
+  const existing = await (prisma as any).profileLike.findUnique({
+    where: { likerId_profileId: { likerId: me.id, profileId } },
+    select: { id: true }
+  });
+
+  if (existing) {
+    await (prisma as any).profileLike.delete({ where: { id: existing.id } });
+  } else {
+    await (prisma as any).profileLike.create({ data: { likerId: me.id, profileId } });
+  }
+
+  const likes = await (prisma as any).profileLike.count({ where: { profileId } });
+  return { success: true, isLiked: !existing, likes };
 }
 
 export async function getGlobalEdgeRequestCount() {

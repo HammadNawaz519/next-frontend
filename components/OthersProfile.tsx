@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Share2, UserPlus, UserCheck, Clock, Star, Heart } from 'lucide-react';
+import { ChevronLeft, Share2, UserPlus, UserCheck, Clock, Heart } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
-import { getUserPublicProfile, toggleFollowUser } from '@/app/dashboard/actions';
+import { getUserPublicProfile, toggleFollowUser, toggleProfileLike } from '@/app/dashboard/actions';
 
 interface OthersProfileProps {
   user: any;
@@ -36,7 +36,6 @@ export default function OthersProfile({
   const [followingCount, setFollowingCount] = useState<number>(0);
   const [likesCount, setLikesCount] = useState<number>(0);
   const [isLiked, setIsLiked] = useState<boolean>(false);
-  const [rating, setRating] = useState<string>('—');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loadingFollow, setLoadingFollow] = useState<boolean>(false);
 
@@ -59,7 +58,7 @@ export default function OthersProfile({
           setFollowersCount(fullData.stats?.followers || 0);
           setFollowingCount(fullData.stats?.following || 0);
           setLikesCount(fullData.stats?.likes || 0);
-          setRating(fullData.stats?.rating || '—');
+          setIsLiked(Boolean(fullData.isLiked));
         }
       } catch (e) {
         console.warn('Failed to load public profile:', e);
@@ -131,12 +130,25 @@ export default function OthersProfile({
     }
   };
 
-  const handleToggleLike = () => {
+  const handleToggleLike = async () => {
+    if (!profileData?.id || profileData.id === user?.id) return;
     triggerHaptic('light');
+    const previousLiked = isLiked;
+    const previousCount = likesCount;
     const nextLiked = !isLiked;
     setIsLiked(nextLiked);
     setLikesCount((prev) => (nextLiked ? prev + 1 : Math.max(0, prev - 1)));
-    showToast(nextLiked ? 'Liked profile' : 'Unliked profile');
+    try {
+      const result = await toggleProfileLike(profileData.id);
+      if (!result || result.error) throw new Error(result?.error || 'Like failed');
+      setIsLiked(Boolean(result.isLiked));
+      setLikesCount(result.likes);
+      showToast(result.isLiked ? 'Liked profile' : 'Unliked profile');
+    } catch {
+      setIsLiked(previousLiked);
+      setLikesCount(previousCount);
+      showToast('Could not update like');
+    }
   };
 
   const handleShare = async () => {
@@ -165,6 +177,8 @@ export default function OthersProfile({
           ...prev,
           ...(data.username ? { username: data.username } : {}),
           ...(data.image ? { image: data.image } : {}),
+          ...(data.bio !== undefined ? { bio: data.bio } : {}),
+          ...(data.website !== undefined ? { website: data.website } : {}),
         }));
       }
     };
@@ -293,14 +307,14 @@ export default function OthersProfile({
 
           {/* 3-Column Stats Row (Light, Clean Typography for Stats) */}
           <div className="w-full bg-zinc-50/80 border border-zinc-100 rounded-2xl p-3.5 sm:p-4 flex items-center justify-around text-center mb-3 shadow-2xs shrink-0">
-            {/* Column 1: Real Rating */}
+            {/* Column 1: Profile Likes */}
             <div className="flex-1 flex flex-col items-center">
               <div className="flex items-center gap-1 text-base sm:text-lg font-semibold text-zinc-900 tracking-tight">
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400 shrink-0" />
-                <span>{rating}</span>
+                <Heart className="w-4 h-4 fill-pink-500 text-pink-500 shrink-0" />
+                <span>{likesCount > 999 ? `${(likesCount / 1000).toFixed(1)}k` : likesCount}</span>
               </div>
               <span className="text-[11px] font-normal text-zinc-500 mt-0.5">
-                rating
+                likes
               </span>
             </div>
 
