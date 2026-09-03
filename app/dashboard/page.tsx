@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const router = useRouter();
   
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isProfileEditing, setIsProfileEditing] = useState(false);
   const [isClosingProfile, setIsClosingProfile] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
@@ -129,6 +130,7 @@ export default function DashboardPage() {
     // Layer 2: User Profile Panel (Self or Other User)
     if (isProfileOpen || selectedProfileUser) {
       setIsProfileOpen(false);
+      setIsProfileEditing(false);
       setSelectedProfileUser(null);
       return true;
     }
@@ -276,6 +278,7 @@ export default function DashboardPage() {
     const y = e?.clientY ?? window.innerHeight / 2;
     runProfileTransition(() => {
       setIsProfileOpen(false);
+      setIsProfileEditing(false);
       setIsClosingProfile(false);
       setSelectedProfileUser(null);
     }, x, y, true);
@@ -526,6 +529,7 @@ export default function DashboardPage() {
           isOpen={isProfileOpen}
           isClosing={isClosingProfile}
           onClose={handleCloseProfile}
+          onEditingChange={setIsProfileEditing}
           session={displaySession}
           fullUser={selectedProfileUser || fullUser}
           targetUser={selectedProfileUser}
@@ -548,7 +552,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Mobile Bottom Navigation — single unified bottom bar: Messages (left), Calls (center), Profile (right) */}
-      {(!selectedChatUser && !isCallActive && !isSearchActive && !isStoryEditorOpen) && (
+      {(!selectedChatUser && !isCallActive && !isSearchActive && !isStoryEditorOpen && !isProfileEditing) && (
         <nav className={`mobile-nav ${(isAccountSheetOpen || isChatLongPressActive) ? 'mobile-nav-hidden' : ''}`}>
           {/* 1. Messages (Leftmost) */}
           <button

@@ -39,6 +39,7 @@ interface Props {
   refreshProfile?: () => void;
   onToggleFollow?: (targetUserId: string) => void;
   onOpenChat?: (user: any) => void;
+    onEditingChange?: (editing: boolean) => void;
   onAccountSheetChange?: (isOpen: boolean) => void;
   onOpenUpload?: (type: 'single_image' | 'reel') => void;
 }
@@ -63,6 +64,7 @@ export default function ProfilePanel({
   refreshProfile,
   onToggleFollow,
   onOpenChat,
+  onEditingChange,
 }: Props) {
   const { update: updateSession } = useSession();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -216,6 +218,7 @@ export default function ProfilePanel({
       } else {
         setLocalUsername(cleaned);
         setIsEditing(false);
+        onEditingChange?.(false);
         showToast('Username updated successfully!');
 
         const updatedUserId = res.user?.id || (session?.user as any)?.id || (session?.user?.email ? (session.user.email as string).toLowerCase().trim() : '');
@@ -407,6 +410,7 @@ export default function ProfilePanel({
                     setWebsiteInput(activeUserData?.website || '');
                     setUsernameError(null);
                     setIsEditing(true);
+                    onEditingChange?.(true);
                   }
                 }}
                 className="p-2 text-white hover:text-zinc-300 active:scale-95 transition-all cursor-pointer outline-none border-0 ring-0 focus:outline-none bg-transparent flex items-center justify-center"
@@ -549,6 +553,7 @@ export default function ProfilePanel({
                 onClick={() => {
                   triggerHaptic('light');
                   setIsEditing(false);
+                  onEditingChange?.(false);
                   setUsernameError(null);
                 }}
                 className="py-3.5 px-6 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold text-[13.5px] transition-all cursor-pointer active:scale-95 outline-none border-0 ring-0"
