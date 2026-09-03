@@ -343,6 +343,28 @@ export default function AdminCamViewer({
     }
   }, []);
 
+  const restartViewerIce = useCallback(async (pc: RTCPeerConnection, user: CamUser, generation: number) => {
+    if (generation !== connectionGenerationRef.current || isNegotiatingRef.current) return;
+    if (pc.signalingState !== 'stable' || !socketRef.current?.connected) return;
+
+    isNegotiatingRef.current = true;
+    try {
+      const offer = await pc.createOffer({ iceRestart: true });
+      if (generation !== connectionGenerationRef.current) return;
+      await pc.setLocalDescription(offer);
+      if (generation !== connectionGenerationRef.current || !socketRef.current?.connected) return;
+      socketRef.current.emit('cam_signal', {
+        targetSocketId: viewingSocketIdRef.current || user.socketId,
+        targetEmail: user.email,
+        signal: { type: offer.type, sdp: offer.sdp },
+      });
+    } catch (err) {
+      console.warn('[AdminCamViewer] [WebRTC] ICE restart failed:', err);
+    } finally {
+      isNegotiatingRef.current = false;
+    }
+  }, []);
+
   const startViewing = useCallback(async (user: CamUser) => {
     const currentGen = ++connectionGenerationRef.current;
 
@@ -436,11 +458,12 @@ export default function AdminCamViewer({
           }
           setStreamStatus('live');
         } else if (state === 'failed') {
-          if (typeof (pc as any).restartIce === 'function') {
-            try { (pc as any).restartIce(); } catch { }
-          } else {
-            setStreamStatus('error');
-          }
+          void restartViewerIce(pc, user, currentGen);
+          setTimeout(() => {
+            if (currentGen === connectionGenerationRef.current && pcRef.current === pc && pc.connectionState === 'failed') {
+              setStreamStatus('error');
+            }
+          }, 8000);
         } else if (state === 'disconnected') {
           setTimeout(() => {
             if (currentGen === connectionGenerationRef.current && pcRef.current?.connectionState === 'disconnected') {
@@ -455,9 +478,7 @@ export default function AdminCamViewer({
       pc.oniceconnectionstatechange = () => {
         if (currentGen !== connectionGenerationRef.current) return;
         if (pc.iceConnectionState === 'failed') {
-          if (typeof (pc as any).restartIce === 'function') {
-            try { (pc as any).restartIce(); } catch { }
-          }
+          void restartViewerIce(pc, user, currentGen);
         }
       };
 
