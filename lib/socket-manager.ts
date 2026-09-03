@@ -12,7 +12,7 @@ import { io, Socket } from 'socket.io-client';
 
 const SOCKET_URL =
   (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SOCKET_URL) ||
-  'https://server-production-265c.up.railway.app';
+  'https://server-6gmj.onrender.com';
 
 type MessageHandler = (msg: any) => void;
 type StatusHandler = (connected: boolean) => void;
