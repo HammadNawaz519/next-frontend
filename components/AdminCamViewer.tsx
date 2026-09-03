@@ -163,7 +163,7 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     if (!isAdmin || !isOpen) return;
 
     const socket = io(SOCKET_URL, {
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,
       timeout: 15000,
@@ -220,6 +220,11 @@ export default function AdminCamViewer({ userEmail, username, isOpen, onOpenChan
     };
 
     socket.on('connect', onConnect);
+    socket.on('connect_error', error => {
+      console.warn('[AdminCamViewer] Socket connection failed:', error.message);
+      if (!targetRef.current) onCamUsersCount?.(0);
+      else setStatus('error');
+    });
     socket.on('cam_users_list', onUsers);
     socket.on('cam_user_online_event', refreshUsers);
     socket.on('cam_user_offline', ({ socketId }: { socketId: string }) => {
