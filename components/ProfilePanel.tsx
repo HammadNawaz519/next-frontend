@@ -1102,37 +1102,39 @@ export default function ProfilePanel({
               </div>
             </div>
 
-            {/* ── ACCOUNT ACTIONS (Both Dark Like Logout, Stacked Full Width) ── */}
+            {/* ── ACCOUNT ACTIONS (Soft Filled, Side by Side) ── */}
             {isSelf && (
               <div className="flex flex-col gap-2 mt-0.5 pt-1">
                 <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider px-1">
                   Account Actions
                 </span>
 
-                {/* Outline Black Log Out Button */}
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full py-3.5 px-6 rounded-full bg-transparent hover:bg-zinc-50 active:bg-zinc-100 border border-zinc-900 text-zinc-900 font-bold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98]"
-                  aria-label="Log Out of Account"
-                >
-                  <LogOut className="w-4 h-4 text-zinc-900" strokeWidth={2.2} />
-                  <span>Log Out</span>
-                </button>
+                <div className="flex items-center gap-2.5 w-full">
+                  {/* Filled Soft Log Out Button */}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex-1 py-3.5 px-4 rounded-full bg-zinc-100 hover:bg-zinc-200 active:bg-zinc-300 border-0 text-zinc-500 font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98]"
+                    aria-label="Log Out of Account"
+                  >
+                    <LogOut className="w-4 h-4 text-zinc-400" strokeWidth={2.2} />
+                    <span>Log Out</span>
+                  </button>
 
-                {/* Outline Black Delete Account Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('medium');
-                    setShowDeleteConfirm(true);
-                  }}
-                  className="w-full py-3.5 px-6 rounded-full bg-transparent hover:bg-zinc-50 active:bg-zinc-100 border border-zinc-900 text-zinc-900 font-bold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98]"
-                  aria-label="Delete Account"
-                >
-                  <Trash2 className="w-4 h-4 text-zinc-900" strokeWidth={2.2} />
-                  <span>Delete Account</span>
-                </button>
+                  {/* Filled Soft Delete Account Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('medium');
+                      setShowDeleteConfirm(true);
+                    }}
+                    className="flex-1 py-3.5 px-4 rounded-full bg-rose-50 hover:bg-rose-100 active:bg-rose-200 border-0 text-rose-400 font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98]"
+                    aria-label="Delete Account"
+                  >
+                    <Trash2 className="w-4 h-4 text-rose-300" strokeWidth={2.2} />
+                    <span>Delete Account</span>
+                  </button>
+                </div>
               </div>
             )}
           </>
