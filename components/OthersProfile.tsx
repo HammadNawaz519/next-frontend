@@ -547,14 +547,6 @@ export default function OthersProfile({
                 </span>
               </div>
             )}
-
-            <div className="flex items-center justify-between pt-3">
-              <span className="font-medium text-zinc-500">Network Presence</span>
-              <span className="font-semibold text-emerald-600 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                {profileData?.isOnline ? 'Online now' : 'Connect Member'}
-              </span>
-            </div>
           </div>
         </div>
 

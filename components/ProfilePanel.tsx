@@ -493,7 +493,7 @@ export default function ProfilePanel({
       />
 
       {/* ── 1. DARK TOP HEADER BAR (Exact Chat UI Alignment) ── */}
-      <div className="w-full bg-[#141111] pt-10 pb-2 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
+      <div className="w-full bg-[#141111] pt-12 pb-3 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
         {/* Left: Frameless Back Button */}
         <button
           type="button"
@@ -557,16 +557,16 @@ export default function ProfilePanel({
         </div>
       </div>
 
-      {/* ── 2. CURVED WHITE SHEET (All Content & DP in White Area, Non-Scrollable Fit) ── */}
-      <div className="w-full flex-1 bg-white rounded-t-[32px] sm:rounded-t-[36px] px-4 sm:px-5 pt-3.5 pb-20 sm:pb-22 flex flex-col justify-between text-zinc-900 shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-y-auto no-scrollbar relative min-h-0">
+      {/* ── 2. CURVED WHITE SHEET (All Content & DP in White Area) ── */}
+      <div className="w-full flex-1 bg-white rounded-t-[32px] sm:rounded-t-[36px] px-5 pt-6 pb-28 flex flex-col gap-6 text-zinc-900 shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-y-auto no-scrollbar relative min-h-0">
         {/* Sheet Drag Handle */}
-        <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-1 mb-0.5 shrink-0" />
+        <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-2 mb-1 shrink-0" />
 
         {isEditing ? (
           /* ── EDIT MODE INSIDE WHITE AREA ── */
-          <div className="w-full flex flex-col gap-3.5 animate-in fade-in duration-200">
+          <div className="w-full flex flex-col gap-4 animate-in fade-in duration-200">
             <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
-              <h3 className="text-base font-black text-zinc-900 tracking-tight">Edit Profile</h3>
+              <h3 className="text-lg font-black text-zinc-900 tracking-tight">Edit Profile</h3>
               <button
                 type="button"
                 onClick={() => {
@@ -582,10 +582,10 @@ export default function ProfilePanel({
             </div>
 
             {/* Avatar changer */}
-            <div className="flex flex-col items-center gap-1.5 py-1">
+            <div className="flex flex-col items-center gap-2 py-2">
               <div className="relative">
                 <div
-                  className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center text-2xl font-black text-zinc-900 shadow-md border-3 border-white"
+                  className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-3xl font-black text-zinc-900 shadow-md border-4 border-white"
                   style={{ backgroundColor: avatarBg }}
                 >
                   {curImage ? (
@@ -597,13 +597,13 @@ export default function ProfilePanel({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#141111] hover:bg-zinc-800 text-white flex items-center justify-center shadow-md border-2 border-white cursor-pointer active:scale-90 transition-all outline-none"
+                  className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#141111] hover:bg-zinc-800 text-white flex items-center justify-center shadow-md border-2 border-white cursor-pointer active:scale-90 transition-all outline-none"
                   title="Upload Photo"
                 >
                   <Camera className="w-3.5 h-3.5 text-white" strokeWidth={2.4} />
                 </button>
               </div>
-              <div className="flex items-center gap-3 mt-0.5">
+              <div className="flex items-center gap-3 mt-1">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -628,8 +628,8 @@ export default function ProfilePanel({
             </div>
 
             {/* Username Input */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider">
                 Username
               </label>
               <input
@@ -640,7 +640,7 @@ export default function ProfilePanel({
                   setUsernameError(null);
                 }}
                 placeholder="Enter username"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 focus:border-zinc-900 outline-none text-[14px] font-semibold text-zinc-900 transition-all"
+                className="w-full px-4 py-3.5 rounded-2xl bg-zinc-50 border border-zinc-200 focus:border-zinc-900 outline-none text-[15px] font-semibold text-zinc-900 transition-all"
               />
               {usernameError && (
                 <span className="text-xs font-semibold text-rose-500 mt-0.5">{usernameError}</span>
@@ -648,9 +648,9 @@ export default function ProfilePanel({
             </div>
 
             {/* Bio Input */}
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                <label className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider">
                   Bio
                 </label>
                 <span className="text-[11px] font-medium text-zinc-400">{bioInput.length}/150</span>
@@ -659,18 +659,18 @@ export default function ProfilePanel({
                 value={bioInput}
                 onChange={(e) => setBioInput(e.target.value.slice(0, 150))}
                 placeholder="Tell others a little about yourself"
-                rows={2}
-                className="w-full resize-none px-3.5 py-2 rounded-xl bg-zinc-50 border border-zinc-200 focus:border-zinc-900 outline-none text-[14px] font-medium text-zinc-900 transition-all placeholder:text-zinc-400"
+                rows={3}
+                className="w-full resize-none px-4 py-3 rounded-2xl bg-zinc-50 border border-zinc-200 focus:border-zinc-900 outline-none text-[15px] font-medium text-zinc-900 transition-all placeholder:text-zinc-400"
               />
             </div>
 
             {/* Action buttons */}
-            <div className="flex items-center gap-2.5 mt-1">
+            <div className="flex items-center gap-3 mt-2">
               <button
                 type="button"
                 onClick={handleSaveProfile}
                 disabled={isSavingUsername}
-                className="flex-1 py-3 px-5 rounded-full bg-[#141111] hover:bg-zinc-800 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shadow-sm border-0"
+                className="flex-1 py-3.5 px-6 rounded-full bg-[#141111] hover:bg-zinc-800 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shadow-sm border-0"
               >
                 {isSavingUsername ? 'Saving...' : 'Save Profile'}
               </button>
@@ -682,7 +682,7 @@ export default function ProfilePanel({
                   onEditingChange?.(false);
                   setUsernameError(null);
                 }}
-                className="py-3 px-5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold text-xs sm:text-sm transition-all cursor-pointer active:scale-95 border-0"
+                className="py-3.5 px-6 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold text-sm transition-all cursor-pointer active:scale-95 border-0"
               >
                 Cancel
               </button>
@@ -786,13 +786,13 @@ export default function ProfilePanel({
             </div>
           </div>
         ) : (
-          /* ── NORMAL PROFILE VIEW INSIDE WHITE AREA (Non-Scrollable Fit) ── */
-          <div className="w-full flex flex-col justify-between flex-1 gap-2.5 sm:gap-3">
-            {/* Profile Hero: Avatar with Camera button (NO green dot), Display Name, Handle & Bio */}
-            <div className="flex flex-col items-center text-center pt-0.5">
+          /* ── NORMAL PROFILE VIEW INSIDE WHITE AREA ── */
+          <>
+            {/* Profile Hero: Avatar with Camera button, Display Name, Handle & Bio */}
+            <div className="flex flex-col items-center text-center pt-1">
               <div className="relative">
                 <div
-                  className="w-20 h-20 sm:w-22 sm:h-22 rounded-full overflow-hidden flex items-center justify-center text-2xl sm:text-3xl font-black text-zinc-900 shadow-[0_10px_24px_rgba(0,0,0,0.1)] border-3 sm:border-4 border-white relative z-10"
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden flex items-center justify-center text-3xl sm:text-4xl font-black text-zinc-900 shadow-[0_12px_28px_rgba(0,0,0,0.12)] border-4 border-white relative z-10"
                   style={{ backgroundColor: avatarBg }}
                 >
                   {curImage ? (
@@ -807,7 +807,7 @@ export default function ProfilePanel({
                   )}
                   {isUploadingAvatar && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full z-20">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     </div>
                   )}
                 </div>
@@ -817,7 +817,7 @@ export default function ProfilePanel({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 z-20 w-7 h-7 rounded-full bg-[#141111] hover:bg-zinc-800 text-white flex items-center justify-center shadow-md border-2 border-white cursor-pointer active:scale-90 transition-all outline-none"
+                    className="absolute bottom-0 right-0 z-20 w-8 h-8 rounded-full bg-[#141111] hover:bg-zinc-800 text-white flex items-center justify-center shadow-md border-2 border-white cursor-pointer active:scale-90 transition-all outline-none"
                     title="Change Profile Photo"
                     aria-label="Change Profile Photo"
                   >
@@ -827,7 +827,7 @@ export default function ProfilePanel({
               </div>
 
               {/* Display Name */}
-              <h2 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tight mt-2 leading-tight">
+              <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight mt-3.5">
                 {displayName}
               </h2>
 
@@ -835,7 +835,7 @@ export default function ProfilePanel({
               <button
                 type="button"
                 onClick={handleCopyHandle}
-                className="inline-flex items-center gap-1 mt-0.5 px-2.5 py-0.5 rounded-full bg-purple-50 hover:bg-purple-100 text-purple-700 text-[11px] font-bold tracking-wide transition-all cursor-pointer border-0 outline-none active:scale-95"
+                className="inline-flex items-center gap-1 mt-1 px-3 py-1 rounded-full bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold tracking-wide transition-all cursor-pointer border-0 outline-none active:scale-95"
                 title="Copy username"
               >
                 <span>@{displayName}</span>
@@ -848,17 +848,18 @@ export default function ProfilePanel({
 
               {/* Bio */}
               {activeUserData?.bio ? (
-                <p className="text-xs sm:text-sm text-zinc-600 font-normal max-w-sm mt-1.5 leading-snug px-2 line-clamp-2">
+                <p className="text-sm text-zinc-600 font-normal max-w-sm mt-3 leading-relaxed px-3">
                   {activeUserData.bio}
                 </p>
               ) : isSelf ? (
                 <button
                   type="button"
                   onClick={() => {
+                    triggerHaptic('light');
                     setIsEditing(true);
                     onEditingChange?.(true);
                   }}
-                  className="text-[11px] text-purple-600 hover:text-purple-700 font-semibold mt-1 underline cursor-pointer border-0 bg-transparent"
+                  className="text-xs text-purple-600 hover:text-purple-700 font-semibold mt-2.5 underline cursor-pointer border-0 bg-transparent"
                 >
                   + Add a bio
                 </button>
@@ -866,21 +867,21 @@ export default function ProfilePanel({
             </div>
 
             {/* ── 3-COLUMN STATISTICS ROW (Likes, Followers, Following) ── */}
-            <div className="w-full bg-zinc-50 border border-zinc-100 rounded-[20px] p-2.5 sm:p-3 flex items-center justify-around text-center shadow-2xs">
+            <div className="w-full bg-zinc-50 border border-zinc-100 rounded-[24px] p-4 flex items-center justify-around text-center shadow-2xs">
               {/* Column 1: Likes (Prominently displayed) */}
               <div className="flex-1 flex flex-col items-center">
-                <div className="flex items-center gap-1 text-base sm:text-lg font-black text-zinc-900 tracking-tight">
-                  <Heart className="w-4 h-4 fill-rose-500 text-rose-500 shrink-0" />
+                <div className="flex items-center gap-1.5 text-lg font-black text-zinc-900 tracking-tight">
+                  <Heart className="w-4.5 h-4.5 fill-rose-500 text-rose-500 shrink-0" />
                   <span className="tabular-nums">
                     {likesCount > 999 ? `${(likesCount / 1000).toFixed(1)}k` : likesCount}
                   </span>
                 </div>
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
                   Likes
                 </span>
               </div>
 
-              <div className="w-px h-6 bg-zinc-200" />
+              <div className="w-px h-8 bg-zinc-200" />
 
               {/* Column 2: Followers (Clickable) */}
               <div
@@ -890,15 +891,15 @@ export default function ProfilePanel({
                 }}
                 className="flex-1 flex flex-col items-center cursor-pointer hover:opacity-80 transition-opacity"
               >
-                <span className="text-base sm:text-lg font-black text-zinc-900 tracking-tight tabular-nums">
+                <span className="text-lg font-black text-zinc-900 tracking-tight tabular-nums">
                   {followerCount > 999 ? `${(followerCount / 1000).toFixed(1)}k` : followerCount}
                 </span>
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
                   Followers
                 </span>
               </div>
 
-              <div className="w-px h-6 bg-zinc-200" />
+              <div className="w-px h-8 bg-zinc-200" />
 
               {/* Column 3: Following (Clickable) */}
               <div
@@ -908,10 +909,10 @@ export default function ProfilePanel({
                 }}
                 className="flex-1 flex flex-col items-center cursor-pointer hover:opacity-80 transition-opacity"
               >
-                <span className="text-base sm:text-lg font-black text-zinc-900 tracking-tight tabular-nums">
+                <span className="text-lg font-black text-zinc-900 tracking-tight tabular-nums">
                   {followingCount > 999 ? `${(followingCount / 1000).toFixed(1)}k` : followingCount}
                 </span>
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
                   Following
                 </span>
               </div>
@@ -919,12 +920,12 @@ export default function ProfilePanel({
 
             {/* Follow / Message action for other user viewed via ProfilePanel */}
             {!isSelf && (
-              <div className="flex items-center gap-2.5 w-full">
+              <div className="flex items-center gap-3 w-full">
                 <button
                   type="button"
                   onClick={handleFollowToggle}
                   disabled={isFollowLoading}
-                  className={`flex-1 py-3 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer outline-none border-0 ${
+                  className={`flex-1 py-3.5 px-6 rounded-full font-bold text-sm flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer outline-none border-0 ${
                     isFollowing
                       ? 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'
                       : hasSentRequest
@@ -953,7 +954,7 @@ export default function ProfilePanel({
                     onClose();
                     onOpenChat?.(targetUser);
                   }}
-                  className="flex-1 py-3 px-4 rounded-full bg-[#141111] hover:bg-zinc-800 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer outline-none border-0"
+                  className="flex-1 py-3.5 px-4 rounded-full bg-[#141111] hover:bg-zinc-800 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer outline-none border-0"
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span>Message</span>
@@ -961,12 +962,12 @@ export default function ProfilePanel({
               </div>
             )}
 
-            {/* ── ABOUT & DETAILS SECTION (Streamlined 3-Row Card: Username, Email, Member Since) ── */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider px-1">
+            {/* ── ABOUT & DETAILS SECTION ── */}
+            <div className="flex flex-col gap-2">
+              <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">
                 About & Account Details
               </span>
-              <div className="bg-zinc-50 border border-zinc-100 rounded-[20px] p-3 sm:p-3.5 flex flex-col gap-2.5 text-xs sm:text-sm divide-y divide-zinc-100/80 shadow-2xs">
+              <div className="bg-zinc-50 border border-zinc-100 rounded-[24px] p-4 flex flex-col gap-3 text-sm divide-y divide-zinc-100/80 shadow-2xs">
                 {/* Username */}
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-zinc-500">Username</span>
@@ -975,7 +976,7 @@ export default function ProfilePanel({
 
                 {/* Email (Without verified badge) */}
                 {curEmail && (
-                  <div className="flex items-center justify-between pt-2.5">
+                  <div className="flex items-center justify-between pt-3">
                     <span className="font-medium text-zinc-500">Email Address</span>
                     <span className="font-semibold text-zinc-800 truncate max-w-[200px]">
                       {curEmail}
@@ -984,7 +985,7 @@ export default function ProfilePanel({
                 )}
 
                 {/* Member Since */}
-                <div className="flex items-center justify-between pt-2.5">
+                <div className="flex items-center justify-between pt-3">
                   <span className="font-medium text-zinc-500">Member Since</span>
                   <span className="font-semibold text-zinc-700 flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-zinc-400" />
@@ -1001,36 +1002,40 @@ export default function ProfilePanel({
               </div>
             </div>
 
-            {/* ── ACCOUNT ACTIONS (Both Dark Like Logout, Positioned Comfortably Above Bottom Bar) ── */}
+            {/* ── ACCOUNT ACTIONS (Both Dark Like Logout, Stacked Full Width) ── */}
             {isSelf && (
-              <div className="flex items-center gap-2.5 w-full mt-0.5">
+              <div className="flex flex-col gap-2.5 mt-1 pt-2">
+                <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">
+                  Account Actions
+                </span>
+
                 {/* Sleek Dark Log Out Button */}
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="flex-1 py-3 px-4 rounded-full bg-[#141111] hover:bg-zinc-800 active:bg-zinc-900 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] shadow-sm border-0"
+                  className="w-full py-4 px-6 rounded-full bg-[#141111] hover:bg-zinc-800 text-white font-bold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98] shadow-sm border-0"
                   aria-label="Log Out of Account"
                 >
-                  <LogOut className="w-3.5 h-3.5 text-white" strokeWidth={2.2} />
+                  <LogOut className="w-4 h-4" strokeWidth={2.2} />
                   <span>Log Out</span>
                 </button>
 
-                {/* Sleek Dark Delete Account Button (Same Dark Style as Logout) */}
+                {/* Sleek Dark Delete Account Button (Styled exactly like Logout button) */}
                 <button
                   type="button"
                   onClick={() => {
                     triggerHaptic('medium');
                     setShowDeleteConfirm(true);
                   }}
-                  className="flex-1 py-3 px-4 rounded-full bg-[#141111] hover:bg-zinc-800 active:bg-zinc-900 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] shadow-sm border-0"
+                  className="w-full py-4 px-6 rounded-full bg-[#141111] hover:bg-zinc-800 text-white font-bold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98] shadow-sm border-0"
                   aria-label="Delete Account"
                 >
-                  <Trash2 className="w-3.5 h-3.5 text-white" strokeWidth={2} />
+                  <Trash2 className="w-4 h-4 text-white" strokeWidth={2.2} />
                   <span>Delete Account</span>
                 </button>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
 
