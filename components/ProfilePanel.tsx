@@ -137,7 +137,9 @@ export default function ProfilePanel({
   const curUsername = activeUserData?.username || (session?.user as any)?.username || 'User';
   const [localUsername, setLocalUsername] = useState(curUsername);
   const [localImage, setLocalImage] = useState<string | null | undefined>(undefined);
-  const curImage = localImage !== undefined ? (localImage || '') : (activeUserData?.image || session?.user?.image || '');
+  const curImage = localImage !== undefined
+    ? (localImage || '')
+    : (activeUserData && 'image' in activeUserData ? (activeUserData.image || '') : (session?.user?.image || ''));
 
   const [selectedEmojiIdx, setSelectedEmojiIdx] = useState<number | null>(null);
 
@@ -161,7 +163,7 @@ export default function ProfilePanel({
   // Sync counts and details on mount or user change
   useEffect(() => {
     if (activeUserData) {
-      setLocalImage(undefined);
+      setLocalImage(activeUserData.image || '');
       const followers = activeUserData.followers || [];
       const following = activeUserData.following || [];
       setFollowerCount(followers.length);
@@ -260,7 +262,35 @@ export default function ProfilePanel({
         const base64 = reader.result as string;
         const res = await updateProfileImageAction(base64);
         if (res.success) {
-          setLocalImage(res.image || base64);
+          const newImage = res.image || base64;
+          setLocalImage(newImage);
+          if (session?.user) {
+            (session.user as any).image = newImage;
+            updateSession({ image: newImage }).catch(() => {});
+          }
+          if (fullUser) {
+            fullUser.image = newImage;
+          }
+          if (typeof window !== 'undefined') {
+            const myId = (session?.user as any)?.id;
+            if (myId) {
+              const cached = localStorage.getItem(`cached_profile_details_${myId}`);
+              if (cached) {
+                try {
+                  const parsed = JSON.parse(cached);
+                  parsed.image = newImage;
+                  localStorage.setItem(`cached_profile_details_${myId}`, JSON.stringify(parsed));
+                } catch (e) {}
+              }
+              const currentMeta = DeviceAccountStore.getCurrentAccount();
+              if (currentMeta) {
+                DeviceAccountStore.addOrUpdateAccount({ ...currentMeta, image: newImage }).catch(() => {});
+              }
+            }
+            window.dispatchEvent(new CustomEvent('user_profile_updated', {
+              detail: { userId: myId, image: newImage, username: localUsername || curUsername }
+            }));
+          }
           refreshProfile?.();
         } else {
           showToast(res.error || 'Failed to update photo');
@@ -293,47 +323,58 @@ export default function ProfilePanel({
     }
 
     const nextPalette = PASTEL_PALETTES[nextIdx];
-    const generatedDataUrl = generateEmojiAvatarDataUrl(nextPalette.emoji, nextPalette.bg);
+    // Immediately clear image so the random emoji avatar is displayed
+    setLocalImage('');
 
-    setLocalImage(generatedDataUrl || '');
     try {
       const myId = (session?.user as any)?.id || (session?.user?.email ? (session.user.email as string).toLowerCase().trim() : '');
       const myEmail = session?.user?.email ? (session.user.email as string).toLowerCase().trim() : undefined;
 
-      const res = await updateProfileImageAction(generatedDataUrl || '');
-      const finalImage = res?.image || generatedDataUrl || '';
+      // 1. Remove photo in PostgreSQL database (sets image = null)
+      await updateProfileImageAction('');
+
+      // 2. Remove photo in Render backend if used
       try {
-        await renderApiClient.updateProfile({ image: finalImage }, myId, myEmail);
+        await renderApiClient.updateProfile({ image: '' }, myId, myEmail);
       } catch (err) {}
 
+      // 3. Clear from NextAuth session
       if (session?.user) {
-        (session.user as any).image = finalImage;
-        updateSession({ image: finalImage }).catch(() => {});
-      }
-      if (fullUser) {
-        fullUser.image = finalImage;
+        (session.user as any).image = null;
+        updateSession({ image: null }).catch(() => {});
       }
 
+      // 4. Clear from fullUser state
+      if (fullUser) {
+        fullUser.image = null;
+      }
+
+      // 5. Clear from local storage and account store
       if (typeof window !== 'undefined') {
         if (myId) {
           const cached = localStorage.getItem(`cached_profile_details_${myId}`);
           if (cached) {
             try {
               const parsed = JSON.parse(cached);
-              parsed.image = finalImage;
+              parsed.image = null;
               localStorage.setItem(`cached_profile_details_${myId}`, JSON.stringify(parsed));
             } catch (e) {}
           }
+          const currentMeta = DeviceAccountStore.getCurrentAccount();
+          if (currentMeta) {
+            DeviceAccountStore.addOrUpdateAccount({ ...currentMeta, image: null }).catch(() => {});
+          }
         }
         window.dispatchEvent(new CustomEvent('user_profile_updated', {
-          detail: { userId: myId, email: myEmail, username: localUsername || curUsername, image: finalImage }
+          detail: { userId: myId, email: myEmail, username: localUsername || curUsername, image: null }
         }));
       }
+
       refreshProfile?.();
       showToast(`Avatar changed to ${nextPalette.emoji}`);
     } catch (err) {
-      console.error('Error removing/randomizing avatar:', err);
-      showToast('Failed to change emoji avatar');
+      console.error('Error removing avatar:', err);
+      showToast('Failed to remove photo');
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -668,18 +709,20 @@ export default function ProfilePanel({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-3.5 py-1.5 rounded-full bg-purple-50 hover:bg-purple-100 active:scale-95 text-purple-700 text-xs font-bold transition-all cursor-pointer border-0"
+                  className="px-4 py-2 rounded-full bg-zinc-100 hover:bg-zinc-200 active:scale-95 text-zinc-800 text-xs font-bold transition-all cursor-pointer border-0 flex items-center gap-1.5 shadow-xs"
                 >
-                  Change Photo
+                  <Camera className="w-3.5 h-3.5 text-zinc-700" strokeWidth={2.2} />
+                  <span>Change Photo</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleRemoveAvatar}
                   disabled={isUploadingAvatar}
-                  className="px-3.5 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 text-xs font-bold transition-all cursor-pointer border-0 disabled:opacity-50"
-                  title="Roll random emoji avatar"
+                  className="px-4 py-2 rounded-full bg-[#141111] hover:bg-zinc-800 active:scale-95 text-white text-xs font-bold transition-all cursor-pointer border-0 disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
+                  title="Remove photo or roll random emoji"
                 >
-                  {isUploadingAvatar ? 'Updating...' : (curImage && !curImage.startsWith('data:image/png') ? 'Remove Profile Pic' : 'Random Emoji')}
+                  <Trash2 className="w-3.5 h-3.5 text-white" strokeWidth={2.2} />
+                  <span>{isUploadingAvatar ? 'Updating...' : (curImage ? 'Remove Profile Pic' : 'Random Emoji')}</span>
                 </button>
               </div>
             </div>

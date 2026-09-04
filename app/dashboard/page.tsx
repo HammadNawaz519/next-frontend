@@ -221,7 +221,7 @@ export default function DashboardPage() {
           ...prev,
           ...(username ? { username } : {}),
           ...(name ? { name } : {}),
-          ...(image ? { image } : {}),
+          ...(image !== undefined ? { image: image || null } : {}),
           ...(bio !== undefined ? { bio } : {}),
           ...(website !== undefined ? { website } : {}),
         };

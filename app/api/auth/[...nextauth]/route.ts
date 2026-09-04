@@ -101,20 +101,28 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account }) {
       if (account?.provider === "google" && user.email) {
         try {
-          // Upsert Google user into DB so they have a real user record
-          await prisma.user.upsert({
+          // Check if user already exists so we don't overwrite user's custom/removed image preference
+          const existing = await prisma.user.findUnique({
             where: { email: user.email },
-            update: {
-              image: user.image ?? undefined,
-              emailVerified: new Date(),
-            },
-            create: {
-              email: user.email,
-              image: user.image,
-              emailVerified: new Date(),
-              username: user.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, ""),
-            },
+            select: { id: true, image: true },
           });
+          if (!existing) {
+            await prisma.user.create({
+              data: {
+                email: user.email,
+                image: user.image,
+                emailVerified: new Date(),
+                username: user.email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, ""),
+              },
+            });
+          } else {
+            await prisma.user.update({
+              where: { email: user.email },
+              data: {
+                emailVerified: new Date(),
+              },
+            });
+          }
         } catch (err) {
           console.error("[GOOGLE_SIGNIN_DB_ERROR]", err);
           // Don't block sign-in if DB save fails
@@ -127,25 +135,27 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account, trigger, session }) {
       if (user) {
         if (account?.provider === "google" && user.email) {
-          // Fetch real DB user ID and username for Google user
+          // Fetch real DB user ID, username, and DB-stored image
           try {
             const dbUser = await prisma.user.findUnique({
               where: { email: user.email },
-              select: { id: true, username: true },
+              select: { id: true, username: true, image: true },
             });
             token.id = dbUser?.id ?? user.id;
             token.username = dbUser?.username ?? (user as any).username ?? null;
+            token.picture = dbUser ? dbUser.image : (user.image ?? null);
           } catch {
             token.id = user.id;
             token.username = (user as any).username ?? null;
+            token.picture = user.image ?? null;
           }
         } else {
           token.id = user.id;
           token.username = (user as any).username ?? (user as any).name ?? null;
+          token.picture = user.image ?? null;
         }
         token.email = user.email;
         token.name = token.username || (user as any).name || null;
-        token.picture = user.image ?? null;
         token.provider = account?.provider ?? "credentials";
       }
 
@@ -157,7 +167,9 @@ export const authOptions: NextAuthOptions = {
           token.name = session.name;
           token.username = session.name;
         }
-        if (session.image) token.picture = session.image;
+        if (session.image !== undefined) {
+          token.picture = session.image || null;
+        }
       }
 
       return token;
@@ -170,7 +182,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).username = token.username;
         session.user.email = token.email as string;
         session.user.name = (token.username || token.name) as string;
-        session.user.image = token.picture as string;
+        session.user.image = (token.picture as string) || null;
       }
       return session;
     },
