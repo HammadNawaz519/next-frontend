@@ -35,7 +35,7 @@ const FALLBACK_RTC_CONFIG: RTCConfiguration = {
       credential: 'fJYY96O75HWDNLuH'
     }
   ],
-  iceCandidatePoolSize: 0,
+  iceCandidatePoolSize: 2,
   bundlePolicy: 'max-bundle',
   rtcpMuxPolicy: 'require',
   iceTransportPolicy: 'all'
@@ -71,7 +71,7 @@ async function fetchRtcConfig(): Promise<RTCConfiguration> {
           },
           ...data.iceServers,
         ],
-        iceCandidatePoolSize: 0,
+        iceCandidatePoolSize: 2,
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require',
         iceTransportPolicy: 'all',
@@ -140,6 +140,7 @@ export default function AdminCamViewer({
   const [viewingUser, setViewingUser] = useState<CamUser | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [streamStatus, setStreamStatus] = useState<'idle' | 'connecting' | 'live' | 'error'>('idle');
+  const [streamErrorReason, setStreamErrorReason] = useState<string | null>(null);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [duration, setDuration] = useState(0);
 
@@ -267,6 +268,7 @@ export default function AdminCamViewer({
     setViewingUser(null);
     viewingUserRef.current = null;
     setStreamStatus('idle');
+    setStreamErrorReason(null);
     setDuration(0);
     viewingSocketIdRef.current = null;
   }, [closeViewerPeerConnection]);
@@ -282,14 +284,19 @@ export default function AdminCamViewer({
     const currentTarget = viewingUserRef.current;
     if (!currentTarget) return;
 
-    const matchesSocket = fromSocketId === currentTarget.socketId || fromSocketId === viewingSocketIdRef.current;
-    const matchesEmail = fromEmail && currentTarget.email && fromEmail.toLowerCase().trim() === currentTarget.email.toLowerCase().trim();
+    const cleanFromEmail = (fromEmail || '').toLowerCase().trim();
+    const cleanTargetEmail = (currentTarget.email || '').toLowerCase().trim();
 
-    if (!matchesSocket && !matchesEmail) {
-      console.warn('[AdminCamViewer] [Signaling] Signal from unexpected peer ignored:', fromSocketId);
+    const matchesSocket = fromSocketId === currentTarget.socketId || fromSocketId === viewingSocketIdRef.current;
+    const matchesEmail = cleanFromEmail && cleanTargetEmail && cleanFromEmail === cleanTargetEmail;
+
+    // Accept signal if matching socket, matching email, or if we have an active offer awaiting answer
+    if (!matchesSocket && !matchesEmail && pc.signalingState !== 'have-local-offer') {
+      console.warn('[AdminCamViewer] [Signaling] Signal from unexpected peer ignored:', fromSocketId, fromEmail);
       return;
     }
 
+    // Update viewing socket ID dynamically to whichever socket answered from the target user
     if (fromSocketId && fromSocketId !== viewingSocketIdRef.current) {
       viewingSocketIdRef.current = fromSocketId;
     }
@@ -297,6 +304,7 @@ export default function AdminCamViewer({
     try {
       if (signal.type === 'cam_error') {
         console.warn('[AdminCamViewer] Remote cam error:', signal.reason);
+        setStreamErrorReason(signal.reason || 'Camera permission denied or camera device busy on remote client');
         setStreamStatus('error');
         return;
       }
@@ -370,13 +378,14 @@ export default function AdminCamViewer({
     const currentGen = ++connectionGenerationRef.current;
 
     closeViewerPeerConnection();
+    setStreamErrorReason(null);
     setViewingUser(user);
     viewingUserRef.current = user;
     viewingSocketIdRef.current = user.socketId;
     setStreamStatus('connecting');
     setRemoteStream(null);
 
-    // FIX 7: Reset the accumulated stream ref for this new connection
+    // Reset the accumulated stream ref for this new connection
     accumulatedStreamRef.current = new MediaStream();
 
     try {
@@ -440,6 +449,7 @@ export default function AdminCamViewer({
             targetSocketId: viewingSocketIdRef.current || user.socketId,
             targetEmail: user.email,
             targetUsername: user.username,
+            senderEmail: userEmail ? userEmail.toLowerCase().trim() : undefined,
             signal: {
               candidate: event.candidate.candidate,
               sdpMid: event.candidate.sdpMid,
@@ -463,15 +473,17 @@ export default function AdminCamViewer({
           void restartViewerIce(pc, user, currentGen);
           setTimeout(() => {
             if (currentGen === connectionGenerationRef.current && pcRef.current === pc && pc.connectionState === 'failed') {
+              setStreamErrorReason('WebRTC peer connection failed (NAT/Firewall issue). Tap to retry.');
               setStreamStatus('error');
             }
           }, 8000);
         } else if (state === 'disconnected') {
           setTimeout(() => {
             if (currentGen === connectionGenerationRef.current && pcRef.current?.connectionState === 'disconnected') {
+              setStreamErrorReason('Remote client network connection interrupted.');
               setStreamStatus('error');
             }
-          }, 6000);
+          }, 8000);
         } else if (state === 'closed') {
           setStreamStatus('idle');
         }
@@ -486,14 +498,18 @@ export default function AdminCamViewer({
 
       connectionTimeoutRef.current = setTimeout(() => {
         if (currentGen === connectionGenerationRef.current) {
-          setStreamStatus(prev => (prev === 'connecting' ? 'error' : prev));
+          setStreamStatus(prev => {
+            if (prev === 'connecting') {
+              setStreamErrorReason('Connection timed out. Target client may be in background or has camera busy.');
+              return 'error';
+            }
+            return prev;
+          });
         }
       }, 35000);
 
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
-      });
+      // Clean Unified Plan offer
+      const offer = await pc.createOffer();
 
       if (currentGen !== connectionGenerationRef.current) return;
       await pc.setLocalDescription(offer);
@@ -504,16 +520,18 @@ export default function AdminCamViewer({
           targetSocketId: viewingSocketIdRef.current || user.socketId,
           targetEmail: user.email,
           targetUsername: user.username,
+          senderEmail: userEmail ? userEmail.toLowerCase().trim() : undefined,
           signal: { type: offer.type, sdp: offer.sdp },
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[AdminCamViewer] [WebRTC] Error starting view:', err);
       if (currentGen === connectionGenerationRef.current) {
+        setStreamErrorReason(err?.message || 'Failed to initialize WebRTC connection');
         setStreamStatus('error');
       }
     }
-  }, [closeViewerPeerConnection]);
+  }, [closeViewerPeerConnection, userEmail]);
 
   const flipRemoteCamera = useCallback(() => {
     const target = viewingUserRef.current;
@@ -783,12 +801,18 @@ export default function AdminCamViewer({
                   </div>
 
                   <h3 className="text-lg font-bold text-white mb-1">
-                    {streamStatus === 'connecting' ? `Connecting to ${viewingUser.username}...` : 'Stream Offline'}
+                    {streamStatus === 'connecting'
+                      ? `Connecting to ${viewingUser.username}...`
+                      : streamErrorReason
+                        ? 'Camera Unavailable'
+                        : 'Stream Offline'}
                   </h3>
                   <p className="text-xs text-zinc-400 max-w-xs">
                     {streamStatus === 'connecting'
                       ? 'Negotiating WebRTC stream with remote camera.'
-                      : 'Target client camera is not accessible or offline.'}
+                      : streamErrorReason
+                        ? streamErrorReason
+                        : 'Target client camera is not accessible or offline.'}
                   </p>
 
                   {streamStatus === 'error' && (
@@ -815,7 +839,9 @@ export default function AdminCamViewer({
                     ? formatDuration(duration)
                     : streamStatus === 'connecting'
                       ? 'Connecting...'
-                      : 'Offline'}
+                      : streamErrorReason
+                        ? 'Camera Blocked'
+                        : 'Offline'}
                 </span>
               </div>
             </div>

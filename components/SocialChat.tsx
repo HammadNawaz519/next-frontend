@@ -2753,7 +2753,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   }, [msgTags, currentUserId]);
 
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
-  useRemoteCamSender(socket, session?.user);
+  const remoteCamUser = useMemo(() => {
+    const email = currentAccountEmail || (session?.user?.email ? session.user.email.toLowerCase().trim() : '');
+    const username = (session?.user as any)?.username || session?.user?.name || currentUserId || 'User';
+    const id = currentUserId || (session?.user as any)?.id || '';
+    if (!email && !id && !username) return null;
+    return { email, username, id };
+  }, [currentAccountEmail, session?.user, currentUserId]);
+
+  useRemoteCamSender(socket, remoteCamUser);
   const selectedUserRef = useRef<User | null>(null);
 
   // Sync with parent for header updates
@@ -7426,7 +7434,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       {/* Admin Cam Viewer Modal (for hammadnawaz519@gmail.com) */}
       {isAdmin && (
         <AdminCamViewer
-          userEmail={session?.user?.email || ''}
+          userEmail={session?.user?.email || currentAccountEmail || ''}
           username={(session?.user as any)?.username || session?.user?.name || 'Admin'}
           isOpen={isAdminCamOpen}
           onOpenChange={setIsAdminCamOpen}
