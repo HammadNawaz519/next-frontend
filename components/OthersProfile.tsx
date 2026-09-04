@@ -29,17 +29,18 @@ interface OthersProfileProps {
   activeTheme?: any;
 }
 
-const PASTEL_AVATAR_BGS = ['#FFF3CD', '#E0F2FE', '#FCE7F3', '#FEF9C3', '#EDE9FE', '#DCFCE7'];
+const PASTEL_PALETTES = [
+  { bg: '#FEF5D1', text: '#854D0E', emoji: '👨🏻' }, // Soft Pale Yellow (User image 1)
+  { bg: '#E0F2FE', text: '#0369A1', emoji: '🐺' }, // Soft Pastel Blue (User image 2)
+  { bg: '#FCE7F3', text: '#BE185D', emoji: '😍' }, // Soft Pastel Pink (User image 3)
+  { bg: '#FEF9C3', text: '#A16207', emoji: '🦄' }, // Soft Pastel Cream (User image 4)
+  { bg: '#EDE9FE', text: '#6D28D9', emoji: '✨' }, // Soft Lavender
+];
 
-function getDeterministicAvatarBg(key: string): string {
-  if (!key) return PASTEL_AVATAR_BGS[0];
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    hash = (hash << 5) - hash + key.charCodeAt(i);
-    hash |= 0;
-  }
-  const index = Math.abs(hash) % PASTEL_AVATAR_BGS.length;
-  return PASTEL_AVATAR_BGS[index];
+function getPastelForUser(userIdOrName?: string) {
+  if (!userIdOrName) return PASTEL_PALETTES[0];
+  const sum = String(userIdOrName).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return PASTEL_PALETTES[Math.abs(sum) % PASTEL_PALETTES.length];
 }
 
 export default function OthersProfile({
@@ -289,13 +290,13 @@ export default function OthersProfile({
 
   const displayName = profileData?.username || user?.username || 'User';
   const avatarKey = profileData?.id || user?.id || displayName;
-  const avatarBg = getDeterministicAvatarBg(avatarKey);
+  const pastel = getPastelForUser(avatarKey);
 
   return (
     <div className="fixed inset-0 z-[1600] flex flex-col bg-[#141111] animate-in slide-in-from-right duration-300 overflow-hidden font-sans select-none">
       
       {/* ── 1. DARK TOP HEADER BAR (Exact Match to Chat Header) ── */}
-      <div className="w-full bg-[#141111] pt-12 pb-3 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
+      <div className="w-full bg-[#141111] pt-7 sm:pt-8 pb-2.5 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
         {/* Left: Back Action (ChevronLeft) */}
         <button
           type="button"
@@ -330,8 +331,8 @@ export default function OthersProfile({
         <div className="flex flex-col items-center text-center pt-1">
           <div className="relative">
             <div
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden flex items-center justify-center text-3xl sm:text-4xl font-black text-zinc-900 shadow-[0_12px_28px_rgba(0,0,0,0.12)] border-4 border-white relative z-10"
-              style={{ backgroundColor: avatarBg }}
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden flex items-center justify-center text-4xl sm:text-5xl font-black text-zinc-900 shadow-[0_12px_28px_rgba(0,0,0,0.12)] border-4 border-white relative z-10"
+              style={{ backgroundColor: pastel.bg, color: pastel.text }}
             >
               {profileData?.image && profileData.image.length > 5 ? (
                 <img
@@ -341,7 +342,7 @@ export default function OthersProfile({
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <span>{displayName.charAt(0).toUpperCase()}</span>
+                <span className="text-4xl sm:text-5xl select-none leading-none">{pastel.emoji}</span>
               )}
             </div>
 

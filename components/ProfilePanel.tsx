@@ -49,15 +49,18 @@ interface Props {
   onOpenUpload?: (type: 'single_image' | 'reel') => void;
 }
 
-const PASTEL_AVATAR_BGS = ['#FFF3CD', '#E0F2FE', '#FCE7F3', '#FEF9C3', '#EDE9FE', '#DCFCE7'];
-function getPastelAvatarBg(key: string): string {
-  if (!key) return PASTEL_AVATAR_BGS[0];
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    hash = (hash << 5) - hash + key.charCodeAt(i);
-    hash |= 0;
-  }
-  return PASTEL_AVATAR_BGS[Math.abs(hash) % PASTEL_AVATAR_BGS.length];
+const PASTEL_PALETTES = [
+  { bg: '#FEF5D1', text: '#854D0E', emoji: '👨🏻' }, // Soft Pale Yellow (User image 1)
+  { bg: '#E0F2FE', text: '#0369A1', emoji: '🐺' }, // Soft Pastel Blue (User image 2)
+  { bg: '#FCE7F3', text: '#BE185D', emoji: '😍' }, // Soft Pastel Pink (User image 3)
+  { bg: '#FEF9C3', text: '#A16207', emoji: '🦄' }, // Soft Pastel Cream (User image 4)
+  { bg: '#EDE9FE', text: '#6D28D9', emoji: '✨' }, // Soft Lavender
+];
+
+function getPastelForUser(userIdOrName?: string) {
+  if (!userIdOrName) return PASTEL_PALETTES[0];
+  const sum = String(userIdOrName).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return PASTEL_PALETTES[Math.abs(sum) % PASTEL_PALETTES.length];
 }
 
 export default function ProfilePanel({
@@ -273,8 +276,10 @@ export default function ProfilePanel({
         }));
       }
       refreshProfile?.();
+      showToast('Profile picture removed');
     } catch (err) {
       console.error('Error removing avatar:', err);
+      showToast('Failed to remove photo');
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -476,7 +481,7 @@ export default function ProfilePanel({
   if (!isOpen) return null;
 
   const displayName = isSelf ? (localUsername || curUsername) : (activeUserData?.username || curUsername);
-  const avatarBg = getPastelAvatarBg(activeUserData?.id || displayName);
+  const pastel = getPastelForUser(activeUserData?.id || activeUserData?.username || displayName);
 
   return (
     <div
@@ -493,7 +498,7 @@ export default function ProfilePanel({
       />
 
       {/* ── 1. DARK TOP HEADER BAR (Exact Chat UI Alignment) ── */}
-      <div className="w-full bg-[#141111] pt-12 pb-3 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
+      <div className="w-full bg-[#141111] pt-7 sm:pt-8 pb-2.5 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
         {/* Left: Frameless Back Button */}
         <button
           type="button"
@@ -558,9 +563,9 @@ export default function ProfilePanel({
       </div>
 
       {/* ── 2. CURVED WHITE SHEET (All Content & DP in White Area) ── */}
-      <div className="w-full flex-1 bg-white rounded-t-[32px] sm:rounded-t-[36px] px-5 pt-6 pb-28 flex flex-col gap-6 text-zinc-900 shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-y-auto no-scrollbar relative min-h-0">
+      <div className="w-full flex-1 bg-white rounded-t-[32px] sm:rounded-t-[36px] px-5 pt-3.5 pb-36 sm:pb-40 flex flex-col gap-3.5 text-zinc-900 shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-y-auto no-scrollbar relative min-h-0">
         {/* Sheet Drag Handle */}
-        <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-2 mb-1 shrink-0" />
+        <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto -mt-1 mb-0.5 shrink-0" />
 
         {isEditing ? (
           /* ── EDIT MODE INSIDE WHITE AREA ── */
@@ -582,16 +587,16 @@ export default function ProfilePanel({
             </div>
 
             {/* Avatar changer */}
-            <div className="flex flex-col items-center gap-2 py-2">
+            <div className="flex flex-col items-center gap-2 py-1">
               <div className="relative">
                 <div
-                  className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-3xl font-black text-zinc-900 shadow-md border-4 border-white"
-                  style={{ backgroundColor: avatarBg }}
+                  className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-4xl shadow-md border-4 border-white"
+                  style={{ backgroundColor: pastel.bg, color: pastel.text }}
                 >
                   {curImage ? (
                     <img src={curImage} alt={displayName} className="w-full h-full object-cover" />
                   ) : (
-                    <span>{displayName.charAt(0).toUpperCase()}</span>
+                    <span className="text-4xl select-none leading-none">{pastel.emoji}</span>
                   )}
                 </div>
                 <button
@@ -603,26 +608,23 @@ export default function ProfilePanel({
                   <Camera className="w-3.5 h-3.5 text-white" strokeWidth={2.4} />
                 </button>
               </div>
-              <div className="flex items-center gap-3 mt-1">
+              <div className="flex items-center gap-2 mt-1.5">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-xs font-bold text-purple-600 hover:text-purple-700 cursor-pointer border-0 bg-transparent"
+                  className="px-3.5 py-1.5 rounded-full bg-purple-50 hover:bg-purple-100 active:scale-95 text-purple-700 text-xs font-bold transition-all cursor-pointer border-0"
                 >
-                  Change Profile Photo
+                  Change Photo
                 </button>
                 {curImage ? (
-                  <>
-                    <span className="text-zinc-300 text-xs">•</span>
-                    <button
-                      type="button"
-                      onClick={handleRemoveAvatar}
-                      disabled={isUploadingAvatar}
-                      className="text-xs font-bold text-rose-500 hover:text-rose-600 cursor-pointer border-0 bg-transparent disabled:opacity-50"
-                    >
-                      {isUploadingAvatar ? 'Removing...' : 'Remove DP'}
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={handleRemoveAvatar}
+                    disabled={isUploadingAvatar}
+                    className="px-3.5 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 text-xs font-bold transition-all cursor-pointer border-0 disabled:opacity-50"
+                  >
+                    {isUploadingAvatar ? 'Removing...' : 'Remove Profile Pic'}
+                  </button>
                 ) : null}
               </div>
             </div>
@@ -731,7 +733,7 @@ export default function ProfilePanel({
                 (listTab === 'followers' ? followersList : followingList).map((userItem: any) => {
                   const itemUsername = userItem.username || userItem.name || 'User';
                   const itemName = userItem.name || itemUsername;
-                  const itemBg = getPastelAvatarBg(userItem.id || itemUsername);
+                  const itemPastel = getPastelForUser(userItem.id || itemUsername);
 
                   return (
                     <div
@@ -746,12 +748,12 @@ export default function ProfilePanel({
                       <div className="flex items-center gap-3 min-w-0">
                         <div
                           className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-800 text-sm font-bold shrink-0 shadow-xs overflow-hidden"
-                          style={{ backgroundColor: itemBg }}
+                          style={{ backgroundColor: itemPastel.bg, color: itemPastel.text }}
                         >
                           {userItem.image ? (
                             <img src={userItem.image} alt={itemName} className="w-full h-full object-cover" />
                           ) : (
-                            <span>{itemUsername.charAt(0).toUpperCase()}</span>
+                            <span className="text-base select-none leading-none">{itemPastel.emoji}</span>
                           )}
                         </div>
 
@@ -792,8 +794,8 @@ export default function ProfilePanel({
             <div className="flex flex-col items-center text-center pt-1">
               <div className="relative">
                 <div
-                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden flex items-center justify-center text-3xl sm:text-4xl font-black text-zinc-900 shadow-[0_12px_28px_rgba(0,0,0,0.12)] border-4 border-white relative z-10"
-                  style={{ backgroundColor: avatarBg }}
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden flex items-center justify-center text-4xl sm:text-5xl font-black text-zinc-900 shadow-[0_12px_28px_rgba(0,0,0,0.12)] border-4 border-white relative z-10"
+                  style={{ backgroundColor: pastel.bg, color: pastel.text }}
                 >
                   {curImage ? (
                     <img
@@ -803,7 +805,7 @@ export default function ProfilePanel({
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <span>{displayName.charAt(0).toUpperCase()}</span>
+                    <span className="text-4xl sm:text-5xl select-none leading-none">{pastel.emoji}</span>
                   )}
                   {isUploadingAvatar && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full z-20">
@@ -827,7 +829,7 @@ export default function ProfilePanel({
               </div>
 
               {/* Display Name */}
-              <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight mt-3.5">
+              <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight mt-2.5">
                 {displayName}
               </h2>
 
@@ -835,7 +837,7 @@ export default function ProfilePanel({
               <button
                 type="button"
                 onClick={handleCopyHandle}
-                className="inline-flex items-center gap-1 mt-1 px-3 py-1 rounded-full bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold tracking-wide transition-all cursor-pointer border-0 outline-none active:scale-95"
+                className="inline-flex items-center gap-1 mt-1 px-3 py-0.5 rounded-full bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold tracking-wide transition-all cursor-pointer border-0 outline-none active:scale-95"
                 title="Copy username"
               >
                 <span>@{displayName}</span>
@@ -848,7 +850,7 @@ export default function ProfilePanel({
 
               {/* Bio */}
               {activeUserData?.bio ? (
-                <p className="text-sm text-zinc-600 font-normal max-w-sm mt-3 leading-relaxed px-3">
+                <p className="text-sm text-zinc-600 font-normal max-w-sm mt-2 leading-relaxed px-3">
                   {activeUserData.bio}
                 </p>
               ) : isSelf ? (
@@ -859,7 +861,7 @@ export default function ProfilePanel({
                     setIsEditing(true);
                     onEditingChange?.(true);
                   }}
-                  className="text-xs text-purple-600 hover:text-purple-700 font-semibold mt-2.5 underline cursor-pointer border-0 bg-transparent"
+                  className="text-xs text-purple-600 hover:text-purple-700 font-semibold mt-1.5 underline cursor-pointer border-0 bg-transparent"
                 >
                   + Add a bio
                 </button>
@@ -867,7 +869,7 @@ export default function ProfilePanel({
             </div>
 
             {/* ── 3-COLUMN STATISTICS ROW (Likes, Followers, Following) ── */}
-            <div className="w-full bg-zinc-50 border border-zinc-100 rounded-[24px] p-4 flex items-center justify-around text-center shadow-2xs">
+            <div className="w-full bg-zinc-50 border border-zinc-100 rounded-[22px] py-3 px-4 flex items-center justify-around text-center shadow-2xs">
               {/* Column 1: Likes (Prominently displayed) */}
               <div className="flex-1 flex flex-col items-center">
                 <div className="flex items-center gap-1.5 text-lg font-black text-zinc-900 tracking-tight">
@@ -876,12 +878,12 @@ export default function ProfilePanel({
                     {likesCount > 999 ? `${(likesCount / 1000).toFixed(1)}k` : likesCount}
                   </span>
                 </div>
-                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
                   Likes
                 </span>
               </div>
 
-              <div className="w-px h-8 bg-zinc-200" />
+              <div className="w-px h-7 bg-zinc-200" />
 
               {/* Column 2: Followers (Clickable) */}
               <div
@@ -894,12 +896,12 @@ export default function ProfilePanel({
                 <span className="text-lg font-black text-zinc-900 tracking-tight tabular-nums">
                   {followerCount > 999 ? `${(followerCount / 1000).toFixed(1)}k` : followerCount}
                 </span>
-                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
                   Followers
                 </span>
               </div>
 
-              <div className="w-px h-8 bg-zinc-200" />
+              <div className="w-px h-7 bg-zinc-200" />
 
               {/* Column 3: Following (Clickable) */}
               <div
@@ -912,7 +914,7 @@ export default function ProfilePanel({
                 <span className="text-lg font-black text-zinc-900 tracking-tight tabular-nums">
                   {followingCount > 999 ? `${(followingCount / 1000).toFixed(1)}k` : followingCount}
                 </span>
-                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
                   Following
                 </span>
               </div>
@@ -963,11 +965,11 @@ export default function ProfilePanel({
             )}
 
             {/* ── ABOUT & DETAILS SECTION ── */}
-            <div className="flex flex-col gap-2">
-              <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider px-1">
                 About & Account Details
               </span>
-              <div className="bg-zinc-50 border border-zinc-100 rounded-[24px] p-4 flex flex-col gap-3 text-sm divide-y divide-zinc-100/80 shadow-2xs">
+              <div className="bg-zinc-50 border border-zinc-100 rounded-[20px] p-3.5 flex flex-col gap-2.5 text-sm divide-y divide-zinc-100/80 shadow-2xs">
                 {/* Username */}
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-zinc-500">Username</span>
@@ -976,7 +978,7 @@ export default function ProfilePanel({
 
                 {/* Email (Without verified badge) */}
                 {curEmail && (
-                  <div className="flex items-center justify-between pt-3">
+                  <div className="flex items-center justify-between pt-2.5">
                     <span className="font-medium text-zinc-500">Email Address</span>
                     <span className="font-semibold text-zinc-800 truncate max-w-[200px]">
                       {curEmail}
@@ -985,7 +987,7 @@ export default function ProfilePanel({
                 )}
 
                 {/* Member Since */}
-                <div className="flex items-center justify-between pt-3">
+                <div className="flex items-center justify-between pt-2.5">
                   <span className="font-medium text-zinc-500">Member Since</span>
                   <span className="font-semibold text-zinc-700 flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-zinc-400" />
@@ -1004,8 +1006,8 @@ export default function ProfilePanel({
 
             {/* ── ACCOUNT ACTIONS (Both Dark Like Logout, Stacked Full Width) ── */}
             {isSelf && (
-              <div className="flex flex-col gap-2.5 mt-1 pt-2">
-                <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">
+              <div className="flex flex-col gap-2 mt-0.5 pt-1">
+                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider px-1">
                   Account Actions
                 </span>
 
@@ -1013,7 +1015,7 @@ export default function ProfilePanel({
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full py-4 px-6 rounded-full bg-[#141111] hover:bg-zinc-800 text-white font-bold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98] shadow-sm border-0"
+                  className="w-full py-3.5 px-6 rounded-full bg-[#141111] hover:bg-zinc-800 active:bg-zinc-900 text-white font-bold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98] shadow-sm border-0"
                   aria-label="Log Out of Account"
                 >
                   <LogOut className="w-4 h-4" strokeWidth={2.2} />
@@ -1027,7 +1029,7 @@ export default function ProfilePanel({
                     triggerHaptic('medium');
                     setShowDeleteConfirm(true);
                   }}
-                  className="w-full py-4 px-6 rounded-full bg-[#141111] hover:bg-zinc-800 text-white font-bold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98] shadow-sm border-0"
+                  className="w-full py-3.5 px-6 rounded-full bg-[#141111] hover:bg-zinc-800 active:bg-zinc-900 text-white font-bold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98] shadow-sm border-0"
                   aria-label="Delete Account"
                 >
                   <Trash2 className="w-4 h-4 text-white" strokeWidth={2.2} />
