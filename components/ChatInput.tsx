@@ -57,6 +57,21 @@ export default function ChatInput({
     }
   }, [message]);
 
+  // Cleanup recording streams and intervals on unmount to prevent microphone hardware leaks
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        try {
+          mediaRecorderRef.current.stop();
+        } catch (e) {}
+      }
+    };
+  }, []);
+
   // ── Backend-Powered Production Voice-to-Text Engine ──
   const vtt = useVoiceToText({
     onTranscript: (transcript) => {

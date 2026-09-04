@@ -110,7 +110,7 @@ export default function CallInterface({
     if (callStatus === 'ringing' && isCaller) {
       timeoutTimer = setTimeout(() => {
         const target = peer.email?.toLowerCase().trim();
-        socket.emit('call_timeout', { to: target, toUserId: peer.id });
+        socket.emit('call_timeout', { to: target, toUserId: peer.id, callId });
         handleEnd();
       }, 30000);
     }

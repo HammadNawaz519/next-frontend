@@ -1674,6 +1674,21 @@ const triggerStunningNotification = async (
 ) => {
   if (typeof window === 'undefined') return;
 
+  // Deterministic notification ID so Android updates conversation threads instead of stacking duplicates
+  const hashStr = (s: string) => {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) {
+      h = (h << 5) - h + s.charCodeAt(i);
+      h |= 0;
+    }
+    return Math.abs(h);
+  };
+  const notifId = type === 'call'
+    ? 99999
+    : extraData?.partnerId
+      ? (hashStr(String(extraData.partnerId)) % 100000) + 1
+      : (hashStr(title) % 100000) + 1;
+
   const isNative = typeof (window as any).Capacitor !== 'undefined' && typeof (window as any).Capacitor.isNativePlatform === 'function' && (window as any).Capacitor.isNativePlatform();
 
   if (isNative) {
@@ -1697,7 +1712,7 @@ const triggerStunningNotification = async (
           {
             title,
             body,
-            id: Math.floor(Math.random() * 1000000) + 1,
+            id: notifId,
             schedule: { at: new Date(Date.now() + 100) },
             channelId: type === 'call' ? 'incoming_calls' : 'chat_messages',
             extra: extraData
@@ -1791,6 +1806,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [hasMoreMessages, setHasMoreMessages] = useState<boolean>(true);
   const [isLoadingOlder, setIsLoadingOlder] = useState<boolean>(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  // Deduplication sets to prevent duplicate notifications and double unread increments
+  const notifiedMessageIdsRef = useRef<Set<string>>(new Set());
+  const notifiedCallIdsRef = useRef<Set<string>>(new Set());
 
   // Auto-select the user passed from another profile's Message button
   useEffect(() => {
@@ -3226,6 +3244,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return;
         }
 
+        // Check if message was already handled (deduplication check)
+        const isAlreadyProcessed = Boolean(msg.id && notifiedMessageIdsRef.current.has(String(msg.id)));
+        if (msg.id) {
+          notifiedMessageIdsRef.current.add(String(msg.id));
+          if (notifiedMessageIdsRef.current.size > 400) {
+            const first = notifiedMessageIdsRef.current.values().next().value;
+            if (first) notifiedMessageIdsRef.current.delete(first);
+          }
+        }
+
         // 2. Update Sidebar (Users / Contacts list)
         // Multi-field flexible partner matching
         const matchesPartner = (u: any) => Boolean(u && (
@@ -3250,7 +3278,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           lastMessageTime: msg.createdAt || new Date().toISOString(),
           unseenCount: isSentByMe
             ? (existingInRef.unseenCount || 0)
-            : (isChatOpen ? 0 : ((existingInRef.unseenCount || 0) + 1)),
+            : (isChatOpen ? 0 : (isAlreadyProcessed ? (existingInRef.unseenCount || 0) : ((existingInRef.unseenCount || 0) + 1))),
           isRequest: false
         } : {
           id: partnerId,
@@ -3320,7 +3348,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         const isAppBackgrounded = typeof document !== 'undefined' && document.visibilityState === 'hidden';
         const isChattingWithSomeoneElse = selectedUserRef.current?.id !== partnerId;
 
-        if (!isSentByMe && (isAppBackgrounded || isChattingWithSomeoneElse)) {
+        if (!isSentByMe && !isAlreadyProcessed && (isAppBackgrounded || isChattingWithSomeoneElse)) {
           const sender = usersRef.current.find(u => u.id === msg.senderId) || requestsRef.current.find(u => u.id === msg.senderId);
           // Prefer payload-embedded sender name (works for brand-new contacts not yet in usersRef)
           const senderName = msg.senderUsername || msg.sender?.username || sender?.username || 'Someone';
@@ -3378,6 +3406,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           newSocket.emit('reject_call', { to: data.from?.email?.toLowerCase().trim(), toUserId: data.from?.id, callId: data.callId });
           return;
         }
+
+        const isCallAlreadyHandled = Boolean(data.callId && notifiedCallIdsRef.current.has(String(data.callId)));
+        if (data.callId) {
+          notifiedCallIdsRef.current.add(String(data.callId));
+          if (notifiedCallIdsRef.current.size > 100) {
+            const first = notifiedCallIdsRef.current.values().next().value;
+            if (first) notifiedCallIdsRef.current.delete(first);
+          }
+        }
+        if (isCallAlreadyHandled) return;
+
         setIncomingCall(data);
 
         // *** FIX Bug 13: Auto-dismiss incoming call after 45 seconds ***
