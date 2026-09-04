@@ -50,12 +50,37 @@ interface Props {
 }
 
 const PASTEL_PALETTES = [
-  { bg: '#FEF5D1', text: '#854D0E', emoji: '👨🏻' }, // Soft Pale Yellow (User image 1)
-  { bg: '#E0F2FE', text: '#0369A1', emoji: '🐺' }, // Soft Pastel Blue (User image 2)
-  { bg: '#FCE7F3', text: '#BE185D', emoji: '😍' }, // Soft Pastel Pink (User image 3)
-  { bg: '#FEF9C3', text: '#A16207', emoji: '🦄' }, // Soft Pastel Cream (User image 4)
+  { bg: '#FEF5D1', text: '#854D0E', emoji: '👨🏻' }, // Soft Pale Yellow
+  { bg: '#E0F2FE', text: '#0369A1', emoji: '🐺' }, // Soft Pastel Blue
+  { bg: '#FCE7F3', text: '#BE185D', emoji: '😍' }, // Soft Pastel Pink
+  { bg: '#FEF9C3', text: '#A16207', emoji: '🦄' }, // Soft Pastel Cream
   { bg: '#EDE9FE', text: '#6D28D9', emoji: '✨' }, // Soft Lavender
+  { bg: '#DCFCE7', text: '#15803D', emoji: '🦊' }, // Soft Mint
+  { bg: '#FFEDD5', text: '#C2410C', emoji: '🚀' }, // Soft Peach
+  { bg: '#F3E8FF', text: '#7E22CE', emoji: '🐼' }, // Soft Violet
+  { bg: '#E0E7FF', text: '#4338CA', emoji: '⚡' }, // Soft Indigo
+  { bg: '#FEE2E2', text: '#B91C1C', emoji: '😎' }, // Soft Rose
 ];
+
+function generateEmojiAvatarDataUrl(emoji: string, bgColor: string): string {
+  if (typeof document === 'undefined') return '';
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.font = '120px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(emoji, 128, 136);
+    return canvas.toDataURL('image/png');
+  } catch (e) {
+    return '';
+  }
+}
 
 function getPastelForUser(userIdOrName?: string) {
   if (!userIdOrName) return PASTEL_PALETTES[0];
@@ -113,6 +138,17 @@ export default function ProfilePanel({
   const [localUsername, setLocalUsername] = useState(curUsername);
   const [localImage, setLocalImage] = useState<string | null | undefined>(undefined);
   const curImage = localImage !== undefined ? (localImage || '') : (activeUserData?.image || session?.user?.image || '');
+
+  const [selectedEmojiIdx, setSelectedEmojiIdx] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('user_random_emoji_idx');
+      if (saved !== null && !isNaN(Number(saved))) {
+        setSelectedEmojiIdx(Number(saved));
+      }
+    }
+  }, []);
 
   const followersList: any[] = activeUserData?.followers || [];
   const followingList: any[] = activeUserData?.following || [];
@@ -242,22 +278,40 @@ export default function ProfilePanel({
   const handleRemoveAvatar = async () => {
     triggerHaptic('medium');
     setIsUploadingAvatar(true);
-    setLocalImage('');
+
+    const fallbackIndex = Math.abs(String(activeUserData?.id || displayName).split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % PASTEL_PALETTES.length;
+    const currentIdx = selectedEmojiIdx !== null ? selectedEmojiIdx : fallbackIndex;
+
+    let nextIdx = Math.floor(Math.random() * PASTEL_PALETTES.length);
+    if (nextIdx === currentIdx) {
+      nextIdx = (currentIdx + 1) % PASTEL_PALETTES.length;
+    }
+
+    setSelectedEmojiIdx(nextIdx);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user_random_emoji_idx', String(nextIdx));
+    }
+
+    const nextPalette = PASTEL_PALETTES[nextIdx];
+    const generatedDataUrl = generateEmojiAvatarDataUrl(nextPalette.emoji, nextPalette.bg);
+
+    setLocalImage(generatedDataUrl || '');
     try {
       const myId = (session?.user as any)?.id || (session?.user?.email ? (session.user.email as string).toLowerCase().trim() : '');
       const myEmail = session?.user?.email ? (session.user.email as string).toLowerCase().trim() : undefined;
 
-      await updateProfileImageAction('');
+      const res = await updateProfileImageAction(generatedDataUrl || '');
+      const finalImage = res?.image || generatedDataUrl || '';
       try {
-        await renderApiClient.updateProfile({ image: '' }, myId, myEmail);
+        await renderApiClient.updateProfile({ image: finalImage }, myId, myEmail);
       } catch (err) {}
 
       if (session?.user) {
-        (session.user as any).image = null;
-        updateSession({ image: null }).catch(() => {});
+        (session.user as any).image = finalImage;
+        updateSession({ image: finalImage }).catch(() => {});
       }
       if (fullUser) {
-        fullUser.image = null;
+        fullUser.image = finalImage;
       }
 
       if (typeof window !== 'undefined') {
@@ -266,20 +320,20 @@ export default function ProfilePanel({
           if (cached) {
             try {
               const parsed = JSON.parse(cached);
-              parsed.image = null;
+              parsed.image = finalImage;
               localStorage.setItem(`cached_profile_details_${myId}`, JSON.stringify(parsed));
             } catch (e) {}
           }
         }
         window.dispatchEvent(new CustomEvent('user_profile_updated', {
-          detail: { userId: myId, email: myEmail, username: localUsername || curUsername, image: '' }
+          detail: { userId: myId, email: myEmail, username: localUsername || curUsername, image: finalImage }
         }));
       }
       refreshProfile?.();
-      showToast('Profile picture removed');
+      showToast(`Avatar changed to ${nextPalette.emoji}`);
     } catch (err) {
-      console.error('Error removing avatar:', err);
-      showToast('Failed to remove photo');
+      console.error('Error removing/randomizing avatar:', err);
+      showToast('Failed to change emoji avatar');
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -481,7 +535,9 @@ export default function ProfilePanel({
   if (!isOpen) return null;
 
   const displayName = isSelf ? (localUsername || curUsername) : (activeUserData?.username || curUsername);
-  const pastel = getPastelForUser(activeUserData?.id || activeUserData?.username || displayName);
+  const fallbackIndex = Math.abs(String(activeUserData?.id || displayName).split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % PASTEL_PALETTES.length;
+  const activeEmojiIndex = selectedEmojiIdx !== null ? selectedEmojiIdx : fallbackIndex;
+  const pastel = PASTEL_PALETTES[activeEmojiIndex % PASTEL_PALETTES.length];
 
   return (
     <div
@@ -498,7 +554,7 @@ export default function ProfilePanel({
       />
 
       {/* ── 1. DARK TOP HEADER BAR (Exact Chat UI Alignment) ── */}
-      <div className="w-full bg-[#141111] pt-7 sm:pt-8 pb-2.5 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
+      <div className="w-full bg-[#141111] pt-12 pb-3 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
         {/* Left: Frameless Back Button */}
         <button
           type="button"
@@ -616,16 +672,15 @@ export default function ProfilePanel({
                 >
                   Change Photo
                 </button>
-                {curImage ? (
-                  <button
-                    type="button"
-                    onClick={handleRemoveAvatar}
-                    disabled={isUploadingAvatar}
-                    className="px-3.5 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 text-xs font-bold transition-all cursor-pointer border-0 disabled:opacity-50"
-                  >
-                    {isUploadingAvatar ? 'Removing...' : 'Remove Profile Pic'}
-                  </button>
-                ) : null}
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  disabled={isUploadingAvatar}
+                  className="px-3.5 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 text-xs font-bold transition-all cursor-pointer border-0 disabled:opacity-50"
+                  title="Roll random emoji avatar"
+                >
+                  {isUploadingAvatar ? 'Updating...' : (curImage && !curImage.startsWith('data:image/png') ? 'Remove Profile Pic' : 'Random Emoji')}
+                </button>
               </div>
             </div>
 
@@ -869,7 +924,7 @@ export default function ProfilePanel({
             </div>
 
             {/* ── 3-COLUMN STATISTICS ROW (Likes, Followers, Following) ── */}
-            <div className="w-full bg-zinc-50 border border-zinc-100 rounded-[22px] py-3 px-4 flex items-center justify-around text-center shadow-2xs">
+            <div className="w-full bg-zinc-50 border border-zinc-100 rounded-[22px] py-3 px-4 flex items-center justify-around text-center shadow-2xs mt-3">
               {/* Column 1: Likes (Prominently displayed) */}
               <div className="flex-1 flex flex-col items-center">
                 <div className="flex items-center gap-1.5 text-lg font-black text-zinc-900 tracking-tight">

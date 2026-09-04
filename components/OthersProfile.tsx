@@ -30,11 +30,16 @@ interface OthersProfileProps {
 }
 
 const PASTEL_PALETTES = [
-  { bg: '#FEF5D1', text: '#854D0E', emoji: '👨🏻' }, // Soft Pale Yellow (User image 1)
-  { bg: '#E0F2FE', text: '#0369A1', emoji: '🐺' }, // Soft Pastel Blue (User image 2)
-  { bg: '#FCE7F3', text: '#BE185D', emoji: '😍' }, // Soft Pastel Pink (User image 3)
-  { bg: '#FEF9C3', text: '#A16207', emoji: '🦄' }, // Soft Pastel Cream (User image 4)
+  { bg: '#FEF5D1', text: '#854D0E', emoji: '👨🏻' }, // Soft Pale Yellow
+  { bg: '#E0F2FE', text: '#0369A1', emoji: '🐺' }, // Soft Pastel Blue
+  { bg: '#FCE7F3', text: '#BE185D', emoji: '😍' }, // Soft Pastel Pink
+  { bg: '#FEF9C3', text: '#A16207', emoji: '🦄' }, // Soft Pastel Cream
   { bg: '#EDE9FE', text: '#6D28D9', emoji: '✨' }, // Soft Lavender
+  { bg: '#DCFCE7', text: '#15803D', emoji: '🦊' }, // Soft Mint
+  { bg: '#FFEDD5', text: '#C2410C', emoji: '🚀' }, // Soft Peach
+  { bg: '#F3E8FF', text: '#7E22CE', emoji: '🐼' }, // Soft Violet
+  { bg: '#E0E7FF', text: '#4338CA', emoji: '⚡' }, // Soft Indigo
+  { bg: '#FEE2E2', text: '#B91C1C', emoji: '😎' }, // Soft Rose
 ];
 
 function getPastelForUser(userIdOrName?: string) {
@@ -296,7 +301,7 @@ export default function OthersProfile({
     <div className="fixed inset-0 z-[1600] flex flex-col bg-[#141111] animate-in slide-in-from-right duration-300 overflow-hidden font-sans select-none">
       
       {/* ── 1. DARK TOP HEADER BAR (Exact Match to Chat Header) ── */}
-      <div className="w-full bg-[#141111] pt-7 sm:pt-8 pb-2.5 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
+      <div className="w-full bg-[#141111] pt-12 pb-3 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
         {/* Left: Back Action (ChevronLeft) */}
         <button
           type="button"
@@ -446,7 +451,7 @@ export default function OthersProfile({
         </div>
 
         {/* ── 3-COLUMN STATISTICS ROW ── */}
-        <div className="w-full bg-zinc-50 border border-zinc-100 rounded-[24px] p-4 flex items-center justify-around text-center shadow-2xs">
+        <div className="w-full bg-zinc-50 border border-zinc-100 rounded-[24px] p-4 flex items-center justify-around text-center shadow-2xs mt-3">
           {/* Column 1: Likes */}
           <div className="flex-1 flex flex-col items-center">
             <div className="flex items-center gap-1.5 text-lg font-black text-zinc-900 tracking-tight">
