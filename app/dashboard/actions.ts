@@ -1009,28 +1009,52 @@ export async function getProfileDetails() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
 
-  const user = await (prisma.user as any).findUnique({
-    where: { email: session.user.email },
-    include: {
-      followers: {
-        select: { id: true, username: true, image: true }
-      },
-      following: {
-        select: { id: true, username: true, image: true }
-      },
-      posts: {
-        orderBy: { createdAt: 'desc' },
-        take: 36
-      },
-      receivedFollowRequests: {
-        include: {
-          sender: { select: { id: true, username: true, image: true } }
+  try {
+    const user = await (prisma.user as any).findUnique({
+      where: { email: session.user.email },
+      include: {
+        followers: {
+          select: { id: true, username: true, image: true }
+        },
+        following: {
+          select: { id: true, username: true, image: true }
+        },
+        posts: {
+          orderBy: { createdAt: 'desc' },
+          take: 36
+        },
+        receivedFollowRequests: {
+          include: {
+            sender: { select: { id: true, username: true, image: true } }
+          }
+        },
+        _count: {
+          select: {
+            followers: true,
+            following: true,
+            posts: true,
+            profileLikesReceived: true
+          }
         }
       }
-    }
-  });
+    });
 
-  return user;
+    if (!user) return null;
+
+    return {
+      ...user,
+      likesCount: user._count?.profileLikesReceived ?? 0,
+      stats: {
+        followers: user._count?.followers ?? user.followers?.length ?? 0,
+        following: user._count?.following ?? user.following?.length ?? 0,
+        posts: user._count?.posts ?? 0,
+        likes: user._count?.profileLikesReceived ?? 0,
+      }
+    };
+  } catch (err) {
+    console.error('getProfileDetails error:', err);
+    return null;
+  }
 }
 
 export async function updateProfileDetails(data: { name?: string; username?: string; bio?: string; website?: string; image?: string }) {
@@ -2122,49 +2146,54 @@ export async function getUserPublicProfile(targetUserId: string) {
 }
 
 export async function toggleProfileLike(profileId: string) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) return { error: 'Not authenticated' };
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) return { error: 'Not authenticated' };
 
-  const me = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true, username: true, image: true }
-  });
-  if (!me) return { error: 'User not found' };
-  if (!profileId) return { error: 'Invalid profile' };
+    const me = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true, username: true, image: true }
+    });
+    if (!me) return { error: 'User not found' };
+    if (!profileId) return { error: 'Invalid profile' };
 
-  const profile = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { id: profileId },
-        { email: profileId },
-        { username: profileId }
-      ]
-    },
-    select: { id: true, email: true, username: true }
-  });
-  if (!profile) return { error: 'Profile not found' };
+    const profile = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { id: profileId },
+          { email: profileId },
+          { username: profileId }
+        ]
+      },
+      select: { id: true, email: true, username: true }
+    });
+    if (!profile) return { error: 'Profile not found' };
 
-  const existing = await (prisma as any).profileLike.findFirst({
-    where: { likerId: me.id, profileId: profile.id },
-    select: { id: true }
-  });
+    const existing = await (prisma as any).profileLike.findFirst({
+      where: { likerId: me.id, profileId: profile.id },
+      select: { id: true }
+    });
 
-  if (existing) {
-    await (prisma as any).profileLike.delete({ where: { id: existing.id } });
-  } else {
-    await (prisma as any).profileLike.create({ data: { likerId: me.id, profileId: profile.id } });
+    if (existing) {
+      await (prisma as any).profileLike.delete({ where: { id: existing.id } });
+    } else {
+      await (prisma as any).profileLike.create({ data: { likerId: me.id, profileId: profile.id } });
+    }
+
+    const likes = await (prisma as any).profileLike.count({ where: { profileId: profile.id } });
+    return {
+      success: true,
+      isLiked: !existing,
+      likes,
+      targetUserId: profile.id,
+      targetEmail: profile.email,
+      likerId: me.id,
+      likerName: me.username || session.user.name || 'Someone'
+    };
+  } catch (err: any) {
+    console.error('toggleProfileLike error:', err);
+    return { error: err?.message || 'Failed to update like' };
   }
-
-  const likes = await (prisma as any).profileLike.count({ where: { profileId: profile.id } });
-  return {
-    success: true,
-    isLiked: !existing,
-    likes,
-    targetUserId: profile.id,
-    targetEmail: profile.email,
-    likerId: me.id,
-    likerName: me.username || session.user.name || 'Someone'
-  };
 }
 
 export async function getGlobalEdgeRequestCount() {

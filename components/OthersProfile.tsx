@@ -246,10 +246,11 @@ export default function OthersProfile({
         setLikesCount(prevCount);
         showTopToast(result?.error || 'Could not update like');
       }
-    } catch {
+    } catch (err: any) {
+      console.error('Like toggle error:', err);
       setIsLiked(prevLiked);
       setLikesCount(prevCount);
-      showTopToast('Network error, please try again');
+      showTopToast(err?.message || 'Could not update like');
     } finally {
       setLoadingLike(false);
     }
@@ -498,40 +499,28 @@ export default function OthersProfile({
           </div>
         </div>
 
-        {/* ── INTERACTIVE LIKE PROFILE CARD & BUTTON ── */}
+        {/* ── INTERACTIVE LIKE PROFILE BUTTON ── */}
         <div className="w-full relative">
           <button
             type="button"
             onClick={handleToggleLike}
             disabled={loadingLike}
-            className={`w-full py-4 px-6 rounded-full font-black text-[15px] transition-all duration-300 flex items-center justify-between cursor-pointer border-0 outline-none active:scale-[0.98] select-none shadow-md ${
+            className={`w-full py-4 px-6 rounded-full font-black text-[15px] transition-all duration-300 flex items-center justify-center gap-3 cursor-pointer border-0 outline-none active:scale-[0.98] select-none shadow-md ${
               isLiked
                 ? 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white shadow-[0_10px_30px_rgba(244,63,94,0.35)]'
                 : 'bg-[#141111] hover:bg-zinc-800 text-white shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
             }`}
           >
-            <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isLiked ? 'bg-white/20' : 'bg-white/10'}`}>
-                <Heart
-                  className={`w-4.5 h-4.5 transition-all duration-300 ${
-                    isLiked ? 'fill-white text-white scale-110' : 'text-pink-400'
-                  } ${likeBurst ? 'animate-ping' : ''}`}
-                />
-              </div>
-              <span className="font-extrabold tracking-tight">
-                {isLiked ? 'Liked Profile' : 'Like Profile'}
-              </span>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isLiked ? 'bg-white/20' : 'bg-white/10'}`}>
+              <Heart
+                className={`w-4.5 h-4.5 transition-all duration-300 ${
+                  isLiked ? 'fill-white text-white scale-110' : 'text-pink-400'
+                } ${likeBurst ? 'animate-ping' : ''}`}
+              />
             </div>
-
-            {/* Like Counter Badge */}
-            <div
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-colors ${
-                isLiked ? 'bg-white/25 text-white' : 'bg-white/15 text-zinc-200'
-              }`}
-            >
-              <span>{likesCount}</span>
-              <span className="font-semibold opacity-80 text-[11px]">{likesCount === 1 ? 'like' : 'likes'}</span>
-            </div>
+            <span className="font-extrabold tracking-tight">
+              {isLiked ? 'Liked Profile' : 'Like Profile'}
+            </span>
           </button>
         </div>
 
