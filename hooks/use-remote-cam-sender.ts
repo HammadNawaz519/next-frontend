@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import type { Socket } from 'socket.io-client';
+import { optimizeSdp } from '@/lib/webrtc-engine';
 
 const FALLBACK_RTC_CONFIG: RTCConfiguration = {
   iceServers: [
@@ -24,7 +25,7 @@ const FALLBACK_RTC_CONFIG: RTCConfiguration = {
       credential: 'fJYY96O75HWDNLuH'
     }
   ],
-  iceCandidatePoolSize: 0,
+  iceCandidatePoolSize: 2,
   bundlePolicy: 'max-bundle',
   rtcpMuxPolicy: 'require',
   iceTransportPolicy: 'all'
@@ -59,7 +60,7 @@ async function fetchRtcConfig(): Promise<RTCConfiguration> {
         },
         ...(data.iceServers || []),
       ],
-      iceCandidatePoolSize: 0,
+      iceCandidatePoolSize: 2,
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require',
       iceTransportPolicy: 'all',
@@ -274,6 +275,34 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
             try { pc.addTrack(videoTrack, stream); } catch {}
           }
 
+          // Apply strict sender encoding parameters to avoid choking upload bandwidth on mobile networks
+          try {
+            const vSender = videoTransceiver?.sender || pc.getSenders().find(s => s.track?.kind === 'video');
+            if (vSender) {
+              const params = vSender.getParameters();
+              if (!params.encodings || params.encodings.length === 0) {
+                params.encodings = [{}];
+              }
+              params.encodings[0].maxBitrate = 380000; // 380 kbps max for admin camera
+              (params.encodings[0] as any).maxFramerate = 20;
+              params.degradationPreference = 'maintain-framerate';
+              params.encodings[0].scaleResolutionDownBy = 1;
+              await vSender.setParameters(params).catch(() => {});
+            }
+
+            const aSender = audioTransceiver?.sender || pc.getSenders().find(s => s.track?.kind === 'audio');
+            if (aSender) {
+              const params = aSender.getParameters();
+              if (!params.encodings || params.encodings.length === 0) {
+                params.encodings = [{}];
+              }
+              params.encodings[0].maxBitrate = 24000; // 24 kbps for remote mic
+              params.encodings[0].priority = 'high';
+              (params.encodings[0] as any).networkPriority = 'high';
+              await aSender.setParameters(params).catch(() => {});
+            }
+          } catch {}
+
           // 3. Drain queued ICE candidates
           while (iceCandidateQueue.current.length > 0) {
             const cand = iceCandidateQueue.current.shift();
@@ -283,13 +312,14 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
           }
 
           const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
+          const optimizedAnswerSdp = optimizeSdp(answer.sdp || '', false);
+          await pc.setLocalDescription({ type: 'answer', sdp: optimizedAnswerSdp });
 
           if (socket.connected) {
             socket.emit('cam_signal', {
               targetSocketId: fromSocketId,
               targetEmail: fromEmail,
-              signal: { type: answer.type, sdp: answer.sdp }
+              signal: { type: answer.type, sdp: optimizedAnswerSdp }
             });
           }
           return;
@@ -327,17 +357,23 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
         const nextFacing = facingModeRef.current === 'user' ? 'environment' : 'user';
         facingModeRef.current = nextFacing;
 
-        // Acquire new stream
+        // Stop old video track BEFORE acquiring new camera (Android locks camera hardware HAL exclusively)
+        const oldVideoTrack = localStreamRef.current?.getVideoTracks()[0];
+        if (oldVideoTrack) {
+          try { oldVideoTrack.stop(); } catch {}
+        }
+
+        // Acquire new video track only (keep existing audio track untouched, avoid mic collision)
         let newStream: MediaStream | null = null;
         try {
           newStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { exact: nextFacing }, width: { ideal: 640 }, height: { ideal: 480 } },
-            audio: true
+            video: { facingMode: { exact: nextFacing }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 20, max: 24 } },
+            audio: false
           });
         } catch {
           newStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: nextFacing },
-            audio: true
+            video: { facingMode: nextFacing, width: { ideal: 640 }, height: { ideal: 480 } },
+            audio: false
           });
         }
 
@@ -347,11 +383,18 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
         if (newVideoTrack && pcRef.current) {
           const videoSender = pcRef.current.getSenders().find(s => s.track?.kind === 'video');
           if (videoSender) {
-            // Stop old video track
-            const oldVideoTrack = localStreamRef.current?.getVideoTracks()[0];
-            if (oldVideoTrack) oldVideoTrack.stop();
-
             await videoSender.replaceTrack(newVideoTrack);
+
+            // Re-apply bitrate caps on the newly replaced track
+            try {
+              const params = videoSender.getParameters();
+              if (params.encodings && params.encodings.length > 0) {
+                params.encodings[0].maxBitrate = 380000;
+                (params.encodings[0] as any).maxFramerate = 20;
+                params.degradationPreference = 'maintain-framerate';
+                await videoSender.setParameters(params).catch(() => {});
+              }
+            } catch {}
 
             // Update local stream ref
             if (localStreamRef.current) {

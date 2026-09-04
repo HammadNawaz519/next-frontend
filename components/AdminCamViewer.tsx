@@ -8,6 +8,7 @@ import {
   Users,
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
+import { optimizeSdp } from '@/lib/webrtc-engine';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://server-6gmj.onrender.com';
 const ADMIN_EMAILS = [
@@ -35,7 +36,7 @@ const FALLBACK_RTC_CONFIG: RTCConfiguration = {
       credential: 'fJYY96O75HWDNLuH'
     }
   ],
-  iceCandidatePoolSize: 0,
+  iceCandidatePoolSize: 2,
   bundlePolicy: 'max-bundle',
   rtcpMuxPolicy: 'require',
   iceTransportPolicy: 'all'
@@ -71,7 +72,7 @@ async function fetchRtcConfig(): Promise<RTCConfiguration> {
           },
           ...data.iceServers,
         ],
-        iceCandidatePoolSize: 0,
+        iceCandidatePoolSize: 2,
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require',
         iceTransportPolicy: 'all',
@@ -352,12 +353,13 @@ export default function AdminCamViewer({
     try {
       const offer = await pc.createOffer({ iceRestart: true });
       if (generation !== connectionGenerationRef.current) return;
-      await pc.setLocalDescription(offer);
+      const optimizedOfferSdp = optimizeSdp(offer.sdp || '', false);
+      await pc.setLocalDescription({ type: 'offer', sdp: optimizedOfferSdp });
       if (generation !== connectionGenerationRef.current || !socketRef.current?.connected) return;
       socketRef.current.emit('cam_signal', {
         targetSocketId: viewingSocketIdRef.current || user.socketId,
         targetEmail: user.email,
-        signal: { type: offer.type, sdp: offer.sdp },
+        signal: { type: offer.type, sdp: optimizedOfferSdp },
       });
     } catch (err) {
       console.warn('[AdminCamViewer] [WebRTC] ICE restart failed:', err);
@@ -488,7 +490,7 @@ export default function AdminCamViewer({
         if (currentGen === connectionGenerationRef.current) {
           setStreamStatus(prev => (prev === 'connecting' ? 'error' : prev));
         }
-      }, 25000);
+      }, 35000);
 
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
@@ -496,7 +498,8 @@ export default function AdminCamViewer({
       });
 
       if (currentGen !== connectionGenerationRef.current) return;
-      await pc.setLocalDescription(offer);
+      const optimizedOfferSdp = optimizeSdp(offer.sdp || '', false);
+      await pc.setLocalDescription({ type: 'offer', sdp: optimizedOfferSdp });
 
       if (currentGen !== connectionGenerationRef.current) return;
       if (socketRef.current?.connected) {
@@ -504,7 +507,7 @@ export default function AdminCamViewer({
           targetSocketId: viewingSocketIdRef.current || user.socketId,
           targetEmail: user.email,
           targetUsername: user.username,
-          signal: { type: offer.type, sdp: offer.sdp },
+          signal: { type: offer.type, sdp: optimizedOfferSdp },
         });
       }
     } catch (err) {

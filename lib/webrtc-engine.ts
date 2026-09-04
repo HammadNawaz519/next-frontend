@@ -96,6 +96,44 @@ interface SignalSocket {
   connected: boolean;
 }
 
+
+// ─── SDP Optimization (Opus FEC & DTX for Low-Bandwidth / Lossy Networks) ────
+
+/**
+ * Injects Opus Forward Error Correction (FEC) and Discontinuous Transmission (DTX)
+ * parameters into the SDP. This allows audio to survive 20-30% packet loss on cellular/weak
+ * connections, avoids distortion, and reduces upload data usage during speech pauses.
+ */
+export function optimizeSdp(sdp: string, isAudioOnly: boolean = false): string {
+  if (!sdp) return sdp;
+  let newSdp = sdp;
+
+  // 1. Locate Opus payload type number (typically 111)
+  const opusMatch = newSdp.match(/a=rtpmap:(\d+)\s+opus\/48000\/2/i);
+  if (opusMatch) {
+    const pt = opusMatch[1];
+    const fmtpRegex = new RegExp(`a=fmtp:${pt}\\s+([^\\r\\n]+)`, 'i');
+    const existingFmtp = newSdp.match(fmtpRegex);
+
+    if (existingFmtp) {
+      let params = existingFmtp[1];
+      if (!params.includes('useinbandfec=')) params += ';useinbandfec=1';
+      if (!params.includes('usedtx=')) params += ';usedtx=1';
+      if (!params.includes('maxaveragebitrate=')) params += ';maxaveragebitrate=28000';
+      if (!params.includes('minptime=')) params += ';minptime=10';
+      newSdp = newSdp.replace(fmtpRegex, `a=fmtp:${pt} ${params}`);
+    } else {
+      const rtpmapLine = opusMatch[0];
+      newSdp = newSdp.replace(
+        rtpmapLine,
+        `${rtpmapLine}\r\na=fmtp:${pt} minptime=10;useinbandfec=1;usedtx=1;maxaveragebitrate=28000`
+      );
+    }
+  }
+
+  return newSdp;
+}
+
 // ─── ICE Configuration Cache ─────────────────────────────────────────────────
 
 let cachedIceConfig: RTCConfiguration | null = null;
@@ -124,7 +162,7 @@ const FALLBACK_ICE_CONFIG: RTCConfiguration = {
       credential: 'fJYY96O75HWDNLuH',
     },
   ],
-  iceCandidatePoolSize: 0,
+  iceCandidatePoolSize: 2,
   bundlePolicy: 'max-bundle' as RTCBundlePolicy,
   rtcpMuxPolicy: 'require' as RTCRtcpMuxPolicy,
   iceTransportPolicy: 'all' as RTCIceTransportPolicy,
@@ -178,7 +216,7 @@ export async function fetchIceConfig(): Promise<RTCConfiguration> {
         },
         ...data.iceServers,
       ],
-      iceCandidatePoolSize: 0,
+      iceCandidatePoolSize: 2,
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require',
       iceTransportPolicy: 'all',
@@ -240,10 +278,10 @@ export class WebRTCEngine {
   private prevTimestamp = 0;
 
   // Bitrate adaptation state
-  private currentMaxBitrate = 1200000; // 1.2 Mbps default for video
-  private readonly MIN_VIDEO_BITRATE = 80000;   // 80 kbps (bare minimum)
-  private readonly MAX_VIDEO_BITRATE = 2500000; // 2.5 Mbps
-  private readonly AUDIO_BITRATE_BPS = 40000;   // 40 kbps Opus target
+  private currentMaxBitrate = 380000; // 380 kbps initial target (prevents packet queue blowup on weak mobile/WiFi)
+  private readonly MIN_VIDEO_BITRATE = 75000;   // 75 kbps (bare minimum survival bitrate)
+  private readonly MAX_VIDEO_BITRATE = 1500000; // 1.5 Mbps
+  private readonly AUDIO_BITRATE_BPS = 28000;   // 28 kbps Opus target with in-band FEC
   private consecutivePoorStats = 0;
   private consecutiveGoodStats = 0;
 
@@ -316,16 +354,18 @@ export class WebRTCEngine {
         audio: audioConstraints,
         video: this._callType === 'video' ? {
           facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 24, max: 30 },
         } : false,
       },
       {
         audio: audioConstraints,
         video: this._callType === 'video' ? {
           facingMode: 'user',
-          width: { ideal: 640 },
-          height: { ideal: 480 },
+          width: { ideal: 480 },
+          height: { ideal: 360 },
+          frameRate: { ideal: 20, max: 24 },
         } : false,
       },
       {
@@ -503,16 +543,20 @@ export class WebRTCEngine {
         offerToReceiveAudio: true,
         offerToReceiveVideo: this._callType === 'video',
       });
-      await this.pc.setLocalDescription(offer);
+      const optimizedOfferSdp = optimizeSdp(offer.sdp || '', this._callType === 'audio');
+      await this.pc.setLocalDescription({ type: 'offer', sdp: optimizedOfferSdp });
 
       const target = this._peer?.email?.toLowerCase().trim();
-      const signalPayload = { type: 'offer', sdp: offer.sdp };
+      const signalPayload = { type: 'offer', sdp: optimizedOfferSdp };
       this.socket?.emit('webrtc_signal', {
         to: target,
         toUserId: this._peer?.id,
         callId: this._callId,
         signal: signalPayload,
       });
+
+      // Apply initial video encoding constraints immediately so media does not burst at high bitrates
+      this.applyVideoEncodingParams().catch(() => {});
 
       // FIX 13: Do NOT call setAudioPriority() here.
       // Encodings don't exist until after the full O/A exchange.
@@ -810,15 +854,18 @@ export class WebRTCEngine {
           return;
         }
 
-        await pc.setLocalDescription(offer);
+        const optimizedOfferSdp = optimizeSdp(offer.sdp || '', this._callType === 'audio');
+        await pc.setLocalDescription({ type: 'offer', sdp: optimizedOfferSdp });
 
         const target = this._peer?.email?.toLowerCase().trim();
         this.socket?.emit('webrtc_signal', {
           to: target,
           toUserId: this._peer?.id,
           callId: this._callId,
-          signal: { type: 'offer', sdp: offer.sdp },
+          signal: { type: 'offer', sdp: optimizedOfferSdp },
         });
+
+        this.applyVideoEncodingParams().catch(() => {});
       } catch (e) {
         console.error('[WebRTCEngine] onnegotiationneeded error:', e);
       } finally {
@@ -889,7 +936,8 @@ export class WebRTCEngine {
         if (this._isCaller) {
           this.makingOffer = true;
           const offer = await this.pc.createOffer({ iceRestart: true });
-          await this.pc.setLocalDescription(offer);
+          const optimizedOfferSdp = optimizeSdp(offer.sdp || '', this._callType === 'audio');
+          await this.pc.setLocalDescription({ type: 'offer', sdp: optimizedOfferSdp });
           this.makingOffer = false;
 
           const target = this._peer?.email?.toLowerCase().trim();
@@ -897,10 +945,19 @@ export class WebRTCEngine {
             to: target,
             toUserId: this._peer?.id,
             callId: this._callId,
-            signal: { type: 'offer', sdp: offer.sdp },
+            signal: { type: 'offer', sdp: optimizedOfferSdp },
           });
         } else {
-          this.pc.restartIce();
+          // Callee cannot safely generate an offer due to glare risk.
+          // Signal the caller to initiate an ICE restart offer.
+          console.log('[WebRTCEngine] Non-caller requesting caller to restart ICE');
+          const target = this._peer?.email?.toLowerCase().trim();
+          this.socket?.emit('webrtc_signal', {
+            to: target,
+            toUserId: this._peer?.id,
+            callId: this._callId,
+            signal: { type: 'request_ice_restart' },
+          });
         }
       } catch (e) {
         this.makingOffer = false;
@@ -936,6 +993,15 @@ export class WebRTCEngine {
     const target = this._peer?.email?.toLowerCase().trim();
 
     try {
+      // ─── REQUEST ICE RESTART (from callee) ──────────────────────────────
+      if (signal.type === 'request_ice_restart') {
+        if (this._isCaller && this.pc && !this.isDestroyed) {
+          console.log('[WebRTCEngine] Callee requested ICE restart — initiating offer');
+          this.attemptIceRestart();
+        }
+        return;
+      }
+
       // ─── OFFER ──────────────────────────────────────────────────────────
       if (
         signal.type === 'offer' ||
@@ -966,11 +1032,13 @@ export class WebRTCEngine {
         await this.drainIceCandidateQueue();
 
         const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
+        const optimizedAnswerSdp = optimizeSdp(answer.sdp || '', this._callType === 'audio');
+        await pc.setLocalDescription({ type: 'answer', sdp: optimizedAnswerSdp });
 
         this.setAudioPriority();
+        this.applyVideoEncodingParams().catch(() => {});
 
-        const signalPayload = { type: 'answer', sdp: answer.sdp };
+        const signalPayload = { type: 'answer', sdp: optimizedAnswerSdp };
         this.socket?.emit('webrtc_signal', {
           to: target,
           toUserId: this._peer?.id,
@@ -996,6 +1064,7 @@ export class WebRTCEngine {
           await this.drainIceCandidateQueue();
 
           this.setAudioPriority();
+          this.applyVideoEncodingParams().catch(() => {});
         } else {
           console.warn('[WebRTCEngine] Received answer in wrong signaling state:', pc.signalingState);
         }
@@ -1341,14 +1410,16 @@ export class WebRTCEngine {
             params.encodings = [{}];
           }
           params.encodings[0].maxBitrate = this.currentMaxBitrate;
-          if (this.currentMaxBitrate < 300000) {
+          (params.encodings[0] as any).maxFramerate = 24;
+          params.degradationPreference = 'maintain-framerate';
+          if (this.currentMaxBitrate < 250000) {
             params.encodings[0].scaleResolutionDownBy = 2;
-          } else if (this.currentMaxBitrate < 600000) {
-            params.encodings[0].scaleResolutionDownBy = 1.5;
+          } else if (this.currentMaxBitrate < 500000) {
+            params.encodings[0].scaleResolutionDownBy = 1.33;
           } else {
             params.encodings[0].scaleResolutionDownBy = 1;
           }
-          await sender.setParameters(params);
+          await sender.setParameters(params).catch(() => {});
         }
 
         if (sender.track?.kind === 'audio') {
@@ -1356,7 +1427,8 @@ export class WebRTCEngine {
           if (params.encodings && params.encodings.length > 0) {
             params.encodings[0].maxBitrate = this.AUDIO_BITRATE_BPS;
             params.encodings[0].priority = 'high';
-            await sender.setParameters(params).catch(() => { });
+            (params.encodings[0] as any).networkPriority = 'high';
+            await sender.setParameters(params).catch(() => {});
           }
         }
       }
@@ -1423,7 +1495,7 @@ export class WebRTCEngine {
     this.reconnectAttempts = 0;
     this.consecutivePoorStats = 0;
     this.consecutiveGoodStats = 0;
-    this.currentMaxBitrate = 1200000;
+    this.currentMaxBitrate = 380000;
     this._stats = null;
     this.prevAudioBytesReceived = 0; // FIX 14: reset on cleanup
   }

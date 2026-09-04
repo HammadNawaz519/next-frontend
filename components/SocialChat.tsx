@@ -3045,8 +3045,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         );
 
         // The other participant in the conversation
-        const partnerId = isSentByMe ? (msgReceiverId || msgReceiverEmail) : (msgSenderId || msgSenderEmail);
-        const partnerEmail = isSentByMe ? msgReceiverEmail : msgSenderEmail;
+        const partnerId = String(isSentByMe ? (msgReceiverId || msgReceiverEmail) : (msgSenderId || msgSenderEmail)).trim();
+        const partnerEmail = String(isSentByMe ? (msgReceiverEmail || msg.receiver?.email || '') : (msgSenderEmail || msg.sender?.email || '')).toLowerCase().trim();
+        const partnerUsername = String(
+          (!isSentByMe && (msg.senderUsername || msg.sender?.username)) ||
+          (isSentByMe && (msg.receiverUsername || selectedUserRef.current?.username)) ||
+          ''
+        ).replace(/^@+/, '').trim();
+        const partnerImage = (!isSentByMe && (msg.senderImage || msg.sender?.image)) ||
+          (isSentByMe && selectedUserRef.current?.image) || undefined;
+
         const selectedId = String(selectedUserRef.current?.id || '').trim();
         const selectedEmail = String(selectedUserRef.current?.email || '').toLowerCase().trim();
 
@@ -3060,9 +3068,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         // Automatically un-hide chat if previously deleted
         setDeletedChatIds(prev => {
-          if (prev.has(partnerId)) {
+          const idsToDelete = [partnerId, partnerEmail, msgSenderId, msgReceiverId].filter(Boolean);
+          const hasAny = idsToDelete.some(id => prev.has(id));
+          if (hasAny) {
             const next = new Set(prev);
-            next.delete(partnerId);
+            idsToDelete.forEach(id => next.delete(id));
             if (typeof window !== 'undefined' && currentUserId) {
               try {
                 localStorage.setItem(`social_deleted_chats_${currentUserId}`, JSON.stringify(Array.from(next)));
@@ -3113,26 +3123,36 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           return [...prev, { ...msg, status: 'sent' }];
         });
 
-        // Sync to cache immediately so reload preserves received messages.
+        // Sync to cache immediately under all key permutations so opening chat is instant 0ms
+        const cacheKeysToUpdate = Array.from(new Set([
+          partnerId,
+          partnerEmail,
+          msgSenderId,
+          msgSenderEmail,
+          msgReceiverId,
+          msgReceiverEmail,
+          selectedUserRef.current?.id,
+          selectedUserRef.current?.email ? selectedUserRef.current.email.toLowerCase().trim() : undefined
+        ].filter(Boolean) as string[]));
+
         setMessagesCache((prev) => {
-          const cacheKey = partnerId || msgSenderId;
-          if (!cacheKey || cacheKey === '') return prev;
-          const current = prev[cacheKey] || [];
-          const isDup = current.some(m =>
-            (msg.id && m.id === msg.id) ||
-            ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type)
-          );
-          let updatedList;
-          if (isDup) {
-            updatedList = current.map(m =>
-              (m.id === msg.id || ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type))
-                ? { ...m, ...msg, id: msg.id || m.id, status: 'sent' }
-                : m
+          const next = { ...prev };
+          for (const cacheKey of cacheKeysToUpdate) {
+            const current = prev[cacheKey] || [];
+            const isDup = current.some(m =>
+              (msg.id && m.id === msg.id) ||
+              ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type)
             );
-          } else {
-            updatedList = [...current, { ...msg, status: 'sent' }];
+            if (isDup) {
+              next[cacheKey] = current.map(m =>
+                (m.id === msg.id || ((m as any).status === 'sending' && String(m.senderId) === msgSenderId && m.content === msg.content && m.type === msg.type))
+                  ? { ...m, ...msg, id: msg.id || m.id, status: 'sent' }
+                  : m
+              );
+            } else {
+              next[cacheKey] = [...current, { ...msg, status: 'sent' }];
+            }
           }
-          const next = { ...prev, [cacheKey]: updatedList };
           if (typeof window !== 'undefined' && currentUserId) {
             try {
               localStorage.setItem(`social_messages_cache_${currentUserId}`, JSON.stringify(next));
@@ -3195,7 +3215,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               allRequestsRef.current = next;
               setUsers(prevContacts => {
                 if (prevContacts.some(u => u.id === senderId)) return prevContacts;
-                const updated = [...prevContacts, { ...req, isRequest: false, unseenCount: 0 }];
+                const updated = [{ ...req, isRequest: false, unseenCount: 0 }, ...prevContacts];
                 allContactsRef.current = updated;
                 return updated;
               });
@@ -3207,123 +3227,78 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
 
         // 2. Update Sidebar (Users / Contacts list)
-        // Find existing contact by either ID or Email to prevent duplicate entries
-        // Search results live in usersRef before they are opened. Include them
-        // in the lookup so the first incoming message promotes them to Recent.
+        // Multi-field flexible partner matching
         const matchesPartner = (u: any) => Boolean(u && (
-          (partnerId && String(u.id).trim() === partnerId) ||
-          (partnerEmail && u.email && u.email.toLowerCase().trim() === partnerEmail)
+          (partnerId && (String(u.id).trim() === partnerId || String(u._id || '').trim() === partnerId)) ||
+          (partnerEmail && u.email && u.email.toLowerCase().trim() === partnerEmail) ||
+          (msgSenderEmail && u.email && u.email.toLowerCase().trim() === msgSenderEmail) ||
+          (msgReceiverEmail && u.email && u.email.toLowerCase().trim() === msgReceiverEmail) ||
+          (msgSenderId && (String(u.id).trim() === msgSenderId || String(u._id || '').trim() === msgSenderId)) ||
+          (msgReceiverId && (String(u.id).trim() === msgReceiverId || String(u._id || '').trim() === msgReceiverId)) ||
+          (partnerUsername && u.username && u.username.toLowerCase().trim() === partnerUsername.toLowerCase())
         ));
+
         const existingInRef = allContactsRef.current.find(matchesPartner)
           || usersRef.current.find(matchesPartner);
 
-        if (existingInRef) {
-          const updated = {
-            ...existingInRef,
-            lastMessage: formatMsg(msg),
-            lastMessageTime: msg.createdAt || new Date().toISOString(),
-            // When I send a message, unseenCount is NEVER incremented (stays 0 or existing).
-            // When someone else sends a message, unseenCount is 0 if chat is currently open, else incremented by 1.
-            unseenCount: isSentByMe
-              ? (existingInRef.unseenCount || 0)
-              : (isChatOpen ? 0 : ((existingInRef.unseenCount || 0) + 1))
-          };
-          const refWithoutPartner = allContactsRef.current.filter(u =>
-            !(partnerId && String(u.id).trim() === partnerId) &&
-            !(partnerEmail && u.email && u.email.toLowerCase().trim() === partnerEmail)
-          );
-          const newRefList = [updated, ...refWithoutPartner];
-          allContactsRef.current = newRefList;
-          if (typeof window !== 'undefined' && currentUserId) {
-            try {
-              localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(newRefList));
-            } catch (e) {}
-          }
-          // Always bubble the contact to the top of the chat list with latest message + badge
-          setUsers(prev => {
-            const next = prev.filter(u =>
-              !(partnerId && String(u.id).trim() === partnerId) &&
-              !(partnerEmail && u.email && u.email.toLowerCase().trim() === partnerEmail)
-            );
-            return [updated, ...next];
-          });
-        } else {
-          // Partner is not yet in contacts ref — add them IMMEDIATELY using enriched payload data
-          const senderUsername: string =
-            (!isSentByMe && (msg.senderUsername || msg.sender?.username)) ||
-            (isSentByMe && selectedUserRef.current?.username) ||
-            '';
-          const senderImage: string | undefined =
-            (!isSentByMe && (msg.senderImage || msg.sender?.image)) ||
-            (isSentByMe && selectedUserRef.current?.image) ||
-            undefined;
-          const senderEmail: string =
-            (!isSentByMe && (msg.senderEmail || msg.sender?.email)) ||
-            (isSentByMe && selectedUserRef.current?.email) ||
-            '';
+        const targetUserItem = existingInRef ? {
+          ...existingInRef,
+          username: existingInRef.username || partnerUsername || 'User',
+          image: existingInRef.image || partnerImage,
+          email: existingInRef.email || partnerEmail,
+          lastMessage: formatMsg(msg),
+          lastMessageTime: msg.createdAt || new Date().toISOString(),
+          unseenCount: isSentByMe
+            ? (existingInRef.unseenCount || 0)
+            : (isChatOpen ? 0 : ((existingInRef.unseenCount || 0) + 1)),
+          isRequest: false
+        } : {
+          id: partnerId,
+          username: partnerUsername || (partnerEmail ? partnerEmail.split('@')[0] : 'User'),
+          email: partnerEmail,
+          image: partnerImage,
+          lastMessage: formatMsg(msg),
+          lastMessageTime: msg.createdAt || new Date().toISOString(),
+          unseenCount: isSentByMe ? 0 : (isChatOpen ? 0 : 1),
+          isRequest: false
+        };
 
-          if (senderUsername) {
-            const formattedUser = {
-              id: partnerId,
-              username: senderUsername,
-              email: senderEmail,
-              image: senderImage,
-              lastMessage: formatMsg(msg),
-              lastMessageTime: msg.createdAt || new Date().toISOString(),
-              isRequest: false,
-              unseenCount: isSentByMe ? 0 : (isChatOpen ? 0 : 1),
-            };
-            if (!allContactsRef.current.some(u => u.id === partnerId || (senderEmail && u.email === senderEmail))) {
-              const newRefList = [formattedUser, ...allContactsRef.current];
-              allContactsRef.current = newRefList;
-              if (typeof window !== 'undefined' && currentUserId) {
-                try {
-                  localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(newRefList));
-                } catch (e) {}
-              }
+        // 1. Immediately update allContactsRef.current (filter old out, prepend to index 0)
+        const updatedContactsRef = [
+          targetUserItem,
+          ...allContactsRef.current.filter(u => !matchesPartner(u))
+        ];
+        allContactsRef.current = updatedContactsRef;
+        if (typeof window !== 'undefined' && currentUserId) {
+          try {
+            localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(updatedContactsRef));
+          } catch (e) {}
+        }
+
+        // 2. Immediately update users state (bubble to index 0 with latest message + unseen badge)
+        setUsers(prev => {
+          const filtered = prev.filter(u => !matchesPartner(u));
+          return [targetUserItem, ...filtered];
+        });
+
+        // 3. If partner was not previously in contacts and we only had partial info, enrich in background
+        if (!existingInRef && partnerId) {
+          renderApiClient.getSocialUser(partnerId, currentUserId, currentAccountEmail).then(freshProfile => {
+            if (freshProfile && (freshProfile.username || freshProfile.image)) {
+              setUsers(prev => prev.map(u => matchesPartner(u) ? {
+                ...u,
+                username: freshProfile.username || u.username,
+                image: freshProfile.image || u.image,
+                bio: freshProfile.bio || u.bio,
+              } : u));
+              allContactsRef.current = allContactsRef.current.map(u => matchesPartner(u) ? {
+                ...u,
+                username: freshProfile.username || u.username,
+                image: freshProfile.image || u.image,
+                bio: freshProfile.bio || u.bio,
+              } : u);
             }
-            setUsers(prev => {
-              if (prev.some(u => u.id === partnerId || (senderEmail && u.email === senderEmail))) return prev;
-              return [formattedUser, ...prev];
-            });
-          } else {
-            // Slow path — fetch from Render backend then fall back to Server Action
-            const fetchAndInsert = async () => {
-              let newUser: any = null;
-              try {
-                newUser = await renderApiClient.getSocialUser(partnerId, currentUserId, currentAccountEmail);
-              } catch {
-                try {
-                  newUser = await getSocialUser(partnerId);
-                } catch {}
-              }
-              if (newUser) {
-                const formattedUser = {
-                  ...(newUser as any),
-                  lastMessage: formatMsg(msg),
-                  lastMessageTime: msg.createdAt || new Date().toISOString(),
-                  isRequest: false,
-                  unseenCount: isSentByMe ? 0 : (isChatOpen ? 0 : 1),
-                };
-                if (!allContactsRef.current.some(u => u.id === (newUser as any).id || (newUser.email && u.email === newUser.email))) {
-                  const newRefList = [formattedUser, ...allContactsRef.current];
-                  allContactsRef.current = newRefList;
-                  if (typeof window !== 'undefined' && currentUserId) {
-                    try {
-                      localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(newRefList));
-                    } catch (e) {}
-                  }
-                }
-                    setUsers(current => {
-                      const matches = (u: any) =>
-                        String(u.id) === String(formattedUser.id) ||
-                        (formattedUser.email && u.email?.toLowerCase().trim() === formattedUser.email.toLowerCase().trim());
-                      return [formattedUser, ...current.filter(u => !matches(u))];
-                    });
-              }
-            };
-            fetchAndInsert().catch(() => {});
-          }
+          }).catch(() => {});
         }
 
         // 3. Mark as seen if active chat is open and this message is incoming
@@ -3972,16 +3947,15 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     };
   }, [session?.user?.email]); // Run when session loads
 
-  // 2. Identify once when socket connects or session loads
-  // Note: identify is already done inside the connect event handler above.
-  // This effect is a safety net in case socket was already connected when session loaded.
+  // 2. Identify whenever socket connects or session/user changes
   useEffect(() => {
-    if (socket && socket.connected && session?.user?.email) {
-      const email = session.user.email.toLowerCase().trim();
-      const username = (session.user as any)?.username || 'User';
-      socket.emit('identify', { email, userId: (session.user as any).id, username });
+    if (socket && socket.connected && session?.user) {
+      const email = session.user.email ? session.user.email.toLowerCase().trim() : undefined;
+      const username = (session.user as any)?.username || (session.user as any)?.name || 'User';
+      const userId = (session.user as any)?.id || currentUserId;
+      socket.emit('identify', { email, userId, username });
     }
-  }, [session?.user?.email]); // Only re-run when session email changes, not on every socket state change
+  }, [socket, isConnected, session?.user, currentUserId]);
 
   const handleCall = async (type: 'audio' | 'video') => {
     if (!selectedUser || !session?.user || !socket) return;
@@ -4273,13 +4247,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             contactById.set(key, contact);
             return;
           }
-          const existingTime = new Date(existing.lastMessageTime || 0).getTime();
-          const incomingTime = new Date(contact.lastMessageTime || 0).getTime();
+          const existingTime = new Date((existing as any).lastMessageTime || 0).getTime();
+          const incomingTime = new Date((contact as any).lastMessageTime || 0).getTime();
           contactById.set(key, incomingTime >= existingTime ? { ...existing, ...contact } : { ...contact, ...existing });
         });
         const mergedContacts = Array.from(contactById.values()).sort((a, b) => {
-          const aTime = new Date(a.lastMessageTime || 0).getTime();
-          const bTime = new Date(b.lastMessageTime || 0).getTime();
+          const aTime = new Date((a as any).lastMessageTime || 0).getTime();
+          const bTime = new Date((b as any).lastMessageTime || 0).getTime();
           return bTime - aTime;
         });
         allContactsRef.current = mergedContacts;
@@ -4369,7 +4343,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       setHasMoreMessages(true);
       setIsLoadingOlder(false);
 
-      const cached = messagesCache[targetUserId];
+      const cached = messagesCache[targetUserId] ||
+        (selectedUser.email ? messagesCache[selectedUser.email.toLowerCase().trim()] : undefined) ||
+        (selectedUser.username ? messagesCache[selectedUser.username.toLowerCase().trim()] : undefined);
       const hasUnseen = !!(selectedUser.unseenCount && selectedUser.unseenCount > 0);
       if (cached && cached.length > 0) {
         const filteredCached = cached
@@ -4826,18 +4802,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           };
         });
 
-        // The Render endpoint broadcasts after its database insert. The
-        // Next.js server-action fallback does not, so broadcast only there.
-        // Never emit the optimistic message before persistence succeeds.
-        if (!persistedByRenderBackend && socket) {
+        // Always emit over persistent socket alongside backend persistence for instant real-time delivery.
+        // Both client and server deduplicate by normalized.id so no double message occurs.
+        if (socket) {
           socket.emit('send_social_message', {
             ...normalized,
+            id: normalized.id || stableId,
             senderId,
             senderEmail,
             senderUsername,
             senderImage,
             receiverId: selectedUser.id,
             receiverEmail: selectedUser.email ? selectedUser.email.toLowerCase().trim() : undefined,
+            receiverUsername: selectedUser.username || undefined,
           });
         }
       }
@@ -5814,7 +5791,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         if (ap !== bp) return ap - bp;
 
                         const getContactLatestTime = (u: any) => {
-                          const cached = messagesCache[u.id];
+                          const cached = messagesCache[u.id] ||
+                            (u.email ? messagesCache[u.email.toLowerCase().trim()] : undefined) ||
+                            (u.username ? messagesCache[u.username.toLowerCase().trim()] : undefined);
                           if (cached && cached.length > 0) {
                             const last = cached[cached.length - 1];
                             if (last?.createdAt) return new Date(last.createdAt).getTime();
