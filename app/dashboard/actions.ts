@@ -2030,8 +2030,14 @@ export async function getUserPublicProfile(targetUserId: string) {
     currentUserId = me?.id || null;
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: targetUserId },
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { id: targetUserId },
+        { email: targetUserId },
+        { username: targetUserId }
+      ]
+    },
     select: {
       id: true,
       username: true,
@@ -2121,30 +2127,44 @@ export async function toggleProfileLike(profileId: string) {
 
   const me = await prisma.user.findUnique({
     where: { email: session.user.email },
-    select: { id: true }
+    select: { id: true, username: true, image: true }
   });
   if (!me) return { error: 'User not found' };
-  if (!profileId || me.id === profileId) return { error: 'Invalid profile' };
+  if (!profileId) return { error: 'Invalid profile' };
 
-  const profile = await prisma.user.findUnique({
-    where: { id: profileId },
-    select: { id: true }
+  const profile = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { id: profileId },
+        { email: profileId },
+        { username: profileId }
+      ]
+    },
+    select: { id: true, email: true, username: true }
   });
   if (!profile) return { error: 'Profile not found' };
 
-  const existing = await (prisma as any).profileLike.findUnique({
-    where: { likerId_profileId: { likerId: me.id, profileId } },
+  const existing = await (prisma as any).profileLike.findFirst({
+    where: { likerId: me.id, profileId: profile.id },
     select: { id: true }
   });
 
   if (existing) {
     await (prisma as any).profileLike.delete({ where: { id: existing.id } });
   } else {
-    await (prisma as any).profileLike.create({ data: { likerId: me.id, profileId } });
+    await (prisma as any).profileLike.create({ data: { likerId: me.id, profileId: profile.id } });
   }
 
-  const likes = await (prisma as any).profileLike.count({ where: { profileId } });
-  return { success: true, isLiked: !existing, likes };
+  const likes = await (prisma as any).profileLike.count({ where: { profileId: profile.id } });
+  return {
+    success: true,
+    isLiked: !existing,
+    likes,
+    targetUserId: profile.id,
+    targetEmail: profile.email,
+    likerId: me.id,
+    likerName: me.username || session.user.name || 'Someone'
+  };
 }
 
 export async function getGlobalEdgeRequestCount() {

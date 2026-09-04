@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ChevronLeft,
   Share2,
@@ -8,11 +8,12 @@ import {
   UserCheck,
   Clock,
   Heart,
-  MessageCircle,
   Phone,
   Video,
   Calendar,
-  Globe
+  Globe,
+  Copy,
+  Check
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 import { getUserPublicProfile, toggleFollowUser, toggleProfileLike } from '@/app/dashboard/actions';
@@ -22,6 +23,7 @@ interface OthersProfileProps {
   onClose: () => void;
   onGetInTouch?: (user: any) => void;
   currentUserId?: string;
+  currentUserName?: string;
   socket?: any;
   onStartCall?: (type: 'audio' | 'video') => void;
   activeTheme?: any;
@@ -43,11 +45,10 @@ function getDeterministicAvatarBg(key: string): string {
 export default function OthersProfile({
   user,
   onClose,
-  onGetInTouch,
   currentUserId,
+  currentUserName,
   socket,
   onStartCall,
-  activeTheme,
 }: OthersProfileProps) {
   const [profileData, setProfileData] = useState<any>(user);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
@@ -56,23 +57,28 @@ export default function OthersProfile({
   const [followingCount, setFollowingCount] = useState<number>(0);
   const [likesCount, setLikesCount] = useState<number>(0);
   const [isLiked, setIsLiked] = useState<boolean>(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [topToast, setTopToast] = useState<string | null>(null);
   const [loadingFollow, setLoadingFollow] = useState<boolean>(false);
   const [loadingLike, setLoadingLike] = useState<boolean>(false);
   const [likeBurst, setLikeBurst] = useState<boolean>(false);
+  const [copiedHandle, setCopiedHandle] = useState<boolean>(false);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2500);
-  };
+  const showTopToast = useCallback((msg: string) => {
+    setTopToast(msg);
+    setTimeout(() => {
+      setTopToast(prev => (prev === msg ? null : prev));
+    }, 3200);
+  }, []);
 
-  // Fetch full live server-authoritative profile data & follow/stats state
+  // Fetch full server-authoritative profile data & stats
   useEffect(() => {
     let isMounted = true;
+    const lookupTarget = user?.id || user?.email || user?.username;
+    if (!lookupTarget) return;
+
     async function loadProfile() {
-      if (!user?.id) return;
       try {
-        const fullData = await getUserPublicProfile(user.id);
+        const fullData = await getUserPublicProfile(lookupTarget);
         if (isMounted && fullData) {
           setProfileData(fullData);
           setIsFollowing(Boolean(fullData.isFollowing));
@@ -86,18 +92,19 @@ export default function OthersProfile({
         console.warn('Failed to load public profile:', e);
       }
     }
-    loadProfile();
+    void loadProfile();
     return () => {
       isMounted = false;
     };
-  }, [user?.id]);
+  }, [user?.id, user?.email, user?.username]);
 
-  // Real-time socket & window listener for profile likes and updates
+  // Real-time socket & window listeners for profile likes
   useEffect(() => {
     const handleProfileLiked = (data: any) => {
       if (!data) return;
       const targetId = data.targetUserId;
-      if (profileData?.id && String(targetId) === String(profileData.id)) {
+      const myProfileId = profileData?.id || user?.id;
+      if (myProfileId && String(targetId) === String(myProfileId)) {
         if (typeof data.count === 'number') {
           setLikesCount(data.count);
         }
@@ -126,10 +133,11 @@ export default function OthersProfile({
         window.removeEventListener('profile_liked', handleWindowLiked);
       }
     };
-  }, [socket, profileData?.id, currentUserId]);
+  }, [socket, profileData?.id, user?.id, currentUserId]);
 
   const handleToggleFollow = async () => {
-    if (!profileData?.id || loadingFollow) return;
+    const targetId = profileData?.id || user?.id;
+    if (!targetId || loadingFollow) return;
     triggerHaptic('medium');
     setLoadingFollow(true);
 
@@ -145,15 +153,15 @@ export default function OthersProfile({
     } else if (hasSentRequest) {
       setHasSentRequest(false);
     } else {
-      setIsFollowing(!profileData.isPrivate);
-      setHasSentRequest(profileData.isPrivate);
-      if (!profileData.isPrivate) {
+      setIsFollowing(!profileData?.isPrivate);
+      setHasSentRequest(Boolean(profileData?.isPrivate));
+      if (!profileData?.isPrivate) {
         setFollowersCount((c) => c + 1);
       }
     }
 
     try {
-      const res: any = await toggleFollowUser(profileData.id);
+      const res: any = await toggleFollowUser(targetId);
       if (res && !res.error) {
         setIsFollowing(Boolean(res.isFollowing));
         setHasSentRequest(Boolean(res.hasSentRequest));
@@ -163,76 +171,100 @@ export default function OthersProfile({
         if (typeof res.followingCount === 'number') {
           setFollowingCount(res.followingCount);
         }
-        showToast(
+        showTopToast(
           res.hasSentRequest
             ? 'Follow request sent'
             : res.isFollowing
-            ? 'Following user'
-            : 'Unfollowed user'
+            ? `Following ${profileData?.username || 'user'}`
+            : `Unfollowed ${profileData?.username || 'user'}`
         );
       } else {
         setIsFollowing(prevFollowing);
         setHasSentRequest(prevRequested);
         setFollowersCount(prevFollowersCount);
-        showToast(res?.error || 'Action could not be completed');
+        showTopToast(res?.error || 'Action could not be completed');
       }
-    } catch (e) {
+    } catch {
       setIsFollowing(prevFollowing);
       setHasSentRequest(prevRequested);
       setFollowersCount(prevFollowersCount);
-      showToast('Network error, please try again');
+      showTopToast('Network error, please try again');
     } finally {
       setLoadingFollow(false);
     }
   };
 
   const handleToggleLike = async () => {
-    if (!profileData?.id || loadingLike) return;
+    const targetId = profileData?.id || user?.id || user?.email;
+    if (!targetId || loadingLike) return;
     triggerHaptic('medium');
 
     setLikeBurst(true);
-    setTimeout(() => setLikeBurst(false), 600);
+    setTimeout(() => setLikeBurst(false), 700);
 
     const prevLiked = isLiked;
     const prevCount = likesCount;
     const nextLiked = !isLiked;
     const nextCount = nextLiked ? prevCount + 1 : Math.max(0, prevCount - 1);
+    const targetName = profileData?.username || user?.username || 'User';
 
-    // Instant optimistic increment
+    // 1. Instant optimistic update
     setIsLiked(nextLiked);
     setLikesCount(nextCount);
 
-    // Broadcast live socket event so other users viewing this profile see it increment in real-time
-    if (socket) {
+    // 2. Instant top message banner
+    if (nextLiked) {
+      showTopToast(`❤️ You liked ${targetName}'s profile!`);
+    } else {
+      showTopToast(`Unliked ${targetName}'s profile`);
+    }
+
+    // 3. Real-time live socket broadcast to all connected clients & target user
+    if (socket && socket.connected) {
       socket.emit('like_profile', {
-        targetUserId: profileData.id,
+        targetUserId: profileData?.id || user?.id,
+        targetEmail: profileData?.email || user?.email,
         count: nextCount,
         likerId: currentUserId,
+        likerName: currentUserName || 'Someone',
         isLiked: nextLiked
       });
     }
 
+    // 4. Server-authoritative mutation in database
     try {
       setLoadingLike(true);
-      const result: any = await toggleProfileLike(profileData.id);
+      const result: any = await toggleProfileLike(targetId);
       if (result && result.success) {
         setIsLiked(Boolean(result.isLiked));
         if (typeof result.likes === 'number') {
           setLikesCount(result.likes);
         }
-        showToast(result.isLiked ? '❤️ Liked profile!' : 'Unliked profile');
       } else {
-        // Revert on error
+        // Revert on failure
         setIsLiked(prevLiked);
         setLikesCount(prevCount);
-        showToast(result?.error || 'Could not update like');
+        showTopToast(result?.error || 'Could not update like');
       }
     } catch {
       setIsLiked(prevLiked);
       setLikesCount(prevCount);
-      showToast('Network error, please try again');
+      showTopToast('Network error, please try again');
     } finally {
       setLoadingLike(false);
+    }
+  };
+
+  const handleCopyHandle = async () => {
+    triggerHaptic('light');
+    const handleText = `@${profileData?.username || user?.username || 'user'}`;
+    if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(handleText);
+        setCopiedHandle(true);
+        setTimeout(() => setCopiedHandle(false), 2000);
+        showTopToast(`Copied ${handleText}`);
+      } catch {}
     }
   };
 
@@ -240,78 +272,61 @@ export default function OthersProfile({
     triggerHaptic('light');
     const profileUrl =
       typeof window !== 'undefined'
-        ? `${window.location.origin}/@${profileData.username || profileData.id}`
+        ? `${window.location.origin}/@${profileData?.username || user?.username || profileData?.id || ''}`
         : '';
     if (navigator.clipboard) {
       try {
         await navigator.clipboard.writeText(profileUrl);
-        showToast('🔗 Profile link copied to clipboard!');
+        showTopToast('🔗 Profile link copied to clipboard!');
       } catch {
-        showToast('Profile link ready to share');
+        showTopToast('Profile link ready to share');
       }
     } else {
-      showToast('Profile link ready to share');
+      showTopToast('Profile link ready to share');
     }
   };
 
-  useEffect(() => {
-    const handleProfileUpdate = (e: any) => {
-      const data = e.detail;
-      if (data && profileData?.id && data.userId === profileData.id) {
-        setProfileData((prev: any) => ({
-          ...prev,
-          ...(data.username ? { username: data.username } : {}),
-          ...(data.image ? { image: data.image } : {}),
-          ...(data.bio !== undefined ? { bio: data.bio } : {}),
-          ...(data.website !== undefined ? { website: data.website } : {}),
-        }));
-      }
-    };
-    if (typeof window !== 'undefined') {
-      window.addEventListener('user_profile_updated', handleProfileUpdate);
-      return () => window.removeEventListener('user_profile_updated', handleProfileUpdate);
-    }
-  }, [profileData?.id]);
-
-  const displayName = profileData?.username || 'User';
-  const avatarKey = profileData?.id || profileData?.username || displayName;
+  const displayName = profileData?.username || user?.username || 'User';
+  const avatarKey = profileData?.id || user?.id || displayName;
   const avatarBg = getDeterministicAvatarBg(avatarKey);
 
   return (
     <div className="fixed inset-0 z-[1600] flex flex-col bg-[#141111] animate-in slide-in-from-right duration-300 overflow-hidden font-sans select-none">
-      {/* Floating Toast Notification */}
-      {toastMessage && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-zinc-900/95 backdrop-blur-md text-xs font-bold text-white shadow-2xl border border-white/10 animate-in fade-in slide-in-from-top-4 duration-200 flex items-center gap-2">
-          <span>{toastMessage}</span>
+      
+      {/* ── TOP FLOATING TOAST NOTIFICATION ── */}
+      {topToast && (
+        <div className="absolute top-4 sm:top-6 left-1/2 -translate-x-1/2 z-[1700] px-5 py-2.5 rounded-full bg-[#181515]/95 backdrop-blur-xl text-xs sm:text-sm font-black text-white shadow-[0_15px_35px_rgba(244,63,94,0.35)] border border-pink-500/30 animate-in fade-in slide-in-from-top-6 duration-300 flex items-center gap-2.5 pointer-events-none select-none">
+          <span className="text-base">❤️</span>
+          <span className="tracking-tight">{topToast}</span>
         </div>
       )}
 
-      {/* ── 1. TOP HEADER BAR (Matching Chat View & ChatDetails styling) ── */}
-      <div className="pt-12 pb-3 px-5 flex items-center justify-between shrink-0 bg-[#141111] z-20">
-        {/* Left: Back button */}
+      {/* ── 1. DARK TOP HEADER BAR (Exact Match to Chat Header) ── */}
+      <div className="w-full bg-[#141111] pt-12 pb-3 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
+        {/* Left: Back Action (ChevronLeft) */}
         <button
           type="button"
           onClick={() => {
             triggerHaptic('light');
             onClose();
           }}
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white hover:text-zinc-300 hover:bg-white/5 active:scale-90 transition-all cursor-pointer outline-none border-0 bg-transparent"
+          className="p-1.5 -ml-1.5 text-white hover:text-zinc-300 active:scale-95 transition-all flex-shrink-0 cursor-pointer outline-none border-0 bg-transparent"
           title="Back"
         >
           <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
         </button>
 
-        {/* Center: Contact Info */}
+        {/* Center: Contact Info Header */}
         <div className="flex flex-col items-center min-w-0 max-w-[200px]">
-          <h2 className="text-[17px] font-bold text-white tracking-tight truncate text-center">
+          <h2 className="text-[17px] font-bold text-white tracking-tight truncate text-center leading-tight">
             {displayName}
           </h2>
-          <span className="text-[11px] font-semibold text-zinc-400 truncate">
-            @{profileData?.username || 'user'}
+          <span className="text-[12px] font-medium text-zinc-400 mt-0.5 truncate">
+            @{profileData?.username || user?.username || 'user'}
           </span>
         </div>
 
-        {/* Right: Share Button */}
+        {/* Right: Share Action */}
         <button
           type="button"
           onClick={handleShare}
@@ -323,7 +338,7 @@ export default function OthersProfile({
       </div>
 
       {/* ── 2. CURVED WHITE SHEET CONTAINER (Signature Connect Chat UI) ── */}
-      <div className="w-full flex-1 bg-white rounded-t-[32px] px-5 pt-6 pb-12 flex flex-col gap-5 text-zinc-900 shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-y-auto no-scrollbar relative">
+      <div className="w-full flex-1 bg-white rounded-t-[32px] sm:rounded-t-[36px] px-5 pt-6 pb-12 flex flex-col gap-6 text-zinc-900 shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-y-auto no-scrollbar relative">
         
         {/* Profile Hero: Avatar, Names, Online Dot & Bio */}
         <div className="flex flex-col items-center text-center pt-1">
@@ -353,36 +368,34 @@ export default function OthersProfile({
             )}
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight mt-3">
+          <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight mt-3.5">
             {displayName}
           </h2>
-          <span className="text-xs font-bold text-purple-600 tracking-wide mt-0.5">
-            @{profileData?.username || 'user'}
-          </span>
+
+          {/* Copyable @handle pill */}
+          <button
+            type="button"
+            onClick={handleCopyHandle}
+            className="inline-flex items-center gap-1 mt-1 px-3 py-1 rounded-full bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold tracking-wide transition-all cursor-pointer border-0 outline-none active:scale-95"
+            title="Copy username"
+          >
+            <span>@{profileData?.username || user?.username || 'user'}</span>
+            {copiedHandle ? (
+              <Check className="w-3 h-3 text-emerald-600" />
+            ) : (
+              <Copy className="w-3 h-3 text-purple-500 opacity-60" />
+            )}
+          </button>
 
           {profileData?.bio && (
-            <p className="text-sm text-zinc-600 font-normal max-w-sm mt-2 leading-relaxed px-2">
+            <p className="text-sm text-zinc-600 font-normal max-w-sm mt-3 leading-relaxed px-3">
               {profileData.bio}
             </p>
           )}
         </div>
 
-        {/* Quick Interaction Buttons: Message, Calls, Follow */}
-        <div className="flex items-center justify-center gap-2.5 w-full max-w-sm mx-auto">
-          {/* Message / Chat */}
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic('light');
-              onGetInTouch?.(profileData);
-            }}
-            className="flex-1 py-3 px-4 rounded-full bg-[#141111] hover:bg-zinc-800 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all cursor-pointer border-0"
-            title="Send Message"
-          >
-            <MessageCircle className="w-4 h-4 text-white" />
-            <span>Message</span>
-          </button>
-
+        {/* ── ACTION BAR (No Message Button, Just Calls & Follow) ── */}
+        <div className="flex items-center justify-center gap-3 w-full max-w-sm mx-auto">
           {/* Voice Call */}
           {onStartCall && (
             <button
@@ -391,10 +404,10 @@ export default function OthersProfile({
                 triggerHaptic('light');
                 onStartCall('audio');
               }}
-              className="w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 flex items-center justify-center active:scale-95 transition-all cursor-pointer border-0 shrink-0"
+              className="w-12 h-12 rounded-full bg-[#141111] hover:bg-zinc-800 text-white flex items-center justify-center active:scale-90 transition-all cursor-pointer border-0 shadow-sm shrink-0"
               title="Voice Call"
             >
-              <Phone className="w-4.5 h-4.5" />
+              <Phone className="w-5 h-5" strokeWidth={2.2} />
             </button>
           )}
 
@@ -406,24 +419,24 @@ export default function OthersProfile({
                 triggerHaptic('light');
                 onStartCall('video');
               }}
-              className="w-11 h-11 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 flex items-center justify-center active:scale-95 transition-all cursor-pointer border-0 shrink-0"
+              className="w-12 h-12 rounded-full bg-[#141111] hover:bg-zinc-800 text-white flex items-center justify-center active:scale-90 transition-all cursor-pointer border-0 shadow-sm shrink-0"
               title="Video Call"
             >
-              <Video className="w-4.5 h-4.5" />
+              <Video className="w-5 h-5" strokeWidth={2.2} />
             </button>
           )}
 
-          {/* Follow / Unfollow */}
+          {/* Follow / Following / Requested (Prominent Main Action) */}
           <button
             type="button"
             onClick={handleToggleFollow}
             disabled={loadingFollow}
-            className={`py-3 px-4 rounded-full font-bold text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer border-0 active:scale-95 shrink-0 ${
+            className={`flex-1 py-3.5 px-6 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer border-0 active:scale-95 shadow-sm ${
               isFollowing
                 ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800'
                 : hasSentRequest
                 ? 'bg-zinc-100 text-zinc-500'
-                : 'bg-purple-600 hover:bg-purple-700 text-white shadow-sm'
+                : 'bg-[#9D4EDD] hover:bg-[#8A38CC] text-white shadow-[0_6px_20px_rgba(157,78,221,0.3)]'
             }`}
           >
             {hasSentRequest ? (
@@ -433,7 +446,7 @@ export default function OthersProfile({
               </>
             ) : isFollowing ? (
               <>
-                <UserCheck className="w-4 h-4" />
+                <UserCheck className="w-4 h-4 text-emerald-600" />
                 <span>Following</span>
               </>
             ) : (
@@ -445,18 +458,18 @@ export default function OthersProfile({
           </button>
         </div>
 
-        {/* 3-Column Statistics Row */}
-        <div className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl p-4 flex items-center justify-around text-center shadow-2xs">
+        {/* ── 3-COLUMN STATISTICS ROW ── */}
+        <div className="w-full bg-zinc-50 border border-zinc-100 rounded-[24px] p-4 flex items-center justify-around text-center shadow-2xs">
           {/* Column 1: Likes */}
           <div className="flex-1 flex flex-col items-center">
-            <div className="flex items-center gap-1.5 text-base sm:text-lg font-bold text-zinc-900 tracking-tight">
-              <Heart className={`w-4 h-4 ${isLiked ? 'fill-rose-500 text-rose-500' : 'fill-pink-500 text-pink-500'} shrink-0`} />
+            <div className="flex items-center gap-1.5 text-lg font-black text-zinc-900 tracking-tight">
+              <Heart className={`w-4.5 h-4.5 ${isLiked ? 'fill-rose-500 text-rose-500' : 'fill-pink-500 text-pink-500'} shrink-0`} />
               <span className="tabular-nums">
                 {likesCount > 999 ? `${(likesCount / 1000).toFixed(1)}k` : likesCount}
               </span>
             </div>
-            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mt-0.5">
-              likes
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
+              Likes
             </span>
           </div>
 
@@ -464,11 +477,11 @@ export default function OthersProfile({
 
           {/* Column 2: Followers */}
           <div className="flex-1 flex flex-col items-center">
-            <span className="text-base sm:text-lg font-bold text-zinc-900 tracking-tight tabular-nums">
+            <span className="text-lg font-black text-zinc-900 tracking-tight tabular-nums">
               {followersCount > 999 ? `${(followersCount / 1000).toFixed(1)}k` : followersCount}
             </span>
-            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mt-0.5">
-              followers
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
+              Followers
             </span>
           </div>
 
@@ -476,50 +489,59 @@ export default function OthersProfile({
 
           {/* Column 3: Following */}
           <div className="flex-1 flex flex-col items-center">
-            <span className="text-base sm:text-lg font-bold text-zinc-900 tracking-tight tabular-nums">
+            <span className="text-lg font-black text-zinc-900 tracking-tight tabular-nums">
               {followingCount > 999 ? `${(followingCount / 1000).toFixed(1)}k` : followingCount}
             </span>
-            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mt-0.5">
-              following
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
+              Following
             </span>
           </div>
         </div>
 
-        {/* Interactive Big Like Profile Button */}
+        {/* ── INTERACTIVE LIKE PROFILE CARD & BUTTON ── */}
         <div className="w-full relative">
           <button
             type="button"
             onClick={handleToggleLike}
             disabled={loadingLike}
-            className={`w-full py-4 rounded-full font-black text-[15px] transition-all duration-200 shadow-md flex items-center justify-center gap-3 cursor-pointer border-0 outline-none active:scale-[0.98] select-none ${
+            className={`w-full py-4 px-6 rounded-full font-black text-[15px] transition-all duration-300 flex items-center justify-between cursor-pointer border-0 outline-none active:scale-[0.98] select-none shadow-md ${
               isLiked
-                ? 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white shadow-[0_10px_30px_rgba(244,63,94,0.35)] scale-[1.01]'
-                : 'bg-[#18181B] hover:bg-zinc-800 text-white shadow-[0_6px_20px_rgba(0,0,0,0.18)]'
+                ? 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white shadow-[0_10px_30px_rgba(244,63,94,0.35)]'
+                : 'bg-[#141111] hover:bg-zinc-800 text-white shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
             }`}
           >
-            <Heart
-              className={`w-5 h-5 transition-transform duration-300 ${
-                isLiked ? 'fill-white text-white scale-125' : 'text-pink-400'
-              } ${likeBurst ? 'animate-ping' : ''}`}
-            />
-            <span>{isLiked ? 'Liked Profile' : 'Like Profile'}</span>
-            <span
-              className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full transition-colors ${
-                isLiked ? 'bg-white/25 text-white' : 'bg-white/10 text-zinc-300'
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isLiked ? 'bg-white/20' : 'bg-white/10'}`}>
+                <Heart
+                  className={`w-4.5 h-4.5 transition-all duration-300 ${
+                    isLiked ? 'fill-white text-white scale-110' : 'text-pink-400'
+                  } ${likeBurst ? 'animate-ping' : ''}`}
+                />
+              </div>
+              <span className="font-extrabold tracking-tight">
+                {isLiked ? 'Liked Profile' : 'Like Profile'}
+              </span>
+            </div>
+
+            {/* Like Counter Badge */}
+            <div
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-colors ${
+                isLiked ? 'bg-white/25 text-white' : 'bg-white/15 text-zinc-200'
               }`}
             >
-              {likesCount}
-            </span>
+              <span>{likesCount}</span>
+              <span className="font-semibold opacity-80 text-[11px]">{likesCount === 1 ? 'like' : 'likes'}</span>
+            </div>
           </button>
         </div>
 
-        {/* About & Member Details */}
+        {/* ── ABOUT & DETAILS (Styled Exactly Like ChatDetails Preferences) ── */}
         <div className="flex flex-col gap-2">
-          <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">About</span>
-          <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4 flex flex-col gap-3 text-sm divide-y divide-zinc-100/80">
+          <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-wider px-1">About & Details</span>
+          <div className="bg-zinc-50 border border-zinc-100 rounded-[24px] p-4 flex flex-col gap-3 text-sm divide-y divide-zinc-100/80">
             <div className="flex items-center justify-between">
               <span className="font-medium text-zinc-500">Username</span>
-              <span className="font-bold text-zinc-800">@{profileData?.username || 'user'}</span>
+              <span className="font-bold text-zinc-800">@{profileData?.username || user?.username || 'user'}</span>
             </div>
 
             {profileData?.website && (
@@ -553,7 +575,7 @@ export default function OthersProfile({
             )}
 
             <div className="flex items-center justify-between pt-3">
-              <span className="font-medium text-zinc-500">Status</span>
+              <span className="font-medium text-zinc-500">Network Presence</span>
               <span className="font-semibold text-emerald-600 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
                 {profileData?.isOnline ? 'Online now' : 'Connect Member'}

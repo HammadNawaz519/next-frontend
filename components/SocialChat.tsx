@@ -2065,6 +2065,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [isClearingDb, setIsClearingDb] = useState<boolean>(false);
   const [showDbResetModal, setShowDbResetModal] = useState<boolean>(false);
   const [dbResetToast, setDbResetToast] = useState<string | null>(null);
+  const [likeNotificationToast, setLikeNotificationToast] = useState<string | null>(null);
 
   const handleClearAllDatabase = async () => {
     triggerHaptic('heavy');
@@ -3716,6 +3717,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       newSocket.on('profile_liked', (data) => {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('profile_liked', { detail: data }));
+        }
+      });
+
+      newSocket.on('profile_liked_notification', (data: any) => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('profile_liked_notification', { detail: data }));
+        }
+        if (data?.likerName) {
+          setLikeNotificationToast(`❤️ ${data.likerName} liked your profile!`);
+          setTimeout(() => setLikeNotificationToast(null), 4000);
         }
       });
 
@@ -6608,7 +6619,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 {viewingProfileUser && (
                   <OthersProfile
                     user={viewingProfileUser}
-                    currentUserId={(session?.user as any)?.id}
+                    currentUserId={(session?.user as any)?.id || currentUserId}
+                    currentUserName={(session?.user as any)?.username || session?.user?.name || 'A user'}
                     socket={socket}
                     onClose={() => setViewingProfileUser(null)}
                     onGetInTouch={(u) => {
@@ -7530,6 +7542,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[110] bg-zinc-900/95 border border-zinc-800 text-white px-5 py-2.5 rounded-full shadow-2xl backdrop-blur-xl flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span>{dbResetToast}</span>
+        </div>
+      )}
+
+      {/* Floating Profile Liked Toast */}
+      {likeNotificationToast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[110] bg-[#181515]/95 border border-rose-500/40 text-rose-100 px-5 py-2.5 rounded-full shadow-2xl backdrop-blur-xl flex items-center gap-2.5 text-xs sm:text-sm font-black animate-in fade-in slide-in-from-top-4 duration-200">
+          <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+          <span>{likeNotificationToast}</span>
         </div>
       )}
     </>
