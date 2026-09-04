@@ -108,7 +108,8 @@ export default function ProfilePanel({
   const curEmail = (activeUserData?.email || session?.user?.email || '').toLowerCase().trim();
   const curUsername = activeUserData?.username || (session?.user as any)?.username || 'User';
   const [localUsername, setLocalUsername] = useState(curUsername);
-  const curImage = activeUserData?.image || session?.user?.image || '';
+  const [localImage, setLocalImage] = useState<string | null | undefined>(undefined);
+  const curImage = localImage !== undefined ? (localImage || '') : (activeUserData?.image || session?.user?.image || '');
 
   const followersList: any[] = activeUserData?.followers || [];
   const followingList: any[] = activeUserData?.following || [];
@@ -121,6 +122,7 @@ export default function ProfilePanel({
   // Sync counts and details on mount or user change
   useEffect(() => {
     if (activeUserData) {
+      setLocalImage(undefined);
       const followers = activeUserData.followers || [];
       const following = activeUserData.following || [];
       setFollowerCount(followers.length);
@@ -219,7 +221,7 @@ export default function ProfilePanel({
         const base64 = reader.result as string;
         const res = await updateProfileImageAction(base64);
         if (res.success) {
-          showToast('Profile photo updated!');
+          setLocalImage(res.image || base64);
           refreshProfile?.();
         } else {
           showToast(res.error || 'Failed to update photo');
@@ -231,6 +233,50 @@ export default function ProfilePanel({
       console.error(err);
       setIsUploadingAvatar(false);
       showToast('Error uploading image');
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    triggerHaptic('medium');
+    setIsUploadingAvatar(true);
+    setLocalImage('');
+    try {
+      const myId = (session?.user as any)?.id || (session?.user?.email ? (session.user.email as string).toLowerCase().trim() : '');
+      const myEmail = session?.user?.email ? (session.user.email as string).toLowerCase().trim() : undefined;
+
+      await updateProfileImageAction('');
+      try {
+        await renderApiClient.updateProfile({ image: '' }, myId, myEmail);
+      } catch (err) {}
+
+      if (session?.user) {
+        (session.user as any).image = null;
+        updateSession({ image: null }).catch(() => {});
+      }
+      if (fullUser) {
+        fullUser.image = null;
+      }
+
+      if (typeof window !== 'undefined') {
+        if (myId) {
+          const cached = localStorage.getItem(`cached_profile_details_${myId}`);
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached);
+              parsed.image = null;
+              localStorage.setItem(`cached_profile_details_${myId}`, JSON.stringify(parsed));
+            } catch (e) {}
+          }
+        }
+        window.dispatchEvent(new CustomEvent('user_profile_updated', {
+          detail: { userId: myId, email: myEmail, username: localUsername || curUsername, image: '' }
+        }));
+      }
+      refreshProfile?.();
+    } catch (err) {
+      console.error('Error removing avatar:', err);
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
 
@@ -437,14 +483,6 @@ export default function ProfilePanel({
       data-profile-open="true"
       className="fixed inset-0 z-30 h-screen w-full flex flex-col bg-[#141111] overflow-hidden font-sans select-none animate-in fade-in duration-200"
     >
-      {/* Toast Alert */}
-      {toastMessage && (
-        <div className="absolute top-4 sm:top-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-2.5 bg-[#181515]/95 backdrop-blur-xl text-white text-xs sm:text-sm font-black rounded-full shadow-[0_15px_35px_rgba(0,0,0,0.35)] border border-white/10 flex items-center gap-2.5 animate-in fade-in slide-in-from-top-3">
-          <Check className="w-4 h-4 text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
       {/* Hidden File Input for Avatar */}
       <input
         ref={fileInputRef}
@@ -470,15 +508,8 @@ export default function ProfilePanel({
           <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
         </button>
 
-        {/* Center: Title & Handle */}
-        <div className="flex flex-col items-center min-w-0 max-w-[200px]">
-          <h2 className="text-[17px] font-bold text-white tracking-tight truncate text-center leading-tight">
-            {isSelf ? 'Profile' : displayName}
-          </h2>
-          <span className="text-[12px] font-medium text-zinc-400 mt-0.5 truncate">
-            @{displayName}
-          </span>
-        </div>
+        {/* Center: Spacer for Alignment */}
+        <div className="flex-1" />
 
         {/* Right: Actions (Save in edit mode, Share & Edit in view mode) */}
         <div className="flex items-center gap-1">
@@ -572,13 +603,28 @@ export default function ProfilePanel({
                   <Camera className="w-3.5 h-3.5 text-white" strokeWidth={2.4} />
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="text-xs font-bold text-purple-600 hover:text-purple-700 mt-0.5 cursor-pointer border-0 bg-transparent"
-              >
-                Change Profile Photo
-              </button>
+              <div className="flex items-center gap-3 mt-0.5">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-xs font-bold text-purple-600 hover:text-purple-700 cursor-pointer border-0 bg-transparent"
+                >
+                  Change Profile Photo
+                </button>
+                {curImage ? (
+                  <>
+                    <span className="text-zinc-300 text-xs">•</span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveAvatar}
+                      disabled={isUploadingAvatar}
+                      className="text-xs font-bold text-rose-500 hover:text-rose-600 cursor-pointer border-0 bg-transparent disabled:opacity-50"
+                    >
+                      {isUploadingAvatar ? 'Removing...' : 'Remove DP'}
+                    </button>
+                  </>
+                ) : null}
+              </div>
             </div>
 
             {/* Username Input */}

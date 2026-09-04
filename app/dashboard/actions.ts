@@ -1126,8 +1126,10 @@ export async function updateProfileImageAction(imageUrl: string) {
   });
   if (!currentUser) return { error: 'User not found' };
 
-  let finalUrl = imageUrl;
-  if (imageUrl && imageUrl.startsWith("data:")) {
+  let finalUrl: string | null = imageUrl;
+  if (!imageUrl || imageUrl.trim() === '' || imageUrl === '__REMOVE__') {
+    finalUrl = null;
+  } else if (imageUrl && imageUrl.startsWith("data:")) {
     try {
       const matches = imageUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
       if (matches && matches.length === 3) {

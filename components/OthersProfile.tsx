@@ -294,14 +294,6 @@ export default function OthersProfile({
   return (
     <div className="fixed inset-0 z-[1600] flex flex-col bg-[#141111] animate-in slide-in-from-right duration-300 overflow-hidden font-sans select-none">
       
-      {/* ── TOP FLOATING TOAST NOTIFICATION ── */}
-      {topToast && (
-        <div className="absolute top-4 sm:top-6 left-1/2 -translate-x-1/2 z-[1700] px-5 py-2.5 rounded-full bg-[#181515]/95 backdrop-blur-xl text-xs sm:text-sm font-black text-white shadow-[0_15px_35px_rgba(244,63,94,0.35)] border border-pink-500/30 animate-in fade-in slide-in-from-top-6 duration-300 flex items-center gap-2.5 pointer-events-none select-none">
-          <span className="text-base">❤️</span>
-          <span className="tracking-tight">{topToast}</span>
-        </div>
-      )}
-
       {/* ── 1. DARK TOP HEADER BAR (Exact Match to Chat Header) ── */}
       <div className="w-full bg-[#141111] pt-12 pb-3 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
         {/* Left: Back Action (ChevronLeft) */}
@@ -317,15 +309,8 @@ export default function OthersProfile({
           <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />
         </button>
 
-        {/* Center: Contact Info Header */}
-        <div className="flex flex-col items-center min-w-0 max-w-[200px]">
-          <h2 className="text-[17px] font-bold text-white tracking-tight truncate text-center leading-tight">
-            {displayName}
-          </h2>
-          <span className="text-[12px] font-medium text-zinc-400 mt-0.5 truncate">
-            @{profileData?.username || user?.username || 'user'}
-          </span>
-        </div>
+        {/* Center: Spacer for Alignment */}
+        <div className="flex-1" />
 
         {/* Right: Share Action */}
         <button

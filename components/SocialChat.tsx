@@ -2160,6 +2160,45 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (!session?.user) return;
     fetchInitialSocialDataCoalesced(true, currentUserId, currentAccountEmail).then((initData) => {
       if (initData) {
+        if (Array.isArray(initData.recentChats) && initData.recentChats.length > 0) {
+          const freshChats = initData.recentChats;
+          const freshById = new Map<string, any>();
+          freshChats.forEach((c: any) => {
+            if (c.id) freshById.set(String(c.id).toLowerCase(), c);
+            if (c.email) freshById.set(c.email.toLowerCase().trim(), c);
+          });
+          setUsers(prev => {
+            if (prev.length === 0) return freshChats;
+            return prev.map(u => {
+              const fresh = freshById.get(String(u.id).toLowerCase()) || (u.email ? freshById.get(u.email.toLowerCase().trim()) : undefined);
+              if (fresh) {
+                return {
+                  ...u,
+                  username: fresh.username || u.username,
+                  image: fresh.image !== undefined ? fresh.image : u.image,
+                  bio: fresh.bio !== undefined ? fresh.bio : u.bio,
+                  lastMessage: fresh.lastMessage || u.lastMessage,
+                  lastMessageTime: fresh.lastMessageTime || u.lastMessageTime,
+                };
+              }
+              return u;
+            });
+          });
+          allContactsRef.current = allContactsRef.current.map(u => {
+            const fresh = freshById.get(String(u.id).toLowerCase()) || (u.email ? freshById.get(u.email.toLowerCase().trim()) : undefined);
+            if (fresh) {
+              return {
+                ...u,
+                username: fresh.username || u.username,
+                image: fresh.image !== undefined ? fresh.image : u.image,
+                bio: fresh.bio !== undefined ? fresh.bio : u.bio,
+                lastMessage: fresh.lastMessage || u.lastMessage,
+                lastMessageTime: fresh.lastMessageTime || u.lastMessageTime,
+              };
+            }
+            return u;
+          });
+        }
         if (Array.isArray(initData.activeStories)) {
           setActiveStories(initData.activeStories);
           const myId = (session.user as any)?.id;
@@ -3666,25 +3705,32 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         cachedInitialSocialData = null;
         lastInitialSocialDataFetchTime = 0;
 
+        const isMatch = (u: any) => {
+          const uId = String(u.id || '').trim();
+          const uEmail = (u.email || '').toLowerCase().trim();
+          return (targetId && (uId === targetId || uEmail === targetId.toLowerCase())) ||
+                 (targetEmail && (uEmail === targetEmail || uId.toLowerCase() === targetEmail));
+        };
+
         // 1. Update contacts list in state and allContactsRef
         setUsers(prev => {
           const updated = prev.map(u => {
-            if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
+            if (isMatch(u)) {
               return {
                 ...u,
                 ...(data.username ? { username: data.username } : {}),
-                ...(data.image ? { image: data.image } : {}),
+                ...(data.image !== undefined ? { image: data.image || '' } : {}),
                 ...((data as any).bio !== undefined ? { bio: (data as any).bio } : {}),
               };
             }
             return u;
           });
           allContactsRef.current = allContactsRef.current.map(u => {
-            if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
+            if (isMatch(u)) {
               return {
                 ...u,
                 ...(data.username ? { username: data.username } : {}),
-                ...(data.image ? { image: data.image } : {}),
+                ...(data.image !== undefined ? { image: data.image || '' } : {}),
                 ...((data as any).bio !== undefined ? { bio: (data as any).bio } : {}),
               };
             }
@@ -3702,21 +3748,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         // 2. Update requests list in state and allRequestsRef
         setRequests(prev => {
           const updated = prev.map(u => {
-            if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
+            if (isMatch(u)) {
               return {
                 ...u,
                 ...(data.username ? { username: data.username } : {}),
-                ...(data.image ? { image: data.image } : {}),
+                ...(data.image !== undefined ? { image: data.image || '' } : {}),
               };
             }
             return u;
           });
           allRequestsRef.current = allRequestsRef.current.map(u => {
-            if ((targetId && u.id === targetId) || (targetEmail && u.email?.toLowerCase().trim() === targetEmail)) {
+            if (isMatch(u)) {
               return {
                 ...u,
                 ...(data.username ? { username: data.username } : {}),
-                ...(data.image ? { image: data.image } : {}),
+                ...(data.image !== undefined ? { image: data.image || '' } : {}),
               };
             }
             return u;
@@ -4483,24 +4529,37 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
         // Server contacts are strictly authoritative for user profile (username, image, email, bio)
         const contactById = new Map<string, User>();
+        const contactByEmail = new Map<string, User>();
         // 1. Index all fresh server contacts first
         contacts.forEach(serverContact => {
-          contactById.set(String(serverContact.id), serverContact);
+          if (serverContact.id) {
+            contactById.set(String(serverContact.id), serverContact);
+            contactById.set(String(serverContact.id).toLowerCase(), serverContact);
+          }
+          if (serverContact.email) {
+            contactByEmail.set(serverContact.email.toLowerCase().trim(), serverContact);
+          }
         });
 
         // 2. Merge local contacts from allContactsRef (preserving optimistic in-flight messages only)
         allContactsRef.current.forEach(localContact => {
-          const key = String(localContact.id);
-          const serverContact = contactById.get(key);
+          const rawId = String(localContact.id || '');
+          const idKey = rawId.toLowerCase();
+          const emailKey = (localContact.email || '').toLowerCase().trim();
+          const serverContact = contactById.get(rawId) ||
+                                contactById.get(idKey) ||
+                                (emailKey ? contactByEmail.get(emailKey) : undefined) ||
+                                contactByEmail.get(idKey);
           if (!serverContact) {
             // Local-only contact not yet in server list
-            contactById.set(key, localContact);
+            contactById.set(rawId, localContact);
           } else {
+            const canonicalKey = String(serverContact.id);
             const serverTime = new Date((serverContact as any).lastMessageTime || 0).getTime();
             const localTime = new Date((localContact as any).lastMessageTime || 0).getTime();
             if (localTime > serverTime) {
               // Local has a strictly newer message (optimistic message in flight)
-              contactById.set(key, {
+              contactById.set(canonicalKey, {
                 ...localContact,
                 ...serverContact,
                 lastMessage: localContact.lastMessage || serverContact.lastMessage,
@@ -4512,7 +4571,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               });
             } else {
               // Server is authoritative for identity and recent message
-              contactById.set(key, {
+              contactById.set(canonicalKey, {
                 ...localContact,
                 ...serverContact,
                 username: serverContact.username || localContact.username,
@@ -4523,7 +4582,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             }
           }
         });
-        const mergedContacts = Array.from(contactById.values()).sort((a, b) => {
+        const uniqueContactsMap = new Map<string, User>();
+        contactById.forEach((c) => {
+          if (c && c.id) {
+            uniqueContactsMap.set(String(c.id), c);
+          }
+        });
+        const mergedContacts = Array.from(uniqueContactsMap.values()).sort((a, b) => {
           const aTime = new Date((a as any).lastMessageTime || 0).getTime();
           const bTime = new Date((b as any).lastMessageTime || 0).getTime();
           return bTime - aTime;
@@ -4539,6 +4604,27 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             localStorage.setItem(`social_users_cache_${currentUserId}`, JSON.stringify(mergedContacts));
           } catch (e) {}
         }
+
+        // Proactive background verification for top recent chat contacts directly from database
+        mergedContacts.slice(0, 8).forEach(c => {
+          const target = c.id || c.email;
+          if (!target) return;
+          renderApiClient.getSocialUser(target, currentUserId, currentAccountEmail).then(fresh => {
+            if (!fresh || !fresh.username) return;
+            setUsers(prev => prev.map(u => (u.id === c.id || (u.email && u.email === c.email)) ? {
+              ...u,
+              username: fresh.username,
+              image: fresh.image !== undefined ? fresh.image : u.image,
+              bio: fresh.bio !== undefined ? fresh.bio : u.bio,
+            } : u));
+            allContactsRef.current = allContactsRef.current.map(u => (u.id === c.id || (u.email && u.email === c.email)) ? {
+              ...u,
+              username: fresh.username,
+              image: fresh.image !== undefined ? fresh.image : u.image,
+              bio: fresh.bio !== undefined ? fresh.bio : u.bio,
+            } : u);
+          }).catch(() => {});
+        });
         // Update selectedUser if active chat is open so header receives latest username/image
         setSelectedUser(curr => {
           if (!curr) return curr;
