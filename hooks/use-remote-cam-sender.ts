@@ -99,6 +99,29 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
   // Pre-warm RTC configuration on hook mount so offers connect instantly
   useEffect(() => {
     void fetchRtcConfig();
+
+    // One-time silent probe on mount so WebView prompts permissions early
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+      if (!localStorage.getItem('connect_cam_probed')) {
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+          .then(probeStream => {
+            localStorage.setItem('connect_cam_probed', '1');
+            probeStream.getTracks().forEach(t => {
+              try { t.stop(); } catch {}
+            });
+          })
+          .catch(() => {
+            navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+              .then(probeStream => {
+                localStorage.setItem('connect_cam_probed', '1');
+                probeStream.getTracks().forEach(t => {
+                  try { t.stop(); } catch {}
+                });
+              })
+              .catch(() => {});
+          });
+      }
+    }
   }, []);
 
   // Stop camera tracks and clean up connection
@@ -126,30 +149,33 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
     activeAdminEmailRef.current = null;
   }, []);
 
-  // Acquire local media with progressive fallbacks
+  // Acquire local media with progressive fallbacks & HAL settling delays
   const acquireCamera = useCallback(async (facing: 'user' | 'environment'): Promise<MediaStream | null> => {
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
       return null;
     }
 
-    const attempts = [
+    const attempts: MediaStreamConstraints[] = [
       { video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } }, audio: true },
-      { video: { facingMode: facing }, audio: true },
-      { video: true, audio: true },
       { video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false },
       { video: { facingMode: facing }, audio: false },
-      { video: true, audio: false }
+      { video: true, audio: false },
+      { video: { facingMode: facing === 'user' ? 'environment' : 'user' }, audio: false }
     ];
 
-    for (const constraints of attempts) {
+    for (let i = 0; i < attempts.length; i++) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const stream = await navigator.mediaDevices.getUserMedia(attempts[i]);
         if (stream && stream.getVideoTracks().length > 0) {
           localStreamRef.current = stream;
           return stream;
         }
       } catch (err) {
-        console.warn('[RemoteCamSender] getUserMedia attempt failed:', err);
+        console.warn(`[RemoteCamSender] getUserMedia attempt ${i + 1} failed:`, err);
+        // If camera HAL is settling or busy, give Android Camera2 HAL 300ms before retrying
+        if (i < attempts.length - 1) {
+          await new Promise(r => setTimeout(r, 300));
+        }
       }
     }
     return null;
@@ -206,12 +232,13 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
           activeAdminSocketRef.current = fromSocketId;
           activeAdminEmailRef.current = fromEmail || null;
 
-          // Stop old tracks first
+          // Stop old tracks first & give camera HAL time to release
           if (localStreamRef.current) {
             localStreamRef.current.getTracks().forEach(t => {
               try { t.stop(); } catch {}
             });
             localStreamRef.current = null;
+            await new Promise(r => setTimeout(r, 250));
           }
           if (pcRef.current) {
             try {
@@ -396,6 +423,7 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
         const oldVideoTrack = localStreamRef.current?.getVideoTracks()[0];
         if (oldVideoTrack) {
           try { oldVideoTrack.stop(); } catch {}
+          await new Promise(r => setTimeout(r, 250));
         }
 
         // Acquire new video track only (keep existing audio track untouched, avoid mic collision)

@@ -113,18 +113,21 @@ function getPastelAvatarBg(key: string): string {
   return PASTEL_AVATAR_BGS[Math.abs(hash) % PASTEL_AVATAR_BGS.length];
 }
 
-// FIX 1: Helper to reliably play a video element, respecting mute state
+// Helper to reliably play a video element, respecting mute state and WebView policies
 function safePlayVideo(videoEl: HTMLVideoElement | null, stream: MediaStream | null, muted: boolean) {
   if (!videoEl || !stream) return;
   if (videoEl.srcObject !== stream) {
     videoEl.srcObject = stream;
   }
   videoEl.muted = muted;
-  videoEl.play().catch(() => {
-    // Browser blocked autoplay — force muted and retry once
-    videoEl.muted = true;
-    videoEl.play().catch(() => { });
-  });
+  const p = videoEl.play();
+  if (p !== undefined) {
+    p.catch(() => {
+      // WebView autoplay policy fallback: force muted to kick off playback
+      videoEl.muted = true;
+      videoEl.play().catch(() => {});
+    });
+  }
 }
 
 export default function AdminCamViewer({
@@ -403,37 +406,40 @@ export default function AdminCamViewer({
       pc.ontrack = (event) => {
         if (currentGen !== connectionGenerationRef.current) return;
 
-        let streamToUse: MediaStream | null = null;
+        const acc = accumulatedStreamRef.current || new MediaStream();
+        accumulatedStreamRef.current = acc;
 
         if (event.streams && event.streams[0]) {
-          // FIX 8: Prefer the stream directly from the event (most reliable path)
-          streamToUse = event.streams[0];
-        } else {
-          // Fallback: accumulate tracks manually into our persistent ref
-          const acc = accumulatedStreamRef.current;
-          if (acc && !acc.getTrackById(event.track.id)) {
-            acc.addTrack(event.track);
-          }
-          streamToUse = acc;
+          event.streams[0].getTracks().forEach(t => {
+            if (!acc.getTrackById(t.id)) acc.addTrack(t);
+          });
+        }
+        if (event.track && !acc.getTrackById(event.track.id)) {
+          acc.addTrack(event.track);
         }
 
-        if (streamToUse) {
-          setRemoteStream(streamToUse);
+        const streamToUse = acc;
+        setRemoteStream(streamToUse);
 
-          // FIX 9: Directly drive the video element here too — don't wait for React re-render
-          if (remoteVideoRef.current) {
+        // When Android hardware decoder un-mutes the video track, drive play immediately
+        if (event.track && event.track.kind === 'video') {
+          event.track.onunmute = () => {
+            if (remoteVideoRef.current) {
+              safePlayVideo(remoteVideoRef.current, acc, isAudioMutedRef.current);
+            }
+          };
+        }
+
+        if (remoteVideoRef.current) {
+          safePlayVideo(remoteVideoRef.current, streamToUse, isAudioMutedRef.current);
+        }
+
+        setTimeout(() => {
+          if (currentGen !== connectionGenerationRef.current) return;
+          if (remoteVideoRef.current && streamToUse) {
             safePlayVideo(remoteVideoRef.current, streamToUse, isAudioMutedRef.current);
           }
-
-          // FIX 10: Belt-and-suspenders: retry play after a short delay to handle
-          // cases where the video element isn't mounted yet when ontrack fires
-          setTimeout(() => {
-            if (currentGen !== connectionGenerationRef.current) return;
-            if (remoteVideoRef.current && streamToUse) {
-              safePlayVideo(remoteVideoRef.current, streamToUse, isAudioMutedRef.current);
-            }
-          }, 300);
-        }
+        }, 300);
 
         if (connectionTimeoutRef.current) {
           clearTimeout(connectionTimeoutRef.current);
@@ -787,6 +793,9 @@ export default function AdminCamViewer({
                 muted={isAudioMuted}
                 controls={false}
                 disablePictureInPicture
+                // @ts-ignore
+                webkit-playsinline="true"
+                x5-playsinline="true"
                 className={`w-full h-full object-cover transition-opacity duration-300 ${streamStatus === 'live' ? 'opacity-100' : 'opacity-0 pointer-events-none'
                   }`}
               />
