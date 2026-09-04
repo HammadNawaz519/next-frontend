@@ -1944,17 +1944,30 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const notifiedMessageIdsRef = useRef<Set<string>>(new Set());
   const notifiedCallIdsRef = useRef<Set<string>>(new Set());
 
-  // Auto-select the user passed from another profile's Message button
+  // Auto-select the user passed from another profile's Message button or parent
   useEffect(() => {
     if (initialUser && initialUser.id) {
+      // Find the freshest known data for this user from ref or state
+      const existingInRef = allContactsRef.current.find(u => u.id === initialUser.id)
+        || users.find(u => u.id === initialUser.id);
+      const resolvedUser = existingInRef
+        ? { ...initialUser, ...existingInRef, username: existingInRef.username || initialUser.username }
+        : initialUser;
+
+      if (selectedUserRef.current?.id !== resolvedUser.id || selectedUserRef.current?.username !== resolvedUser.username) {
+        selectedUserRef.current = resolvedUser;
+        setSelectedUser(resolvedUser);
+      }
       setShowChatDetails(false);
       setShowThemePicker(false);
-      setSelectedUser(initialUser);
 
       // Ensure user is in contacts list so header and list reflect correctly
       setUsers(prev => {
-        if (prev.some(u => u.id === initialUser.id)) return prev;
-        const updated = [{ ...initialUser, unseenCount: 0, isRequest: false }, ...prev];
+        const exists = prev.some(u => u.id === initialUser.id);
+        if (exists) {
+          return prev.map(u => u.id === initialUser.id ? { ...u, ...resolvedUser } : u);
+        }
+        const updated = [{ ...resolvedUser, unseenCount: 0, isRequest: false }, ...prev];
         allContactsRef.current = updated;
         return updated;
       });
@@ -2026,13 +2039,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   };
 
   const handleSelectUser = (user: any, e?: React.MouseEvent) => {
-    selectedUserRef.current = user;
+    if (!user) {
+      selectedUserRef.current = null;
+      setSelectedUser(null);
+      return;
+    }
+    // Lookup the freshest version of this user from allContactsRef or users
+    const freshFromRef = allContactsRef.current.find(c => c.id === user.id) || users.find(u => u.id === user.id);
+    const resolvedUser = freshFromRef ? { ...user, ...freshFromRef, username: freshFromRef.username || user.username } : user;
+    selectedUserRef.current = resolvedUser;
     setShowChatDetails(false);
     setShowThemePicker(false);
     if (selectedChatForOptions) {
-      setSelectedChatForOptions(user);
+      setSelectedChatForOptions(resolvedUser);
     }
-    setSelectedUser(user);
+    setSelectedUser(resolvedUser);
   };
 
   const [view, setView] = useState<'recent' | 'requests'>('recent');
@@ -3157,8 +3178,25 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             if (typeof window !== 'undefined' && currentUserId) {
               try {
                 localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(merged));
+                localStorage.setItem(`social_users_cache_${currentUserId}`, JSON.stringify(merged));
               } catch (e) {}
             }
+            setSelectedUser(curr => {
+              if (!curr) return curr;
+              const fresh = contacts.find((c: any) => c.id === curr.id) || reqs.find((r: any) => r.id === curr.id);
+              if (fresh) {
+                const updated = {
+                  ...curr,
+                  ...fresh,
+                  username: fresh.username || curr.username,
+                  image: fresh.image !== undefined ? fresh.image : curr.image,
+                  bio: fresh.bio !== undefined ? fresh.bio : curr.bio,
+                };
+                selectedUserRef.current = updated;
+                return updated;
+              }
+              return curr;
+            });
 
             if (Object.keys(freshLastSeen).length > 0) {
               setLastSeenMap(prev => {
@@ -3414,9 +3452,9 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
         const targetUserItem = existingInRef ? {
           ...existingInRef,
-          username: existingInRef.username || partnerUsername || 'User',
-          image: existingInRef.image || partnerImage,
-          email: existingInRef.email || partnerEmail,
+          username: partnerUsername || existingInRef.username || 'User',
+          image: partnerImage || existingInRef.image,
+          email: partnerEmail || existingInRef.email,
           lastMessage: formatMsg(msg),
           lastMessageTime: msg.createdAt || new Date().toISOString(),
           unseenCount: isSentByMe
@@ -3625,6 +3663,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         // Invalidate in-flight and module cache
         cachedRecentChatsData = null;
         lastRecentChatsFetchTime = 0;
+        cachedInitialSocialData = null;
+        lastInitialSocialDataFetchTime = 0;
 
         // 1. Update contacts list in state and allContactsRef
         setUsers(prev => {
@@ -3634,6 +3674,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 ...u,
                 ...(data.username ? { username: data.username } : {}),
                 ...(data.image ? { image: data.image } : {}),
+                ...((data as any).bio !== undefined ? { bio: (data as any).bio } : {}),
               };
             }
             return u;
@@ -3644,6 +3685,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 ...u,
                 ...(data.username ? { username: data.username } : {}),
                 ...(data.image ? { image: data.image } : {}),
+                ...((data as any).bio !== undefined ? { bio: (data as any).bio } : {}),
               };
             }
             return u;
@@ -3689,6 +3731,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               ...current,
               ...(data.username ? { username: data.username } : {}),
               ...(data.image ? { image: data.image } : {}),
+              ...((data as any).bio !== undefined ? { bio: (data as any).bio } : {}),
             };
             selectedUserRef.current = updated;
             return updated;
@@ -3703,6 +3746,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               ...current,
               ...(data.username ? { username: data.username } : {}),
               ...(data.image ? { image: data.image } : {}),
+              ...((data as any).bio !== undefined ? { bio: (data as any).bio } : {}),
             };
           }
           return current;
@@ -4324,9 +4368,11 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             // Sync any existing contacts with fresh server data (e.g. updated username, avatar)
             const resultMap = new Map(validResults.map((u: any) => [u.id, u]));
 
+            let hasSearchContactUpdates = false;
             allContactsRef.current = allContactsRef.current.map(c => {
               const fresh = resultMap.get(c.id);
               if (fresh) {
+                hasSearchContactUpdates = true;
                 return {
                   ...c,
                   username: fresh.username || c.username,
@@ -4337,6 +4383,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               }
               return c;
             });
+            if (hasSearchContactUpdates && typeof window !== 'undefined' && currentUserId) {
+              try {
+                localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(allContactsRef.current));
+                localStorage.setItem(`social_users_cache_${currentUserId}`, JSON.stringify(allContactsRef.current));
+              } catch (e) {}
+            }
 
             const freshContactIds = new Set(allContactsRef.current.map(c => c.id));
             const freshReqIds = new Set(allRequestsRef.current.map(r => r.id));
@@ -4429,19 +4481,47 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             return merged;
           });
         }
-        // Keep newer realtime/optimistic entries when this background request
-        // started before a socket message arrived.
+        // Server contacts are strictly authoritative for user profile (username, image, email, bio)
         const contactById = new Map<string, User>();
-        [...contacts, ...allContactsRef.current].forEach(contact => {
-          const key = String(contact.id);
-          const existing = contactById.get(key);
-          if (!existing) {
-            contactById.set(key, contact);
-            return;
+        // 1. Index all fresh server contacts first
+        contacts.forEach(serverContact => {
+          contactById.set(String(serverContact.id), serverContact);
+        });
+
+        // 2. Merge local contacts from allContactsRef (preserving optimistic in-flight messages only)
+        allContactsRef.current.forEach(localContact => {
+          const key = String(localContact.id);
+          const serverContact = contactById.get(key);
+          if (!serverContact) {
+            // Local-only contact not yet in server list
+            contactById.set(key, localContact);
+          } else {
+            const serverTime = new Date((serverContact as any).lastMessageTime || 0).getTime();
+            const localTime = new Date((localContact as any).lastMessageTime || 0).getTime();
+            if (localTime > serverTime) {
+              // Local has a strictly newer message (optimistic message in flight)
+              contactById.set(key, {
+                ...localContact,
+                ...serverContact,
+                lastMessage: localContact.lastMessage || serverContact.lastMessage,
+                lastMessageTime: localContact.lastMessageTime || serverContact.lastMessageTime,
+                username: serverContact.username || localContact.username,
+                image: serverContact.image !== undefined ? serverContact.image : localContact.image,
+                bio: serverContact.bio !== undefined ? serverContact.bio : localContact.bio,
+                email: serverContact.email || localContact.email,
+              });
+            } else {
+              // Server is authoritative for identity and recent message
+              contactById.set(key, {
+                ...localContact,
+                ...serverContact,
+                username: serverContact.username || localContact.username,
+                image: serverContact.image !== undefined ? serverContact.image : localContact.image,
+                bio: serverContact.bio !== undefined ? serverContact.bio : localContact.bio,
+                email: serverContact.email || localContact.email,
+              });
+            }
           }
-          const existingTime = new Date((existing as any).lastMessageTime || 0).getTime();
-          const incomingTime = new Date((contact as any).lastMessageTime || 0).getTime();
-          contactById.set(key, incomingTime >= existingTime ? { ...existing, ...contact } : { ...contact, ...existing });
         });
         const mergedContacts = Array.from(contactById.values()).sort((a, b) => {
           const aTime = new Date((a as any).lastMessageTime || 0).getTime();
@@ -4464,7 +4544,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           if (!curr) return curr;
           const fresh = contacts.find(c => c.id === curr.id) || reqs.find(r => r.id === curr.id);
           if (fresh) {
-            const merged = { ...curr, ...fresh };
+            const merged = {
+              ...curr,
+              ...fresh,
+              username: fresh.username || curr.username,
+              image: fresh.image !== undefined ? fresh.image : curr.image,
+              bio: fresh.bio !== undefined ? fresh.bio : curr.bio,
+            };
             selectedUserRef.current = merged;
             return merged;
           }
@@ -4575,6 +4661,58 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       }
 
       setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, unseenCount: 0 } : u));
+
+      // On opening chat, immediately verify partner's current profile from database so name changes are instantly applied
+      renderApiClient.getSocialUser(targetUserId, currentUserId, currentAccountEmail).then(freshPartner => {
+        if (!freshPartner || !freshPartner.username) return;
+        if (isCancelled || selectedUserRef.current?.id !== targetUserId) return;
+
+        setSelectedUser(curr => {
+          if (!curr || curr.id !== targetUserId) return curr;
+          const updated = {
+            ...curr,
+            username: freshPartner.username,
+            image: freshPartner.image !== undefined ? freshPartner.image : curr.image,
+            bio: freshPartner.bio !== undefined ? freshPartner.bio : curr.bio,
+            email: freshPartner.email || curr.email,
+          };
+          selectedUserRef.current = updated;
+          return updated;
+        });
+
+        allContactsRef.current = allContactsRef.current.map(u => {
+          if (u.id === targetUserId) {
+            return {
+              ...u,
+              username: freshPartner.username,
+              image: freshPartner.image !== undefined ? freshPartner.image : u.image,
+              bio: freshPartner.bio !== undefined ? freshPartner.bio : u.bio,
+              email: freshPartner.email || u.email,
+            };
+          }
+          return u;
+        });
+
+        setUsers(prev => prev.map(u => {
+          if (u.id === targetUserId) {
+            return {
+              ...u,
+              username: freshPartner.username,
+              image: freshPartner.image !== undefined ? freshPartner.image : u.image,
+              bio: freshPartner.bio !== undefined ? freshPartner.bio : u.bio,
+              email: freshPartner.email || u.email,
+            };
+          }
+          return u;
+        }));
+
+        if (typeof window !== 'undefined' && currentUserId) {
+          try {
+            localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(allContactsRef.current));
+            localStorage.setItem(`social_users_cache_${currentUserId}`, JSON.stringify(allContactsRef.current));
+          } catch (e) {}
+        }
+      }).catch(() => {});
 
       try {
         let history: any[] = [];
