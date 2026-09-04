@@ -1109,28 +1109,28 @@ export default function ProfilePanel({
                   Account Actions
                 </span>
 
-                {/* Sleek Dark Log Out Button */}
+                {/* Outline Black Log Out Button */}
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full py-3.5 px-6 rounded-full bg-[#141111] hover:bg-zinc-800 active:bg-zinc-900 text-white font-bold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98] shadow-sm border-0"
+                  className="w-full py-3.5 px-6 rounded-full bg-transparent hover:bg-zinc-50 active:bg-zinc-100 border border-zinc-900 text-zinc-900 font-bold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98]"
                   aria-label="Log Out of Account"
                 >
-                  <LogOut className="w-4 h-4" strokeWidth={2.2} />
+                  <LogOut className="w-4 h-4 text-zinc-900" strokeWidth={2.2} />
                   <span>Log Out</span>
                 </button>
 
-                {/* Sleek Dark Delete Account Button (Styled exactly like Logout button) */}
+                {/* Outline Black Delete Account Button */}
                 <button
                   type="button"
                   onClick={() => {
                     triggerHaptic('medium');
                     setShowDeleteConfirm(true);
                   }}
-                  className="w-full py-3.5 px-6 rounded-full bg-[#141111] hover:bg-zinc-800 active:bg-zinc-900 text-white font-bold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98] shadow-sm border-0"
+                  className="w-full py-3.5 px-6 rounded-full bg-transparent hover:bg-zinc-50 active:bg-zinc-100 border border-zinc-900 text-zinc-900 font-bold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98]"
                   aria-label="Delete Account"
                 >
-                  <Trash2 className="w-4 h-4 text-white" strokeWidth={2.2} />
+                  <Trash2 className="w-4 h-4 text-zinc-900" strokeWidth={2.2} />
                   <span>Delete Account</span>
                 </button>
               </div>
