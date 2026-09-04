@@ -3705,6 +3705,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
       });
 
+      newSocket.on('profile_liked', (data) => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('profile_liked', { detail: data }));
+        }
+      });
+
       // call_busy needs to be handled here because the engine may not have started yet
       // (caller gets busy before the engine's socket listeners are even set up)
       newSocket.on('call_busy', (data) => {
@@ -6590,15 +6596,26 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   onOpenUserProfile={(u) => setViewingProfileUser(u)}
                 />
 
-                {/* ── SCREEN: OTHER USER'S PUBLIC PROFILE MODAL (REVERSED CALL LAYOUT) ── */}
+                {/* ── SCREEN: OTHER USER'S PUBLIC PROFILE MODAL ── */}
                 {viewingProfileUser && (
                   <OthersProfile
                     user={viewingProfileUser}
+                    currentUserId={(session?.user as any)?.id}
+                    socket={socket}
                     onClose={() => setViewingProfileUser(null)}
-                    onGetInTouch={() => {
+                    onGetInTouch={(u) => {
                       setViewingProfileUser(null);
                       setShowChatDetails(false);
+                      if (u && u.id !== selectedUser?.id) {
+                        handleSelectUser(u);
+                      }
                     }}
+                    onStartCall={(type) => {
+                      setViewingProfileUser(null);
+                      setShowChatDetails(false);
+                      handleCall(type);
+                    }}
+                    activeTheme={activeTheme}
                   />
                 )}
 
