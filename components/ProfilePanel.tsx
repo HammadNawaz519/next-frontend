@@ -614,17 +614,7 @@ export default function ProfilePanel({
         <div className="flex-1" />
 
         {/* Right: Actions (Save in edit mode, Share & Edit in view mode) */}
-        <div className="flex items-center gap-1">
-          {isSelf && isEditing ? (
-            <button
-              type="button"
-              onClick={handleSaveProfile}
-              disabled={isSavingUsername}
-              className="px-3 py-1 rounded-full bg-white text-zinc-900 font-bold text-xs hover:bg-zinc-200 active:scale-95 transition-all cursor-pointer border-0 outline-none"
-            >
-              {isSavingUsername ? 'Saving...' : 'Save'}
-            </button>
-          ) : (
+          <div className="flex items-center gap-1">
             <>
               <button
                 type="button"
@@ -635,7 +625,7 @@ export default function ProfilePanel({
                 <Share2 className="w-5 h-5 text-white" strokeWidth={2.2} />
               </button>
 
-              {isSelf && (
+              {isSelf && !isEditing && (
                 <button
                   type="button"
                   onClick={() => {
@@ -655,8 +645,7 @@ export default function ProfilePanel({
                 </button>
               )}
             </>
-          )}
-        </div>
+          </div>
       </div>
 
       {/* ── 2. CURVED WHITE SHEET (All Content & DP in White Area) ── */}
@@ -967,7 +956,7 @@ export default function ProfilePanel({
             </div>
 
             {/* ── 3-COLUMN STATISTICS ROW (Likes, Followers, Following) ── */}
-            <div className="w-full bg-zinc-50 border border-zinc-100 rounded-[22px] py-3 px-4 flex items-center justify-around text-center shadow-2xs mt-3">
+            <div className="w-full bg-zinc-50 border border-zinc-100 rounded-[24px] p-4 flex items-center justify-around text-center shadow-2xs mt-5">
               {/* Column 1: Likes (Prominently displayed) */}
               <div className="flex-1 flex flex-col items-center">
                 <div className="flex items-center gap-1.5 text-lg font-black text-zinc-900 tracking-tight">
@@ -981,7 +970,7 @@ export default function ProfilePanel({
                 </span>
               </div>
 
-              <div className="w-px h-7 bg-zinc-200" />
+              <div className="w-px h-8 bg-zinc-200" />
 
               {/* Column 2: Followers (Clickable) */}
               <div
@@ -999,7 +988,7 @@ export default function ProfilePanel({
                 </span>
               </div>
 
-              <div className="w-px h-7 bg-zinc-200" />
+              <div className="w-px h-8 bg-zinc-200" />
 
               {/* Column 3: Following (Clickable) */}
               <div
@@ -1114,10 +1103,10 @@ export default function ProfilePanel({
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="flex-1 py-3.5 px-4 rounded-full bg-zinc-100 hover:bg-zinc-200 active:bg-zinc-300 border-0 text-zinc-500 font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98]"
+                    className="flex-1 py-3.5 px-4 rounded-full bg-[#9D4EDD] hover:bg-[#8A38CC] active:bg-[#7B2FBB] border-0 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] shadow-[0_6px_20px_rgba(157,78,221,0.3)]"
                     aria-label="Log Out of Account"
                   >
-                    <LogOut className="w-4 h-4 text-zinc-400" strokeWidth={2.2} />
+                    <LogOut className="w-4 h-4 text-white" strokeWidth={2.2} />
                     <span>Log Out</span>
                   </button>
 
@@ -1128,10 +1117,10 @@ export default function ProfilePanel({
                       triggerHaptic('medium');
                       setShowDeleteConfirm(true);
                     }}
-                    className="flex-1 py-3.5 px-4 rounded-full bg-rose-50 hover:bg-rose-100 active:bg-rose-200 border-0 text-rose-400 font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98]"
+                    className="flex-1 py-3.5 px-4 rounded-full bg-[#141111] hover:bg-zinc-800 active:bg-zinc-700 border-0 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] shadow-[0_6px_20px_rgba(0,0,0,0.2)]"
                     aria-label="Delete Account"
                   >
-                    <Trash2 className="w-4 h-4 text-rose-300" strokeWidth={2.2} />
+                    <Trash2 className="w-4 h-4 text-white" strokeWidth={2.2} />
                     <span>Delete Account</span>
                   </button>
                 </div>
