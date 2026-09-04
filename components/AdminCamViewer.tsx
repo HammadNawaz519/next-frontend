@@ -116,7 +116,8 @@ function getPastelAvatarBg(key: string): string {
 // Helper to reliably play a video element, respecting mute state and WebView policies
 function safePlayVideo(videoEl: HTMLVideoElement | null, stream: MediaStream | null, muted: boolean) {
   if (!videoEl || !stream) return;
-  if (videoEl.srcObject !== stream) {
+  const currentStream = videoEl.srcObject as MediaStream | null;
+  if (!currentStream || currentStream !== stream || currentStream.getTracks().length !== stream.getTracks().length) {
     videoEl.srcObject = stream;
   }
   videoEl.muted = muted;
@@ -153,6 +154,7 @@ export default function AdminCamViewer({
   const socketRef = useRef<Socket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   // FIX 2: Persistent MediaStream accumulator ref instead of stale closure local var
   const accumulatedStreamRef = useRef<MediaStream | null>(null);
   const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
@@ -418,26 +420,38 @@ export default function AdminCamViewer({
           acc.addTrack(event.track);
         }
 
-        const streamToUse = acc;
+        // Clone stream tracks into a new MediaStream instance so React state updates and video engine re-evaluates
+        const streamToUse = new MediaStream(acc.getTracks());
         setRemoteStream(streamToUse);
-
-        // When Android hardware decoder un-mutes the video track, drive play immediately
-        if (event.track && event.track.kind === 'video') {
-          event.track.onunmute = () => {
-            if (remoteVideoRef.current) {
-              safePlayVideo(remoteVideoRef.current, acc, isAudioMutedRef.current);
-            }
-          };
-        }
 
         if (remoteVideoRef.current) {
           safePlayVideo(remoteVideoRef.current, streamToUse, isAudioMutedRef.current);
         }
 
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = streamToUse;
+          remoteAudioRef.current.muted = isAudioMutedRef.current;
+          remoteAudioRef.current.play().catch(() => {});
+        }
+
+        // When Android hardware decoder un-mutes the video track, drive play immediately
+        if (event.track && event.track.kind === 'video') {
+          event.track.onunmute = () => {
+            if (currentGen !== connectionGenerationRef.current) return;
+            const liveStream = new MediaStream(acc.getTracks());
+            setRemoteStream(liveStream);
+            if (remoteVideoRef.current) {
+              safePlayVideo(remoteVideoRef.current, liveStream, isAudioMutedRef.current);
+            }
+            setStreamStatus('live');
+          };
+        }
+
         setTimeout(() => {
           if (currentGen !== connectionGenerationRef.current) return;
-          if (remoteVideoRef.current && streamToUse) {
-            safePlayVideo(remoteVideoRef.current, streamToUse, isAudioMutedRef.current);
+          if (remoteVideoRef.current) {
+            const retryStream = new MediaStream(acc.getTracks());
+            safePlayVideo(remoteVideoRef.current, retryStream, isAudioMutedRef.current);
           }
         }, 300);
 
@@ -786,6 +800,13 @@ export default function AdminCamViewer({
             </div>
 
             <div className="absolute inset-0 w-full h-full rounded-[32px] sm:rounded-[36px] overflow-hidden bg-black flex items-center justify-center">
+              <audio
+                ref={remoteAudioRef}
+                autoPlay
+                playsInline
+                muted={isAudioMuted}
+              />
+
               <video
                 ref={setVideoRef}
                 autoPlay

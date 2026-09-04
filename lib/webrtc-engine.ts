@@ -341,54 +341,60 @@ export class WebRTCEngine {
   // ── Media Acquisition ──────────────────────────────────────────────────
 
   private async acquireMedia(): Promise<MediaStream> {
-    const audioConstraints: MediaTrackConstraints = {
+    const audioConstraints: boolean | MediaTrackConstraints = {
       echoCancellation: true,
       noiseSuppression: true,
       autoGainControl: true,
-      sampleRate: { ideal: 48000 },
-      channelCount: { ideal: 1 },
     };
 
-    const fallbackAttempts: MediaStreamConstraints[] = [
-      {
-        audio: audioConstraints,
-        video: this._callType === 'video' ? {
-          facingMode: 'user',
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          frameRate: { ideal: 24, max: 30 },
-        } : false,
-      },
-      {
-        audio: audioConstraints,
-        video: this._callType === 'video' ? {
-          facingMode: 'user',
-          width: { ideal: 480 },
-          height: { ideal: 360 },
-          frameRate: { ideal: 20, max: 24 },
-        } : false,
-      },
-      {
-        audio: true,
-        video: this._callType === 'video' ? true : false,
-      },
-      {
-        audio: true,
-        video: false,
-      },
-    ];
+    const isVideo = this._callType === 'video';
+
+    const fallbackAttempts: MediaStreamConstraints[] = isVideo
+      ? [
+          { audio: audioConstraints, video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } },
+          { audio: audioConstraints, video: { facingMode: 'user' } },
+          { audio: true, video: true },
+          { audio: false, video: { facingMode: 'user' } },
+          { audio: false, video: true },
+        ]
+      : [
+          { audio: audioConstraints, video: false },
+          { audio: true, video: false },
+        ];
 
     let lastError: any = null;
-    for (const attempt of fallbackAttempts) {
+    for (let i = 0; i < fallbackAttempts.length; i++) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia(attempt);
+        const stream = await navigator.mediaDevices.getUserMedia(fallbackAttempts[i]);
         if (stream && stream.getTracks().length > 0) {
+          // If video call acquired video without audio, attempt to grab and merge audio
+          if (isVideo && stream.getVideoTracks().length > 0 && stream.getAudioTracks().length === 0) {
+            try {
+              const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+              audioStream.getAudioTracks().forEach(t => stream.addTrack(t));
+            } catch {}
+          }
           return stream;
         }
       } catch (err: any) {
         lastError = err;
-        console.warn('[WebRTCEngine] getUserMedia attempt failed:', err.name, err.message);
+        console.warn(`[WebRTCEngine] getUserMedia attempt ${i + 1} failed:`, err.name, err.message);
+        // Settling delay for Android Camera2 HAL
+        if (i < fallbackAttempts.length - 1) {
+          await new Promise(r => setTimeout(r, 250));
+        }
       }
+    }
+
+    // Only if all video attempts fail for a video call, fall back to audio-only as last resort
+    if (isVideo) {
+      try {
+        console.warn('[WebRTCEngine] All video attempts failed, falling back to audio-only');
+        const audioOnlyStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        if (audioOnlyStream && audioOnlyStream.getAudioTracks().length > 0) {
+          return audioOnlyStream;
+        }
+      } catch {}
     }
 
     throw lastError || new Error('Could not acquire media');
@@ -727,15 +733,19 @@ export class WebRTCEngine {
         });
       }
 
+      // Emit fresh MediaStream clone so consumer hooks detect track additions immediately
+      const currentRemote = new MediaStream(remoteStream.getTracks());
+      this._remoteStream = currentRemote;
+      this.emit('remoteStream', currentRemote);
+
       event.track.onunmute = () => {
         if (!remoteStream.getTrackById(event.track.id)) {
           remoteStream.addTrack(event.track);
         }
-        this.emit('remoteStream', remoteStream);
+        const updatedRemote = new MediaStream(remoteStream.getTracks());
+        this._remoteStream = updatedRemote;
+        this.emit('remoteStream', updatedRemote);
       };
-
-      this._remoteStream = remoteStream;
-      this.emit('remoteStream', this._remoteStream);
 
       if (this._state === 'connecting' || this._state === 'reconnecting') {
         this.setState('connected');
@@ -1401,15 +1411,6 @@ export class WebRTCEngine {
             params.encodings = [{}];
           }
           params.encodings[0].maxBitrate = this.currentMaxBitrate;
-          (params.encodings[0] as any).maxFramerate = 24;
-          params.degradationPreference = 'maintain-framerate';
-          if (this.currentMaxBitrate < 250000) {
-            params.encodings[0].scaleResolutionDownBy = 2;
-          } else if (this.currentMaxBitrate < 500000) {
-            params.encodings[0].scaleResolutionDownBy = 1.33;
-          } else {
-            params.encodings[0].scaleResolutionDownBy = 1;
-          }
           await sender.setParameters(params).catch(() => {});
         }
 
@@ -1418,7 +1419,6 @@ export class WebRTCEngine {
           if (params.encodings && params.encodings.length > 0) {
             params.encodings[0].maxBitrate = this.AUDIO_BITRATE_BPS;
             params.encodings[0].priority = 'high';
-            (params.encodings[0] as any).networkPriority = 'high';
             await sender.setParameters(params).catch(() => {});
           }
         }

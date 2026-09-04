@@ -142,7 +142,8 @@ export default function CallInterface({
     const streamToShow = (callStatus === 'active' && hasRemoteVideo) ? remoteStream : localStream;
 
     if (streamToShow) {
-      if (videoEl.srcObject !== streamToShow) {
+      const currentSrc = videoEl.srcObject as MediaStream | null;
+      if (!currentSrc || currentSrc !== streamToShow || currentSrc.getTracks().length !== streamToShow.getTracks().length) {
         videoEl.srcObject = streamToShow;
       }
       // Video element MUST be muted so browser autoplay policy never blocks it (remote audio is played via remoteAudioRef)
@@ -354,6 +355,9 @@ export default function CallInterface({
               muted
               controls={false}
               disablePictureInPicture
+              // @ts-ignore
+              webkit-playsinline="true"
+              x5-playsinline="true"
               poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
               className={`w-full h-full object-cover ${callStatus !== 'active' ? 'mirror' : ''}`}
             />
@@ -391,6 +395,9 @@ export default function CallInterface({
                     muted
                     controls={false}
                     disablePictureInPicture
+                    // @ts-ignore
+                    webkit-playsinline="true"
+                    x5-playsinline="true"
                     className="w-full h-full object-cover mirror"
                   />
                 )}

@@ -99,29 +99,6 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
   // Pre-warm RTC configuration on hook mount so offers connect instantly
   useEffect(() => {
     void fetchRtcConfig();
-
-    // One-time silent probe on mount so WebView prompts permissions early
-    if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
-      if (!localStorage.getItem('connect_cam_probed')) {
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-          .then(probeStream => {
-            localStorage.setItem('connect_cam_probed', '1');
-            probeStream.getTracks().forEach(t => {
-              try { t.stop(); } catch {}
-            });
-          })
-          .catch(() => {
-            navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-              .then(probeStream => {
-                localStorage.setItem('connect_cam_probed', '1');
-                probeStream.getTracks().forEach(t => {
-                  try { t.stop(); } catch {}
-                });
-              })
-              .catch(() => {});
-          });
-      }
-    }
   }, []);
 
   // Stop camera tracks and clean up connection
@@ -322,6 +299,9 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
           if (audioTransceiver) {
             audioTransceiver.direction = audioTrack ? 'sendonly' : 'inactive';
             if (audioTrack && audioTransceiver.sender) {
+              if (typeof (audioTransceiver.sender as any).setStreams === 'function') {
+                try { (audioTransceiver.sender as any).setStreams(stream); } catch {}
+              }
               await audioTransceiver.sender.replaceTrack(audioTrack).catch(() => {});
             }
           } else if (audioTrack) {
@@ -332,6 +312,9 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
           if (videoTransceiver) {
             videoTransceiver.direction = videoTrack ? 'sendonly' : 'inactive';
             if (videoTrack && videoTransceiver.sender) {
+              if (typeof (videoTransceiver.sender as any).setStreams === 'function') {
+                try { (videoTransceiver.sender as any).setStreams(stream); } catch {}
+              }
               await videoTransceiver.sender.replaceTrack(videoTrack).catch(() => {});
             }
           } else if (videoTrack) {
@@ -359,16 +342,13 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
             });
           }
 
-          // 4. Apply bitrate optimizations after local description is established
+          // 4. Apply clean standard bitrate parameters after local description is established
           try {
             const vSender = videoTransceiver?.sender || pc.getSenders().find(s => s.track?.kind === 'video');
             if (vSender) {
               const params = vSender.getParameters();
               if (params.encodings && params.encodings.length > 0) {
-                params.encodings[0].maxBitrate = 420000; // 420 kbps for smooth remote cam
-                (params.encodings[0] as any).maxFramerate = 24;
-                params.degradationPreference = 'maintain-framerate';
-                params.encodings[0].scaleResolutionDownBy = 1;
+                params.encodings[0].maxBitrate = 450000; // 450 kbps
                 await vSender.setParameters(params).catch(() => {});
               }
             }
