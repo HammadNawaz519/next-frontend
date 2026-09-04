@@ -152,8 +152,15 @@ interface User {
   lastSeen?: string | Date;
   isPrivate?: boolean;
   lastMessage?: string;
+  lastMessageTime?: string | Date;
   unseenCount?: number;
   isRequest?: boolean;
+  isOnline?: boolean;
+  name?: string;
+  phone?: string;
+  website?: string;
+  showActivityStatus?: boolean;
+  [key: string]: any;
 }
 
 interface Message {
