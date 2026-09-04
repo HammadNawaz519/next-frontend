@@ -13,7 +13,7 @@ interface CallInterfaceProps {
   isAccepted?: boolean;
   initialOffer?: any;
   callId?: string;
-  onEnd: (duration?: number, wasConnected?: boolean) => void;
+  onEnd: (duration?: number, wasConnected?: boolean, reason?: string) => void;
 }
 
 const PASTEL_AVATAR_BGS = ['#FFF3CD', '#E0F2FE', '#FCE7F3', '#FEF9C3', '#EDE9FE', '#DCFCE7'];
@@ -46,8 +46,8 @@ export default function CallInterface({
     onEndRef.current = onEnd;
   }, [onEnd]);
 
-  const handleEndWrapper = useCallback((dur?: number, wasConnected?: boolean) => {
-    onEndRef.current?.(dur, wasConnected);
+  const handleEndWrapper = useCallback((dur?: number, wasConnected?: boolean, reason?: string) => {
+    onEndRef.current?.(dur, wasConnected, reason);
   }, []);
 
   const mountTimeRef = useRef(Date.now());

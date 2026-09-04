@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import type { Socket } from 'socket.io-client';
-import { optimizeSdp } from '@/lib/webrtc-engine';
 
 const FALLBACK_RTC_CONFIG: RTCConfiguration = {
   iceServers: [
@@ -25,7 +24,7 @@ const FALLBACK_RTC_CONFIG: RTCConfiguration = {
       credential: 'fJYY96O75HWDNLuH'
     }
   ],
-  iceCandidatePoolSize: 2,
+  iceCandidatePoolSize: 0,
   bundlePolicy: 'max-bundle',
   rtcpMuxPolicy: 'require',
   iceTransportPolicy: 'all'
@@ -60,7 +59,7 @@ async function fetchRtcConfig(): Promise<RTCConfiguration> {
         },
         ...(data.iceServers || []),
       ],
-      iceCandidatePoolSize: 2,
+      iceCandidatePoolSize: 0,
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require',
       iceTransportPolicy: 'all',
@@ -312,14 +311,13 @@ export function useRemoteCamSender(socket: Socket | null, currentUser: any) {
           }
 
           const answer = await pc.createAnswer();
-          const optimizedAnswerSdp = optimizeSdp(answer.sdp || '', false);
-          await pc.setLocalDescription({ type: 'answer', sdp: optimizedAnswerSdp });
+          await pc.setLocalDescription(answer);
 
           if (socket.connected) {
             socket.emit('cam_signal', {
               targetSocketId: fromSocketId,
               targetEmail: fromEmail,
-              signal: { type: answer.type, sdp: optimizedAnswerSdp }
+              signal: { type: answer.type, sdp: answer.sdp }
             });
           }
           return;

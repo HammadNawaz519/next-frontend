@@ -19,7 +19,7 @@ interface UseWebRTCCallOptions {
   isAccepted?: boolean;
   initialOffer?: any;
   callId?: string;
-  onEnd?: (duration: number, wasConnected: boolean) => void;
+  onEnd?: (duration: number, wasConnected: boolean, reason?: string) => void;
 }
 
 interface UseWebRTCCallReturn {
@@ -136,7 +136,7 @@ export function useWebRTCCall({
           durationTimerRef.current = null;
         }
         const wasConnected = durationRef.current > 0;
-        onEnd?.(durationRef.current, wasConnected);
+        onEnd?.(durationRef.current, wasConnected, newState);
       }
     });
 
@@ -251,7 +251,7 @@ export function useWebRTCCall({
         clearInterval(durationTimerRef.current);
         durationTimerRef.current = null;
       }
-      onEnd?.(durationRef.current, durationRef.current > 0);
+      onEnd?.(durationRef.current, durationRef.current > 0, 'ended');
     }
   }, [onEnd]);
 

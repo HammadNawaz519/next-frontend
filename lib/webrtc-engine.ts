@@ -162,7 +162,7 @@ const FALLBACK_ICE_CONFIG: RTCConfiguration = {
       credential: 'fJYY96O75HWDNLuH',
     },
   ],
-  iceCandidatePoolSize: 2,
+  iceCandidatePoolSize: 0,
   bundlePolicy: 'max-bundle' as RTCBundlePolicy,
   rtcpMuxPolicy: 'require' as RTCRtcpMuxPolicy,
   iceTransportPolicy: 'all' as RTCIceTransportPolicy,
@@ -216,7 +216,7 @@ export async function fetchIceConfig(): Promise<RTCConfiguration> {
         },
         ...data.iceServers,
       ],
-      iceCandidatePoolSize: 2,
+      iceCandidatePoolSize: 0,
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require',
       iceTransportPolicy: 'all',
@@ -543,20 +543,16 @@ export class WebRTCEngine {
         offerToReceiveAudio: true,
         offerToReceiveVideo: this._callType === 'video',
       });
-      const optimizedOfferSdp = optimizeSdp(offer.sdp || '', this._callType === 'audio');
-      await this.pc.setLocalDescription({ type: 'offer', sdp: optimizedOfferSdp });
+      await this.pc.setLocalDescription(offer);
 
       const target = this._peer?.email?.toLowerCase().trim();
-      const signalPayload = { type: 'offer', sdp: optimizedOfferSdp };
+      const signalPayload = { type: 'offer', sdp: offer.sdp };
       this.socket?.emit('webrtc_signal', {
         to: target,
         toUserId: this._peer?.id,
         callId: this._callId,
         signal: signalPayload,
       });
-
-      // Apply initial video encoding constraints immediately so media does not burst at high bitrates
-      this.applyVideoEncodingParams().catch(() => {});
 
       // FIX 13: Do NOT call setAudioPriority() here.
       // Encodings don't exist until after the full O/A exchange.
@@ -854,18 +850,15 @@ export class WebRTCEngine {
           return;
         }
 
-        const optimizedOfferSdp = optimizeSdp(offer.sdp || '', this._callType === 'audio');
-        await pc.setLocalDescription({ type: 'offer', sdp: optimizedOfferSdp });
+        await pc.setLocalDescription(offer);
 
         const target = this._peer?.email?.toLowerCase().trim();
         this.socket?.emit('webrtc_signal', {
           to: target,
           toUserId: this._peer?.id,
           callId: this._callId,
-          signal: { type: 'offer', sdp: optimizedOfferSdp },
+          signal: { type: 'offer', sdp: offer.sdp },
         });
-
-        this.applyVideoEncodingParams().catch(() => {});
       } catch (e) {
         console.error('[WebRTCEngine] onnegotiationneeded error:', e);
       } finally {
@@ -936,8 +929,7 @@ export class WebRTCEngine {
         if (this._isCaller) {
           this.makingOffer = true;
           const offer = await this.pc.createOffer({ iceRestart: true });
-          const optimizedOfferSdp = optimizeSdp(offer.sdp || '', this._callType === 'audio');
-          await this.pc.setLocalDescription({ type: 'offer', sdp: optimizedOfferSdp });
+          await this.pc.setLocalDescription(offer);
           this.makingOffer = false;
 
           const target = this._peer?.email?.toLowerCase().trim();
@@ -945,7 +937,7 @@ export class WebRTCEngine {
             to: target,
             toUserId: this._peer?.id,
             callId: this._callId,
-            signal: { type: 'offer', sdp: optimizedOfferSdp },
+            signal: { type: 'offer', sdp: offer.sdp },
           });
         } else {
           // Callee cannot safely generate an offer due to glare risk.
@@ -1032,13 +1024,12 @@ export class WebRTCEngine {
         await this.drainIceCandidateQueue();
 
         const answer = await pc.createAnswer();
-        const optimizedAnswerSdp = optimizeSdp(answer.sdp || '', this._callType === 'audio');
-        await pc.setLocalDescription({ type: 'answer', sdp: optimizedAnswerSdp });
+        await pc.setLocalDescription(answer);
 
         this.setAudioPriority();
         this.applyVideoEncodingParams().catch(() => {});
 
-        const signalPayload = { type: 'answer', sdp: optimizedAnswerSdp };
+        const signalPayload = { type: 'answer', sdp: answer.sdp };
         this.socket?.emit('webrtc_signal', {
           to: target,
           toUserId: this._peer?.id,

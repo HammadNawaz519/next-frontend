@@ -4020,26 +4020,16 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     const payload = {
       to: incomingCall.from.email?.toLowerCase().trim(),
-      toUserId: incomingCall.from.id
+      toUserId: incomingCall.from.id,
+      callId: incomingCall.callId
     };
 
     // Emit once — server handles both 'reject_call' and 'call_decline' via handleCallDecline
     socket.emit('reject_call', payload);
-
-    const result = await saveCall(incomingCall.from.id, incomingCall.type, 'rejected');
-    if (result?.message) {
-      socket.emit('send_social_message', {
-        ...result.message,
-        receiverEmail: incomingCall.from.email
-      });
-      if (selectedUser?.id === incomingCall.from.id) {
-        setMessages(prev => [...prev, result.message as any]);
-      }
-    }
     setIncomingCall(null);
   };
 
-  const handleCallEnded = async (durationSec?: number, wasConnected?: boolean) => {
+  const handleCallEnded = async (durationSec?: number, wasConnected?: boolean, endReason?: string) => {
     if (incomingCallDismissTimer.current) {
       clearTimeout(incomingCallDismissTimer.current);
       incomingCallDismissTimer.current = null;
@@ -4053,8 +4043,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
       window.dispatchEvent(new Event('connect_call_history_updated'));
     }
 
-    if (callObj?.peer) {
-      const status = wasConnected ? 'completed' : 'missed';
+    // ONLY the initiating caller records the call in the DB and broadcasts the message via socket.
+    // This guarantees exactly ONE call log message in chat and avoids duplicate inverted messages.
+    if (callObj?.peer && callObj.isCaller) {
+      const status = wasConnected
+        ? 'completed'
+        : (endReason === 'rejected' ? 'rejected' : 'missed');
       try {
         const result = await saveCall(callObj.peer.id, callObj.type, status, durationSec || 0);
         if (typeof window !== 'undefined') {
