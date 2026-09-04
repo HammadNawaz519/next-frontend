@@ -284,7 +284,7 @@ export default function ProfilePanel({
               }
               const currentMeta = DeviceAccountStore.getCurrentAccount();
               if (currentMeta) {
-                DeviceAccountStore.addOrUpdateAccount({ ...currentMeta, image: newImage }).catch(() => {});
+                DeviceAccountStore.addOrUpdateAccount({ ...currentMeta, profilePicture: newImage || '' }, false).catch(() => {});
               }
             }
             window.dispatchEvent(new CustomEvent('user_profile_updated', {
@@ -362,7 +362,7 @@ export default function ProfilePanel({
           }
           const currentMeta = DeviceAccountStore.getCurrentAccount();
           if (currentMeta) {
-            DeviceAccountStore.addOrUpdateAccount({ ...currentMeta, image: null }).catch(() => {});
+            DeviceAccountStore.addOrUpdateAccount({ ...currentMeta, profilePicture: '' }, false).catch(() => {});
           }
         }
         window.dispatchEvent(new CustomEvent('user_profile_updated', {

@@ -33,6 +33,7 @@ export interface DeviceAccountMeta {
   username: string;
   displayName: string;
   profilePicture: string;
+  image?: string | null;
   provider: 'credentials' | 'google' | string;
   isSavedOnDevice: boolean; // true if a valid credential/session-hint exists
   lastUsedAt: string;       // ISO 8601
