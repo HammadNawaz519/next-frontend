@@ -51,6 +51,7 @@ import {
   Share2,
   Smile,
   Check,
+  CheckSquare,
   CornerUpLeft,
 } from 'lucide-react';
 import StoryEditor from './StoryEditor';
@@ -459,10 +460,21 @@ export const detectThemeIdFromMessages = (msgs: any[]): string | null => {
 
 const IG_QUICK_REACTIONS = ['❤️', '😂', '😮', '😢', '😡', '👍', '🙏', '🔥'];
 
+const EXTENDED_EMOJIS = [
+  '❤️', '😂', '😮', '😢', '😡', '👍', '🙏', '🔥',
+  '🥳', '✨', '💯', '🎉', '🤩', '😍', '😭', '💀',
+  '💩', '🤡', '👏', '🙌', '🤝', '💡', '💎', '🚀',
+  '👑', '🦄', '🌈', '🌸', '⚡', '🎯', '🖤', '💜',
+  '💙', '💚', '💛', '🧡', '💖', '🤍', '💘', '💌',
+  '🤐', '🤔', '🧐', '🫠', '😈', '😇', '👀', '🤙',
+  '💪', '🧠', '⭐', '🎈', '🍾', '🥂', '🍹', '🍕'
+];
+
 interface IGMenuState {
   msg: any;
   bubbleRect: DOMRect;
   isSent: boolean;
+  bubbleEl?: HTMLElement | null;
 }
 
 const IGMessageOverlay = ({
@@ -474,6 +486,7 @@ const IGMessageOverlay = ({
   onForward,
   onRequestDelete,
   onOpenTagPicker,
+  onToggleSelect,
   session,
   activeTheme,
 }: {
@@ -485,6 +498,7 @@ const IGMessageOverlay = ({
   onForward: (msg: any) => void;
   onRequestDelete: (msgId: string, type: 'me' | 'everyone') => void;
   onOpenTagPicker: (msg: any) => void;
+  onToggleSelect?: (msgId: string) => void;
   session: any;
   activeTheme?: ChatTheme;
 }) => {
@@ -496,8 +510,7 @@ const IGMessageOverlay = ({
     : { top: 150, bottom: 250, left: 20, right: 300, width: 280, height: 100 };
 
   const overlayRef = useRef<HTMLDivElement>(null);
-  const reactionBarRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const cloneContainerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -514,80 +527,135 @@ const IGMessageOverlay = ({
     return () => document.removeEventListener('keydown', handleKey);
   }, []);
 
+  // Clone the real message bubble so it stays crisp and unblurred on top of the dimmed backdrop
+  useEffect(() => {
+    if (cloneContainerRef.current && state.bubbleEl) {
+      try {
+        const clone = state.bubbleEl.cloneNode(true) as HTMLElement;
+        clone.style.margin = '0';
+        clone.style.transform = 'none';
+        clone.style.pointerEvents = 'none';
+        clone.style.width = '100%';
+        clone.style.height = '100%';
+        clone.style.maxWidth = '100%';
+        clone.style.boxSizing = 'border-box';
+        // Remove duplicate IDs to prevent DOM conflicts
+        clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+        clone.removeAttribute('id');
+        cloneContainerRef.current.replaceChildren(clone);
+      } catch (err) {
+        console.warn('Bubble clone failed:', err);
+      }
+    }
+  }, [state.bubbleEl]);
+
   const handleClose = () => {
     setMounted(false);
-    setTimeout(onClose, 200);
+    setTimeout(onClose, 180);
   };
 
   const swipeStartY = useRef(0);
-  const handleMenuTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = (e: React.TouchEvent) => {
     swipeStartY.current = e.touches[0].clientY;
   };
-  const handleMenuTouchEnd = (e: React.TouchEvent) => {
-    const diff = e.changedTouches[0].clientY - swipeStartY.current;
-    if (diff > 60) handleClose();
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const diff = Math.abs(e.changedTouches[0].clientY - swipeStartY.current);
+    if (diff > 50) handleClose();
   };
 
-  // Smart layout: reaction bar & action menu positioning without collision/overlap
-  const REACTION_BAR_H = 54;
-  const MENU_ITEMS_H = isSent ? 260 : 210;
-  const GAP = 10;
-  const PAD = 16;
+  // ── Smart Collision-Free Layout Geometry ──────────────────────────────────────────────
+  // Guarantees zero overlapping between reactions, elevated bubble, action menu & emoji picker
+  const PAD = 14;
+  const GAP = 8;
+  const REACTION_BAR_H = 48;
+  const isMediaMsg = msg.type === 'image' || msg.type === 'video' || msg.type === 'audio' || msg.type === 'media_album';
+  const hasCopy = msg.type === 'text' || isMediaMsg;
+  const itemCount = (isSent ? 6 : 5) + (hasCopy ? 1 : 0);
+  const MENU_ITEMS_H = itemCount * 40 + 16; // approx 216px to 296px
+
   const vw = typeof window !== 'undefined' ? window.innerWidth : 400;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
 
-  const bTop = Math.max(PAD, bubbleRect.top);
-  const bBottom = Math.min(vh - PAD, bubbleRect.bottom);
-  const bLeft = Math.max(12, bubbleRect.left);
-  const bRight = Math.min(vw - 12, bubbleRect.right);
-  const bCenterX = (bLeft + bRight) / 2;
+  const bLeft = Math.max(PAD, Math.min(bubbleRect.left, vw - PAD - 60));
+  const bWidth = Math.min(bubbleRect.width, vw - PAD * 2);
+  const bRight = bLeft + bWidth;
 
-  const spaceBelow = vh - bBottom;
-  const spaceAbove = bTop;
+  const maxSafeBubbleH = Math.max(100, vh - MENU_ITEMS_H - REACTION_BAR_H - (GAP * 4) - (PAD * 2));
+  const bHeight = Math.min(bubbleRect.height, maxSafeBubbleH);
+
+  let bTop = bubbleRect.top;
+  if (bTop + bHeight > vh - PAD) {
+    bTop = vh - PAD - bHeight;
+  }
+  if (bTop < PAD) {
+    bTop = PAD;
+  }
+  const bBottom = bTop + bHeight;
+
+  const spaceAbove = bTop - PAD;
+  const spaceBelow = vh - PAD - bBottom;
 
   let reactionBarTop: number;
   let menuTop: number;
 
-  if (spaceBelow >= MENU_ITEMS_H + PAD && spaceAbove >= REACTION_BAR_H + PAD) {
-    reactionBarTop = Math.max(PAD, bTop - REACTION_BAR_H - GAP);
-    menuTop = Math.min(vh - MENU_ITEMS_H - PAD, bBottom + GAP);
-  } else if (spaceBelow < MENU_ITEMS_H + PAD) {
-    reactionBarTop = Math.max(PAD + MENU_ITEMS_H + GAP, bTop - REACTION_BAR_H - GAP);
-    menuTop = reactionBarTop - MENU_ITEMS_H - GAP;
-    if (menuTop < PAD) {
-      menuTop = PAD;
-      reactionBarTop = menuTop + MENU_ITEMS_H + GAP;
+  // CASE 1: Standard layout (bubble in middle, reactions above, menu below)
+  if (spaceBelow >= MENU_ITEMS_H + GAP && spaceAbove >= REACTION_BAR_H + GAP) {
+    reactionBarTop = bTop - REACTION_BAR_H - GAP;
+    menuTop = bBottom + GAP;
+  }
+  // CASE 2: Bubble near bottom (both go above bubble)
+  else if (spaceAbove >= MENU_ITEMS_H + REACTION_BAR_H + (GAP * 2)) {
+    menuTop = bTop - MENU_ITEMS_H - GAP;
+    reactionBarTop = menuTop - REACTION_BAR_H - GAP;
+  }
+  // CASE 3: Bubble near top (both go below bubble)
+  else if (spaceBelow >= MENU_ITEMS_H + REACTION_BAR_H + (GAP * 2)) {
+    reactionBarTop = bBottom + GAP;
+    menuTop = reactionBarTop + REACTION_BAR_H + GAP;
+  }
+  // CASE 4: Space above is bigger than space below (prioritize above)
+  else if (spaceAbove >= spaceBelow) {
+    menuTop = Math.max(PAD + REACTION_BAR_H + GAP, bTop - MENU_ITEMS_H - GAP);
+    reactionBarTop = Math.max(PAD, menuTop - REACTION_BAR_H - GAP);
+    if (menuTop + MENU_ITEMS_H + GAP > bTop) {
+      bTop = Math.min(vh - PAD - bHeight, menuTop + MENU_ITEMS_H + GAP);
     }
-  } else {
-    reactionBarTop = Math.min(vh - REACTION_BAR_H - MENU_ITEMS_H - GAP - PAD, bBottom + GAP);
+  }
+  // CASE 5: Space below is bigger (prioritize below)
+  else {
+    reactionBarTop = Math.max(PAD, bBottom + GAP);
     menuTop = reactionBarTop + REACTION_BAR_H + GAP;
     if (menuTop + MENU_ITEMS_H > vh - PAD) {
-      menuTop = vh - MENU_ITEMS_H - PAD;
+      menuTop = vh - PAD - MENU_ITEMS_H;
       reactionBarTop = Math.max(PAD, menuTop - REACTION_BAR_H - GAP);
     }
   }
 
-  const reactionBarW = Math.min(390, vw - 24);
-  let reactionBarLeft = bCenterX - reactionBarW / 2;
-  reactionBarLeft = Math.max(12, Math.min(reactionBarLeft, vw - reactionBarW - 12));
+  // Horizontal alignments
+  const reactionBarW = Math.min(370, vw - PAD * 2);
+  let reactionBarLeft = bLeft + (bWidth / 2) - (reactionBarW / 2);
+  reactionBarLeft = Math.max(PAD, Math.min(reactionBarLeft, vw - PAD - reactionBarW));
 
-  const MENU_W = Math.min(270, vw - 28);
-  let menuLeft = isSent ? bRight - MENU_W : bLeft;
-  menuLeft = Math.max(14, Math.min(menuLeft, vw - MENU_W - 14));
+  const MENU_W = Math.min(250, vw - PAD * 2);
+  let menuLeft = isSent ? (bRight - MENU_W) : bLeft;
+  menuLeft = Math.max(PAD, Math.min(menuLeft, vw - PAD - MENU_W));
+
+  // Extended Emoji Picker positioning
+  const PICKER_W = Math.min(320, vw - PAD * 2);
+  const PICKER_H = 220;
+  let pickerTop: number;
+  if (reactionBarTop + REACTION_BAR_H + GAP + PICKER_H <= vh - PAD) {
+    pickerTop = reactionBarTop + REACTION_BAR_H + GAP;
+  } else {
+    pickerTop = Math.max(PAD, reactionBarTop - PICKER_H - GAP);
+  }
+  let pickerLeft = Math.max(PAD, Math.min(reactionBarLeft, vw - PAD - PICKER_W));
 
   const myReactions = new Set<string>(
     (msg.reactions || [])
       .filter((r: any) => String(r.userId) === String(currentUserId))
       .map((r: any) => r.emoji)
   );
-
-  const accentColor = activeTheme?.accentColor || '#a855f7';
-
-  const animStyle = (extraTransform = '') => ({
-    opacity: mounted ? 1 : 0,
-    transform: mounted ? `scale(1) ${extraTransform}` : `scale(0.94) translateY(6px) ${extraTransform}`,
-    transition: 'opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-  });
 
   const renderMenuItem = (
     icon: React.ReactNode,
@@ -598,29 +666,31 @@ const IGMessageOverlay = ({
   ) => (
     <button
       key={label}
-      onClick={() => {
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
         triggerHaptic(isDanger ? 'heavy' : 'light');
         onClick();
         if (!badge) handleClose();
       }}
-      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all cursor-pointer select-none text-left outline-none border-0 group active:scale-[0.98] ${
+      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all cursor-pointer select-none text-left outline-none border-0 group active:scale-[0.98] ${
         isDanger
-          ? 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/12'
-          : 'text-zinc-200 hover:text-white hover:bg-white/8'
+          ? 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/15'
+          : 'text-zinc-200 hover:text-white hover:bg-white/10'
       }`}
     >
       <div className="flex items-center gap-3">
         <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
           isDanger
             ? 'bg-rose-500/15 text-rose-400 group-hover:bg-rose-500/25'
-            : 'bg-zinc-800/80 text-zinc-300 group-hover:bg-zinc-700/80 group-hover:text-white'
+            : 'bg-white/5 text-zinc-300 group-hover:bg-white/10 group-hover:text-white'
         }`}>
           {icon}
         </div>
         <span className="text-[13.5px] font-semibold tracking-tight">{label}</span>
       </div>
       {badge && (
-        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 animate-in fade-in">
           {badge}
         </span>
       )}
@@ -630,81 +700,104 @@ const IGMessageOverlay = ({
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-[99999] pointer-events-auto select-none font-sans"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      className="fixed inset-0 z-[99999] pointer-events-auto select-none font-sans overflow-hidden"
     >
-      {/* Sleek Dim Backdrop with blur */}
+      {/* Dim and blur backdrop */}
       <div
         onClick={handleClose}
-        className={`absolute inset-0 bg-black/65 backdrop-blur-md transition-opacity duration-200 ${
+        className={`absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-200 ${
           mounted ? 'opacity-100' : 'opacity-0'
         }`}
       />
 
-      {/* Focused message highlight contour */}
+      {/* Elevated Focused Message Bubble (Stays crisp and sharp, zero fade-up or blur) */}
       <div
+        ref={cloneContainerRef}
         style={{
           position: 'absolute',
-          top: bubbleRect.top,
-          left: bubbleRect.left,
-          width: bubbleRect.width,
-          height: bubbleRect.height,
+          top: bTop,
+          left: bLeft,
+          width: bWidth,
+          height: bHeight,
+          zIndex: 15,
           pointerEvents: 'none',
-          borderRadius: '26px',
-          boxShadow: `0 0 0 2px rgba(255,255,255,0.35), 0 12px 35px rgba(0,0,0,0.6)`,
           opacity: mounted ? 1 : 0,
-          transition: 'opacity 0.2s ease-out',
-          zIndex: 1,
+          transform: mounted ? 'scale(1.02)' : 'scale(0.98)',
+          transition: 'opacity 0.2s ease-out, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+          filter: 'drop-shadow(0 18px 40px rgba(0,0,0,0.6))',
         }}
-      />
+      >
+        {!state.bubbleEl && (
+          <div
+            className="px-6 py-3.5 rounded-[26px] min-h-[44px] w-full h-full text-[14.5px] font-normal leading-[1.45] flex items-center shadow-lg"
+            style={{
+              background: isSent ? '#18181B' : '#FFF3CD',
+              color: isSent ? '#ffffff' : '#18181b',
+            }}
+          >
+            {state.msg.content}
+          </div>
+        )}
+      </div>
 
-      {/* Floating Quick Reactions Capsule */}
+      {/* Quick Reactions Capsule */}
       <div
-        ref={reactionBarRef}
         style={{
           position: 'absolute',
           top: reactionBarTop,
           left: reactionBarLeft,
-          zIndex: 3,
-          ...animStyle(),
+          width: reactionBarW,
+          zIndex: 25,
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? 'scale(1) translateY(0)' : 'scale(0.92) translateY(6px)',
+          transition: 'opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
-        className="bg-[#181515]/95 border border-zinc-800/90 shadow-[0_16px_45px_rgba(0,0,0,0.85)] backdrop-blur-2xl rounded-full px-2.5 py-1.5 flex items-center gap-1 max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar"
+        className="bg-[#1C1C1E]/95 border border-white/10 shadow-[0_16px_45px_rgba(0,0,0,0.75)] backdrop-blur-2xl rounded-full px-2.5 py-1.5 flex items-center justify-between no-scrollbar"
       >
-        {IG_QUICK_REACTIONS.map(emoji => {
-          const alreadyReacted = myReactions.has(emoji);
-          return (
-            <button
-              key={emoji}
-              onClick={() => {
-                triggerHaptic('light');
-                onReact(msg.id, emoji);
-                handleClose();
-              }}
-              title={emoji}
-              className={`w-9 h-9 rounded-full flex items-center justify-center text-[19px] cursor-pointer transition-all active:scale-90 hover:scale-125 select-none ${
-                alreadyReacted
-                  ? 'bg-purple-500/25 border border-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]'
-                  : 'hover:bg-white/10'
-              }`}
-            >
-              {emoji}
-            </button>
-          );
-        })}
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+          {IG_QUICK_REACTIONS.map(emoji => {
+            const alreadyReacted = myReactions.has(emoji);
+            return (
+              <button
+                key={emoji}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerHaptic('light');
+                  onReact(msg.id, emoji);
+                  handleClose();
+                }}
+                title={emoji}
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-[20px] cursor-pointer transition-all active:scale-90 hover:scale-125 select-none shrink-0 ${
+                  alreadyReacted
+                    ? 'bg-purple-500/25 ring-2 ring-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]'
+                    : 'hover:bg-white/10'
+                }`}
+              >
+                {emoji}
+              </button>
+            );
+          })}
+        </div>
 
-        {/* More Emojis Trigger */}
+        {/* Extended Emojis Trigger */}
         <button
-          onClick={() => {
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
             triggerHaptic('light');
             setShowPicker(p => !p);
           }}
-          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer ml-0.5 ${
+          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer ml-1 shrink-0 ${
             showPicker
-              ? 'bg-purple-500/30 text-purple-300 border border-purple-500/40'
+              ? 'bg-purple-600 text-white shadow-md'
               : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
           title="More reactions"
         >
-          <Plus className="w-4 h-4" strokeWidth={2.4} />
+          <Plus className={`w-4 h-4 transition-transform duration-200 ${showPicker ? 'rotate-45' : ''}`} strokeWidth={2.4} />
         </button>
       </div>
 
@@ -713,24 +806,20 @@ const IGMessageOverlay = ({
         <div
           style={{
             position: 'absolute',
-            top: reactionBarTop + REACTION_BAR_H + 8 > vh - 240 ? Math.max(10, reactionBarTop - 225) : reactionBarTop + REACTION_BAR_H + 8,
-            left: Math.max(12, Math.min(reactionBarLeft, vw - 312)),
-            zIndex: 10,
+            top: pickerTop,
+            left: pickerLeft,
+            width: PICKER_W,
+            maxHeight: PICKER_H,
+            zIndex: 30,
           }}
-          className="w-[300px] max-h-[220px] bg-[#181515]/98 border border-zinc-800 shadow-[0_25px_70px_rgba(0,0,0,0.9)] backdrop-blur-2xl rounded-[24px] p-2.5 grid grid-cols-7 gap-1.5 overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-150"
+          className="bg-[#1C1C1E]/98 border border-white/10 shadow-[0_25px_70px_rgba(0,0,0,0.9)] backdrop-blur-2xl rounded-[24px] p-2.5 grid grid-cols-7 gap-1 overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-150"
         >
-          {[
-            '❤️', '😂', '😮', '😢', '😡', '👍', '🙏', '🔥',
-            '🥳', '✨', '💯', '🎉', '🤩', '😍', '😭', '💀',
-            '💩', '🤡', '👏', '🙌', '🤝', '💡', '💎', '🚀',
-            '👑', '🦄', '🌈', '🌸', '⚡', '🎯', '🖤', '💜',
-            '💙', '💚', '💛', '🧡', '💖', '🤍', '💘', '💌',
-            '🤐', '🤔', '🧐', '🫠', '😈', '😇', '👀', '🤙',
-            '💪', '🧠', '⭐', '🎈', '🍾', '🥂', '🍹', '🍕'
-          ].map(emoji => (
+          {EXTENDED_EMOJIS.map(emoji => (
             <button
               key={emoji}
-              onClick={() => {
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
                 triggerHaptic('light');
                 onReact(msg.id, emoji);
                 handleClose();
@@ -743,73 +832,98 @@ const IGMessageOverlay = ({
         </div>
       )}
 
-      {/* High-End Glassmorphic Action Menu Card */}
+      {/* Glassmorphic Action Menu Card */}
       <div
-        ref={menuRef}
-        onTouchStart={handleMenuTouchStart}
-        onTouchEnd={handleMenuTouchEnd}
         style={{
           position: 'absolute',
           top: menuTop,
           left: menuLeft,
           width: MENU_W,
-          zIndex: 2,
-          ...animStyle(),
+          zIndex: 20,
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? 'scale(1) translateY(0)' : 'scale(0.92) translateY(6px)',
+          transition: 'opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
-        className="bg-[#181515]/95 border border-zinc-800/90 shadow-[0_24px_65px_rgba(0,0,0,0.85)] backdrop-blur-2xl rounded-[24px] p-1.5 flex flex-col gap-0.5 select-none"
+        className="bg-[#1C1C1E]/95 border border-white/10 shadow-[0_24px_65px_rgba(0,0,0,0.85)] backdrop-blur-2xl rounded-[22px] p-1.5 flex flex-col gap-0.5 select-none"
       >
         {/* Reply */}
         {renderMenuItem(
-          <Reply className="w-3.5 h-3.5" strokeWidth={2.4} />,
+          <Reply className="w-4 h-4" strokeWidth={2.2} />,
           'Reply',
           () => onReply(msg)
         )}
 
-        {/* Copy (text only) */}
-        {msg.type === 'text' && renderMenuItem(
-          copied ? <Check className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2.4} /> : <Copy className="w-3.5 h-3.5" strokeWidth={2.4} />,
-          'Copy Text',
-          () => {
-            try {
-              navigator.clipboard.writeText(msg.content);
-              setCopied(true);
-              setTimeout(() => {
-                setCopied(false);
-                handleClose();
-              }, 600);
-            } catch {}
-          },
-          false,
-          copied ? 'Copied!' : ''
-        )}
+        {/* Copy Text or Copy Link */}
+        {msg.type === 'text' ? (
+          renderMenuItem(
+            copied ? <Check className="w-4 h-4 text-emerald-400" strokeWidth={2.4} /> : <Copy className="w-4 h-4" strokeWidth={2.2} />,
+            'Copy Text',
+            () => {
+              try {
+                navigator.clipboard.writeText(msg.content);
+                setCopied(true);
+                setTimeout(() => {
+                  setCopied(false);
+                  handleClose();
+                }, 450);
+              } catch {}
+            },
+            false,
+            copied ? 'Copied!' : ''
+          )
+        ) : isMediaMsg ? (
+          renderMenuItem(
+            copied ? <Check className="w-4 h-4 text-emerald-400" strokeWidth={2.4} /> : <Copy className="w-4 h-4" strokeWidth={2.2} />,
+            'Copy Link',
+            () => {
+              try {
+                navigator.clipboard.writeText(msg.content);
+                setCopied(true);
+                setTimeout(() => {
+                  setCopied(false);
+                  handleClose();
+                }, 450);
+              } catch {}
+            },
+            false,
+            copied ? 'Copied!' : ''
+          )
+        ) : null}
 
         {/* Forward */}
         {renderMenuItem(
-          <Share2 className="w-3.5 h-3.5" strokeWidth={2.4} />,
+          <Forward className="w-4 h-4" strokeWidth={2.2} />,
           'Forward',
           () => onForward(msg)
         )}
 
+        {/* Select */}
+        {onToggleSelect && renderMenuItem(
+          <CheckSquare className="w-4 h-4" strokeWidth={2.2} />,
+          'Select',
+          () => onToggleSelect(msg.id)
+        )}
+
         {/* Tag Message */}
         {renderMenuItem(
-          <Tag className="w-3.5 h-3.5" strokeWidth={2.4} />,
+          <Tag className="w-4 h-4" strokeWidth={2.2} />,
           'Tag Message',
           () => onOpenTagPicker(msg)
         )}
 
-        <div className="h-[1px] bg-zinc-800/80 my-1 mx-2" />
+        <div className="h-[1px] bg-white/10 my-1 mx-2" />
 
         {/* Delete for Me */}
         {renderMenuItem(
-          <Trash2 className="w-3.5 h-3.5 text-rose-400" strokeWidth={2.4} />,
+          <Trash2 className="w-4 h-4 text-rose-400" strokeWidth={2.2} />,
           'Delete for Me',
           () => onRequestDelete(msg.id, 'me'),
           true
         )}
 
-        {/* Delete for Everyone (sent only) */}
+        {/* Delete for Everyone */}
         {isSent && renderMenuItem(
-          <Trash2 className="w-3.5 h-3.5 text-rose-400" strokeWidth={2.4} />,
+          <Trash2 className="w-4 h-4 text-rose-400" strokeWidth={2.2} />,
           'Delete for Everyone',
           () => onRequestDelete(msg.id, 'everyone'),
           true
@@ -1175,8 +1289,8 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
   const triggerIGMenu = () => {
     if (!bubbleRef.current) return;
     const rect = bubbleRef.current.getBoundingClientRect();
-    if (navigator.vibrate) navigator.vibrate([8, 4, 8]);
-    onShowIGMenu({ msg, bubbleRect: rect, isSent });
+    triggerHaptic('medium');
+    onShowIGMenu({ msg, bubbleRect: rect, isSent, bubbleEl: bubbleRef.current });
   };
 
   const handlePointerDown = (e: any) => {
@@ -1191,7 +1305,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
     longPressTimeout.current = setTimeout(() => {
       if (!isMoving.current && !isSwiping.current) triggerIGMenu();
-    }, 450);
+    }, 420);
   };
 
   const handlePointerUp = () => {
@@ -1225,7 +1339,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
       if (progress >= 45 && !hasTriggeredReply.current) {
         hasTriggeredReply.current = true;
-        if (navigator.vibrate) navigator.vibrate(30);
+        triggerHaptic('light');
         onReply(msg);
       }
     }
@@ -1233,13 +1347,14 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (navigator.vibrate) navigator.vibrate(40);
+    triggerHaptic('medium');
     if (bubbleRef.current) {
       const rect = bubbleRef.current.getBoundingClientRect();
       onShowIGMenu({
         msg,
         bubbleRect: rect,
         isSent,
+        bubbleEl: bubbleRef.current,
       });
     }
   };
@@ -1260,16 +1375,18 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
       onMouseDown={handlePointerDown}
       onMouseUp={handlePointerUp}
       onMouseMove={handlePointerMove}
+      onMouseLeave={handlePointerUp}
       onTouchStart={handlePointerDown}
       onTouchEnd={handlePointerUp}
       onTouchMove={handlePointerMove}
+      onTouchCancel={handlePointerUp}
       onContextMenu={handleContextMenu}
       style={{
         display: 'flex',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: isSent ? 'flex-end' : 'flex-start',
-        gap: '0px',
+        gap: '8px',
         width: '100%',
         padding: '0',
         userSelect: 'none',
@@ -1278,6 +1395,23 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         marginBottom: hasReactions ? '8px' : (isNextSameSender ? '2px' : '5px'),
       }}
     >
+      {/* Selection checkbox indicator when in multi-select mode */}
+      {isInSelectionMode && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleMessageSelection(msg.id);
+          }}
+          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+            isSelected
+              ? 'bg-purple-600 border-purple-600 text-white shadow-xs scale-105'
+              : 'border-zinc-400/70 bg-white/10 hover:border-zinc-300'
+          }`}
+          style={{ order: isSent ? 3 : 0 }}
+        >
+          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+        </div>
+      )}
 
       {/* Column wrapper keeps bubble + time stacked, w-fit max-w-[82%] */}
       <div 
@@ -6215,7 +6349,41 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                     )}
 
                     <div className="w-full pointer-events-auto">
-                      <ChatInput
+                      {selectedMessageIds.size > 0 ? (
+                        <div className="w-full flex items-center justify-between px-5 py-3 rounded-full bg-[#18181B] text-white shadow-2xl border border-zinc-700 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                setSelectedMessageIds(new Set());
+                              }}
+                              className="w-7 h-7 rounded-full flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                              title="Cancel Selection"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                            <span className="text-xs font-bold tracking-wide text-zinc-200">
+                              {selectedMessageIds.size} selected
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('heavy');
+                                selectedMessageIds.forEach(id => handleDelete(id, 'me'));
+                                setSelectedMessageIds(new Set());
+                              }}
+                              className="px-3 py-1.5 rounded-full bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <ChatInput
                         onSendMessage={(text) => {
                           if (typingTimeoutRef.current) {
                             clearTimeout(typingTimeoutRef.current);
@@ -6373,6 +6541,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           }
                         }}
                       />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -7215,6 +7384,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
           onForward={(m: any) => setForwardMsg(m)}
           onRequestDelete={handleRequestDelete}
           onOpenTagPicker={(m: any) => setOpenTagPickerMsg(m)}
+          onToggleSelect={toggleMessageSelection}
           session={session}
           activeTheme={activeTheme}
         />
