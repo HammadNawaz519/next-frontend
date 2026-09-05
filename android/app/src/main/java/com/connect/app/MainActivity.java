@@ -75,6 +75,12 @@ public class MainActivity extends BridgeActivity {
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
+        settings.setJavaScriptEnabled(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setUserAgentString("Mozilla/5.0 (Android 13; Mobile; rv:125.0) Gecko/125.0 Firefox/125.0");
+
+        android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
+        android.webkit.CookieManager.getInstance().setAcceptCookie(true);
 
         // Enhance WebChromeClient so WebRTC getUserMedia calls are granted instantly
         // without activity result race conditions or camera HAL collisions.
