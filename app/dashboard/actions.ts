@@ -1316,10 +1316,7 @@ export async function searchUsers(query: string) {
   const users = await prisma.user.findMany({
     where: {
       id: { not: currentUser.id },
-      OR: [
-        { username: { contains: cleanQ, mode: 'insensitive' } },
-        { email: { contains: cleanQ, mode: 'insensitive' } }
-      ]
+      username: { startsWith: cleanQ, mode: 'insensitive' }
     },
     select: { id: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true, lastHeartbeat: true, isOnline: true },
     take: 40,
@@ -1333,12 +1330,6 @@ export async function searchUsers(query: string) {
     const bExact = bUser === lowerQ;
     if (aExact && !bExact) return -1;
     if (!aExact && bExact) return 1;
-
-    const aStarts = aUser.startsWith(lowerQ);
-    const bStarts = bUser.startsWith(lowerQ);
-    if (aStarts && !bStarts) return -1;
-    if (!aStarts && bStarts) return 1;
-
     return aUser.localeCompare(bUser);
   });
 }

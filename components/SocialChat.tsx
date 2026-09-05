@@ -4439,34 +4439,28 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (cleanQ.length >= 1) {
       setIsSearchingGlobal(true);
 
-      // Scoring function to strictly match and rank users by name relevance
+      // Strict prefix matching: ONLY users whose username starts with search query (e.g. 'h' -> 'hammad')
+      const matchesContact = (u: any): boolean => {
+        if (!u) return false;
+        const uEmail = (u.email || '').toLowerCase().trim();
+        const nick = (nicknames[u.id] || (uEmail && nicknames[uEmail]) || '').toLowerCase().replace(/^@+/, '').trim();
+        const username = (u.username || '').toLowerCase().replace(/^@+/, '').trim();
+
+        return username.startsWith(cleanQ) || (nick.length > 0 && nick.startsWith(cleanQ));
+      };
+
       const getMatchScore = (u: any): number => {
         if (!u) return 0;
         const uEmail = (u.email || '').toLowerCase().trim();
         const nick = (nicknames[u.id] || (uEmail && nicknames[uEmail]) || '').toLowerCase().replace(/^@+/, '').trim();
         const username = (u.username || '').toLowerCase().replace(/^@+/, '').trim();
 
-        // 1. Exact username match
         if (username === cleanQ) return 100;
-        // 2. Exact nickname match
         if (nick === cleanQ) return 95;
-        // 3. Username starts with search query (e.g. 'ha' -> 'hammad')
         if (username.startsWith(cleanQ)) return 80;
-        // 4. Nickname starts with search query
-        if (nick.startsWith(cleanQ)) return 75;
-        // 5. Email starts with query
-        if (uEmail.startsWith(cleanQ) || uEmail.split('@')[0].startsWith(cleanQ)) return 60;
-        // 6. Username contains query
-        if (username.includes(cleanQ)) return 50;
-        // 7. Nickname contains query
-        if (nick.includes(cleanQ)) return 40;
-        // 8. Email contains query
-        if (uEmail.includes(cleanQ)) return 30;
-
-        return 0; // Not a match
+        if (nick.length > 0 && nick.startsWith(cleanQ)) return 70;
+        return 0;
       };
-
-      const matchesContact = (u: any) => getMatchScore(u) > 0;
 
       const sortByRelevance = (list: User[]) => {
         return [...list].sort((a, b) => {
@@ -4502,7 +4496,8 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
           if (Array.isArray(results)) {
             const currentMyId = (session?.user as any)?.id;
-            const validResults = results.filter((u: any) => u.id !== currentMyId);
+            // Strictly enforce prefix matching on all incoming server search results
+            const validResults = results.filter((u: any) => u && u.id && u.id !== currentMyId && matchesContact(u));
 
             // Sync any existing contacts with fresh server data (e.g. updated username, avatar)
             const resultMap = new Map(validResults.map((u: any) => [u.id, u]));
@@ -4538,7 +4533,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             validResults.forEach((u: any) => {
               if (freshContactIds.has(u.id)) {
                 const existingContact = allContactsRef.current.find(c => c.id === u.id);
-                if (existingContact) {
+                if (existingContact && matchesContact(existingContact)) {
                   matchedContactsFromResults.push({
                     ...existingContact,
                     username: u.username || existingContact.username,
@@ -4547,14 +4542,14 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 }
               } else if (freshReqIds.has(u.id)) {
                 const existingReq = allRequestsRef.current.find(r => r.id === u.id);
-                if (existingReq) {
+                if (existingReq && matchesContact(existingReq)) {
                   matchedContactsFromResults.push({
                     ...existingReq,
                     username: u.username || existingReq.username,
                     image: u.image !== undefined ? (u.image || '') : existingReq.image,
                   });
                 }
-              } else {
+              } else if (matchesContact(u)) {
                 newGlobalPeople.push({
                   ...u,
                   image: u.image || '',
@@ -4566,17 +4561,21 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
             });
 
             // Set the full consolidated results sorted strictly by match quality
-            const combined = [...allContactsRef.current.filter(matchesContact), ...matchedContactsFromResults, ...newGlobalPeople];
+            const combined = [
+              ...allContactsRef.current.filter(matchesContact),
+              ...matchedContactsFromResults.filter(matchesContact),
+              ...newGlobalPeople.filter(matchesContact)
+            ];
             const seen = new Set<string>();
             const deduped = combined.filter(u => {
               if (!u || !u.id || seen.has(u.id)) return false;
               seen.add(u.id);
-              return true;
+              return matchesContact(u);
             });
 
             const ranked = sortByRelevance(deduped);
             setUsers(ranked);
-            setGlobalSearchResults(newGlobalPeople);
+            setGlobalSearchResults(newGlobalPeople.filter(matchesContact));
           }
         } catch (e) {
           console.error("Search users error:", e);
@@ -6261,36 +6260,48 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   let filtered: User[] = [];
 
                   if (isSearching) {
-                    // Combine all potential user sources for search
                     const searchPool: User[] = [
+                      ...users,
+                      ...globalSearchResults,
                       ...allContactsRef.current,
                       ...allRequestsRef.current,
-                      ...users,
-                      ...requests,
-                      ...globalSearchResults
                     ];
 
-                    const matchesContact = (u: any) => {
+                    const matchesPrefix = (u: any): boolean => {
                       if (!u) return false;
-                      const uUser = (u.username || '').toLowerCase().replace(/^@+/, '');
-                      const uEmail = (u.email || '').toLowerCase();
-                      const uNick = (nicknames[u.id] || '').toLowerCase();
-                      const uMsg = (u.lastMessage || '').toLowerCase();
-                      const uBio = (u.bio || '').toLowerCase();
-                      return (
-                        uUser.includes(cleanQ) ||
-                        uEmail.includes(cleanQ) ||
-                        uNick.includes(cleanQ) ||
-                        uMsg.includes(cleanQ) ||
-                        uBio.includes(cleanQ)
-                      );
+                      const uEmail = (u.email || '').toLowerCase().trim();
+                      const uNick = (nicknames[u.id] || (uEmail && nicknames[uEmail]) || '').toLowerCase().replace(/^@+/, '').trim();
+                      const uUser = (u.username || '').toLowerCase().replace(/^@+/, '').trim();
+                      return uUser.startsWith(cleanQ) || (uNick.length > 0 && uNick.startsWith(cleanQ));
+                    };
+
+                    const getScore = (u: any): number => {
+                      if (!u) return 0;
+                      const uEmail = (u.email || '').toLowerCase().trim();
+                      const uNick = (nicknames[u.id] || (uEmail && nicknames[uEmail]) || '').toLowerCase().replace(/^@+/, '').trim();
+                      const uUser = (u.username || '').toLowerCase().replace(/^@+/, '').trim();
+
+                      if (uUser === cleanQ) return 100;
+                      if (uNick === cleanQ) return 95;
+                      if (uUser.startsWith(cleanQ)) return 80;
+                      if (uNick.length > 0 && uNick.startsWith(cleanQ)) return 70;
+                      return 0;
                     };
 
                     const seenIds = new Set<string>();
-                    filtered = searchPool.filter(u => {
+                    const matched = searchPool.filter(u => {
                       if (!u || !u.id || seenIds.has(u.id)) return false;
                       seenIds.add(u.id);
-                      return matchesContact(u);
+                      return matchesPrefix(u);
+                    });
+
+                    filtered = matched.sort((a, b) => {
+                      const scoreA = getScore(a);
+                      const scoreB = getScore(b);
+                      if (scoreA !== scoreB) return scoreB - scoreA;
+                      const nameA = (nicknames[a.id] || a.username || '').toLowerCase();
+                      const nameB = (nicknames[b.id] || b.username || '').toLowerCase();
+                      return nameA.localeCompare(nameB);
                     });
                   } else {
                     const baseList = view === 'recent' ? users : requests;

@@ -213,9 +213,9 @@ export default function CallsView({
   const filteredCalls = useMemo(() => {
     return calls.filter((c) => {
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesName = c.contactName?.toLowerCase().includes(q);
-        const matchesUser = c.contactUsername?.toLowerCase().includes(q);
+        const q = searchQuery.toLowerCase().replace(/^@+/, '').trim();
+        const matchesName = Boolean(c.contactName?.toLowerCase().replace(/^@+/, '').trim().startsWith(q));
+        const matchesUser = Boolean(c.contactUsername?.toLowerCase().replace(/^@+/, '').trim().startsWith(q));
         if (!matchesName && !matchesUser) return false;
       }
 
