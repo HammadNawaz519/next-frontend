@@ -72,6 +72,12 @@ export default function DashboardPage() {
     const sessionUser = session?.user as any;
     if (!sessionUser?.email || !sessionUser?.id) return;
 
+    try {
+      localStorage.removeItem('user_logged_out');
+      localStorage.setItem('has_active_session', 'true');
+      localStorage.setItem('last_logged_user', JSON.stringify(sessionUser));
+    } catch (e) {}
+
     const meta = DeviceAccountStore.metaFromSession(sessionUser);
 
     DeviceAccountStore.addOrUpdateAccount(meta, true).then(() => {
