@@ -1045,6 +1045,12 @@ const ChatItem = memo(({
   };
 
   const pastel = getPastelForUser(user.id || user.username);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [user.image]);
+
   const latestTimeVal = latestCachedMsg?.createdAt || (user as any).lastMessageTime || (user as any).updatedAt || lastSeenVal;
   const timeDisplay = formatChatTime(latestTimeVal);
   const unseen = (user as any).unseenCount || 0;
@@ -1089,10 +1095,15 @@ const ChatItem = memo(({
           className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center text-xl shrink-0 relative shadow-xs"
           style={{ background: pastel.bg, color: pastel.text }}
         >
-          {user.image && user.image.length > 5 ? (
-            <img src={user.image} alt={user.username} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
-          ) : (
-            <span>{pastel.emoji}</span>
+          <span className="select-none leading-none">{pastel.emoji}</span>
+          {user.image && user.image.length > 5 && !imgError && (
+            <img 
+              src={user.image} 
+              alt={user.username} 
+              className="absolute inset-0 w-full h-full object-cover rounded-full" 
+              referrerPolicy="no-referrer" 
+              onError={() => setImgError(true)}
+            />
           )}
         </div>
       </div>
@@ -4428,26 +4439,48 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
     if (cleanQ.length >= 1) {
       setIsSearchingGlobal(true);
 
-      // 1. Instant client-side filter from cached list (checking username, email, nickname, last message, and bio)
-      const matchesContact = (u: any) => {
-        if (!u) return false;
+      // Scoring function to strictly match and rank users by name relevance
+      const getMatchScore = (u: any): number => {
+        if (!u) return 0;
         const uEmail = (u.email || '').toLowerCase().trim();
-        const nick = (nicknames[u.id] || (uEmail && nicknames[uEmail]) || '').toLowerCase();
-        const username = (u.username || '').toLowerCase().replace(/^@+/, '');
-        const email = uEmail;
-        const lastMsg = (u.lastMessage || '').toLowerCase();
-        const bio = (u.bio || '').toLowerCase();
-        return (
-          username.includes(cleanQ) ||
-          email.includes(cleanQ) ||
-          nick.includes(cleanQ) ||
-          lastMsg.includes(cleanQ) ||
-          bio.includes(cleanQ)
-        );
+        const nick = (nicknames[u.id] || (uEmail && nicknames[uEmail]) || '').toLowerCase().replace(/^@+/, '').trim();
+        const username = (u.username || '').toLowerCase().replace(/^@+/, '').trim();
+
+        // 1. Exact username match
+        if (username === cleanQ) return 100;
+        // 2. Exact nickname match
+        if (nick === cleanQ) return 95;
+        // 3. Username starts with search query (e.g. 'ha' -> 'hammad')
+        if (username.startsWith(cleanQ)) return 80;
+        // 4. Nickname starts with search query
+        if (nick.startsWith(cleanQ)) return 75;
+        // 5. Email starts with query
+        if (uEmail.startsWith(cleanQ) || uEmail.split('@')[0].startsWith(cleanQ)) return 60;
+        // 6. Username contains query
+        if (username.includes(cleanQ)) return 50;
+        // 7. Nickname contains query
+        if (nick.includes(cleanQ)) return 40;
+        // 8. Email contains query
+        if (uEmail.includes(cleanQ)) return 30;
+
+        return 0; // Not a match
       };
 
-      const filteredContacts = allContactsRef.current.filter(matchesContact);
-      const filteredRequests = allRequestsRef.current.filter(matchesContact);
+      const matchesContact = (u: any) => getMatchScore(u) > 0;
+
+      const sortByRelevance = (list: User[]) => {
+        return [...list].sort((a, b) => {
+          const scoreA = getMatchScore(a);
+          const scoreB = getMatchScore(b);
+          if (scoreA !== scoreB) return scoreB - scoreA;
+          const nameA = (nicknames[a.id] || a.username || '').toLowerCase();
+          const nameB = (nicknames[b.id] || b.username || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+      };
+
+      const filteredContacts = sortByRelevance(allContactsRef.current.filter(matchesContact));
+      const filteredRequests = sortByRelevance(allRequestsRef.current.filter(matchesContact));
 
       setUsers(filteredContacts);
       setRequests(filteredRequests);
@@ -4482,7 +4515,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                 return {
                   ...c,
                   username: fresh.username || c.username,
-                  image: fresh.image || c.image,
+                  image: fresh.image !== undefined ? (fresh.image || '') : c.image,
                   bio: fresh.bio ?? c.bio,
                   lastSeen: fresh.lastSeen ?? c.lastSeen,
                 };
@@ -4509,7 +4542,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   matchedContactsFromResults.push({
                     ...existingContact,
                     username: u.username || existingContact.username,
-                    image: u.image || existingContact.image,
+                    image: u.image !== undefined ? (u.image || '') : existingContact.image,
                   });
                 }
               } else if (freshReqIds.has(u.id)) {
@@ -4518,12 +4551,13 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                   matchedContactsFromResults.push({
                     ...existingReq,
                     username: u.username || existingReq.username,
-                    image: u.image || existingReq.image,
+                    image: u.image !== undefined ? (u.image || '') : existingReq.image,
                   });
                 }
               } else {
                 newGlobalPeople.push({
                   ...u,
+                  image: u.image || '',
                   lastMessage: u.bio || (u.username ? `${u.username}` : 'user'),
                   unseenCount: 0,
                   isRequest: false
@@ -4531,16 +4565,17 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               }
             });
 
-            // Set the full consolidated results
+            // Set the full consolidated results sorted strictly by match quality
             const combined = [...allContactsRef.current.filter(matchesContact), ...matchedContactsFromResults, ...newGlobalPeople];
             const seen = new Set<string>();
             const deduped = combined.filter(u => {
-              if (seen.has(u.id)) return false;
+              if (!u || !u.id || seen.has(u.id)) return false;
               seen.add(u.id);
               return true;
             });
 
-            setUsers(deduped);
+            const ranked = sortByRelevance(deduped);
+            setUsers(ranked);
             setGlobalSearchResults(newGlobalPeople);
           }
         } catch (e) {
@@ -6402,13 +6437,20 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         const pastel = getPastelForUser(selectedUser.id || selectedUser.username);
                         return (
                           <div 
-                            className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-lg shrink-0 relative"
+                            className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-lg shrink-0 relative shadow-xs"
                             style={{ background: pastel.bg, color: pastel.text }}
                           >
-                            {selectedUser.image && selectedUser.image.length > 5 ? (
-                              <img src={selectedUser.image} alt={selectedUser.username} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
-                            ) : (
-                              <span>{pastel.emoji}</span>
+                            <span className="select-none leading-none">{pastel.emoji}</span>
+                            {selectedUser.image && selectedUser.image.length > 5 && (
+                              <img 
+                                src={selectedUser.image} 
+                                alt={selectedUser.username} 
+                                className="absolute inset-0 w-full h-full object-cover rounded-full" 
+                                referrerPolicy="no-referrer"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLElement).style.display = 'none';
+                                }}
+                              />
                             )}
                           </div>
                         );

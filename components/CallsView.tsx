@@ -387,17 +387,19 @@ export default function CallsView({
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm text-zinc-800 shrink-0 overflow-hidden shadow-xs"
+                      className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm text-zinc-800 shrink-0 overflow-hidden shadow-xs relative"
                       style={{ backgroundColor: avatarBg }}
                     >
-                      {call.contactImage ? (
+                      <span className="select-none">{call.contactName.charAt(0).toUpperCase()}</span>
+                      {call.contactImage && (
                         <img
                           src={call.contactImage}
                           alt={call.contactName}
-                          className="w-full h-full object-cover"
+                          className="absolute inset-0 w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
                         />
-                      ) : (
-                        <span>{call.contactName.charAt(0).toUpperCase()}</span>
                       )}
                     </div>
 

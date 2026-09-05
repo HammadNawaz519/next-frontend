@@ -771,13 +771,19 @@ export default function ProfilePanel({
             <div className="flex flex-col items-center gap-2 py-1">
               <div className="relative">
                 <div
-                  className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-4xl shadow-md border-4 border-white"
+                  className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-4xl shadow-md border-4 border-white relative"
                   style={{ backgroundColor: pastel.bg, color: pastel.text }}
                 >
-                  {curImage ? (
-                    <img src={curImage} alt={displayName} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-4xl select-none leading-none">{pastel.emoji}</span>
+                  <span className="text-4xl select-none leading-none">{pastel.emoji}</span>
+                  {curImage && (
+                    <img
+                      src={curImage}
+                      alt={displayName}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                      }}
+                    />
                   )}
                 </div>
                 <button
@@ -979,15 +985,17 @@ export default function ProfilePanel({
                   className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden flex items-center justify-center text-4xl sm:text-5xl font-black text-zinc-900 shadow-[0_12px_28px_rgba(0,0,0,0.12)] border-4 border-white relative z-10"
                   style={{ backgroundColor: pastel.bg, color: pastel.text }}
                 >
-                  {curImage ? (
+                  <span className="text-4xl sm:text-5xl select-none leading-none">{pastel.emoji}</span>
+                  {curImage && (
                     <img
                       src={curImage}
                       alt={displayName}
-                      className="w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover"
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                      }}
                     />
-                  ) : (
-                    <span className="text-4xl sm:text-5xl select-none leading-none">{pastel.emoji}</span>
                   )}
                   {isUploadingAvatar && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full z-20">

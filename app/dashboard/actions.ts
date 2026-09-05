@@ -1313,7 +1313,7 @@ export async function searchUsers(query: string) {
     });
   }
 
-  return await prisma.user.findMany({
+  const users = await prisma.user.findMany({
     where: {
       id: { not: currentUser.id },
       OR: [
@@ -1323,6 +1323,23 @@ export async function searchUsers(query: string) {
     },
     select: { id: true, username: true, email: true, image: true, bio: true, isPrivate: true, lastSeen: true, lastHeartbeat: true, isOnline: true },
     take: 40,
+  });
+
+  const lowerQ = cleanQ.toLowerCase();
+  return users.sort((a, b) => {
+    const aUser = (a.username || '').toLowerCase();
+    const bUser = (b.username || '').toLowerCase();
+    const aExact = aUser === lowerQ;
+    const bExact = bUser === lowerQ;
+    if (aExact && !bExact) return -1;
+    if (!aExact && bExact) return 1;
+
+    const aStarts = aUser.startsWith(lowerQ);
+    const bStarts = bUser.startsWith(lowerQ);
+    if (aStarts && !bStarts) return -1;
+    if (!aStarts && bStarts) return 1;
+
+    return aUser.localeCompare(bUser);
   });
 }
 

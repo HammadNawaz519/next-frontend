@@ -393,15 +393,17 @@ export default function OthersProfile({
               className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden flex items-center justify-center text-4xl sm:text-5xl font-black text-zinc-900 shadow-[0_12px_28px_rgba(0,0,0,0.12)] border-4 border-white relative z-10"
               style={{ backgroundColor: pastel.bg, color: pastel.text }}
             >
-              {profileData?.image && profileData.image.length > 5 ? (
+              <span className="text-4xl sm:text-5xl select-none leading-none">{pastel.emoji}</span>
+              {profileData?.image && profileData.image.length > 5 && (
                 <img
                   src={profileData.image}
                   alt={displayName}
-                  className="w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover"
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLElement).style.display = 'none';
+                  }}
                 />
-              ) : (
-                <span className="text-4xl sm:text-5xl select-none leading-none">{pastel.emoji}</span>
               )}
             </div>
 
