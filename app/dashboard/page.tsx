@@ -187,7 +187,6 @@ export default function DashboardPage() {
   }, []);
 
   // Load User Details for Profile Panel on-demand when profile is opened (cached)
-  const hasLoadedUser = useRef(false);
   const refreshProfile = () => {
     if (status === 'authenticated' && currentAuthId) {
       getProfileDetails().then(data => {
@@ -203,14 +202,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (status !== 'authenticated') return;
-    if (isProfileOpen && !hasLoadedUser.current) {
-      hasLoadedUser.current = true;
-      if (!fullUser) {
-        refreshProfile();
-      }
+    if (isProfileOpen) {
+      refreshProfile();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isProfileOpen, status, fullUser]);
+  }, [isProfileOpen, status]);
+
+  useEffect(() => {
+    const handleUserFollowed = () => {
+      refreshProfile();
+    };
+    window.addEventListener('user_followed', handleUserFollowed);
+    return () => window.removeEventListener('user_followed', handleUserFollowed);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentAuthId, status]);
 
   useEffect(() => {
     const handleProfileUpdate = (e: any) => {

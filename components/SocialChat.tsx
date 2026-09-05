@@ -2679,6 +2679,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
   const [acceptedContactIds, setAcceptedContactIds] = useState<Set<string>>(new Set());
   const acceptedContactIdsRef = useRef<Set<string>>(new Set());
   const wasSocketDisconnectedRef = useRef<boolean>(false);
+  const lastBackgroundedAtRef = useRef<number>(0);
   // Close chat details modal first when user hits back button / Escape key
   useEffect(() => {
     if (!showChatDetails) return;
@@ -3827,6 +3828,19 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         }
       });
 
+      newSocket.on('user_followed', (data: any) => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('user_followed', { detail: data }));
+        }
+      });
+
+      newSocket.on('user_followed_notification', (data: any) => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('user_followed', { detail: data }));
+          window.dispatchEvent(new CustomEvent('user_followed_notification', { detail: data }));
+        }
+      });
+
       // call_busy needs to be handled here because the engine may not have started yet
       // (caller gets busy before the engine's socket listeners are even set up)
       newSocket.on('call_busy', (data) => {
@@ -4108,7 +4122,18 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     // Re-identify + sync messages when app tab comes back to foreground
     const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // Track when app went to background for recovery timing
+        lastBackgroundedAtRef.current = Date.now();
+        return;
+      }
+
       if (document.visibilityState === 'visible') {
+        const backgroundedMs = lastBackgroundedAtRef.current > 0
+          ? Date.now() - lastBackgroundedAtRef.current
+          : 0;
+        lastBackgroundedAtRef.current = 0;
+
         socketInstancePromise.then(s => {
           if (s && s.connected) {
             const userObj = sessionRef.current?.user as any;
@@ -4119,8 +4144,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               });
             }
           }
-          // Only perform database refetch if the socket was disconnected during backgrounding
-          if (!s || !s.connected || wasSocketDisconnectedRef.current) {
+
+          // Recovery fetch if socket was disconnected OR app was backgrounded ≥5 seconds.
+          // Mobile browsers can suspend JS execution without disconnecting the socket,
+          // so we must recover based on background duration, not just disconnect state.
+          const needsRecovery = !s || !s.connected || wasSocketDisconnectedRef.current || backgroundedMs >= 5000;
+          if (needsRecovery) {
             wasSocketDisconnectedRef.current = false;
             const activeUser = selectedUserRef.current;
             if (activeUser) {
@@ -4189,25 +4218,49 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
               }).catch(() => {});
             }
 
-            // ── Refresh lastSeenMap from DB only if disconnected while in background ──
-            fetchRecentChatsCoalesced(true).then(results => {
+            // ── Refresh recent chats + lastSeenMap from DB to catch any missed messages ──
+            fetchRecentChatsCoalesced(true, currentUserId, currentAccountEmail).then(results => {
+              if (!Array.isArray(results)) return;
               const freshLastSeen: Record<string, string> = {};
+              const contacts: any[] = [];
+              const reqs: any[] = [];
               results.forEach((u: any) => {
+                if (u.isRequest) reqs.push(u);
+                else contacts.push(u);
                 const timeVal = u.lastSeen ? (typeof u.lastSeen === 'string' ? u.lastSeen : new Date(u.lastSeen).toISOString()) : null;
                 if (timeVal) {
                   if (u.email) freshLastSeen[u.email.toLowerCase().trim()] = timeVal;
                   if (u.id) freshLastSeen[u.id] = timeVal;
                 }
               });
+
+              // Merge: server results are authoritative; keep any realtime-added local-only contacts
+              const serverIds = new Set(contacts.map((c: any) => c.id));
+              const localOnlyContacts = allContactsRef.current.filter(c => !serverIds.has(c.id));
+              const merged = [...contacts, ...localOnlyContacts];
+              allContactsRef.current = merged;
+              setUsers(merged);
+              setRequests(prev => {
+                const filteredReqs = reqs.filter(r => !serverIds.has(r.id));
+                allRequestsRef.current = filteredReqs;
+                return filteredReqs;
+              });
+
+              if (typeof window !== 'undefined' && currentUserId) {
+                try {
+                  localStorage.setItem(`social_contacts_cache_${currentUserId}`, JSON.stringify(merged));
+                } catch (e) {}
+              }
+
               if (Object.keys(freshLastSeen).length > 0) {
                 setLastSeenMap(prev => {
-                  const merged = mergeLastSeenMaps(prev, freshLastSeen);
+                  const mergedLS = mergeLastSeenMaps(prev, freshLastSeen);
                   if (typeof window !== 'undefined' && currentUserId) {
                     try {
-                      localStorage.setItem(`chat_last_seen_${currentUserId}`, JSON.stringify(merged));
+                      localStorage.setItem(`chat_last_seen_${currentUserId}`, JSON.stringify(mergedLS));
                     } catch (e) {}
                   }
-                  return merged;
+                  return mergedLS;
                 });
               }
             }).catch(() => {});

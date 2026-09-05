@@ -1368,8 +1368,14 @@ export async function getOtherUserProfile(targetUserId: string) {
 
   if (!currentUser) return null;
 
-  const targetUser = await (prisma.user as any).findUnique({
-    where: { id: targetUserId },
+  const targetUser = await (prisma.user as any).findFirst({
+    where: {
+      OR: [
+        { id: targetUserId },
+        { email: targetUserId },
+        { username: targetUserId }
+      ]
+    },
     include: {
       followers: {
         select: { id: true, username: true, image: true }
@@ -1385,6 +1391,14 @@ export async function getOtherUserProfile(targetUserId: string) {
         include: {
           sender: { select: { id: true, username: true, image: true } }
         }
+      },
+      _count: {
+        select: {
+          followers: true,
+          following: true,
+          posts: true,
+          profileLikesReceived: true
+        }
       }
     }
   });
@@ -1395,11 +1409,22 @@ export async function getOtherUserProfile(targetUserId: string) {
   const isFollowing = targetUser.followers.some((f: any) => f.id === currentUser.id);
   const hasSentRequest = targetUser.receivedFollowRequests.some((r: any) => r.senderId === currentUser.id);
 
+  const followersCount = targetUser._count?.followers ?? targetUser.followers?.length ?? 0;
+  const followingCount = targetUser._count?.following ?? targetUser.following?.length ?? 0;
+  const postsCount = targetUser._count?.posts ?? 0;
+  const likesCount = targetUser._count?.profileLikesReceived ?? 0;
+
   return {
     ...targetUser,
     isFollowing,
     hasSentRequest,
-    isCurrentUser: currentUser.id === targetUser.id
+    isCurrentUser: currentUser.id === targetUser.id,
+    stats: {
+      followers: followersCount,
+      following: followingCount,
+      posts: postsCount,
+      likes: likesCount
+    }
   };
 }
 
@@ -1415,10 +1440,15 @@ export async function toggleFollowUser(targetUserId: string) {
   });
 
   if (!currentUser) return { error: 'User not found' };
-  if (currentUser.id === targetUserId) return { error: 'Cannot follow yourself' };
 
-  const targetUser = await (prisma.user as any).findUnique({
-    where: { id: targetUserId },
+  const targetUser = await (prisma.user as any).findFirst({
+    where: {
+      OR: [
+        { id: targetUserId },
+        { email: targetUserId },
+        { username: targetUserId }
+      ]
+    },
     include: {
       followers: true,
       receivedFollowRequests: true
@@ -1426,37 +1456,54 @@ export async function toggleFollowUser(targetUserId: string) {
   });
 
   if (!targetUser) return { error: 'Target user not found' };
+  if (currentUser.id === targetUser.id) return { error: 'Cannot follow yourself' };
 
+  const realTargetId = targetUser.id;
   const isFollowing = targetUser.followers.some((f: any) => f.id === currentUser.id);
 
   if (isFollowing) {
     // Unfollow
     await prisma.$transaction([
       (prisma.user as any).update({
-        where: { id: targetUserId },
+        where: { id: realTargetId },
         data: { followers: { disconnect: { id: currentUser.id } } }
       }),
       (prisma.user as any).update({
         where: { id: currentUser.id },
-        data: { following: { disconnect: { id: targetUserId } } }
+        data: { following: { disconnect: { id: realTargetId } } }
       })
     ]);
 
-    const updatedTarget = await prisma.user.findUnique({
-      where: { id: targetUserId },
-      select: {
-        _count: {
-          select: { followers: true, following: true }
+    const [updatedTarget, updatedCurrent] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: realTargetId },
+        select: {
+          _count: {
+            select: { followers: true, following: true }
+          }
         }
-      }
-    });
+      }),
+      prisma.user.findUnique({
+        where: { id: currentUser.id },
+        select: {
+          _count: {
+            select: { followers: true, following: true }
+          }
+        }
+      })
+    ]);
 
     return {
       success: true,
       isFollowing: false,
       hasSentRequest: false,
+      targetUserId: realTargetId,
+      targetEmail: targetUser.email,
+      currentUserId: currentUser.id,
       followersCount: updatedTarget?._count?.followers ?? 0,
-      followingCount: updatedTarget?._count?.following ?? 0
+      followingCount: updatedTarget?._count?.following ?? 0,
+      myFollowersCount: updatedCurrent?._count?.followers ?? 0,
+      myFollowingCount: updatedCurrent?._count?.following ?? 0
     };
   }
 
@@ -1465,55 +1512,83 @@ export async function toggleFollowUser(targetUserId: string) {
     const existingRequest = targetUser.receivedFollowRequests.some((r: any) => r.senderId === currentUser.id);
     if (existingRequest) {
       // Cancel request
-      await (prisma as any).followRequest.delete({
+      await (prisma as any).followRequest.deleteMany({
         where: {
-          senderId_receiverId: {
-            senderId: currentUser.id,
-            receiverId: targetUserId
-          }
+          senderId: currentUser.id,
+          receiverId: realTargetId
         }
       });
 
-      const updatedTarget = await prisma.user.findUnique({
-        where: { id: targetUserId },
-        select: {
-          _count: {
-            select: { followers: true, following: true }
+      const [updatedTarget, updatedCurrent] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: realTargetId },
+          select: {
+            _count: {
+              select: { followers: true, following: true }
+            }
           }
-        }
-      });
+        }),
+        prisma.user.findUnique({
+          where: { id: currentUser.id },
+          select: {
+            _count: {
+              select: { followers: true, following: true }
+            }
+          }
+        })
+      ]);
 
       return {
         success: true,
         isFollowing: false,
         hasSentRequest: false,
+        targetUserId: realTargetId,
+        targetEmail: targetUser.email,
+        currentUserId: currentUser.id,
         followersCount: updatedTarget?._count?.followers ?? 0,
-        followingCount: updatedTarget?._count?.following ?? 0
+        followingCount: updatedTarget?._count?.following ?? 0,
+        myFollowersCount: updatedCurrent?._count?.followers ?? 0,
+        myFollowingCount: updatedCurrent?._count?.following ?? 0
       };
     } else {
       // Create request
       await (prisma as any).followRequest.create({
         data: {
           senderId: currentUser.id,
-          receiverId: targetUserId
+          receiverId: realTargetId
         }
       });
 
-      const updatedTarget = await prisma.user.findUnique({
-        where: { id: targetUserId },
-        select: {
-          _count: {
-            select: { followers: true, following: true }
+      const [updatedTarget, updatedCurrent] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: realTargetId },
+          select: {
+            _count: {
+              select: { followers: true, following: true }
+            }
           }
-        }
-      });
+        }),
+        prisma.user.findUnique({
+          where: { id: currentUser.id },
+          select: {
+            _count: {
+              select: { followers: true, following: true }
+            }
+          }
+        })
+      ]);
 
       return {
         success: true,
         isFollowing: false,
         hasSentRequest: true,
+        targetUserId: realTargetId,
+        targetEmail: targetUser.email,
+        currentUserId: currentUser.id,
         followersCount: updatedTarget?._count?.followers ?? 0,
-        followingCount: updatedTarget?._count?.following ?? 0
+        followingCount: updatedTarget?._count?.following ?? 0,
+        myFollowersCount: updatedCurrent?._count?.followers ?? 0,
+        myFollowingCount: updatedCurrent?._count?.following ?? 0
       };
     }
   }
@@ -1521,30 +1596,45 @@ export async function toggleFollowUser(targetUserId: string) {
   // If public, follow directly
   await prisma.$transaction([
     (prisma.user as any).update({
-      where: { id: targetUserId },
+      where: { id: realTargetId },
       data: { followers: { connect: { id: currentUser.id } } }
     }),
     (prisma.user as any).update({
       where: { id: currentUser.id },
-      data: { following: { connect: { id: targetUserId } } }
+      data: { following: { connect: { id: realTargetId } } }
     })
   ]);
 
-  const updatedTarget = await prisma.user.findUnique({
-    where: { id: targetUserId },
-    select: {
-      _count: {
-        select: { followers: true, following: true }
+  const [updatedTarget, updatedCurrent] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: realTargetId },
+      select: {
+        _count: {
+          select: { followers: true, following: true }
+        }
       }
-    }
-  });
+    }),
+    prisma.user.findUnique({
+      where: { id: currentUser.id },
+      select: {
+        _count: {
+          select: { followers: true, following: true }
+        }
+      }
+    })
+  ]);
 
   return {
     success: true,
     isFollowing: true,
     hasSentRequest: false,
+    targetUserId: realTargetId,
+    targetEmail: targetUser.email,
+    currentUserId: currentUser.id,
     followersCount: updatedTarget?._count?.followers ?? 0,
-    followingCount: updatedTarget?._count?.following ?? 0
+    followingCount: updatedTarget?._count?.following ?? 0,
+    myFollowersCount: updatedCurrent?._count?.followers ?? 0,
+    myFollowingCount: updatedCurrent?._count?.following ?? 0
   };
 }
 
@@ -2073,6 +2163,12 @@ export async function getUserPublicProfile(targetUserId: string) {
       isOnline: true,
       lastSeen: true,
       createdAt: true,
+      followers: {
+        select: { id: true, username: true, image: true }
+      },
+      following: {
+        select: { id: true, username: true, image: true }
+      },
       _count: {
         select: {
           followers: true,
@@ -2086,13 +2182,15 @@ export async function getUserPublicProfile(targetUserId: string) {
 
   if (!user) return null;
 
+  const realTargetId = user.id;
+
   let isFollowing = false;
   let hasSentRequest = false;
-  if (currentUserId && currentUserId !== targetUserId) {
+  if (currentUserId && currentUserId !== realTargetId) {
     const followCheck = await prisma.user.findFirst({
       where: {
         id: currentUserId,
-        following: { some: { id: targetUserId } }
+        following: { some: { id: realTargetId } }
       },
       select: { id: true }
     });
@@ -2103,7 +2201,7 @@ export async function getUserPublicProfile(targetUserId: string) {
         where: {
           senderId_receiverId: {
             senderId: currentUserId,
-            receiverId: targetUserId
+            receiverId: realTargetId
           }
         },
         select: { id: true }
@@ -2114,12 +2212,12 @@ export async function getUserPublicProfile(targetUserId: string) {
 
   const profileLikesCount = user._count?.profileLikesReceived ?? 0;
   let isLiked = false;
-  if (currentUserId && currentUserId !== targetUserId) {
+  if (currentUserId && currentUserId !== realTargetId) {
     isLiked = Boolean(await (prisma as any).profileLike.findUnique({
       where: {
         likerId_profileId: {
           likerId: currentUserId,
-          profileId: targetUserId
+          profileId: realTargetId
         }
       },
       select: { id: true }
@@ -2127,8 +2225,8 @@ export async function getUserPublicProfile(targetUserId: string) {
   }
 
   // Real authoritative database counts
-  const followersCount = user._count?.followers ?? 0;
-  const followingCount = user._count?.following ?? 0;
+  const followersCount = user._count?.followers ?? user.followers?.length ?? 0;
+  const followingCount = user._count?.following ?? user.following?.length ?? 0;
   const postsCount = user._count?.posts ?? 0;
   const likesCount = profileLikesCount;
 
@@ -2136,7 +2234,7 @@ export async function getUserPublicProfile(targetUserId: string) {
     ...user,
     isFollowing,
     hasSentRequest,
-    isSelf: currentUserId === targetUserId,
+    isSelf: currentUserId === realTargetId,
     stats: {
       followers: followersCount,
       following: followingCount,

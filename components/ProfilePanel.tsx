@@ -152,8 +152,11 @@ export default function ProfilePanel({
     }
   }, []);
 
-  const followersList: any[] = activeUserData?.followers || [];
-  const followingList: any[] = activeUserData?.following || [];
+  const [fetchedFollowers, setFetchedFollowers] = useState<any[] | null>(null);
+  const [fetchedFollowing, setFetchedFollowing] = useState<any[] | null>(null);
+
+  const followersList: any[] = fetchedFollowers || activeUserData?.followers || [];
+  const followingList: any[] = fetchedFollowing || activeUserData?.following || [];
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -164,10 +167,23 @@ export default function ProfilePanel({
   useEffect(() => {
     if (activeUserData) {
       setLocalImage(activeUserData.image || '');
-      const followers = activeUserData.followers || [];
-      const following = activeUserData.following || [];
-      setFollowerCount(followers.length);
-      setFollowingCount(following.length);
+      const initialFollowers =
+        activeUserData?.stats?.followers ??
+        activeUserData?._count?.followers ??
+        (Array.isArray(activeUserData?.followers) ? activeUserData.followers.length : 0);
+      const initialFollowing =
+        activeUserData?.stats?.following ??
+        activeUserData?._count?.following ??
+        (Array.isArray(activeUserData?.following) ? activeUserData.following.length : 0);
+      setFollowerCount(initialFollowers);
+      setFollowingCount(initialFollowing);
+
+      if (Array.isArray(activeUserData.followers)) {
+        setFetchedFollowers(activeUserData.followers);
+      }
+      if (Array.isArray(activeUserData.following)) {
+        setFetchedFollowing(activeUserData.following);
+      }
 
       const initialLikes =
         activeUserData?.stats?.likes ??
@@ -184,13 +200,15 @@ export default function ProfilePanel({
 
       if (!isSelf && session?.user) {
         const myId = (session.user as any)?.id;
-        setIsFollowing(followers.some((f: any) => f.id === myId));
+        const followers = activeUserData.followers || [];
+        setIsFollowing(Boolean(activeUserData.isFollowing || (Array.isArray(followers) && followers.some((f: any) => f.id === myId))));
       }
     }
   }, [activeUserData, isSelf, session, curEmail]);
 
-  // Fetch authoritative stats including Likes received from database
+  // Fetch authoritative stats including Likes received and followers/following lists from database
   useEffect(() => {
+    if (!isOpen) return;
     let isMounted = true;
     const lookupTarget = activeUserData?.id || activeUserData?.email || session?.user?.email;
     if (!lookupTarget) return;
@@ -207,6 +225,18 @@ export default function ProfilePanel({
           if (data.stats?.following !== undefined) {
             setFollowingCount(data.stats.following);
           }
+          if (Array.isArray(data.followers)) {
+            setFetchedFollowers(data.followers);
+          }
+          if (Array.isArray(data.following)) {
+            setFetchedFollowing(data.following);
+          }
+          if (!isSelf && data.isFollowing !== undefined) {
+            setIsFollowing(Boolean(data.isFollowing));
+          }
+          if (!isSelf && data.hasSentRequest !== undefined) {
+            setHasSentRequest(Boolean(data.hasSentRequest));
+          }
         }
       })
       .catch(() => {});
@@ -214,9 +244,9 @@ export default function ProfilePanel({
     return () => {
       isMounted = false;
     };
-  }, [activeUserData?.id, activeUserData?.email, session?.user?.email]);
+  }, [isOpen, activeUserData?.id, activeUserData?.email, session?.user?.email, isSelf]);
 
-  // Real-time socket & window listeners for profile likes
+  // Real-time socket & window listeners for profile likes and follows
   useEffect(() => {
     const handleProfileLiked = (data: any) => {
       if (!data) return;
@@ -232,6 +262,35 @@ export default function ProfilePanel({
       }
     };
 
+    const handleUserFollowed = (e: any) => {
+      const data = e?.detail || e;
+      if (!data) return;
+      const myId = activeUserData?.id || (session?.user as any)?.id;
+      const myEmail = activeUserData?.email || session?.user?.email;
+
+      // If my profile was followed/unfollowed
+      if ((myId && String(data.targetUserId) === String(myId)) || (myEmail && data.targetEmail === myEmail)) {
+        if (typeof data.followersCount === 'number') {
+          setFollowerCount(data.followersCount);
+        }
+        if (data.followerId && String(data.followerId) === String((session?.user as any)?.id)) {
+          setIsFollowing(Boolean(data.isFollowing));
+          setHasSentRequest(Boolean(data.hasSentRequest));
+        }
+      }
+
+      // If I followed/unfollowed someone else
+      if ((myId && String(data.followerId) === String(myId)) || (myEmail && data.followerEmail === myEmail)) {
+        if (typeof data.myFollowingCount === 'number') {
+          setFollowingCount(data.myFollowingCount);
+        }
+      }
+
+      if (isOpen) {
+        refreshProfile?.();
+      }
+    };
+
     const handleWindowLiked = (e: any) => {
       handleProfileLiked(e.detail);
     };
@@ -239,14 +298,18 @@ export default function ProfilePanel({
     if (typeof window !== 'undefined') {
       window.addEventListener('profile_liked', handleWindowLiked);
       window.addEventListener('profile_liked_notification', handleWindowLiked);
+      window.addEventListener('user_followed', handleUserFollowed);
+      window.addEventListener('user_followed_notification', handleUserFollowed);
     }
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('profile_liked', handleWindowLiked);
         window.removeEventListener('profile_liked_notification', handleWindowLiked);
+        window.removeEventListener('user_followed', handleUserFollowed);
+        window.removeEventListener('user_followed_notification', handleUserFollowed);
       }
     };
-  }, [activeUserData?.id, activeUserData?.email, session?.user]);
+  }, [activeUserData?.id, activeUserData?.email, session?.user, isOpen, refreshProfile]);
 
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -381,17 +444,49 @@ export default function ProfilePanel({
   };
 
   const handleFollowToggle = async () => {
-    if (!targetUser?.id || isFollowLoading) return;
+    const targetId = targetUser?.id || activeUserData?.id;
+    if (!targetId || isFollowLoading) return;
     triggerHaptic('medium');
     setIsFollowLoading(true);
     try {
-      const res = await toggleFollowUser(targetUser.id);
-      if (res.success) {
-        setIsFollowing(res.isFollowing);
-        setHasSentRequest(res.hasSentRequest || false);
-        setFollowerCount((prev) => (res.isFollowing ? prev + 1 : Math.max(0, prev - 1)));
-        onToggleFollow?.(targetUser.id);
+      const res: any = await toggleFollowUser(targetId);
+      if (res && !res.error && res.success) {
+        setIsFollowing(Boolean(res.isFollowing));
+        setHasSentRequest(Boolean(res.hasSentRequest));
+        if (typeof res.followersCount === 'number') {
+          setFollowerCount(res.followersCount);
+        }
+        if (typeof res.followingCount === 'number') {
+          setFollowingCount(res.followingCount);
+        }
+        onToggleFollow?.(targetId);
         refreshProfile?.();
+
+        const followPayload = {
+          targetUserId: res.targetUserId || targetId,
+          targetEmail: targetUser?.email || activeUserData?.email,
+          followerId: res.currentUserId || (session?.user as any)?.id,
+          isFollowing: res.isFollowing,
+          hasSentRequest: res.hasSentRequest,
+          followersCount: res.followersCount,
+          followingCount: res.followingCount,
+          myFollowersCount: res.myFollowersCount,
+          myFollowingCount: res.myFollowingCount
+        };
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('user_followed', { detail: followPayload }));
+        }
+
+        showToast(
+          res.hasSentRequest
+            ? 'Follow request sent'
+            : res.isFollowing
+            ? `Following ${targetUser?.username || activeUserData?.username || 'user'}`
+            : `Unfollowed ${targetUser?.username || activeUserData?.username || 'user'}`
+        );
+      } else {
+        showToast(res?.error || 'Failed to update follow status');
       }
     } catch (err) {
       showToast('Failed to update follow status');

@@ -104,7 +104,7 @@ export default function OthersProfile({
     };
   }, [user?.id, user?.email, user?.username]);
 
-  // Real-time socket & window listeners for profile likes
+  // Real-time socket & window listeners for profile likes & follows
   useEffect(() => {
     const handleProfileLiked = (data: any) => {
       if (!data) return;
@@ -120,26 +120,59 @@ export default function OthersProfile({
       }
     };
 
+    const handleUserFollowed = (data: any) => {
+      if (!data) return;
+      const targetId = data.targetUserId;
+      const targetEmail = data.targetEmail;
+      const myProfileId = profileData?.id || user?.id;
+      const myProfileEmail = profileData?.email || user?.email;
+
+      // If this profile is the user who was followed / unfollowed
+      if ((myProfileId && String(targetId) === String(myProfileId)) || (myProfileEmail && targetEmail === myProfileEmail)) {
+        if (typeof data.followersCount === 'number') {
+          setFollowersCount(data.followersCount);
+        }
+        if (data.followerId && String(data.followerId) === String(currentUserId)) {
+          setIsFollowing(Boolean(data.isFollowing));
+          setHasSentRequest(Boolean(data.hasSentRequest));
+        }
+      }
+      // If this profile is the follower
+      if (myProfileId && String(data.followerId) === String(myProfileId)) {
+        if (typeof data.myFollowingCount === 'number') {
+          setFollowingCount(data.myFollowingCount);
+        }
+      }
+    };
+
     const handleWindowLiked = (e: any) => {
       handleProfileLiked(e.detail);
     };
 
+    const handleWindowFollowed = (e: any) => {
+      handleUserFollowed(e.detail);
+    };
+
     if (socket) {
       socket.on('profile_liked', handleProfileLiked);
+      socket.on('user_followed', handleUserFollowed);
     }
     if (typeof window !== 'undefined') {
       window.addEventListener('profile_liked', handleWindowLiked);
+      window.addEventListener('user_followed', handleWindowFollowed);
     }
 
     return () => {
       if (socket) {
         socket.off('profile_liked', handleProfileLiked);
+        socket.off('user_followed', handleUserFollowed);
       }
       if (typeof window !== 'undefined') {
         window.removeEventListener('profile_liked', handleWindowLiked);
+        window.removeEventListener('user_followed', handleWindowFollowed);
       }
     };
-  }, [socket, profileData?.id, user?.id, currentUserId]);
+  }, [socket, profileData?.id, profileData?.email, user?.id, user?.email, currentUserId]);
 
   const handleToggleFollow = async () => {
     const targetId = profileData?.id || user?.id;
@@ -168,7 +201,7 @@ export default function OthersProfile({
 
     try {
       const res: any = await toggleFollowUser(targetId);
-      if (res && !res.error) {
+      if (res && !res.error && res.success) {
         setIsFollowing(Boolean(res.isFollowing));
         setHasSentRequest(Boolean(res.hasSentRequest));
         if (typeof res.followersCount === 'number') {
@@ -177,6 +210,27 @@ export default function OthersProfile({
         if (typeof res.followingCount === 'number') {
           setFollowingCount(res.followingCount);
         }
+
+        const followPayload = {
+          targetUserId: res.targetUserId || profileData?.id || user?.id,
+          targetEmail: res.targetEmail || profileData?.email || user?.email,
+          followerId: res.currentUserId || currentUserId,
+          followerName: currentUserName,
+          isFollowing: res.isFollowing,
+          hasSentRequest: res.hasSentRequest,
+          followersCount: res.followersCount,
+          followingCount: res.followingCount,
+          myFollowersCount: res.myFollowersCount,
+          myFollowingCount: res.myFollowingCount
+        };
+
+        if (socket) {
+          socket.emit('follow_user', followPayload);
+        }
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('user_followed', { detail: followPayload }));
+        }
+
         showTopToast(
           res.hasSentRequest
             ? 'Follow request sent'
