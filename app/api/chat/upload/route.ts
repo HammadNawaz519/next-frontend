@@ -72,6 +72,14 @@ export async function POST(req: NextRequest) {
           type: type || "image",
           senderId: userId,
           receiverId,
+          mediaUrl,
+          thumbnailUrl: thumbnailUrl || null,
+          mimeType: mimeType || null,
+          fileSize: fileSize ? Number(fileSize) : null,
+          width: width ? Number(width) : null,
+          height: height ? Number(height) : null,
+          duration: duration ? Number(duration) : null,
+          storagePath: storagePath || null,
           ...(replyTo
             ? {
                 replyToId: replyTo.id,
@@ -212,6 +220,10 @@ export async function POST(req: NextRequest) {
           type: type,
           senderId: currentUserId,
           receiverId: receiverId,
+          mediaUrl: url,
+          mimeType: f.type || undefined,
+          fileSize: f.size || undefined,
+          storagePath: storagePath || null,
         },
         include: {
           reactions: true,

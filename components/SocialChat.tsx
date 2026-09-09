@@ -4399,7 +4399,12 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
         ? 'completed'
         : (endReason === 'rejected' ? 'rejected' : 'missed');
       try {
-        const result = await saveCall(callObj.peer.id, callObj.type, status, durationSec || 0);
+        let result: any = null;
+        try {
+          result = await renderApiClient.saveCall(callObj.peer.id, callObj.type, status, durationSec || 0, currentUserId, currentAccountEmail);
+        } catch {
+          result = await saveCall(callObj.peer.id, callObj.type, status, durationSec || 0);
+        }
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new Event('connect_call_history_updated'));
         }
@@ -6125,7 +6130,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           setSelectedUser(null);
                         }
                         try {
-                          await hideSocialChat(targetId);
+                          await renderApiClient.hideChat(targetId, currentUserId, currentAccountEmail).catch(() => hideSocialChat(targetId));
                         } catch (err) {
                           console.warn('Failed to delete chat on server:', err);
                         }
@@ -7195,7 +7200,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                         <button
                           onClick={async () => {
                             setShowClearConfirmModal(false);
-                            await hideSocialChat(selectedUser.id);
+                            await renderApiClient.hideChat(selectedUser.id, currentUserId, currentAccountEmail).catch(() => hideSocialChat(selectedUser.id));
                             setMessages([]);
                             setMessagesCache(prev => {
                               const next = { ...prev };

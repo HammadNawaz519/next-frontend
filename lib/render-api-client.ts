@@ -90,11 +90,11 @@ class RenderApiClient {
       return configured.replace(/\/+$/, '');
     }
 
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      return 'http://localhost:5000';
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      return 'http://localhost:8080';
     }
 
-    return '';
+    return 'https://server-6gmj.onrender.com';
   }
 
   private getAuthHeaders(currentUserId?: string, currentUserEmail?: string): Record<string, string> {
@@ -429,7 +429,26 @@ class RenderApiClient {
   }
 
   /**
-   * Save call log
+   * Hide a chat or clear messages for the current user
+   */
+  async hideChat(targetId: string, userId: string, userEmail?: string): Promise<{ success: boolean }> {
+    return this.fetchWithRetry(
+      '/api/social/chats/hide',
+      {
+        method: 'POST',
+        body: JSON.stringify({ targetId }),
+      },
+      userId,
+      userEmail
+    );
+  }
+
+  async clearChat(targetId: string, userId: string, userEmail?: string): Promise<{ success: boolean }> {
+    return this.hideChat(targetId, userId, userEmail);
+  }
+
+  /**
+   * Save call log and generate chat message
    */
   async saveCall(
     receiverId: string,
@@ -438,13 +457,25 @@ class RenderApiClient {
     duration: number,
     userId: string,
     userEmail?: string
-  ): Promise<{ success: boolean; call: any }> {
+  ): Promise<{ success: boolean; callId?: string; message?: any; call?: any }> {
     return this.fetchWithRetry(
       '/api/social/calls',
       {
         method: 'POST',
         body: JSON.stringify({ receiverId, type, status, duration }),
       },
+      userId,
+      userEmail
+    );
+  }
+
+  /**
+   * Clear all call history for the current user
+   */
+  async clearCalls(userId: string, userEmail?: string): Promise<{ success: boolean }> {
+    return this.fetchWithRetry(
+      '/api/social/calls',
+      { method: 'DELETE' },
       userId,
       userEmail
     );

@@ -6,6 +6,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { getCallHistory, clearCallHistory } from '@/app/dashboard/actions';
+import { renderApiClient } from '@/lib/render-api-client';
 import { triggerHaptic } from '@/lib/haptics';
 
 export interface CallRecord {
@@ -92,7 +93,14 @@ export default function CallsView({
       // Fetch DB calls
       let dbCalls: CallRecord[] = [];
       try {
-        const fetched = await getCallHistory();
+        let fetched: any[] = [];
+        try {
+          const res = await renderApiClient.getCalls(currentUserId);
+          fetched = res?.calls || [];
+        } catch {
+          fetched = await getCallHistory();
+        }
+
         if (Array.isArray(fetched)) {
           dbCalls = fetched.map((item: any) => {
             const isCaller = String(item.callerId) === String(currentUserId);
@@ -267,7 +275,7 @@ export default function CallsView({
       localStorage.removeItem('connect_call_history');
     }
     try {
-      await clearCallHistory();
+      await renderApiClient.clearCalls(currentUserId).catch(() => clearCallHistory());
     } catch (e) {
       console.warn('Failed to clear call history DB:', e);
     }
