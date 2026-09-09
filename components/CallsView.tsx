@@ -95,7 +95,7 @@ export default function CallsView({
       try {
         let fetched: any[] = [];
         try {
-          const res = await renderApiClient.getCalls(currentUserId);
+          const res = await renderApiClient.getCalls(currentUserId || '');
           fetched = res?.calls || [];
         } catch {
           fetched = await getCallHistory();
@@ -275,7 +275,7 @@ export default function CallsView({
       localStorage.removeItem('connect_call_history');
     }
     try {
-      await renderApiClient.clearCalls(currentUserId).catch(() => clearCallHistory());
+      await renderApiClient.clearCalls(currentUserId || '').catch(() => clearCallHistory());
     } catch (e) {
       console.warn('Failed to clear call history DB:', e);
     }

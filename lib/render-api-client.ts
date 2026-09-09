@@ -424,7 +424,7 @@ class RenderApiClient {
   /**
    * Fetch call history
    */
-  async getCalls(userId: string, userEmail?: string): Promise<{ calls: any[] }> {
+  async getCalls(userId?: string, userEmail?: string): Promise<{ calls: any[] }> {
     return this.coalescedGet('/api/social/calls', userId, userEmail);
   }
 
@@ -472,7 +472,7 @@ class RenderApiClient {
   /**
    * Clear all call history for the current user
    */
-  async clearCalls(userId: string, userEmail?: string): Promise<{ success: boolean }> {
+  async clearCalls(userId?: string, userEmail?: string): Promise<{ success: boolean }> {
     return this.fetchWithRetry(
       '/api/social/calls',
       { method: 'DELETE' },
