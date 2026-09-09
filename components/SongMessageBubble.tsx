@@ -145,20 +145,20 @@ export default function SongMessageBubble({
 
       {/* ── Top Badge (Music Tag) ── */}
       <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md text-white text-[11px] font-bold border border-white/10 shadow-xs">
-        <Music className="w-3 h-3 text-[#D8B4E2]" />
+        <Music className="w-3 h-3 text-violet-400" />
         <span>Song Clip</span>
       </div>
 
-      {/* ── Center Play / Waving Dots Equalizer Visualizer ── */}
+      {/* ── Center Play / Waving Waveform Equalizer Visualizer ── */}
       <div className="absolute inset-0 flex items-center justify-center z-10">
         {isPlaying ? (
-          /* Animated Waving Equalizer Dots */
-          <div className="flex items-center gap-2 px-4 py-3 rounded-full bg-black/60 backdrop-blur-md border border-white/15 shadow-xl animate-in zoom-in-95 duration-200">
-            <span className="w-1.5 h-6 bg-[#D8B4E2] rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.9s' }} />
-            <span className="w-1.5 h-10 bg-white rounded-full animate-bounce" style={{ animationDelay: '180ms', animationDuration: '0.9s' }} />
-            <span className="w-1.5 h-4 bg-[#D8B4E2] rounded-full animate-bounce" style={{ animationDelay: '360ms', animationDuration: '0.9s' }} />
-            <span className="w-1.5 h-8 bg-white rounded-full animate-bounce" style={{ animationDelay: '540ms', animationDuration: '0.9s' }} />
-            <span className="w-1.5 h-5 bg-[#D8B4E2] rounded-full animate-bounce" style={{ animationDelay: '270ms', animationDuration: '0.9s' }} />
+          /* Animated Smooth Waveform Equalizer */
+          <div className="flex items-end gap-1.5 px-4 py-2.5 rounded-full bg-black/65 backdrop-blur-xl border border-white/15 shadow-2xl animate-in zoom-in-95 duration-200 h-11">
+            <span className="w-1 h-5 bg-violet-400 rounded-full animate-sound-wave" style={{ animationDelay: '0ms' }} />
+            <span className="w-1 h-7 bg-white rounded-full animate-sound-wave" style={{ animationDelay: '200ms' }} />
+            <span className="w-1 h-4 bg-violet-300 rounded-full animate-sound-wave" style={{ animationDelay: '400ms' }} />
+            <span className="w-1 h-8 bg-white rounded-full animate-sound-wave" style={{ animationDelay: '150ms' }} />
+            <span className="w-1 h-6 bg-violet-400 rounded-full animate-sound-wave" style={{ animationDelay: '300ms' }} />
           </div>
         ) : (
           /* Play Button */
@@ -175,7 +175,7 @@ export default function SongMessageBubble({
         </h4>
         <div className="flex items-center justify-between text-[11.5px] text-zinc-300 font-medium mt-0.5">
           <span className="truncate max-w-[170px]">{songData.artist}</span>
-          <span className="shrink-0 text-[#D8B4E2] font-semibold text-[11px]">
+          <span className="shrink-0 text-violet-300 font-semibold text-[11px]">
             {isPlaying ? `${Math.max(0, Math.floor(currentTime))}s / ` : ''}{duration}s
           </span>
         </div>

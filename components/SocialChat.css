@@ -42,7 +42,7 @@
   display: flex;
   height: 100%;
   width: 100%;
-  background: #141111;
+  background: var(--dm-bg-main);
   margin: 0;
   padding: 0;
   border: none;
@@ -55,7 +55,7 @@
    ========================================= */
 .social-chat-container .sidebar {
   width: 380px;
-  background: #141111;
+  background: var(--dm-bg-sidebar);
   display: flex;
   flex-direction: column;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
@@ -180,7 +180,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #141111;
+  background: var(--dm-bg-main);
   overflow: hidden;
   position: relative;
   border: none;
@@ -327,27 +327,41 @@
 }
 
 .social-chat-container .msg.sent {
-  background: linear-gradient(135deg, #18181b 0%, #000000 100%);
-  color: #ffffff;
-  border-radius: 1.25rem;
-  box-shadow: none !important;
-  border: none !important;
+  background: var(--dm-chat-sent-bg, linear-gradient(135deg, #27272a 0%, #18181b 100%));
+  color: var(--dm-chat-sent-text, #ffffff);
+  border-radius: 18px 18px 4px 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
 }
 
 .social-chat-container .msg.received {
-  background: #ffffff;
-  color: #111827;
+  background: var(--dm-chat-recv-bg, #262626);
+  color: var(--dm-chat-recv-text, #f4f4f5);
+  border-radius: 18px 18px 18px 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="light"] .social-chat-container .msg.sent,
+html:not(.dark) .social-chat-container .msg.sent {
+  background: #111827 !important;
+  color: #ffffff !important;
   border: none !important;
-  border-radius: 1.25rem;
-  box-shadow: none !important;
+}
+
+[data-theme="light"] .social-chat-container .msg.received,
+html:not(.dark) .social-chat-container .msg.received {
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+  border: 1px solid rgba(0, 0, 0, 0.04) !important;
 }
 
 .social-chat-container .msg.ai {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  color: #111827;
-  border: none !important;
-  border-radius: 1.25rem;
-  box-shadow: none !important;
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.15) 0%, rgba(59, 130, 246, 0.12) 100%);
+  color: var(--dm-text-primary, #ffffff);
+  border: 1px solid rgba(147, 51, 234, 0.25) !important;
+  border-radius: 18px 18px 18px 4px;
+  box-shadow: 0 2px 8px rgba(147, 51, 234, 0.1);
 }
 
 .social-chat-container .ai-badge {

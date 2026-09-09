@@ -562,13 +562,17 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Mobile Bottom Navigation — single unified bottom bar: Messages (left), Calls (center), Profile (right) */}
+      {/* Mobile Bottom Navigation — Ultra-Premium Frosted Capsule Bar */}
       {(!selectedChatUser && !isCallActive && !isSearchActive && !isStoryEditorOpen && !isProfileEditing) && (
         <nav className={`mobile-nav ${(isAccountSheetOpen || isChatLongPressActive) ? 'mobile-nav-hidden' : ''}`}>
-          {/* 1. Messages (Leftmost) */}
+          {/* 1. Messages (Left) */}
           <button
             onClick={(e) => handleNavClick('chat', e)}
-            className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
+            className={`relative flex flex-col items-center justify-center gap-1 transition-all duration-200 active:scale-90 px-5 py-1.5 rounded-full outline-none cursor-pointer ${
+              !isProfileOpen && activeView === 'chat'
+                ? (isDark ? 'bg-white/[0.12] text-white shadow-xs' : 'bg-black/[0.07] text-zinc-900 shadow-xs')
+                : (isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-800')
+            }`}
           >
             <div className="w-5 h-5 flex items-center justify-center">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
@@ -576,11 +580,11 @@ export default function DashboardPage() {
                   fillRule="evenodd" 
                   clipRule="evenodd" 
                   d="M3.0132 9.15129C3 9.69022 3 10.3021 3 11V13C3 15.8284 3 17.2426 3.87868 18.1213C4.75736 19 6.17157 19 9 19H15C17.8284 19 19.2426 19 20.1213 18.1213C21 17.2426 21 15.8284 21 13V11C21 10.3021 21 9.69022 20.9868 9.15129L12.9713 13.6044C12.3672 13.9399 11.6328 13.9399 11.0287 13.6044L3.0132 9.15129ZM3.24297 7.02971C3.32584 7.05052 3.4074 7.08237 3.48564 7.12584L12 11.856L20.5144 7.12584C20.5926 7.08237 20.6742 7.05052 20.757 7.02971C20.6271 6.55619 20.4276 6.18491 20.1213 5.87868C19.2426 5 17.8284 5 15 5H9C6.17157 5 4.75736 5 3.87868 5.87868C3.57245 6.18491 3.37294 6.55619 3.24297 7.02971Z" 
-                  fill={!isProfileOpen && activeView === 'chat' ? '#D8B4E2' : 'rgba(255,255,255,0.45)'}
+                  fill="currentColor"
                 />
               </svg>
             </div>
-            <span className={`text-[10px] tracking-tight ${!isProfileOpen && activeView === 'chat' ? 'text-[#D8B4E2] font-semibold' : 'text-zinc-400 font-medium'}`}>
+            <span className="text-[10px] tracking-tight font-semibold">
               Messages
             </span>
           </button>
@@ -588,35 +592,46 @@ export default function DashboardPage() {
           {/* 2. Calls (Center) */}
           <button
             onClick={(e) => handleNavClick('calls', e)}
-            className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
+            className={`relative flex flex-col items-center justify-center gap-1 transition-all duration-200 active:scale-90 px-5 py-1.5 rounded-full outline-none cursor-pointer ${
+              !isProfileOpen && activeView === 'calls'
+                ? (isDark ? 'bg-white/[0.12] text-white shadow-xs' : 'bg-black/[0.07] text-zinc-900 shadow-xs')
+                : (isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-800')
+            }`}
           >
             <div className="w-5 h-5 flex items-center justify-center">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
                 <path 
                   d="M10.0376 5.31617L10.6866 6.4791C11.2723 7.52858 11.0372 8.90532 10.1147 9.8278C10.1147 9.8278 10.1147 9.8278 10.1147 9.8278C10.1146 9.82792 8.99588 10.9468 11.0245 12.9755C13.0525 15.0035 14.1714 13.8861 14.1722 13.8853C14.1722 13.8853 14.1722 13.8853 14.1722 13.8853C15.0947 12.9628 16.4714 12.7277 17.5209 13.3134L18.6838 13.9624C20.2686 14.8468 20.4557 17.0692 19.0628 18.4622C18.2258 19.2992 17.2004 19.9505 16.0669 19.9934C14.1588 20.0658 10.9183 19.5829 7.6677 16.3323C4.41713 13.0817 3.93421 9.84122 4.00655 7.93309C4.04952 6.7996 4.7008 5.77423 5.53781 4.93723C6.93076 3.54428 9.15317 3.73144 10.0376 5.31617Z" 
-                  stroke={!isProfileOpen && activeView === 'calls' ? '#D8B4E2' : 'rgba(255,255,255,0.45)'} 
-                  strokeWidth="1.8" 
+                  stroke="currentColor" 
+                  strokeWidth="1.9" 
                   strokeLinecap="round"
                 />
               </svg>
             </div>
-            <span className={`text-[10px] tracking-tight ${!isProfileOpen && activeView === 'calls' ? 'text-[#D8B4E2] font-semibold' : 'text-zinc-400 font-medium'}`}>
+            <span className="text-[10px] tracking-tight font-semibold">
               Calls
             </span>
           </button>
 
           {/* 3. Profile (Right) */}
           <button
-            onClick={(e) => runProfileTransition(() => setIsProfileOpen(true), e.clientX, e.clientY, false)}
-            className="flex flex-col items-center justify-center gap-1 transition-all active:scale-95 px-4 py-1 outline-none cursor-pointer"
+            onClick={(e) => {
+              triggerHaptic('light');
+              runProfileTransition(() => setIsProfileOpen(true), e.clientX, e.clientY, false);
+            }}
+            className={`relative flex flex-col items-center justify-center gap-1 transition-all duration-200 active:scale-90 px-5 py-1.5 rounded-full outline-none cursor-pointer ${
+              isProfileOpen
+                ? (isDark ? 'bg-white/[0.12] text-white shadow-xs' : 'bg-black/[0.07] text-zinc-900 shadow-xs')
+                : (isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-500 hover:text-zinc-800')
+            }`}
           >
             <div className="w-5 h-5 flex items-center justify-center">
-              <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke={isProfileOpen ? '#D8B4E2' : 'rgba(255,255,255,0.45)'} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.0" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </div>
-            <span className={`text-[10px] tracking-tight ${isProfileOpen ? 'text-[#D8B4E2] font-semibold' : 'text-zinc-400 font-medium'}`}>
+            <span className="text-[10px] tracking-tight font-semibold">
               Profile
             </span>
           </button>

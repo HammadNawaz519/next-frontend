@@ -5,8 +5,14 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 
-const geistSans = { variable: "--font-geist-sans" };
-const geistMono = { variable: "--font-geist-mono" };
+import { Plus_Jakarta_Sans } from "next/font/google";
+
+const fontSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+  weight: ["300", "400", "500", "600", "700", "800"],
+});
 
 export const metadata: Metadata = {
   title: "Connect",
@@ -50,7 +56,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${fontSans.variable} font-sans h-full antialiased selection:bg-purple-500/20`}
     >
       <head>
         {/* PWA manifest */}
