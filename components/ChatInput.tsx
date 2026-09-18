@@ -34,6 +34,7 @@ export default function ChatInput({
   const [isCancelled, setIsCancelled] = useState(false);
   const [showAiSuggestion, setShowAiSuggestion] = useState(false);
   const [isMultiline, setIsMultiline] = useState(false);
+  const [isSendingAnim, setIsSendingAnim] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -112,6 +113,7 @@ export default function ChatInput({
     const trimmed = message.trim();
     if (!trimmed || disabled) return;
     triggerHaptic('light');
+    setIsSendingAnim(true);
     onSendMessage(trimmed);
     setMessage('');
     setIsMultiline(false);
@@ -120,6 +122,9 @@ export default function ChatInput({
       textareaRef.current.style.height = '38px';
       textareaRef.current.focus();
     }
+    setTimeout(() => {
+      setIsSendingAnim(false);
+    }, 260);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -322,7 +327,9 @@ export default function ChatInput({
 
       {/* ── Chat Composer Pill Container (Always fully rounded continuous capsule) ── */}
       <div
-        className={`w-full rounded-[28px] sm:rounded-[32px] p-1.5 pl-2 pr-1.5 flex gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border transition-all focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.08)] ${
+        className={`w-full rounded-[28px] sm:rounded-[32px] p-1.5 pl-2 pr-1.5 flex gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border transition-all duration-200 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.08)] ${
+          hasText ? 'ring-1 ring-zinc-300/70 dark:ring-zinc-600/50 shadow-[0_4px_16px_rgba(0,0,0,0.08)]' : ''
+        } ${
           isMultiline ? 'items-end' : 'items-center'
         }`}
         style={{
@@ -408,87 +415,100 @@ export default function ChatInput({
         )}
 
         {/* ── RIGHT: Dynamic Action Button (Mic on Empty -> Send when Typed) ── */}
-        {hasText ? (
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={disabled || vtt.isBusy}
-            className="w-11 h-11 rounded-full active:scale-90 flex items-center justify-center transition-all cursor-pointer outline-none shrink-0 shadow-2xs"
-            style={{
-              border: theme?.inputBorderColor && theme.id !== 'default' ? `1.5px solid ${theme.inputBorderColor}` : '1.5px solid #e4e4e7',
-              backgroundColor: theme?.id && theme.id !== 'default' ? 'rgba(255,255,255,0.7)' : '#f4f4f5',
-              color: theme?.inputBorderColor && theme.id !== 'default' ? theme.inputBorderColor : '#3f3f46',
-            }}
-            title="Send Message"
-          >
-            <svg className="w-5 h-5" style={{ color: 'inherit' }} viewBox="-0.5 0 25 25" fill="none" stroke="currentColor">
-              <path d="M2.33045 8.38999C0.250452 11.82 9.42048 14.9 9.42048 14.9C9.42048 14.9 12.5005 24.07 15.9305 21.99C19.5705 19.77 23.9305 6.13 21.0505 3.27C18.1705 0.409998 4.55045 4.74999 2.33045 8.38999Z" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M15.1999 9.12L9.41992 14.9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        ) : isSpeechToTextEnabled ? (
-          <button
-            type="button"
-            onClick={handleToggleVoiceToText}
-            disabled={disabled}
-            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer outline-none shrink-0 shadow-2xs ${
-              vtt.isRecording
-                ? 'bg-[#9D4EDD] text-white animate-pulse shadow-md'
-                : vtt.isTranscribing
-                ? 'bg-zinc-200 text-zinc-400 animate-pulse'
-                : 'hover:opacity-90 active:scale-90'
-            }`}
-            style={{
-              border: !vtt.isRecording && !vtt.isTranscribing
-                ? (theme?.inputBorderColor && theme.id !== 'default' ? `1.5px solid ${theme.inputBorderColor}` : '1.5px solid #e4e4e7')
-                : undefined,
-              backgroundColor: !vtt.isRecording && !vtt.isTranscribing
-                ? (theme?.id && theme.id !== 'default' ? 'rgba(255,255,255,0.7)' : '#f4f4f5')
-                : undefined,
-              color: !vtt.isRecording && !vtt.isTranscribing
-                ? (theme?.inputBorderColor && theme.id !== 'default' ? theme.inputBorderColor : '#3f3f46')
-                : undefined,
-            }}
-            title={
-              vtt.isRecording
-                ? 'Tap to stop and transcribe'
-                : vtt.isTranscribing
-                ? 'Transcribing...'
-                : 'Tap to speak (Voice to text)'
-            }
-          >
-            {vtt.isRecording ? (
-              <Square className="w-4 h-4 text-white fill-white" />
-            ) : (
+        <div className="relative w-11 h-11 shrink-0 flex items-center justify-center">
+          {hasText ? (
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={disabled || vtt.isBusy}
+              className={`w-11 h-11 rounded-full flex items-center justify-center cursor-pointer outline-none shadow-2xs transition-all duration-200 ${
+                isSendingAnim
+                  ? 'scale-90 opacity-90 shadow-none'
+                  : 'hover:scale-105 active:scale-90 animate-in zoom-in-75 fade-in duration-200'
+              }`}
+              style={{
+                border: theme?.inputBorderColor && theme.id !== 'default' ? `1.5px solid ${theme.inputBorderColor}` : '1.5px solid #e4e4e7',
+                backgroundColor: theme?.id && theme.id !== 'default' ? 'rgba(255,255,255,0.7)' : '#f4f4f5',
+                color: theme?.inputBorderColor && theme.id !== 'default' ? theme.inputBorderColor : '#3f3f46',
+              }}
+              title="Send Message"
+            >
+              <svg
+                className={`w-5 h-5 transition-transform duration-200 ${
+                  isSendingAnim ? 'translate-x-1 -translate-y-1 scale-90' : ''
+                }`}
+                style={{ color: 'inherit' }}
+                viewBox="-0.5 0 25 25"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path d="M2.33045 8.38999C0.250452 11.82 9.42048 14.9 9.42048 14.9C9.42048 14.9 12.5005 24.07 15.9305 21.99C19.5705 19.77 23.9305 6.13 21.0505 3.27C18.1705 0.409998 4.55045 4.74999 2.33045 8.38999Z" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M15.1999 9.12L9.41992 14.9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          ) : isSpeechToTextEnabled ? (
+            <button
+              type="button"
+              onClick={handleToggleVoiceToText}
+              disabled={disabled}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer outline-none shrink-0 shadow-2xs animate-in zoom-in-75 fade-in duration-200 ${
+                vtt.isRecording
+                  ? 'bg-[#9D4EDD] text-white animate-pulse shadow-md'
+                  : vtt.isTranscribing
+                  ? 'bg-zinc-200 text-zinc-400 animate-pulse'
+                  : 'hover:opacity-90 active:scale-90'
+              }`}
+              style={{
+                border: !vtt.isRecording && !vtt.isTranscribing
+                  ? (theme?.inputBorderColor && theme.id !== 'default' ? `1.5px solid ${theme.inputBorderColor}` : '1.5px solid #e4e4e7')
+                  : undefined,
+                backgroundColor: !vtt.isRecording && !vtt.isTranscribing
+                  ? (theme?.id && theme.id !== 'default' ? 'rgba(255,255,255,0.7)' : '#f4f4f5')
+                  : undefined,
+                color: !vtt.isRecording && !vtt.isTranscribing
+                  ? (theme?.inputBorderColor && theme.id !== 'default' ? theme.inputBorderColor : '#3f3f46')
+                  : undefined,
+              }}
+              title={
+                vtt.isRecording
+                  ? 'Tap to stop and transcribe'
+                  : vtt.isTranscribing
+                  ? 'Transcribing...'
+                  : 'Tap to speak (Voice to text)'
+              }
+            >
+              {vtt.isRecording ? (
+                <Square className="w-4 h-4 text-white fill-white" />
+              ) : (
+                <svg className="w-5 h-5" style={{ color: 'inherit' }} viewBox="0 0 1920 1920" fill="currentColor">
+                  <path d="M425.818 709.983V943.41c0 293.551 238.946 532.497 532.497 532.497 293.55 0 532.496-238.946 532.496-532.497V709.983h96.818V943.41c0 330.707-256.438 602.668-580.9 627.471l-.006 252.301h242.044V1920H667.862v-96.818h242.043l-.004-252.3C585.438 1546.077 329 1274.116 329 943.41V709.983h96.818ZM958.315 0c240.204 0 435.679 195.475 435.679 435.68v484.087c0 240.205-195.475 435.68-435.68 435.68-240.204 0-435.679-195.475-435.679-435.68V435.68C522.635 195.475 718.11 0 958.315 0Z" fillRule="evenodd"/>
+                </svg>
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
+              disabled={disabled}
+              className={`w-11 h-11 rounded-full active:scale-90 flex items-center justify-center transition-all duration-200 cursor-pointer outline-none shrink-0 touch-none shadow-2xs animate-in zoom-in-75 fade-in duration-200 ${
+                isRecording ? 'ring-4 ring-zinc-200 animate-pulse bg-zinc-200' : ''
+              }`}
+              style={{
+                border: theme?.inputBorderColor && theme.id !== 'default' ? `1.5px solid ${theme.inputBorderColor}` : '1.5px solid #e4e4e7',
+                backgroundColor: theme?.id && theme.id !== 'default' ? 'rgba(255,255,255,0.7)' : '#f4f4f5',
+                color: theme?.inputBorderColor && theme.id !== 'default' ? theme.inputBorderColor : '#3f3f46',
+              }}
+              title="Hold to Record Voice Message"
+            >
               <svg className="w-5 h-5" style={{ color: 'inherit' }} viewBox="0 0 1920 1920" fill="currentColor">
                 <path d="M425.818 709.983V943.41c0 293.551 238.946 532.497 532.497 532.497 293.55 0 532.496-238.946 532.496-532.497V709.983h96.818V943.41c0 330.707-256.438 602.668-580.9 627.471l-.006 252.301h242.044V1920H667.862v-96.818h242.043l-.004-252.3C585.438 1546.077 329 1274.116 329 943.41V709.983h96.818ZM958.315 0c240.204 0 435.679 195.475 435.679 435.68v484.087c0 240.205-195.475 435.68-435.68 435.68-240.204 0-435.679-195.475-435.679-435.68V435.68C522.635 195.475 718.11 0 958.315 0Z" fillRule="evenodd"/>
               </svg>
-            )}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerCancel}
-            disabled={disabled}
-            className={`w-11 h-11 rounded-full active:scale-90 flex items-center justify-center transition-all cursor-pointer outline-none shrink-0 touch-none shadow-2xs ${
-              isRecording ? 'ring-4 ring-zinc-200 animate-pulse bg-zinc-200' : ''
-            }`}
-            style={{
-              border: theme?.inputBorderColor && theme.id !== 'default' ? `1.5px solid ${theme.inputBorderColor}` : '1.5px solid #e4e4e7',
-              backgroundColor: theme?.id && theme.id !== 'default' ? 'rgba(255,255,255,0.7)' : '#f4f4f5',
-              color: theme?.inputBorderColor && theme.id !== 'default' ? theme.inputBorderColor : '#3f3f46',
-            }}
-            title="Hold to Record Voice Message"
-          >
-            <svg className="w-5 h-5" style={{ color: 'inherit' }} viewBox="0 0 1920 1920" fill="currentColor">
-              <path d="M425.818 709.983V943.41c0 293.551 238.946 532.497 532.497 532.497 293.55 0 532.496-238.946 532.496-532.497V709.983h96.818V943.41c0 330.707-256.438 602.668-580.9 627.471l-.006 252.301h242.044V1920H667.862v-96.818h242.043l-.004-252.3C585.438 1546.077 329 1274.116 329 943.41V709.983h96.818ZM958.315 0c240.204 0 435.679 195.475 435.679 435.68v484.087c0 240.205-195.475 435.68-435.68 435.68-240.204 0-435.679-195.475-435.679-435.68V435.68C522.635 195.475 718.11 0 958.315 0Z" fillRule="evenodd"/>
-            </svg>
-          </button>
-        )}
-
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

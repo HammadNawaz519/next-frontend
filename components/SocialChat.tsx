@@ -1139,11 +1139,27 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup, partnerLastSee
   if (!isLastSentInGroup) return null;
   if (msg.type === 'call' || msg.type === 'deleted') return null;
 
-  const isSending = (msg as any).status === 'sending' && (String(msg.id).startsWith('temp-') || String(msg.id).startsWith('optimistic-') || String(msg.id).startsWith('msg-'));
+  const isSending = (msg as any).status === 'sending';
   if (isSending) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px', fontSize: '0.68rem', fontWeight: 600, color: isDark ? '#e4e4e7' : '#18181b', marginTop: '2px', pointerEvents: 'none' }}>
-        <span>Sending...</span>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: '4px',
+          fontSize: '0.68rem',
+          fontWeight: 600,
+          color: isDark ? '#a1a1aa' : '#71717a',
+          marginTop: '3px',
+          pointerEvents: 'none',
+        }}
+        className="animate-in fade-in duration-200"
+      >
+        <span
+          className="inline-block w-2.5 h-2.5 rounded-full border-[1.5px] border-zinc-400/30 border-t-purple-500 animate-spin"
+        />
+        <span className="tracking-tight">Sending...</span>
       </div>
     );
   }
@@ -1190,7 +1206,7 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup, partnerLastSee
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-end',
-        gap: '4px',
+        gap: '3px',
         fontSize: '0.68rem',
         fontWeight: 600,
         color: isDark ? '#a1a1aa' : '#52525b',
@@ -1200,7 +1216,11 @@ const SentMessageStatus = memo(({ msg, isDark, isLastSentInGroup, partnerLastSee
         opacity: 1,
         transition: 'color 0.3s ease',
       }}
+      className="animate-in fade-in duration-300"
     >
+      {!msg.isSeen && (
+        <Check className="w-2.5 h-2.5 text-zinc-400 stroke-[2.5]" />
+      )}
       <span>{statusText}</span>
     </div>
   );
@@ -1378,7 +1398,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
 
   return (
     <div
-      className={`msg-wrapper ${isSent ? 'sent' : 'received'} ${isSelected ? 'selected-item' : ''} animate-in slide-in-from-bottom-2 duration-300 relative`}
+      className={`msg-wrapper ${isSent ? 'sent' : 'received'} ${isSelected ? 'selected-item' : ''} relative`}
       onClick={handleMessageClick}
       onMouseDown={handlePointerDown}
       onMouseUp={handlePointerUp}
@@ -1461,7 +1481,7 @@ const MessageItem = memo(({ msg, currentUserId, selectedUser, partnerLastSeen, o
         return (
           <div
             ref={bubbleRef}
-            className={`msg ${bubbleClasses} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''} ${isMedia ? '!p-0 !bg-transparent !border-0 !shadow-none' : ''}`}
+            className={`msg ${bubbleClasses} ${isSending ? 'msg-sending-optimistic' : ''} ${msg.type === 'deleted' ? 'deleted-msg' : ''} ${isSelected ? (isSent ? 'msg--sel-sent' : 'msg--sel-recv') : ''} ${isMedia ? '!p-0 !bg-transparent !border-0 !shadow-none' : ''}`}
             style={{
               position: 'relative',
               borderRadius: '26px',
@@ -5261,7 +5281,10 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
     requestAnimationFrame(() => {
       if (messagesContainerRef.current) {
-        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
       }
     });
 
@@ -6605,7 +6628,7 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
 
                     {/* ── Partner Live Typing Indicator Bubble ── */}
                     {isPartnerTyping && (
-                      <div className="flex items-center gap-2 self-start pl-1 py-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                      <div className="flex items-center gap-2 self-start pl-1 py-1 animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-250 ease-out">
                         <div
                           className="px-5 py-3.5 !rounded-[26px] min-h-[44px] flex items-center gap-1.5 shadow-2xs transition-all select-none"
                           style={{
@@ -6616,36 +6639,30 @@ const SocialChat = React.forwardRef(({ isActive, onStatusChange, onChatChange, o
                           }}
                         >
                           <span
-                            className="w-2 h-2 rounded-full animate-bounce"
+                            className="w-2 h-2 rounded-full typing-dot-wave"
                             style={{
                               backgroundColor: activeTheme?.incomingTextColor
                                 ? activeTheme.incomingTextColor
                                 : '#18181b',
-                              opacity: 0.8,
                               animationDelay: '0ms',
-                              animationDuration: '1.1s',
                             }}
                           />
                           <span
-                            className="w-2 h-2 rounded-full animate-bounce"
+                            className="w-2 h-2 rounded-full typing-dot-wave"
                             style={{
                               backgroundColor: activeTheme?.incomingTextColor
                                 ? activeTheme.incomingTextColor
                                 : '#18181b',
-                              opacity: 0.8,
                               animationDelay: '180ms',
-                              animationDuration: '1.1s',
                             }}
                           />
                           <span
-                            className="w-2 h-2 rounded-full animate-bounce"
+                            className="w-2 h-2 rounded-full typing-dot-wave"
                             style={{
                               backgroundColor: activeTheme?.incomingTextColor
                                 ? activeTheme.incomingTextColor
                                 : '#18181b',
-                              opacity: 0.8,
                               animationDelay: '360ms',
-                              animationDuration: '1.1s',
                             }}
                           />
                         </div>
