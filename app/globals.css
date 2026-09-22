@@ -388,32 +388,36 @@ body {
 @keyframes ig-msg-sent {
   from {
     opacity: 0;
-    transform: scale(0.94) translateY(7px);
+    transform: translate3d(0, 8px, 0) scale(0.94);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes ig-msg-recv {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translate3d(0, 8px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
 .ig-msg-sent {
-  animation: ig-msg-sent 160ms var(--ease-ig) forwards;
+  animation: ig-msg-sent 180ms cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+  transform-origin: bottom right;
+  backface-visibility: hidden;
   will-change: transform, opacity;
 }
 
 .ig-msg-recv {
-  animation: ig-msg-recv 160ms var(--ease-ig) forwards;
+  animation: ig-msg-recv 180ms cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+  transform-origin: bottom left;
+  backface-visibility: hidden;
   will-change: transform, opacity;
 }
 

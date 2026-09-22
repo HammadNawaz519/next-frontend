@@ -111,13 +111,17 @@
   align-items: center;
   cursor: pointer;
   background: transparent;
-  transition: all .2s;
+  transition: background-color 0.18s cubic-bezier(0.32, 0.72, 0, 1), transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), border-color 0.18s ease;
   border: 1px solid transparent;
+  will-change: transform;
 }
-
 
 .social-chat-container .list .item:hover {
   background: var(--dm-bg-hover);
+}
+
+.social-chat-container .list .item:active {
+  transform: scale(0.98);
 }
 
 .social-chat-container .list .item.active {
@@ -273,6 +277,9 @@
   flex-direction: column;
   gap: 2px;
   background-color: transparent;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 105px), rgba(0, 0, 0, 0.88) calc(100% - 45px), rgba(0, 0, 0, 0.5) calc(100% - 20px), transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 105px), rgba(0, 0, 0, 0.88) calc(100% - 45px), rgba(0, 0, 0, 0.5) calc(100% - 20px), transparent 100%);
 }
@@ -314,20 +321,22 @@
   letter-spacing: -0.01em;
   position: relative;
   word-wrap: break-word;
-  transition: background-color 200ms var(--ease-ig), color 200ms var(--ease-ig), border-color 200ms var(--ease-ig);
+  transition: background-color 200ms var(--ease-ig), color 200ms var(--ease-ig), border-color 200ms var(--ease-ig), transform 0.16s cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+}
+
+.social-chat-container .msg:active {
+  transform: scale(0.985);
 }
 
 /* =========================================
    SMOOTH MESSAGE ENTRY & SENDING ANIMATIONS (GPU Accelerated)
+   Continuous, mathematically smooth deceleration curves with zero velocity hitching
    ========================================= */
 @keyframes smooth-msg-send-in {
   0% {
     opacity: 0;
-    transform: translate3d(0, 14px, 0) scale(0.94);
-  }
-  65% {
-    opacity: 1;
-    transform: translate3d(0, -1.5px, 0) scale(1.008);
+    transform: translate3d(0, 16px, 0) scale(0.92);
   }
   100% {
     opacity: 1;
@@ -338,11 +347,7 @@
 @keyframes smooth-msg-recv-in {
   0% {
     opacity: 0;
-    transform: translate3d(0, 12px, 0) scale(0.95);
-  }
-  70% {
-    opacity: 1;
-    transform: translate3d(0, -1px, 0) scale(1.006);
+    transform: translate3d(0, 14px, 0) scale(0.93);
   }
   100% {
     opacity: 1;
@@ -373,7 +378,7 @@
 }
 
 .social-chat-container .msg-wrapper.sent {
-  animation: smooth-msg-send-in 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: smooth-msg-send-in 260ms cubic-bezier(0.18, 0.89, 0.32, 1.12) forwards;
   transform-origin: bottom right;
   backface-visibility: hidden;
   will-change: transform, opacity;
@@ -381,7 +386,7 @@
 
 .social-chat-container .msg-wrapper.received,
 .social-chat-container .msg-wrapper.ai {
-  animation: smooth-msg-recv-in 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: smooth-msg-recv-in 250ms cubic-bezier(0.18, 0.89, 0.32, 1.12) forwards;
   transform-origin: bottom left;
   backface-visibility: hidden;
   will-change: transform, opacity;

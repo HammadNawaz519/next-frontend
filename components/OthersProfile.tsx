@@ -363,12 +363,15 @@ export default function OthersProfile({
 
   return (
     <div
-      className={`fixed inset-0 z-[1600] flex flex-col bg-[#141111] overflow-hidden font-sans select-none transition-all duration-240 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-        isClosing
-          ? 'translate-x-full opacity-90 pointer-events-none'
-          : 'animate-in slide-in-from-right duration-300'
+      className={`fixed inset-0 z-[1600] flex flex-col bg-[#141111] overflow-hidden font-sans select-none ${
+        !isClosing ? 'animate-in slide-in-from-right duration-300' : 'pointer-events-none'
       }`}
-      style={{ willChange: 'transform, opacity' }}
+      style={{
+        transition: 'transform 260ms cubic-bezier(0.32, 0.72, 0, 1), opacity 260ms cubic-bezier(0.32, 0.72, 0, 1)',
+        transform: isClosing ? 'translate3d(100%, 0, 0)' : 'translate3d(0, 0, 0)',
+        opacity: isClosing ? 0.85 : 1,
+        willChange: 'transform, opacity',
+      }}
     >
       
       {/* ── 1. DARK TOP HEADER BAR (Exact Match to Chat Header) ── */}
