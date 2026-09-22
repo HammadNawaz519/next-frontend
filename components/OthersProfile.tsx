@@ -68,6 +68,16 @@ export default function OthersProfile({
   const [loadingLike, setLoadingLike] = useState<boolean>(false);
   const [likeBurst, setLikeBurst] = useState<boolean>(false);
   const [copiedHandle, setCopiedHandle] = useState<boolean>(false);
+  const [isClosing, setIsClosing] = useState<boolean>(false);
+
+  const handleSmoothClose = useCallback(() => {
+    if (isClosing) return;
+    triggerHaptic('light');
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+    }, 240);
+  }, [isClosing, onClose]);
 
   const showTopToast = useCallback((msg: string) => {
     setTopToast(msg);
@@ -352,18 +362,22 @@ export default function OthersProfile({
   const pastel = getPastelForUser(avatarKey);
 
   return (
-    <div className="fixed inset-0 z-[1600] flex flex-col bg-[#141111] animate-in slide-in-from-right duration-300 overflow-hidden font-sans select-none">
+    <div
+      className={`fixed inset-0 z-[1600] flex flex-col bg-[#141111] overflow-hidden font-sans select-none transition-all duration-240 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        isClosing
+          ? 'translate-x-full opacity-90 pointer-events-none'
+          : 'animate-in slide-in-from-right duration-300'
+      }`}
+      style={{ willChange: 'transform, opacity' }}
+    >
       
       {/* ── 1. DARK TOP HEADER BAR (Exact Match to Chat Header) ── */}
       <div className="w-full bg-[#141111] pt-12 pb-3 px-5 flex items-center justify-between shrink-0 select-none z-10 m-0 border-none">
         {/* Left: Back Action (ChevronLeft) */}
         <button
           type="button"
-          onClick={() => {
-            triggerHaptic('light');
-            onClose();
-          }}
-          className="p-1.5 -ml-1.5 text-white hover:text-zinc-300 active:scale-95 transition-all flex-shrink-0 cursor-pointer outline-none border-0 bg-transparent"
+          onClick={handleSmoothClose}
+          className="p-1.5 -ml-1.5 text-white hover:text-zinc-300 active:scale-90 transition-all flex-shrink-0 cursor-pointer outline-none border-0 bg-transparent"
           title="Back"
         >
           <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.4} />

@@ -65,12 +65,24 @@ export default function ChatDetails({
   const [nicknameInput, setNicknameInput] = useState('');
   const [detailsTab, setDetailsTab] = useState<'media' | 'files'>('media');
   const [speechToText, setSpeechToText] = useState(isSpeechToTextEnabled);
+  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     setSpeechToText(isSpeechToTextEnabled);
   }, [isSpeechToTextEnabled]);
 
   if (!isOpen || !selectedUser) return null;
+
+  const handleSmoothClose = () => {
+    if (isClosing) return;
+    triggerHaptic('light');
+    setEditingNickname(false);
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 240);
+  };
 
   const handleToggleVoiceTyping = () => {
     triggerHaptic('light');
@@ -83,17 +95,21 @@ export default function ChatDetails({
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-[#141111] animate-in slide-in-from-right-full duration-300 overflow-hidden font-sans select-none">
+    <div
+      className={`absolute inset-0 z-50 flex flex-col bg-[#141111] overflow-hidden font-sans select-none transition-all duration-240 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        isClosing
+          ? 'translate-x-full opacity-90 pointer-events-none'
+          : 'animate-in slide-in-from-right-full duration-300'
+      }`}
+      style={{ willChange: 'transform, opacity' }}
+    >
       
       {/* ── 1. TOP BAR (BACK BUTTON, NAME & SEARCH BUTTON ON TOP RIGHT - NO BORDER, NO OUTLINE) ── */}
       <div className="pt-14 pb-4 px-5 flex items-center justify-between shrink-0 bg-[#141111] z-20">
         
         {/* Left: Back button matching chat UI (no outline, no border) */}
         <button
-          onClick={() => {
-            setEditingNickname(false);
-            onClose();
-          }}
+          onClick={handleSmoothClose}
           className="w-10 h-10 rounded-full text-white hover:text-zinc-300 hover:bg-white/5 flex items-center justify-center cursor-pointer active:scale-90 transition-all outline-none border-0"
           title="Back to conversation"
         >
